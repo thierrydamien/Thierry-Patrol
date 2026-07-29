@@ -1,0 +1,12 @@
+{
+  "name": "skyforce-web",
+  "version": "1.0.0",
+  "description": "Thierry Family SkyForce - browser port smoke test",
+  "private": true,
+  "scripts": {
+    "test": "node _smoketest.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SkyForce — Thierry Family Edition</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===================== PROFILE PICKER ===================== -->
+  <section id="screen-profiles" class="screen active">
+    <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
+    <h1 class="logo">SKY<span>FORCE</span></h1>
+    <p class="tagline">Who's playing?</p>
+    <div id="profileGrid" class="profile-grid"></div>
+    <button id="addProfileBtn" class="ghost-btn">+ Add Player</button>
+  </section>
+
+  <!-- ===================== MAIN MENU ===================== -->
+  <section id="screen-menu" class="screen">
+    <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
+    <h1 class="logo small">SKY<span>FORCE</span></h1>
+    <p id="greeting" class="greeting"></p>
+    <div class="menu-buttons">
+      <button id="playBtn" class="main-btn">▶ PLAY</button>
+      <button id="armoryBtn" class="main-btn">🛠 ARMORY</button>
+      <button id="leaderboardBtn" class="main-btn">🏆 CHAMPIONSHIP</button>
+      <button id="switchBtn" class="ghost-btn">Switch Player</button>
+    </div>
+  </section>
+
+  <!-- ===================== ARMORY ===================== -->
+  <section id="screen-armory" class="screen">
+    <h2 class="section-title">ARMORY</h2>
+    <p id="armoryMoney" class="money-line"></p>
+
+    <div class="panel">
+      <label class="panel-label">CALLSIGN</label>
+      <div class="callsign-row">
+        <input id="callsignInput" type="text" maxlength="16">
+        <button id="saveCallsignBtn" class="small-btn">SAVE</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label class="panel-label">SHIP COLOR</label>
+      <div id="colorRow" class="color-row"></div>
+    </div>
+
+    <div class="panel">
+      <label class="panel-label">WEAPONS &amp; GEAR</label>
+      <div id="shopItems" class="shop-items"></div>
+    </div>
+
+    <button id="armoryBackBtn" class="ghost-btn">Back to Menu</button>
+  </section>
+
+  <!-- ===================== LEADERBOARD ===================== -->
+  <section id="screen-leaderboard" class="screen">
+    <h2 class="section-title">THIERRY FAMILY CHAMPIONSHIP</h2>
+    <div id="leaderboardList" class="leaderboard-list"></div>
+    <button id="leaderboardBackBtn" class="ghost-btn">Back to Menu</button>
+  </section>
+
+  <!-- ===================== GAME ===================== -->
+  <section id="screen-game" class="screen">
+    <div class="game-frame">
+      <canvas id="game"></canvas>
+
+      <button id="pauseBtn" class="icon-btn top-left hidden">II</button>
+
+      <div id="overlayPause" class="overlay hidden">
+        <h2>PAUSED</h2>
+        <button id="resumeBtn" class="main-btn">RESUME</button>
+        <button id="quitBtn" class="ghost-btn">Quit to Menu</button>
+      </div>
+
+      <div id="overlayOver" class="overlay hidden">
+        <h2>SIGNAL LOST</h2>
+        <p id="overScore" class="money-line"></p>
+        <p id="overMoney" class="money-line"></p>
+        <button id="retryBtn" class="main-btn">▶ RETRY</button>
+        <button id="menuBtn" class="ghost-btn">Back to Menu</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
