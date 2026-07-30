@@ -1,5 +1,6 @@
 package Game_Manager;
 
+import Game_Audio.SoundEngine;
 import Game_Bullet.Bullet;
 import static Game_Display.Display.frame;
 import Game_Enemy.Enemy;
@@ -45,6 +46,11 @@ public class GameManager {
     private String callsign;
     private String shipColorHex;
 
+    // --- Combo state ---
+    private int combo;
+    private long comboExpiresAt; // System.currentTimeMillis() timestamp; streak breaks once passed
+    private static final long COMBO_WINDOW_MS = 1300;
+
     public GameManager(){
         
     }
@@ -66,11 +72,17 @@ public class GameManager {
         killsInLevel = 0;
         levelConfig = GameLevel.get(level);
         bannerUntil = 0;
+        combo = 0;
+        comboExpiresAt = 0;
     }
     public void tick(){
     	player.tick();
         for (int i = 0; i<bullet.size();i++){
             bullet.get(i).tick();
+        }
+
+        if(combo > 0 && System.currentTimeMillis() > comboExpiresAt){
+            combo = 0; // streak lapsed
         }
 
         boolean showingBanner = System.currentTimeMillis() < bannerUntil;
@@ -136,9 +148,17 @@ public class GameManager {
                     
                     bullet.remove(j);
                     j--;
-                    score+=5;
-                    sessionMoney+=2;
+
+                    combo++;
+                    comboExpiresAt = System.currentTimeMillis() + COMBO_WINDOW_MS;
+                    double multiplier = 1.0 + Math.min(combo/3, 4) * 0.5; // caps at x3, matches web version
+                    score += Math.round(5*multiplier);
+                    sessionMoney += Math.round(2*multiplier);
                     killsInLevel++;
+                    SoundEngine.playExplosion(false);
+                    if(combo % 3 == 0){
+                        SoundEngine.playCombo(combo);
+                    }
                     checkLevelClear();
                 }
             }
@@ -150,10 +170,13 @@ public class GameManager {
     /** Applies a hit to the player, letting an active shield absorb it first. */
     private void damagePlayer(){
         if(player.consumeShield()){
+            SoundEngine.playHit();
             return;
         }
         health--;
+        SoundEngine.playHit();
         if(health<=0){
+            SoundEngine.playGameOver();
             enemies.removeAll(enemies);
             player.setHealth(0);
             persistWallet();
@@ -192,6 +215,7 @@ public class GameManager {
             levelConfig = GameLevel.get(level);
             enemies.removeAll(enemies);
             bannerUntil = System.currentTimeMillis() + 1800;
+            SoundEngine.playLevelClear();
         }
     }
 
@@ -208,6 +232,12 @@ public class GameManager {
         g.setColor(new Color(255,210,60));
         g.setFont(new Font("arial", Font.BOLD, 16));
         g.drawString("Pilot " + callsign + "     Level " + level + "     Money: $" + (walletMoney + sessionMoney), 50, 565);
+
+        if(combo >= 3){
+            g.setColor(new Color(255,93,115));
+            g.setFont(new Font("arial", Font.BOLD, 16));
+            g.drawString("COMBO x" + combo, 50, 515);
+        }
 
         try {
             ResultSet query1 = SignIn.dbConn.createStatement().executeQuery("SELECT username, score FROM highscore ORDER BY score DESC LIMIT 1");

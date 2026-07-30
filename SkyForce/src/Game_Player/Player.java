@@ -99,6 +99,7 @@ public class Player implements KeyListener {
                         GameManager.bullet.add(new Bullet(x + 22, y));
                     }
                     current = System.nanoTime();
+                    Game_Audio.SoundEngine.playShoot();
                 }
             }
         }

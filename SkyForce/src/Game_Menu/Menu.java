@@ -33,6 +33,7 @@ public class Menu extends javax.swing.JFrame {
         initComponents();
         addShopButton();
         addPersonalization();
+        addMuteButton();
     }
 
     public Menu(String name) {
@@ -40,6 +41,7 @@ public class Menu extends javax.swing.JFrame {
         Uname = name;
         addShopButton();
         addPersonalization();
+        addMuteButton();
     }
 
     /**
@@ -114,6 +116,20 @@ public class Menu extends javax.swing.JFrame {
     private void ShopActionPerformed(java.awt.event.ActionEvent evt) {
         this.setVisible(false);
         new Shop().setVisible(true);
+    }
+
+    /** Small speaker-icon toggle, top-right corner, next to the family banner. */
+    private void addMuteButton() {
+        javax.swing.JButton muteButton = new javax.swing.JButton(Game_Audio.SoundEngine.isMuted() ? "\u2715" : "\u266A");
+        muteButton.setBackground(new java.awt.Color(30, 30, 30));
+        muteButton.setForeground(java.awt.Color.white);
+        muteButton.setBounds(364, 6, 30, 24);
+        muteButton.setMargin(new java.awt.Insets(0,0,0,0));
+        muteButton.addActionListener(evt -> {
+            Game_Audio.SoundEngine.setMuted(!Game_Audio.SoundEngine.isMuted());
+            muteButton.setText(Game_Audio.SoundEngine.isMuted() ? "\u2715" : "\u266A");
+        });
+        getContentPane().add(muteButton);
     }
 
     /**
