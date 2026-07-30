@@ -5,15 +5,25 @@ tablet, or computer — no install, no NetBeans, no MySQL required.
 
 This is a from-scratch JS/HTML5 canvas rewrite of the Java game's design:
 same idea (levels, money economy, Armory upgrades, callsigns, ship colors,
-family leaderboard), reimplemented for the browser. It does **not** share
-save data with the desktop Java version — this one keeps each player's
-progress in the browser itself (`localStorage`), per device.
+family leaderboard), reimplemented for the browser, plus some browser-only
+extras: sound effects, boss fights, combo streaks, achievements, and
+surprise power-ups. It does **not** share save data with the desktop Java
+version — this one keeps each player's progress in the browser itself
+(`localStorage`), per device.
 
 ## Playing it
 Open `index.html` (or the hosted GitHub Pages URL once deployed). Pick
 your name on the "Who's playing?" screen, then Play / Armory / Championship.
 - **Desktop:** Arrow keys or A/D to move, cannon auto-fires.
 - **Touch:** drag anywhere on the game to steer, cannon auto-fires.
+- A boss shows up every 3rd level (3, 6, 9...) with its own health bar.
+- Chain kills quickly for a combo multiplier on score/money.
+- Power-ups occasionally drift down mid-level — fly through to grab a
+  temporary boost (rapid fire, spread shot, shield, 2x score, or a
+  screen-clearing bomb).
+- 10 achievements to unlock, viewable from the menu.
+- Speaker icon in the top-right of the game mutes sound; setting is
+  remembered per browser.
 
 ## Files
 - `index.html` — all screens (profile picker, menu, armory, leaderboard, game)
@@ -28,6 +38,12 @@ your name on the "Who's playing?" screen, then Play / Armory / Championship.
 npm install
 npm test
 ```
+The test drives a real ~60-simulated-second play session (oscillating
+movement, real collisions) rather than just checking menus, and uses two
+inert test-only hooks (`window.__SKYFORCE_TEST_INVINCIBLE__` and
+`window.__SKYFORCE_TEST_EASY_BOSS__`, both `undefined`/false in real play)
+so it can reliably reach and verify the boss-defeat path without needing
+a huge frame budget or a perfectly-aiming bot.
 
 ## Notes / things to know
 - Progress is per-browser (`localStorage`), not synced across devices.

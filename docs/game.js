@@ -35,6 +35,56 @@ function getLevel(n){
   };
 }
 
+const BOSS_EVERY = 3; // a boss appears on levels 3, 6, 9...
+function isBossLevel(n){ return n % BOSS_EVERY === 0; }
+
+const ACHIEVEMENTS = [
+  { id:"first_blood",  icon:"💥", name:"First Blood",     desc:"Destroy your first enemy",        check:p=>p.totalKills>=1 },
+  { id:"sharpshooter",  icon:"🎯", name:"Sharpshooter",    desc:"Reach a x5 combo",                check:p=>p.maxCombo>=5 },
+  { id:"combo_master",  icon:"⚡", name:"Combo Master",    desc:"Reach a x10 combo",               check:p=>p.maxCombo>=10 },
+  { id:"level5",        icon:"🚀", name:"Level 5 Legend",  desc:"Reach level 5",                   check:p=>p.maxLevel>=5 },
+  { id:"boss_slayer",   icon:"👾", name:"Boss Slayer",     desc:"Defeat a boss",                   check:p=>p.bossesDefeated>=1 },
+  { id:"boss_hunter",   icon:"🛡️", name:"Boss Hunter",     desc:"Defeat 5 bosses",                 check:p=>p.bossesDefeated>=5 },
+  { id:"big_spender",   icon:"💰", name:"Fully Loaded",    desc:"Own every Armory upgrade",        check:p=>p.hasSpread&&p.hasRapid&&p.hasShield&&p.extraLives>=3 },
+  { id:"century",       icon:"💯", name:"Century Club",    desc:"Destroy 100 enemies (lifetime)",  check:p=>p.totalKills>=100 },
+  { id:"high_roller",   icon:"🤑", name:"High Roller",     desc:"Earn $1000 (lifetime)",           check:p=>p.lifetimeMoney>=1000 },
+  { id:"unstoppable",   icon:"🌟", name:"Unstoppable",     desc:"Reach level 10",                  check:p=>p.maxLevel>=10 },
+];
+
+/* =========================================================
+   SOUND (Web Audio, generated - no audio files to load)
+   ========================================================= */
+let actx = null, muted = localStorage.getItem("skyforce_muted") === "1";
+function initAudio(){
+  if(!actx){
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ actx = null; }
+  }
+}
+function tone(freq, dur, type, gainStart, glideTo){
+  if(!actx || muted) return;
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.type = type || "square";
+  osc.frequency.setValueAtTime(freq, actx.currentTime);
+  if(glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(glideTo,1), actx.currentTime+dur);
+  gain.gain.setValueAtTime(gainStart||0.08, actx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+  osc.connect(gain); gain.connect(actx.destination);
+  osc.start(); osc.stop(actx.currentTime+dur+0.02);
+}
+function playShoot(){ tone(760,0.06,"square",0.045,420); }
+function playExplosion(big){ tone(big?220:300,big?0.32:0.22,"sawtooth",big?0.11:0.08, big?25:40); }
+function playHit(){ tone(140,0.2,"sawtooth",0.09,55); }
+function playPowerup(){ if(!actx||muted) return; [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.08,"square",0.06),i*55)); }
+function playBomb(){ if(!actx||muted) return; tone(90,0.4,"sawtooth",0.14,20); setTimeout(()=>tone(160,0.3,"square",0.08,20),40); }
+function playLevelClear(){ if(!actx||muted) return; [392,523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.1,"triangle",0.07),i*65)); }
+function playBossAlert(){ if(!actx||muted) return; [220,180,220,180].forEach((f,i)=>setTimeout(()=>tone(f,0.18,"sawtooth",0.09),i*220)); }
+function playBossDefeat(){ if(!actx||muted) return; [392,494,587,784,988].forEach((f,i)=>setTimeout(()=>tone(f,0.16,"triangle",0.09),i*90)); }
+function playCombo(n){ tone(480+Math.min(n,15)*30, 0.06, "square", 0.05); }
+function playAchievement(){ if(!actx||muted) return; [660,880,1108].forEach((f,i)=>setTimeout(()=>tone(f,0.11,"sine",0.07),i*80)); }
+function playGameOver(){ if(!actx||muted) return; [392,330,220].forEach((f,i)=>setTimeout(()=>tone(f,0.3,"sawtooth",0.08),i*170)); }
+
 /* =========================================================
    PROFILES (localStorage)
    ========================================================= */
@@ -57,13 +107,18 @@ function addProfileName(name){
   }
 }
 function loadProfile(name){
-  const raw = localStorage.getItem(PROFILE_PREFIX+name);
-  if(raw) return JSON.parse(raw);
-  return {
+  const base = {
     name, callsign:name, shipColor: SHIP_COLORS[0],
     money:0, hasSpread:false, hasRapid:false, hasShield:false, extraLives:0,
     highscore:0,
+    totalKills:0, bossesDefeated:0, maxLevel:0, maxCombo:0, lifetimeMoney:0,
+    achievements:[],
   };
+  const raw = localStorage.getItem(PROFILE_PREFIX+name);
+  if(raw){
+    return Object.assign(base, JSON.parse(raw)); // old saves just fill in any new fields as defaults
+  }
+  return base;
 }
 function saveProfile(p){
   localStorage.setItem(PROFILE_PREFIX+p.name, JSON.stringify(p));
@@ -117,6 +172,7 @@ document.getElementById("switchBtn").addEventListener("click", () => {
 
 /* ---- Main menu ---- */
 document.getElementById("playBtn").addEventListener("click", () => {
+  initAudio();
   showScreen("screen-game");
   startRun();
 });
@@ -130,6 +186,11 @@ document.getElementById("leaderboardBtn").addEventListener("click", () => {
 });
 document.getElementById("armoryBackBtn").addEventListener("click", () => showScreen("screen-menu"));
 document.getElementById("leaderboardBackBtn").addEventListener("click", () => showScreen("screen-menu"));
+document.getElementById("achievementsBackBtn").addEventListener("click", () => showScreen("screen-menu"));
+document.getElementById("achievementsBtn").addEventListener("click", () => {
+  renderAchievements();
+  showScreen("screen-achievements");
+});
 
 /* ---- Armory ---- */
 function renderArmory(){
@@ -207,6 +268,64 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+/* ---- Achievements ---- */
+function renderAchievements(){
+  const p = activeProfile;
+  const list = document.getElementById("achievementsList");
+  list.innerHTML = ACHIEVEMENTS.map(a => {
+    const unlocked = p.achievements.includes(a.id);
+    return `
+      <div class="ach-row${unlocked ? " unlocked" : ""}">
+        <div class="ach-icon">${unlocked ? a.icon : "🔒"}</div>
+        <div><div class="ach-name">${escapeHtml(a.name)}</div><div class="ach-desc">${escapeHtml(a.desc)}</div></div>
+      </div>
+    `;
+  }).join("");
+}
+
+let toastQueue = [];
+let toastShowing = false;
+function queueAchievementToast(a){
+  toastQueue.push(a);
+  if(!toastShowing) showNextToast();
+}
+function showNextToast(){
+  const a = toastQueue.shift();
+  if(!a){ toastShowing=false; return; }
+  toastShowing = true;
+  playAchievement();
+  const el = document.getElementById("achievementToast");
+  el.classList.remove("hidden");
+  document.getElementById("at-name").textContent = a.icon + " " + a.name;
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { el.classList.add("hidden"); showNextToast(); }, 250);
+  }, 2400);
+}
+
+/** Compares current profile stats against every achievement and unlocks any newly-met ones. */
+function checkAchievements(){
+  const p = activeProfile;
+  let unlocked = [];
+  ACHIEVEMENTS.forEach(a => {
+    if(!p.achievements.includes(a.id) && a.check(p)){
+      p.achievements.push(a.id);
+      unlocked.push(a);
+    }
+  });
+  if(unlocked.length){
+    saveProfile(p);
+    unlocked.forEach(queueAchievementToast);
+  }
+}
+
+document.getElementById("muteBtn").addEventListener("click", () => {
+  muted = !muted;
+  localStorage.setItem("skyforce_muted", muted ? "1" : "0");
+  document.getElementById("muteBtn").textContent = muted ? "🔇" : "♪";
+});
+
 /* =========================================================
    GAME
    ========================================================= */
@@ -261,10 +380,13 @@ window.addEventListener("pointermove", e => { if(dragActive) dragX = pointerToVi
 window.addEventListener("pointerup", () => { dragActive=false; });
 
 /* ---- Entity state ---- */
-let player, bullets, enemyBullets, enemies, particles;
+let player, bullets, enemyBullets, enemies, particles, floatingTexts, powerups;
 let level, killsInLevel, levelConfig, bannerUntil;
-let sessionMoney, score;
+let sessionMoney, score, sessionKills;
 let spawnTimer;
+let combo, comboTimer;
+let boss, bossPending;
+let powerupTimer;
 let gameState = "playing"; // playing | paused | over
 
 function startRun(){
@@ -275,12 +397,18 @@ function startRun(){
     invuln: 1.0, shield: p.hasShield, cooldown:0,
     fireInterval: p.hasRapid ? 0.16 : 0.30,
     hasSpread: p.hasSpread, color: p.shipColor,
+    tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0,
   };
-  bullets=[]; enemyBullets=[]; enemies=[]; particles=[];
+  bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[];
   level=1; killsInLevel=0; levelConfig=getLevel(level); bannerUntil=0;
-  sessionMoney=0; score=0; spawnTimer=0;
+  sessionMoney=0; score=0; sessionKills=0; spawnTimer=0;
+  combo=0; comboTimer=0;
+  boss=null; bossPending=false;
+  powerupTimer = 10 + Math.random()*6;
   gameState="playing";
   document.getElementById("pauseBtn").classList.remove("hidden");
+  document.getElementById("muteBtn").classList.remove("hidden");
+  document.getElementById("muteBtn").textContent = muted ? "🔇" : "♪";
   document.getElementById("overlayPause").classList.add("hidden");
   document.getElementById("overlayOver").classList.add("hidden");
   resizeCanvas();
@@ -295,6 +423,7 @@ document.getElementById("resumeBtn").addEventListener("click", togglePause);
 document.getElementById("quitBtn").addEventListener("click", () => {
   document.getElementById("overlayPause").classList.add("hidden");
   document.getElementById("pauseBtn").classList.add("hidden");
+  document.getElementById("muteBtn").classList.add("hidden");
   showScreen("screen-menu");
 });
 document.getElementById("retryBtn").addEventListener("click", () => startRun());
@@ -302,14 +431,25 @@ document.getElementById("menuBtn").addEventListener("click", () => showScreen("s
 
 function endRun(){
   gameState="over";
+  playGameOver();
   const p = activeProfile;
   p.money += sessionMoney;
+  p.lifetimeMoney += sessionMoney;
+  p.totalKills += sessionKills;
+  if(level > p.maxLevel) p.maxLevel = level;
+  if(combo > p.maxCombo) p.maxCombo = combo;
   if(score > p.highscore) p.highscore = score;
   saveProfile(p);
+  checkAchievements();
   document.getElementById("overScore").textContent = "SCORE " + score;
   document.getElementById("overMoney").textContent = "+$" + sessionMoney + " earned (wallet: $" + p.money + ")";
   document.getElementById("pauseBtn").classList.add("hidden");
+  document.getElementById("muteBtn").classList.add("hidden");
   document.getElementById("overlayOver").classList.remove("hidden");
+}
+
+function addFloatingText(x,y,text,color,size){
+  floatingTexts.push({x,y,text,color:color||"#ffffff",size:size||16,life:0,maxLife:0.9});
 }
 
 function spawnParticles(x,y,count,color){
@@ -327,15 +467,59 @@ function makeEnemy(){
     sway: Math.random()*Math.PI*2, brute,
   };
 }
+function makeBoss(){
+  const hp = window.__SKYFORCE_TEST_EASY_BOSS__ ? 3 : (18 + level*7); // test-only hook, unused in real play
+  return {
+    x: VW/2, y:-70, targetY:74, hp, maxhp:hp,
+    vx: 55 + level*3, shootTimer: 1.3, entering:true,
+  };
+}
+
+const POWERUP_TYPES = [
+  { id:"rapid",  color:"#ffd23f", label:"RAPID FIRE" },
+  { id:"spread", color:"#3399ff", label:"SPREAD SHOT" },
+  { id:"shield", color:"#2ecc71", label:"SHIELD" },
+  { id:"score2x",color:"#ff66b3", label:"SCORE x2" },
+  { id:"bomb",   color:"#ff5d73", label:"BOMB" },
+];
+function spawnFloatingPowerup(){
+  const type = POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
+  powerups.push({ x: 30+Math.random()*(VW-60), y:-24, vy:75, r:13, angle:0, type });
+}
+function applyPowerup(type){
+  playPowerup();
+  addFloatingText(player.x, player.y-26, type.label+"!", type.color, 15);
+  const now = performance.now();
+  if(type.id==="rapid") player.tempRapidUntil = now + 8000;
+  else if(type.id==="spread") player.tempSpreadUntil = now + 8000;
+  else if(type.id==="shield") player.shield = true;
+  else if(type.id==="score2x") player.tempScoreUntil = now + 8000;
+  else if(type.id==="bomb"){
+    playBomb();
+    enemies.forEach(e=>{
+      score += e.brute?12:5;
+      sessionMoney += e.brute?4:2;
+      sessionKills++; killsInLevel++;
+      spawnParticles(e.x,e.y,10,"#ffd23f");
+    });
+    enemies = [];
+    enemyBullets = [];
+    addFloatingText(VW/2, VH/2, "BOOM!", "#ff5d73", 22);
+  }
+}
+
 function fireBullets(){
   const vy=-460;
-  if(player.hasSpread){
+  const now = performance.now();
+  const spreadActive = player.hasSpread || now < player.tempSpreadUntil;
+  if(spreadActive){
     bullets.push({x:player.x,y:player.y-10,vx:-110,vy,r:3});
     bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3});
     bullets.push({x:player.x,y:player.y-10,vx:110,vy,r:3});
   } else {
     bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3});
   }
+  playShoot();
 }
 
 function update(dt){
@@ -352,30 +536,68 @@ function update(dt){
 
   if(player.invuln>0) player.invuln -= dt;
 
+  const now = performance.now();
+  let interval = player.fireInterval;
+  if(now < player.tempRapidUntil) interval *= 0.55;
   player.cooldown -= dt;
-  if(player.cooldown<=0){ fireBullets(); player.cooldown = player.fireInterval; }
+  if(player.cooldown<=0){ fireBullets(); player.cooldown = interval; }
 
   bullets.forEach(b=>{ b.x+=b.vx*dt; b.y+=b.vy*dt; });
   bullets = bullets.filter(b=> b.y>-20 && b.x>-20 && b.x<VW+20);
   enemyBullets.forEach(b=>{ b.x+=b.vx*dt; b.y+=b.vy*dt; });
   enemyBullets = enemyBullets.filter(b=> b.y<VH+20);
 
-  const showingBanner = performance.now() < bannerUntil;
-  if(!showingBanner){
+  const showingBanner = now < bannerUntil;
+
+  if(bossPending && !showingBanner){
+    boss = makeBoss();
+    bossPending = false;
+  }
+
+  if(!showingBanner && !boss && !bossPending){
     spawnTimer -= dt*1000;
     if(spawnTimer<=0){
       for(let i=0;i<levelConfig.wave;i++) enemies.push(makeEnemy());
       spawnTimer = levelConfig.spawnMs;
     }
+    powerupTimer -= dt;
+    if(powerupTimer<=0){
+      spawnFloatingPowerup();
+      powerupTimer = 10 + Math.random()*7;
+    }
   }
 
   enemies.forEach(e=>{
     e.y += e.speed*dt;
-    e.x += Math.sin(performance.now()/600 + e.sway)*20*dt;
+    e.x += Math.sin(now/600 + e.sway)*20*dt;
   });
+
+  if(boss){
+    if(boss.entering){
+      boss.y += 70*dt;
+      if(boss.y >= boss.targetY){ boss.y = boss.targetY; boss.entering=false; }
+    } else {
+      boss.x += boss.vx*dt;
+      if(boss.x < 46 || boss.x > VW-46) boss.vx *= -1;
+      boss.shootTimer -= dt;
+      if(boss.shootTimer<=0){
+        [-90,0,90].forEach(vx => enemyBullets.push({x:boss.x, y:boss.y+26, vx, vy:210, r:4}));
+        boss.shootTimer = 1.3;
+      }
+    }
+  }
+
+  powerups.forEach(p=>{ p.y += p.vy*dt; p.angle += dt*2.2; });
+  powerups = powerups.filter(p=> p.y < VH+20);
 
   particles.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life+=dt; p.vx*=0.94; p.vy*=0.94; });
   particles = particles.filter(p=> p.life<p.maxLife);
+
+  floatingTexts.forEach(f=>{ f.y -= 30*dt; f.life += dt; });
+  floatingTexts = floatingTexts.filter(f=> f.life < f.maxLife);
+
+  if(comboTimer>0) comboTimer -= dt;
+  else if(combo>0) combo = 0;
 
   checkCollisions();
   checkLevelClear();
@@ -387,15 +609,41 @@ function update(dt){
 }
 
 function damagePlayer(){
+  if(window.__SKYFORCE_TEST_INVINCIBLE__) return; // test-only hook, unused in real play
   if(player.shield){
     player.shield=false;
     player.invuln=1.0;
     spawnParticles(player.x,player.y,14,player.color);
+    playHit();
     return;
   }
   player.lives--;
   player.invuln=1.5;
   spawnParticles(player.x,player.y,16,player.color);
+  playHit();
+}
+
+function comboMultiplier(){ return 1 + Math.min(Math.floor(combo/3), 4)*0.5; } // caps at x3
+
+function registerKill(x, y, baseScore, baseMoney, isBrute){
+  combo++; comboTimer = 1.3;
+  if(combo > activeProfile.maxCombo){ activeProfile.maxCombo = combo; }
+  const mult = comboMultiplier() * (performance.now() < player.tempScoreUntil ? 2 : 1);
+  const gainedScore = Math.round(baseScore*mult);
+  const gainedMoney = Math.round(baseMoney*mult);
+  score += gainedScore;
+  sessionMoney += gainedMoney;
+  sessionKills++;
+  killsInLevel++;
+  activeProfile.totalKills++;
+  activeProfile.lifetimeMoney += gainedMoney;
+  spawnParticles(x,y,isBrute?16:12,"#ffd23f");
+  if(combo>0 && combo%3===0){
+    addFloatingText(x,y-10,"COMBO x"+combo+"!","#ffd23f",16);
+    playCombo(combo);
+  }
+  saveProfile(activeProfile);
+  checkAchievements();
 }
 
 function checkCollisions(){
@@ -406,12 +654,27 @@ function checkCollisions(){
         b.hit=true; e.hp--;
         if(e.hp<=0){
           e.dead=true;
-          score += e.brute?12:5;
-          sessionMoney += e.brute?4:2;
-          killsInLevel++;
-          spawnParticles(e.x,e.y,12,"#ffd23f");
+          registerKill(e.x, e.y, e.brute?12:5, e.brute?4:2, e.brute);
+          playExplosion(e.brute);
         }
         break;
+      }
+    }
+    if(b.hit) continue;
+    if(boss && dist2(b.x,b.y,boss.x,boss.y) < (b.r+34)*(b.r+34)){
+      b.hit=true;
+      boss.hp--;
+      spawnParticles(boss.x+((Math.random()-0.5)*40), boss.y+((Math.random()-0.5)*20), 4, "#ff5d73");
+      if(boss.hp<=0){
+        score += 150; sessionMoney += 60;
+        activeProfile.bossesDefeated++;
+        saveProfile(activeProfile);
+        checkAchievements();
+        playBossDefeat();
+        spawnParticles(boss.x,boss.y,40,"#ff5d73");
+        addFloatingText(boss.x, boss.y, "BOSS DOWN!", "#ff5d73", 20);
+        boss=null;
+        advanceLevel(0);
       }
     }
   }
@@ -428,19 +691,59 @@ function checkCollisions(){
       }
     }
     enemies = enemies.filter(e=>!e.dead);
+
+    for(const eb of enemyBullets){
+      if(dist2(eb.x,eb.y,player.x,player.y) < (eb.r+player.r)*(eb.r+player.r)){
+        eb.hit=true;
+        damagePlayer();
+        break;
+      }
+    }
+    enemyBullets = enemyBullets.filter(eb=>!eb.hit);
+
+    if(boss && dist2(boss.x,boss.y,player.x,player.y) < (34+player.r)*(34+player.r)){
+      damagePlayer();
+    }
   } else {
     enemies = enemies.filter(e=> e.y <= VH+20);
+  }
+
+  for(const p of powerups){
+    if(dist2(p.x,p.y,player.x,player.y) < (p.r+player.r)*(p.r+player.r)){
+      p.taken=true;
+      applyPowerup(p.type);
+    }
+  }
+  powerups = powerups.filter(p=>!p.taken);
+}
+
+function advanceLevel(bonus){
+  sessionMoney += bonus;
+  level++;
+  killsInLevel=0;
+  levelConfig = getLevel(level);
+  enemies = [];
+  enemyBullets = [];
+  if(level > activeProfile.maxLevel){
+    activeProfile.maxLevel = level;
+    saveProfile(activeProfile);
+    checkAchievements();
+  }
+  if(isBossLevel(level)){
+    bannerUntil = performance.now() + 2200;
+    bossPending = true;
+    playBossAlert();
+  } else {
+    bannerUntil = performance.now() + 1500;
+    bossPending = false;
+    playLevelClear();
   }
 }
 
 function checkLevelClear(){
+  if(boss || bossPending) return; // during a boss encounter, only defeating it advances the level
   if(killsInLevel >= levelConfig.kills && performance.now() >= bannerUntil){
-    sessionMoney += levelConfig.bonus;
-    level++;
-    killsInLevel=0;
-    levelConfig = getLevel(level);
-    enemies = [];
-    bannerUntil = performance.now() + 1600;
+    advanceLevel(levelConfig.bonus);
   }
 }
 
@@ -488,6 +791,63 @@ function drawEnemies(){
     ctx.restore();
   });
 }
+function drawBoss(){
+  if(!boss) return;
+  ctx.save();
+  ctx.translate(boss.x,boss.y);
+  ctx.fillStyle = "#ff2d55";
+  ctx.shadowColor = "#ff2d55"; ctx.shadowBlur = 18;
+  ctx.beginPath();
+  const pts=8;
+  for(let i=0;i<pts;i++){
+    const a=(Math.PI*2/pts)*i;
+    const rad = i%2===0 ? 34 : 22;
+    const px=Math.cos(a)*rad, py=Math.sin(a)*rad*0.75;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#ffd23f"; ctx.shadowBlur=6;
+  ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // health bar
+  ctx.save();
+  ctx.shadowBlur=0;
+  const w=140, pct=Math.max(0,boss.hp/boss.maxhp);
+  ctx.fillStyle="rgba(0,0,0,0.5)";
+  ctx.fillRect(VW/2-w/2, boss.y-52, w, 8);
+  ctx.fillStyle="#ff2d55";
+  ctx.fillRect(VW/2-w/2, boss.y-52, w*pct, 8);
+  ctx.restore();
+}
+function drawPowerups(){
+  powerups.forEach(p=>{
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(p.angle);
+    ctx.fillStyle = p.type.color;
+    ctx.shadowColor = p.type.color; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#0a0920";
+    ctx.font="bold 12px Arial, sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    const glyph = {rapid:"⚡",spread:"✦",shield:"🛡",score2x:"x2",bomb:"💣"}[p.type.id] || "?";
+    ctx.fillText(glyph,0,1);
+    ctx.restore();
+  });
+}
+function drawFloatingTexts(){
+  floatingTexts.forEach(f=>{
+    const t = 1 - f.life/f.maxLife;
+    ctx.save();
+    ctx.globalAlpha = t;
+    ctx.fillStyle = f.color;
+    ctx.font = "bold " + f.size + "px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.restore();
+  });
+}
 function drawBullets(){
   ctx.save();
   ctx.fillStyle="#ffd23f"; ctx.shadowColor="#ffd23f"; ctx.shadowBlur=8;
@@ -529,13 +889,21 @@ function drawHud(){
     ctx.restore();
   }
 
+  if(combo>=3){
+    ctx.fillStyle="#ff5d73";
+    ctx.font="bold 13px Arial, sans-serif";
+    ctx.textAlign="right";
+    ctx.fillText("COMBO x"+combo, VW-12, 32);
+    ctx.textAlign="left";
+  }
+
   if(performance.now() < bannerUntil){
     ctx.fillStyle="rgba(0,0,0,0.55)";
-    ctx.fillRect(60,VH/2-40,VW-120,60);
-    ctx.fillStyle="white";
+    ctx.fillRect(50,VH/2-40,VW-100,60);
+    ctx.fillStyle= bossPending ? "#ff5d73" : "white";
     ctx.textAlign="center";
-    ctx.font="bold 20px Arial, sans-serif";
-    ctx.fillText("LEVEL " + level + " INCOMING", VW/2, VH/2-22);
+    ctx.font="bold 19px Arial, sans-serif";
+    ctx.fillText(bossPending ? "⚠ BOSS INCOMING ⚠" : "LEVEL " + level + " INCOMING", VW/2, VH/2-22);
     ctx.textAlign="left";
   }
   ctx.restore();
@@ -545,9 +913,12 @@ function render(dt){
   ctx.clearRect(0,0,VW,VH);
   drawStars(dt);
   drawParticles();
+  drawPowerups();
   drawEnemies();
+  drawBoss();
   drawBullets();
   drawPlayer();
+  drawFloatingTexts();
   drawHud();
 }
 

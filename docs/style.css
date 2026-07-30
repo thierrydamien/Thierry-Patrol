@@ -201,7 +201,44 @@ html, body {
   font-size: 13px;
 }
 .icon-btn.top-left { top:10px; left:10px; }
+.icon-btn.top-right { top:10px; right:10px; }
 .icon-btn.hidden { display:none; }
+
+.achievements-list { width:100%; margin-bottom: 10px; }
+.ach-row {
+  display:flex; align-items:center; gap:12px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  opacity: 0.45;
+}
+.ach-row.unlocked { opacity: 1; border-color: rgba(255,210,63,0.5); }
+.ach-icon { font-size: 22px; }
+.ach-name { font-weight:700; font-size:14px; }
+.ach-desc { font-size:11px; color: rgba(255,255,255,0.6); }
+
+.achievement-toast {
+  position: fixed;
+  top: 16px; left:50%;
+  transform: translateX(-50%) translateY(-30px);
+  display:flex; align-items:center; gap:12px;
+  background: linear-gradient(135deg, #2a2660, #1a1840);
+  border: 1px solid rgba(255,210,63,0.6);
+  border-radius: 14px;
+  padding: 12px 18px;
+  z-index: 50;
+  opacity:0;
+  transition: opacity .25s ease, transform .25s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  pointer-events:none;
+}
+.achievement-toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+.achievement-toast.hidden { display:none; }
+.at-icon { font-size: 26px; }
+.at-label { font-size: 10px; letter-spacing:2px; color: rgba(255,255,255,0.6); }
+.at-name { font-weight:800; color: var(--accent); font-size:15px; }
 
 .overlay {
   position:absolute; inset:0;
