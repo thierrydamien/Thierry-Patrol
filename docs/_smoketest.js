@@ -85,7 +85,7 @@ async function run() {
 
   doc.getElementById("achievementsBtn").dispatchEvent(new window.MouseEvent("click", {bubbles:true}));
   check("achievements screen active", doc.getElementById("screen-achievements").classList.contains("active"));
-  check("achievements list has all 10 defined", doc.querySelectorAll("#achievementsList .ach-row").length === 10);
+  check("achievements list has all 13 defined", doc.querySelectorAll("#achievementsList .ach-row").length === 13);
   doc.getElementById("achievementsBackBtn").dispatchEvent(new window.MouseEvent("click", {bubbles:true}));
 
   doc.getElementById("leaderboardBtn").dispatchEvent(new window.MouseEvent("click", {bubbles:true}));

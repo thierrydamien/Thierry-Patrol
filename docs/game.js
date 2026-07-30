@@ -16,8 +16,8 @@ const SHOP_ITEMS = [
 ];
 
 const LEVELS = [
-  { speed:70,  wave:2, spawnMs:1800, kills:15, bonus:50  },
-  { speed:100, wave:3, spawnMs:1500, kills:20, bonus:75  },
+  { speed:65,  wave:2, spawnMs:2000, kills:12, bonus:50  },
+  { speed:95,  wave:3, spawnMs:1650, kills:18, bonus:75  },
   { speed:130, wave:3, spawnMs:1250, kills:25, bonus:100 },
   { speed:170, wave:4, spawnMs:1050, kills:30, bonus:150 },
   { speed:210, wave:4, spawnMs:900,  kills:40, bonus:250 },
@@ -49,6 +49,9 @@ const ACHIEVEMENTS = [
   { id:"century",       icon:"💯", name:"Century Club",    desc:"Destroy 100 enemies (lifetime)",  check:p=>p.totalKills>=100 },
   { id:"high_roller",   icon:"🤑", name:"High Roller",     desc:"Earn $1000 (lifetime)",           check:p=>p.lifetimeMoney>=1000 },
   { id:"unstoppable",   icon:"🌟", name:"Unstoppable",     desc:"Reach level 10",                  check:p=>p.maxLevel>=10 },
+  { id:"speed_runner",  icon:"⏱️", name:"Speed Runner",    desc:"Clear level 1 in under 25 seconds", check:p=>p.fastestLevel1!=null && p.fastestLevel1<=25 },
+  { id:"untouchable",   icon:"🧿", name:"Untouchable",     desc:"Clear a level without taking a hit", check:p=>p.untouchedLevelClears>=1 },
+  { id:"collector",     icon:"🎁", name:"Powered Up",      desc:"Collect 15 power-ups (lifetime)", check:p=>p.powerupsCollected>=15 },
 ];
 
 /* =========================================================
@@ -112,6 +115,7 @@ function loadProfile(name){
     money:0, hasSpread:false, hasRapid:false, hasShield:false, extraLives:0,
     highscore:0,
     totalKills:0, bossesDefeated:0, maxLevel:0, maxCombo:0, lifetimeMoney:0,
+    fastestLevel1:null, untouchedLevelClears:0, powerupsCollected:0,
     achievements:[],
   };
   const raw = localStorage.getItem(PROFILE_PREFIX+name);
@@ -380,31 +384,37 @@ window.addEventListener("pointermove", e => { if(dragActive) dragX = pointerToVi
 window.addEventListener("pointerup", () => { dragActive=false; });
 
 /* ---- Entity state ---- */
-let player, bullets, enemyBullets, enemies, particles, floatingTexts, powerups;
+let player, bullets, enemyBullets, enemies, particles, floatingTexts, powerups, trail;
+let shakeMag = 0, hitFlash = 0;
+function screenShake(amount){ shakeMag = Math.max(shakeMag, amount); }
 let level, killsInLevel, levelConfig, bannerUntil;
 let sessionMoney, score, sessionKills;
 let spawnTimer;
 let combo, comboTimer;
 let boss, bossPending;
 let powerupTimer;
+let runStartTime, tookDamageThisLevel;
 let gameState = "playing"; // playing | paused | over
 
 function startRun(){
   const p = activeProfile;
   player = {
-    x: VW/2, y: VH-60, targetX: VW/2, r:11,
+    x: VW/2, y: VH-60, targetX: VW/2, r:9,
     speed: 320, lives: 3+p.extraLives, alive:true,
-    invuln: 1.0, shield: p.hasShield, cooldown:0,
+    invuln: 1.6, shield: p.hasShield, cooldown:0,
     fireInterval: p.hasRapid ? 0.16 : 0.30,
     hasSpread: p.hasSpread, color: p.shipColor,
-    tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0,
+    tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0, tempHomingUntil:0,
   };
-  bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[];
+  bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[]; trail=[];
+  shakeMag=0; hitFlash=0;
   level=1; killsInLevel=0; levelConfig=getLevel(level); bannerUntil=0;
   sessionMoney=0; score=0; sessionKills=0; spawnTimer=0;
   combo=0; comboTimer=0;
   boss=null; bossPending=false;
   powerupTimer = 10 + Math.random()*6;
+  runStartTime = performance.now();
+  tookDamageThisLevel = false;
   gameState="playing";
   document.getElementById("pauseBtn").classList.remove("hidden");
   document.getElementById("muteBtn").classList.remove("hidden");
@@ -462,16 +472,19 @@ function makeEnemy(){
   const brute = level>=3 && Math.random()<0.25;
   const x = 24 + Math.random()*(VW-48);
   return {
-    x, y:-30, r: brute?15:11, hp: brute?2:1, maxhp: brute?2:1,
+    x, y:-30, r: brute?14:10, hp: brute?2:1, maxhp: brute?2:1,
     speed: levelConfig.speed * (brute?0.75:1) * (0.85+Math.random()*0.3),
     sway: Math.random()*Math.PI*2, brute,
   };
 }
 function makeBoss(){
   const hp = window.__SKYFORCE_TEST_EASY_BOSS__ ? 3 : (18 + level*7); // test-only hook, unused in real play
+  const bossIndex = level / BOSS_EVERY; // 1st, 2nd, 3rd boss encounter...
   return {
     x: VW/2, y:-70, targetY:74, hp, maxhp:hp,
     vx: 55 + level*3, shootTimer: 1.3, entering:true,
+    pattern: (bossIndex % 2 === 0) ? "aimed" : "spread",
+    aimStep: 0,
   };
 }
 
@@ -481,6 +494,7 @@ const POWERUP_TYPES = [
   { id:"shield", color:"#2ecc71", label:"SHIELD" },
   { id:"score2x",color:"#ff66b3", label:"SCORE x2" },
   { id:"bomb",   color:"#ff5d73", label:"BOMB" },
+  { id:"homing", color:"#22d3ee", label:"HOMING SHOT" },
 ];
 function spawnFloatingPowerup(){
   const type = POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
@@ -489,13 +503,18 @@ function spawnFloatingPowerup(){
 function applyPowerup(type){
   playPowerup();
   addFloatingText(player.x, player.y-26, type.label+"!", type.color, 15);
+  activeProfile.powerupsCollected = (activeProfile.powerupsCollected||0) + 1;
+  saveProfile(activeProfile);
+  checkAchievements();
   const now = performance.now();
   if(type.id==="rapid") player.tempRapidUntil = now + 8000;
   else if(type.id==="spread") player.tempSpreadUntil = now + 8000;
   else if(type.id==="shield") player.shield = true;
   else if(type.id==="score2x") player.tempScoreUntil = now + 8000;
+  else if(type.id==="homing") player.tempHomingUntil = now + 8000;
   else if(type.id==="bomb"){
     playBomb();
+    screenShake(14);
     enemies.forEach(e=>{
       score += e.brute?12:5;
       sessionMoney += e.brute?4:2;
@@ -512,12 +531,13 @@ function fireBullets(){
   const vy=-460;
   const now = performance.now();
   const spreadActive = player.hasSpread || now < player.tempSpreadUntil;
+  const homing = now < player.tempHomingUntil;
   if(spreadActive){
-    bullets.push({x:player.x,y:player.y-10,vx:-110,vy,r:3});
-    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3});
-    bullets.push({x:player.x,y:player.y-10,vx:110,vy,r:3});
+    bullets.push({x:player.x,y:player.y-10,vx:-110,vy,r:3,homing});
+    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3,homing});
+    bullets.push({x:player.x,y:player.y-10,vx:110,vy,r:3,homing});
   } else {
-    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3});
+    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3,homing});
   }
   playShoot();
 }
@@ -534,6 +554,13 @@ function update(dt){
   player.targetX = clamp(player.targetX, 18, VW-18);
   player.x += (player.targetX-player.x)*Math.min(1, dt*14);
 
+  trail.push({x:player.x, y:player.y+10, life:0, maxLife:0.35});
+  trail.forEach(t=> t.life += dt);
+  trail = trail.filter(t=> t.life < t.maxLife);
+
+  shakeMag = Math.max(0, shakeMag - dt*40);
+  hitFlash = Math.max(0, hitFlash - dt*2.2);
+
   if(player.invuln>0) player.invuln -= dt;
 
   const now = performance.now();
@@ -542,7 +569,18 @@ function update(dt){
   player.cooldown -= dt;
   if(player.cooldown<=0){ fireBullets(); player.cooldown = interval; }
 
-  bullets.forEach(b=>{ b.x+=b.vx*dt; b.y+=b.vy*dt; });
+  bullets.forEach(b=>{
+    if(b.homing){
+      let target = null, bestD = Infinity;
+      enemies.forEach(e=>{ const d=dist2(b.x,b.y,e.x,e.y); if(d<bestD){ bestD=d; target=e; } });
+      if(boss){ const d=dist2(b.x,b.y,boss.x,boss.y); if(d<bestD){ bestD=d; target=boss; } }
+      if(target){
+        const desired = clamp((target.x-b.x)*3, -260, 260);
+        b.vx += clamp(desired-b.vx, -500*dt, 500*dt);
+      }
+    }
+    b.x+=b.vx*dt; b.y+=b.vy*dt;
+  });
   bullets = bullets.filter(b=> b.y>-20 && b.x>-20 && b.x<VW+20);
   enemyBullets.forEach(b=>{ b.x+=b.vx*dt; b.y+=b.vy*dt; });
   enemyBullets = enemyBullets.filter(b=> b.y<VH+20);
@@ -581,8 +619,16 @@ function update(dt){
       if(boss.x < 46 || boss.x > VW-46) boss.vx *= -1;
       boss.shootTimer -= dt;
       if(boss.shootTimer<=0){
-        [-90,0,90].forEach(vx => enemyBullets.push({x:boss.x, y:boss.y+26, vx, vy:210, r:4}));
-        boss.shootTimer = 1.3;
+        if(boss.pattern === "aimed"){
+          const dx = player.x - boss.x, dy = Math.max(60, player.y - boss.y);
+          const vy = 220, vx = clamp((dx/dy)*vy, -160, 160);
+          enemyBullets.push({x:boss.x, y:boss.y+26, vx, vy, r:4});
+          boss.aimStep++;
+          boss.shootTimer = boss.aimStep % 3 === 0 ? 1.1 : 0.28;
+        } else {
+          [-90,0,90].forEach(vx => enemyBullets.push({x:boss.x, y:boss.y+26, vx, vy:210, r:4}));
+          boss.shootTimer = 1.3;
+        }
       }
     }
   }
@@ -610,16 +656,20 @@ function update(dt){
 
 function damagePlayer(){
   if(window.__SKYFORCE_TEST_INVINCIBLE__) return; // test-only hook, unused in real play
+  tookDamageThisLevel = true;
   if(player.shield){
     player.shield=false;
     player.invuln=1.0;
     spawnParticles(player.x,player.y,14,player.color);
+    screenShake(6);
     playHit();
     return;
   }
   player.lives--;
-  player.invuln=1.5;
+  player.invuln=1.8;
   spawnParticles(player.x,player.y,16,player.color);
+  screenShake(10);
+  hitFlash = 1;
   playHit();
 }
 
@@ -637,7 +687,8 @@ function registerKill(x, y, baseScore, baseMoney, isBrute){
   killsInLevel++;
   activeProfile.totalKills++;
   activeProfile.lifetimeMoney += gainedMoney;
-  spawnParticles(x,y,isBrute?16:12,"#ffd23f");
+  spawnParticles(x,y,isBrute?18:13,"#ffd23f");
+  particles.push({x,y,vx:0,vy:0,life:0,maxLife:0.15,color:"#ffffff",flash:true});
   if(combo>0 && combo%3===0){
     addFloatingText(x,y-10,"COMBO x"+combo+"!","#ffd23f",16);
     playCombo(combo);
@@ -671,6 +722,7 @@ function checkCollisions(){
         saveProfile(activeProfile);
         checkAchievements();
         playBossDefeat();
+        screenShake(18);
         spawnParticles(boss.x,boss.y,40,"#ff5d73");
         addFloatingText(boss.x, boss.y, "BOSS DOWN!", "#ff5d73", 20);
         boss=null;
@@ -719,6 +771,17 @@ function checkCollisions(){
 
 function advanceLevel(bonus){
   sessionMoney += bonus;
+  const wasLevel1 = (level === 1);
+  if(!tookDamageThisLevel){
+    activeProfile.untouchedLevelClears = (activeProfile.untouchedLevelClears||0) + 1;
+  }
+  if(wasLevel1){
+    const elapsedSec = (performance.now() - runStartTime) / 1000;
+    if(activeProfile.fastestLevel1 == null || elapsedSec < activeProfile.fastestLevel1){
+      activeProfile.fastestLevel1 = Math.round(elapsedSec*10)/10;
+    }
+  }
+  tookDamageThisLevel = false;
   level++;
   killsInLevel=0;
   levelConfig = getLevel(level);
@@ -726,9 +789,9 @@ function advanceLevel(bonus){
   enemyBullets = [];
   if(level > activeProfile.maxLevel){
     activeProfile.maxLevel = level;
-    saveProfile(activeProfile);
-    checkAchievements();
   }
+  saveProfile(activeProfile);
+  checkAchievements();
   if(isBossLevel(level)){
     bannerUntil = performance.now() + 2200;
     bossPending = true;
@@ -793,10 +856,11 @@ function drawEnemies(){
 }
 function drawBoss(){
   if(!boss) return;
+  const bossColor = boss.pattern === "aimed" ? "#a855f7" : "#ff2d55";
   ctx.save();
   ctx.translate(boss.x,boss.y);
-  ctx.fillStyle = "#ff2d55";
-  ctx.shadowColor = "#ff2d55"; ctx.shadowBlur = 18;
+  ctx.fillStyle = bossColor;
+  ctx.shadowColor = bossColor; ctx.shadowBlur = 18;
   ctx.beginPath();
   const pts=8;
   for(let i=0;i<pts;i++){
@@ -816,7 +880,7 @@ function drawBoss(){
   const w=140, pct=Math.max(0,boss.hp/boss.maxhp);
   ctx.fillStyle="rgba(0,0,0,0.5)";
   ctx.fillRect(VW/2-w/2, boss.y-52, w, 8);
-  ctx.fillStyle="#ff2d55";
+  ctx.fillStyle=bossColor;
   ctx.fillRect(VW/2-w/2, boss.y-52, w*pct, 8);
   ctx.restore();
 }
@@ -831,7 +895,7 @@ function drawPowerups(){
     ctx.fillStyle="#0a0920";
     ctx.font="bold 12px Arial, sans-serif";
     ctx.textAlign="center"; ctx.textBaseline="middle";
-    const glyph = {rapid:"⚡",spread:"✦",shield:"🛡",score2x:"x2",bomb:"💣"}[p.type.id] || "?";
+    const glyph = {rapid:"⚡",spread:"✦",shield:"🛡",score2x:"x2",bomb:"💣",homing:"◎"}[p.type.id] || "?";
     ctx.fillText(glyph,0,1);
     ctx.restore();
   });
@@ -859,9 +923,25 @@ function drawBullets(){
 function drawParticles(){
   particles.forEach(p=>{
     const t=1-p.life/p.maxLife;
-    ctx.fillStyle = p.color;
     ctx.globalAlpha = t;
-    ctx.fillRect(p.x-2,p.y-2,4,4);
+    if(p.flash){
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y, 4+(1-t)*16, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x-2,p.y-2,4,4);
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+function drawTrail(){
+  trail.forEach(t=>{
+    const a = 1 - t.life/t.maxLife;
+    ctx.globalAlpha = a*0.35;
+    ctx.fillStyle = player.color;
+    ctx.fillRect(t.x-2, t.y, 4, 8);
     ctx.globalAlpha = 1;
   });
 }
@@ -910,8 +990,13 @@ function drawHud(){
 }
 
 function render(dt){
-  ctx.clearRect(0,0,VW,VH);
+  ctx.save();
+  if(shakeMag > 0.3){
+    ctx.translate((Math.random()-0.5)*shakeMag, (Math.random()-0.5)*shakeMag);
+  }
+  ctx.clearRect(-20,-20,VW+40,VH+40);
   drawStars(dt);
+  drawTrail();
   drawParticles();
   drawPowerups();
   drawEnemies();
@@ -920,6 +1005,11 @@ function render(dt){
   drawPlayer();
   drawFloatingTexts();
   drawHud();
+  if(hitFlash > 0.01){
+    ctx.fillStyle = `rgba(255,40,60,${hitFlash*0.35})`;
+    ctx.fillRect(0,0,VW,VH);
+  }
+  ctx.restore();
 }
 
 let lastTime = performance.now();
