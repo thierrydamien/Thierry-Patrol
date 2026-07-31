@@ -49,6 +49,30 @@ for — both directly blocked the weapon feature from working)
    drawn inside the enemy loop). That would've made the HUD vanish during
    the level-clear banner, so it's now drawn every frame regardless.
 
+## Sound, combos, and boss fights (Java desktop version, later pass)
+- `Game_Audio/SoundEngine.java`: procedurally synthesized sound effects
+  (no audio files), same palette as the web version. Mute toggle on the
+  main menu.
+- Combo scoring: chaining kills within 1.3s scales score/money up to x3,
+  shown in the HUD.
+- `Game_Boss/Boss.java` + `Game_Bullet/EnemyBullet.java`: a boss appears
+  every 3rd level, alternating between a spread volley and an aimed burst
+  that tracks the player, with its own health bar. This required adding
+  enemy projectiles to the Java version for the first time (previously
+  only contact damage existed).
+- Found and fixed a third pre-existing bug while wiring this up:
+  `drawHud()`'s highscore query dereferenced `SignIn.dbConn` with no
+  null-check, which would have crashed the game every single frame if
+  the DB connection ever dropped mid-session. Now guarded.
+- **Verified with a real integration test**, not just a compile check:
+  a headless Xvfb display + the actual unmodified game code ran both
+  boss encounters end-to-end (spread pattern at level 3, aimed pattern
+  at level 6) — enemy bullets fired, boss HP dropped on hits, both
+  bosses defeated, level progressed correctly past each. This was a
+  one-off verification harness, not checked into the repo (it needs a
+  non-headless JDK + Xvfb + reflection into private fields to drive a
+  non-dodging test bot) — happy to package a reusable version if useful.
+
 Everything compiles cleanly (checked with `javac` here). I can't run the
 Swing GUI or hit a live MySQL instance from this sandbox, so please play-test
 locally and tell me what needs rebalancing (costs, level pacing, kill

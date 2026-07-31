@@ -1,7 +1,9 @@
 package Game_Manager;
 
 import Game_Audio.SoundEngine;
+import Game_Boss.Boss;
 import Game_Bullet.Bullet;
+import Game_Bullet.EnemyBullet;
 import static Game_Display.Display.frame;
 import Game_Enemy.Enemy;
 import Game_Level.GameLevel;
@@ -36,6 +38,12 @@ public class GameManager {
     private GameLevel levelConfig;
     private long bannerUntil; // System.currentTimeMillis() timestamp; banner shows while now < this
 
+    // --- Boss state ---
+    private static final int BOSS_EVERY = 3; // a boss appears on levels 3, 6, 9...
+    private Boss boss;
+    private boolean bossPending; // banner is showing, boss spawns once it ends
+    private ArrayList<EnemyBullet> enemyBullets;
+
     // --- Economy state ---
     private int sessionMoney;  // earned this run, not yet persisted to the DB
     private int walletMoney;   // persisted total, loaded at run start
@@ -64,6 +72,9 @@ public class GameManager {
         player.init();
         bullet = new ArrayList <Bullet>();
         enemies = new ArrayList <Enemy>();
+        enemyBullets = new ArrayList <EnemyBullet>();
+        boss = null;
+        bossPending = false;
 	current = System.nanoTime();
         health = player.getHealth();
         score=0;
@@ -80,13 +91,31 @@ public class GameManager {
         for (int i = 0; i<bullet.size();i++){
             bullet.get(i).tick();
         }
+        for (int i = 0; i<enemyBullets.size();i++){
+            enemyBullets.get(i).tick();
+        }
 
         if(combo > 0 && System.currentTimeMillis() > comboExpiresAt){
             combo = 0; // streak lapsed
         }
 
         boolean showingBanner = System.currentTimeMillis() < bannerUntil;
-        if(!showingBanner){
+
+        if(bossPending && !showingBanner){
+            int bossEncounterNumber = level / BOSS_EVERY;
+            boss = new Boss(level, bossEncounterNumber);
+            bossPending = false;
+        }
+
+        if(boss != null){
+            boss.tick();
+            if(boss.readyToShoot()){
+                fireBossShot();
+                boss.scheduleNextShot();
+            }
+        }
+
+        if(!showingBanner && boss == null && !bossPending){
             long breaks = (System.nanoTime()-current)/1000000;
             if(breaks > levelConfig.spawnDelayMs){
                 for(int i=0; i<levelConfig.enemiesPerWave; i++){
@@ -104,6 +133,21 @@ public class GameManager {
             enemies.get(i).tick();
         }
     }
+
+    /** Fires one shot for the current boss according to its pattern; called from tick() when the boss is ready. */
+    private void fireBossShot(){
+        int bx = boss.getX(), by = boss.getY()+20;
+        if("aimed".equals(boss.getPattern())){
+            int px = player.getX()+25;
+            int dx = px - bx;
+            int vx = Math.max(-6, Math.min(6, dx/18));
+            enemyBullets.add(new EnemyBullet(bx, by, vx, 7));
+        } else {
+            enemyBullets.add(new EnemyBullet(bx, by, -4, 6));
+            enemyBullets.add(new EnemyBullet(bx, by, 0, 7));
+            enemyBullets.add(new EnemyBullet(bx, by, 4, 6));
+        }
+    }
    
     public void render(Graphics g){
     	player.render(g);
@@ -116,6 +160,17 @@ public class GameManager {
                     i--;
             }
         }
+
+        for (int i = 0; i<enemyBullets.size();i++){
+            enemyBullets.get(i).render(g);
+        }
+        for (int i = 0; i<enemyBullets.size();i++){
+            if(enemyBullets.get(i).getY() >= 640){
+                enemyBullets.remove(i);
+                i--;
+            }
+        }
+
         for(int i=0; i<enemies.size(); i++){
             if(!(enemies.get(i).getX()<=50 || enemies.get(i).getX()>=450-45 || enemies.get(i).getY()>=456)){
                 if(enemies.get(i).getY()>=-45){
@@ -123,6 +178,10 @@ public class GameManager {
                 }
             }
 	}
+
+        if(boss != null){
+            boss.render(g);
+        }
         
         for (int i=0;i<enemies.size();i++){
             int ex = enemies.get(i).getX();
@@ -164,7 +223,51 @@ public class GameManager {
             }
         }
 
+        checkBossCollisions();
+
         drawHud(g);
+    }
+
+    /** Player bullets vs boss, enemy bullets vs player, and boss body vs player (contact damage). */
+    private void checkBossCollisions(){
+        int px = player.getX(), py = player.getY();
+
+        if(boss != null){
+            for(int j=0;j<bullet.size();j++){
+                int bx = bullet.get(j).getX();
+                int by = bullet.get(j).getY();
+                if(Math.abs(bx-boss.getX())<38 && Math.abs(by-boss.getY())<28){
+                    bullet.remove(j);
+                    j--;
+                    boss.hit();
+                    SoundEngine.playExplosion(false);
+                    if(boss.isDead()){
+                        score += 150;
+                        sessionMoney += 60;
+                        SoundEngine.playBossDefeat();
+                        boss = null;
+                        advanceLevel(0);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(boss != null && !boss.isEntering()){
+            if(boss.getX()-40 < px+50 && boss.getX()+40 > px && boss.getY()-30 < py+50 && boss.getY()+30 > py){
+                damagePlayer();
+            }
+        }
+
+        for(int i=0;i<enemyBullets.size();i++){
+            int bx = enemyBullets.get(i).getX();
+            int by = enemyBullets.get(i).getY();
+            if(px < bx+8 && px+50>bx && py<by+8 && py+50>by){
+                enemyBullets.remove(i);
+                i--;
+                damagePlayer();
+            }
+        }
     }
 
     /** Applies a hit to the player, letting an active shield absorb it first. */
@@ -206,16 +309,34 @@ public class GameManager {
         }
     }
 
-    /** Advances to the next level once enough kills have been racked up, and shows a brief banner. */
-    private void checkLevelClear(){
-        if(killsInLevel >= levelConfig.killsToClear){
-            sessionMoney += levelConfig.clearBonus;
-            level++;
-            killsInLevel = 0;
-            levelConfig = GameLevel.get(level);
-            enemies.removeAll(enemies);
+    /** Advances to the next level (from a normal clear or a boss defeat) and shows a brief banner. */
+    private void advanceLevel(int bonus){
+        sessionMoney += bonus;
+        level++;
+        killsInLevel = 0;
+        levelConfig = GameLevel.get(level);
+        enemies.removeAll(enemies);
+        enemyBullets.removeAll(enemyBullets);
+        if(isBossLevel(level)){
+            bannerUntil = System.currentTimeMillis() + 2500;
+            bossPending = true;
+            SoundEngine.playBossAlert();
+        } else {
             bannerUntil = System.currentTimeMillis() + 1800;
+            bossPending = false;
             SoundEngine.playLevelClear();
+        }
+    }
+
+    private boolean isBossLevel(int lvl){
+        return lvl % BOSS_EVERY == 0;
+    }
+
+    /** Checks whether enough kills have been racked up to clear the current (non-boss) level. */
+    private void checkLevelClear(){
+        if(boss != null || bossPending) return; // during a boss encounter, only defeating it advances the level
+        if(killsInLevel >= levelConfig.killsToClear){
+            advanceLevel(levelConfig.clearBonus);
         }
     }
 
@@ -240,10 +361,12 @@ public class GameManager {
         }
 
         try {
-            ResultSet query1 = SignIn.dbConn.createStatement().executeQuery("SELECT username, score FROM highscore ORDER BY score DESC LIMIT 1");
-            while(query1.next()){
-                username=query1.getString("username");    
-                hscore = query1.getInt("score");
+            if(SignIn.dbConn != null){
+                ResultSet query1 = SignIn.dbConn.createStatement().executeQuery("SELECT username, score FROM highscore ORDER BY score DESC LIMIT 1");
+                while(query1.next()){
+                    username=query1.getString("username");    
+                    hscore = query1.getInt("score");
+                }
             }
         } catch (SQLException ex1) {
             Logger.getLogger(GameManager.class.getName()).log(Level.SEVERE, null, ex1);
@@ -256,9 +379,9 @@ public class GameManager {
         if(System.currentTimeMillis() < bannerUntil){
             g.setColor(new Color(0,0,0,170));
             g.fillRect(60, 220, 340, 60);
-            g.setColor(Color.white);
+            g.setColor(bossPending ? new Color(255,93,115) : Color.white);
             g.setFont(new Font("arial", Font.BOLD, 22));
-            g.drawString("LEVEL " + level + " INCOMING", 90, 258);
+            g.drawString(bossPending ? "\u26A0 BOSS INCOMING \u26A0" : "LEVEL " + level + " INCOMING", 90, 258);
         }
     }
 
