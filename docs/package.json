@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "jsdom": "^30.0.1"
+  },
+  "dependencies": {
+    "canvas": "^3.2.3"
   }
 }

@@ -11,18 +11,16 @@
 <div id="app">
 
   <!-- ===================== PROFILE PICKER ===================== -->
-  <section id="screen-profiles" class="screen active">
+  <section id="screen-profiles" class="screen menu-bg active">
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
-    <h1 class="logo">SKY<span>FORCE</span></h1>
     <p class="tagline">Who's playing?</p>
     <div id="profileGrid" class="profile-grid"></div>
     <button id="addProfileBtn" class="ghost-btn">+ Add Player</button>
   </section>
 
   <!-- ===================== MAIN MENU ===================== -->
-  <section id="screen-menu" class="screen">
+  <section id="screen-menu" class="screen menu-bg">
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
-    <h1 class="logo small">SKY<span>FORCE</span></h1>
     <p id="greeting" class="greeting"></p>
     <div class="menu-buttons">
       <button id="playBtn" class="main-btn">▶ PLAY</button>
@@ -80,6 +78,7 @@
 
       <button id="pauseBtn" class="icon-btn top-left hidden">II</button>
       <button id="muteBtn" class="icon-btn top-right hidden">♪</button>
+      <button id="fireBtn" class="fire-btn hidden">FIRE</button>
 
       <div id="overlayPause" class="overlay hidden">
         <h2>PAUSED</h2>
@@ -97,6 +96,10 @@
     </div>
   </section>
 
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-text">LOADING...</div>
 </div>
 
 <div id="achievementToast" class="achievement-toast hidden">

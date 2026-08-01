@@ -14,9 +14,16 @@ const { window } = dom;
 
 // jsdom doesn't implement canvas 2D rendering (needs native deps) - stub it
 // so the DOM/logic under test can run without touching real rendering.
+// getImageData needs to return a real-shaped object (not undefined from a
+// generic no-op), since the sprite-tinting code path calls .data on it.
 window.HTMLCanvasElement.prototype.getContext = function(){
   const noop = () => {};
-  return new Proxy({}, { get: () => noop });
+  const ctxStub = new Proxy({}, { get: (target, prop) => {
+    if(prop === "getImageData") return (x,y,w,h) => ({ width:w, height:h, data: new Uint8ClampedArray(w*h*4) });
+    if(prop === "canvas") return { width:1, height:1 };
+    return noop;
+  }});
+  return ctxStub;
 };
 
 // Drive a bounded number of real animation frames with an advancing fake
@@ -32,6 +39,7 @@ window.requestAnimationFrame = (cb) => {
   if (frameCount >= FRAME_BUDGET) return 1;
   frameCount++;
   fakeNow += 16.7;
+  if (frameCount === 1) window.dispatchEvent(new window.KeyboardEvent("keydown", { key: " " })); // hold fire for the whole run
   if (Math.floor(fakeNow / 500) % 2 === 0) {
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowLeft" }));
     window.dispatchEvent(new window.KeyboardEvent("keyup", { key: "ArrowRight" }));
@@ -47,6 +55,14 @@ window.requestAnimationFrame = (cb) => {
 
 window.alert = (msg) => { window.__lastAlert = msg; };
 window.prompt = () => "TestKid";
+
+// The smoke test only needs onload to fire quickly, not real pixels - jsdom
+// has no real server to fetch assets/*.png from, and was hanging trying.
+class StubImage {
+  set src(v){ this._src = v; setTimeout(() => { if(this.onload) this.onload(); }, 0); }
+  get src(){ return this._src; }
+}
+window.Image = StubImage;
 
 let errors = [];
 window.addEventListener("error", (e) => errors.push(e.error || e.message));

@@ -89,8 +89,106 @@ function playAchievement(){ if(!actx||muted) return; [660,880,1108].forEach((f,i
 function playGameOver(){ if(!actx||muted) return; [392,330,220].forEach((f,i)=>setTimeout(()=>tone(f,0.3,"sawtooth",0.08),i*170)); }
 
 /* =========================================================
-   PROFILES (localStorage)
+   REAL GAME ART (same source files as the Java version, same crop
+   rectangles as Game_Graphics/loadImage.java's crop()) - not invented
+   vector shapes. Ship color tinting uses the same hue-preserving
+   technique as Game_Graphics/ImageTint.java.
    ========================================================= */
+const ASSET_PATHS = {
+  ship: "assets/orange.png",
+  enemy: "assets/red.png",
+  bulletImg: "assets/bullet.png",
+  playfieldBg: "assets/BackNew.jpg",
+  frameBg: "assets/BackBack.jpg",
+  menuBg: "assets/Menu.jpg",
+};
+const assets = {};
+let assetsReady = false;
+
+function loadAssets(cb){
+  const keys = Object.keys(ASSET_PATHS);
+  let remaining = keys.length;
+  let allOk = true;
+  keys.forEach(key => {
+    const img = new Image();
+    img.onload = () => { if(--remaining === 0){ assetsReady = allOk; cb(); } };
+    img.onerror = () => { allOk = false; if(--remaining === 0){ assetsReady = allOk; cb(); } };
+    img.src = ASSET_PATHS[key];
+    assets[key] = img;
+  });
+}
+
+function hexToRgb(hex){
+  const v = parseInt(hex.replace("#",""), 16);
+  return { r: (v>>16)&255, g: (v>>8)&255, b: v&255 };
+}
+function rgbToHsb(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  let h=0;
+  if(d!==0){
+    if(max===r) h=((g-b)/d)%6;
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60; if(h<0) h+=360;
+  }
+  const s = max===0 ? 0 : d/max;
+  return { h, s, v: max };
+}
+function hsbToRgb(h,s,v){
+  const c=v*s, x=c*(1-Math.abs((h/60)%2-1)), m=v-c;
+  let r,g,b;
+  if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;} else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;} else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+  return { r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255) };
+}
+
+/** Recolors the ship sprite to a target hue while preserving its original shading (same technique as ImageTint.java). Cached per color. */
+const tintCache = {};
+function getTintedShip(hex){
+  if(tintCache[hex]) return tintCache[hex];
+  const img = assets.ship;
+  const off = document.createElement("canvas");
+  off.width = img.naturalWidth; off.height = img.naturalHeight;
+  const octx = off.getContext("2d");
+  octx.drawImage(img, 0, 0);
+  const imgData = octx.getImageData(0, 0, off.width, off.height);
+  const data = imgData.data;
+  const targetHsb = rgbToHsb(hexToRgb(hex).r, hexToRgb(hex).g, hexToRgb(hex).b);
+  for(let i=0;i<data.length;i+=4){
+    if(data[i+3] === 0) continue;
+    const hsb = rgbToHsb(data[i], data[i+1], data[i+2]);
+    const rgb = hsbToRgb(targetHsb.h, hsb.s, hsb.v);
+    data[i]=rgb.r; data[i+1]=rgb.g; data[i+2]=rgb.b;
+  }
+  octx.putImageData(imgData, 0, 0);
+  tintCache[hex] = off;
+  return off;
+}
+
+/** Recolors the enemy sprite (used for the boss's two pattern-color variants). */
+const enemyTintCache = {};
+function getTintedEnemy(hex){
+  if(enemyTintCache[hex]) return enemyTintCache[hex];
+  const img = assets.enemy;
+  const off = document.createElement("canvas");
+  off.width = img.naturalWidth; off.height = img.naturalHeight;
+  const octx = off.getContext("2d");
+  octx.drawImage(img, 0, 0);
+  const imgData = octx.getImageData(0, 0, off.width, off.height);
+  const data = imgData.data;
+  const targetHsb = rgbToHsb(hexToRgb(hex).r, hexToRgb(hex).g, hexToRgb(hex).b);
+  for(let i=0;i<data.length;i+=4){
+    if(data[i+3] === 0) continue;
+    const hsb = rgbToHsb(data[i], data[i+1], data[i+2]);
+    const rgb = hsbToRgb(targetHsb.h, hsb.s, hsb.v);
+    data[i]=rgb.r; data[i+1]=rgb.g; data[i+2]=rgb.b;
+  }
+  octx.putImageData(imgData, 0, 0);
+  enemyTintCache[hex] = off;
+  return off;
+}
+
 const INDEX_KEY = "skyforce_profiles";
 const PROFILE_PREFIX = "skyforce_profile_";
 
@@ -367,12 +465,17 @@ function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
 /* ---- Input ---- */
 const keys = {};
+let firing = false;
 window.addEventListener("keydown", e => {
   keys[e.key] = true;
+  if(e.key===" ") firing = true;
   if(e.key===" "||e.key==="ArrowUp"||e.key==="ArrowDown") e.preventDefault();
   if(e.key==="p"||e.key==="P"||e.key==="Escape") togglePause();
 });
-window.addEventListener("keyup", e => { keys[e.key]=false; });
+window.addEventListener("keyup", e => {
+  keys[e.key]=false;
+  if(e.key===" ") firing = false;
+});
 
 let dragActive=false, dragX=VW/2;
 function pointerToVirtualX(clientX){
@@ -382,6 +485,16 @@ function pointerToVirtualX(clientX){
 canvas.addEventListener("pointerdown", e => { dragActive=true; dragX=pointerToVirtualX(e.clientX); });
 window.addEventListener("pointermove", e => { if(dragActive) dragX = pointerToVirtualX(e.clientX); });
 window.addEventListener("pointerup", () => { dragActive=false; });
+
+const fireBtn = document.getElementById("fireBtn");
+if(fireBtn){
+  const startFiring = e => { firing = true; e.preventDefault(); };
+  const stopFiring = () => { firing = false; };
+  fireBtn.addEventListener("pointerdown", startFiring);
+  fireBtn.addEventListener("pointerup", stopFiring);
+  fireBtn.addEventListener("pointerleave", stopFiring);
+  fireBtn.addEventListener("pointercancel", stopFiring);
+}
 
 /* ---- Entity state ---- */
 let player, bullets, enemyBullets, enemies, particles, floatingTexts, powerups, trail;
@@ -417,6 +530,7 @@ function startRun(){
   tookDamageThisLevel = false;
   gameState="playing";
   document.getElementById("pauseBtn").classList.remove("hidden");
+  document.getElementById("fireBtn").classList.remove("hidden");
   document.getElementById("muteBtn").classList.remove("hidden");
   document.getElementById("muteBtn").textContent = muted ? "🔇" : "♪";
   document.getElementById("overlayPause").classList.add("hidden");
@@ -434,6 +548,7 @@ document.getElementById("quitBtn").addEventListener("click", () => {
   document.getElementById("overlayPause").classList.add("hidden");
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
+  document.getElementById("fireBtn").classList.add("hidden");
   showScreen("screen-menu");
 });
 document.getElementById("retryBtn").addEventListener("click", () => startRun());
@@ -456,6 +571,7 @@ function endRun(){
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
   document.getElementById("overlayOver").classList.remove("hidden");
+  document.getElementById("fireBtn").classList.add("hidden");
 }
 
 function addFloatingText(x,y,text,color,size){
@@ -567,7 +683,7 @@ function update(dt){
   let interval = player.fireInterval;
   if(now < player.tempRapidUntil) interval *= 0.55;
   player.cooldown -= dt;
-  if(player.cooldown<=0){ fireBullets(); player.cooldown = interval; }
+  if(firing && player.cooldown<=0){ fireBullets(); player.cooldown = interval; }
 
   bullets.forEach(b=>{
     if(b.homing){
@@ -811,78 +927,64 @@ function checkLevelClear(){
 }
 
 /* ---- Rendering ---- */
-const stars = [];
-for(let i=0;i<60;i++) stars.push({x:Math.random()*VW,y:Math.random()*VH,speed:30+Math.random()*70,size:Math.random()<0.2?2:1});
-
-function drawStars(dt){
-  ctx.save();
-  stars.forEach(s=>{
-    s.y += s.speed*dt;
-    if(s.y>VH){ s.y=-2; s.x=Math.random()*VW; }
-    ctx.fillStyle = `rgba(255,255,255,${s.size===2?0.5:0.22})`;
-    ctx.fillRect(s.x,s.y,s.size,s.size);
-  });
-  ctx.restore();
+function drawBackground(){
+  if(assetsReady) ctx.drawImage(assets.playfieldBg, 0, 0, VW, VH);
+  else { ctx.fillStyle="#05040f"; ctx.fillRect(0,0,VW,VH); }
 }
 function drawPlayer(){
   if(!player.alive) return;
   if(player.invuln>0 && Math.floor(player.invuln*10)%2===0) return;
-  ctx.save();
-  ctx.translate(player.x,player.y);
-  ctx.fillStyle = player.color;
-  ctx.shadowColor = player.color;
-  ctx.shadowBlur = 12;
-  ctx.beginPath();
-  ctx.moveTo(0,-16); ctx.lineTo(11,12); ctx.lineTo(4,7); ctx.lineTo(0,11); ctx.lineTo(-4,7); ctx.lineTo(-11,12);
-  ctx.closePath(); ctx.fill();
-  if(player.shield){
-    ctx.strokeStyle="rgba(120,200,255,0.8)";
-    ctx.lineWidth=2; ctx.shadowBlur=8;
-    ctx.beginPath(); ctx.arc(0,0,18,0,Math.PI*2); ctx.stroke();
+  const size = 46;
+  const sprite = assetsReady ? getTintedShip(player.color) : null;
+  if(sprite){
+    ctx.drawImage(sprite, player.x-size/2, player.y-size/2, size, size);
+  } else {
+    ctx.fillStyle = player.color;
+    ctx.beginPath(); ctx.arc(player.x, player.y, size/2, 0, Math.PI*2); ctx.fill();
   }
-  ctx.restore();
+  if(player.shield){
+    ctx.save();
+    ctx.strokeStyle="rgba(120,200,255,0.8)";
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(player.x, player.y, size*0.7, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
 }
 function drawEnemies(){
   enemies.forEach(e=>{
-    ctx.save();
-    ctx.translate(e.x,e.y);
-    ctx.fillStyle = e.brute ? "#ff5d73" : "#8b5cf6";
-    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur=10;
-    ctx.beginPath();
-    ctx.moveTo(0,e.r); ctx.lineTo(e.r,-e.r*0.6); ctx.lineTo(0,-e.r*0.1); ctx.lineTo(-e.r,-e.r*0.6);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    const size = e.brute ? 46 : 34;
+    if(assetsReady){
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(Math.PI); // enemy sprite faces the same way as player art; flip to face downward
+      ctx.drawImage(assets.enemy, -size/2, -size/2, size, size);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = e.brute ? "#ff5d73" : "#c0392b";
+      ctx.beginPath(); ctx.arc(e.x, e.y, size/2, 0, Math.PI*2); ctx.fill();
+    }
   });
 }
 function drawBoss(){
   if(!boss) return;
-  const bossColor = boss.pattern === "aimed" ? "#a855f7" : "#ff2d55";
-  ctx.save();
-  ctx.translate(boss.x,boss.y);
-  ctx.fillStyle = bossColor;
-  ctx.shadowColor = bossColor; ctx.shadowBlur = 18;
-  ctx.beginPath();
-  const pts=8;
-  for(let i=0;i<pts;i++){
-    const a=(Math.PI*2/pts)*i;
-    const rad = i%2===0 ? 34 : 22;
-    const px=Math.cos(a)*rad, py=Math.sin(a)*rad*0.75;
-    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  const size = 96;
+  const tintHex = boss.pattern === "aimed" ? "#a855f7" : "#ff2d55";
+  if(assetsReady){
+    ctx.save();
+    ctx.translate(boss.x, boss.y);
+    ctx.rotate(Math.PI);
+    ctx.drawImage(getTintedEnemy(tintHex), -size/2, -size/2, size, size);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = tintHex;
+    ctx.beginPath(); ctx.arc(boss.x, boss.y, size/2, 0, Math.PI*2); ctx.fill();
   }
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle="#ffd23f"; ctx.shadowBlur=6;
-  ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
-  ctx.restore();
 
-  // health bar
-  ctx.save();
-  ctx.shadowBlur=0;
   const w=140, pct=Math.max(0,boss.hp/boss.maxhp);
   ctx.fillStyle="rgba(0,0,0,0.5)";
-  ctx.fillRect(VW/2-w/2, boss.y-52, w, 8);
-  ctx.fillStyle=bossColor;
-  ctx.fillRect(VW/2-w/2, boss.y-52, w*pct, 8);
-  ctx.restore();
+  ctx.fillRect(VW/2-w/2, boss.y-64, w, 8);
+  ctx.fillStyle=tintHex;
+  ctx.fillRect(VW/2-w/2, boss.y-64, w*pct, 8);
 }
 function drawPowerups(){
   powerups.forEach(p=>{
@@ -890,12 +992,14 @@ function drawPowerups(){
     ctx.translate(p.x,p.y);
     ctx.rotate(p.angle);
     ctx.fillStyle = p.type.color;
-    ctx.shadowColor = p.type.color; ctx.shadowBlur=10;
-    ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0,0,11,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.rotate(-p.angle);
     ctx.fillStyle="#0a0920";
-    ctx.font="bold 12px Arial, sans-serif";
+    ctx.font="bold 11px Arial, sans-serif";
     ctx.textAlign="center"; ctx.textBaseline="middle";
-    const glyph = {rapid:"⚡",spread:"✦",shield:"🛡",score2x:"x2",bomb:"💣",homing:"◎"}[p.type.id] || "?";
+    const glyph = {rapid:"R",spread:"S",shield:"+",score2x:"x2",bomb:"B",homing:"H"}[p.type.id] || "?";
     ctx.fillText(glyph,0,1);
     ctx.restore();
   });
@@ -913,10 +1017,13 @@ function drawFloatingTexts(){
   });
 }
 function drawBullets(){
+  const bw=8, bh=22;
+  bullets.forEach(b=>{
+    if(assetsReady) ctx.drawImage(assets.bulletImg, b.x-bw/2, b.y-bh/2, bw, bh);
+    else { ctx.fillStyle="#ffd23f"; ctx.fillRect(b.x-2,b.y-6,4,10); }
+  });
   ctx.save();
-  ctx.fillStyle="#ffd23f"; ctx.shadowColor="#ffd23f"; ctx.shadowBlur=8;
-  bullets.forEach(b=> ctx.fillRect(b.x-2,b.y-6,4,10));
-  ctx.fillStyle="#ff5d73"; ctx.shadowColor="#ff5d73";
+  ctx.fillStyle="#ff5d73"; ctx.shadowColor="#ff5d73"; ctx.shadowBlur=6;
   enemyBullets.forEach(b=> ctx.fillRect(b.x-2,b.y-5,4,9));
   ctx.restore();
 }
@@ -939,7 +1046,7 @@ function drawParticles(){
 function drawTrail(){
   trail.forEach(t=>{
     const a = 1 - t.life/t.maxLife;
-    ctx.globalAlpha = a*0.35;
+    ctx.globalAlpha = a*0.3;
     ctx.fillStyle = player.color;
     ctx.fillRect(t.x-2, t.y, 4, 8);
     ctx.globalAlpha = 1;
@@ -995,7 +1102,7 @@ function render(dt){
     ctx.translate((Math.random()-0.5)*shakeMag, (Math.random()-0.5)*shakeMag);
   }
   ctx.clearRect(-20,-20,VW+40,VH+40);
-  drawStars(dt);
+  drawBackground();
   drawTrail();
   drawParticles();
   drawPowerups();
@@ -1027,5 +1134,6 @@ function loop(now){
 renderProfileGrid();
 resizeCanvas();
 requestAnimationFrame(loop);
+loadAssets(() => { document.body.classList.add("assets-ready"); });
 
 })();
