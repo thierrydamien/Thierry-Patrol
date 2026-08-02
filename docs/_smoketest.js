@@ -50,6 +50,14 @@ window.requestAnimationFrame = (cb) => {
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight" }));
     window.dispatchEvent(new window.KeyboardEvent("keyup", { key: "ArrowLeft" }));
   }
+  // ...and drift up and down too, so the free vertical movement is exercised.
+  if (Math.floor(fakeNow / 1700) % 2 === 0) {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "w" }));
+    window.dispatchEvent(new window.KeyboardEvent("keyup", { key: "s" }));
+  } else {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "s" }));
+    window.dispatchEvent(new window.KeyboardEvent("keyup", { key: "w" }));
+  }
   setImmediate(() => {
     try { cb(fakeNow); } catch (e) { errors.push(e); }
   });

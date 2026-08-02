@@ -21,10 +21,15 @@ device.
 ## Playing it
 Open `index.html` (or the hosted GitHub Pages URL once deployed). Pick
 your name on the "Who's playing?" screen, then Play / Armory / Championship.
-- **Desktop:** Arrow keys or A/D to move, **hold Space to fire** (matches
-  the real game — it's not automatic). **B** sets off a smart bomb.
-- **Touch:** drag anywhere on the game to steer, **hold the FIRE button**
-  (bottom-right) to shoot, tap 💣 (bottom-left) for a smart bomb.
+- **Desktop:** arrow keys or WASD to fly **in any direction**, **hold Space
+  to fire** (it's not automatic). **B** sets off a smart bomb.
+- **Touch:** drag anywhere on the game to fly the ship around (it rides
+  just above your finger), **hold the FIRE button** (bottom-right) to
+  shoot, tap 💣 (bottom-left) for a smart bomb.
+- **Most enemies shoot back**, firing straight down as they descend; on
+  the harder tiers a share of them lead their shots at you instead (those
+  are tinted purple). Only flying into an enemy or being hit costs a life
+  — anything that gets past you just leaves the screen.
 - A boss shows up every 3rd level (3, 6, 9...) with its own health bar.
 - Chain kills quickly for a combo multiplier on score/money.
 - Power-ups occasionally drift down mid-level — fly through to grab a
@@ -36,17 +41,17 @@ your name on the "Who's playing?" screen, then Play / Armory / Championship.
 
 ## Difficulty tiers
 Pressing PLAY asks which mission you want. Harder tiers send faster,
-armoured enemies — and from ACE upward, some enemies shoot back (those
-are tinted purple) — but they pay out far more money, so a run on a hard
-tier funds a lot of Armory levels.
+armoured enemies that shoot more often — and from ACE upward, a share of
+them aim at you instead of firing straight down — but they pay out far
+more money, so a run on a hard tier funds a lot of Armory levels.
 
-| Tier | Enemy speed | Armour | Shooters | Pays | Unlocked by |
-|---|---|---|---|---|---|
-| ROOKIE | 0.7x | — | — | 0.7x | always (starts you with a spare life) |
-| PILOT | 1x | — | — | 1x | always |
-| ACE | 1.28x | +1 HP | 12% | 1.7x | reach level 4 on PILOT |
-| VETERAN | 1.55x | +2 HP | 22% | 2.6x | reach level 5 on ACE |
-| NIGHTMARE | 1.9x | +3 HP | 32% | 4x | reach level 6 on VETERAN |
+| Tier | Enemy speed | Armour | Aimed shots | Rate of fire | Pays | Unlocked by |
+|---|---|---|---|---|---|---|
+| ROOKIE | 0.7x | — | — | sparse | 0.7x | always (starts you with a spare life) |
+| PILOT | 1x | — | — | 0.8x | 1x | always |
+| ACE | 1.28x | +1 HP | 20% | 1x | 1.7x | reach level 4 on PILOT |
+| VETERAN | 1.55x | +2 HP | 35% | 1.2x | 2.6x | reach level 5 on ACE |
+| NIGHTMARE | 1.9x | +3 HP | 50% | 1.4x | 4x | reach level 6 on VETERAN |
 
 The screen shows your gear level and suggests a tier to match it. The
 loop is deliberate: the tier that's brutal today becomes comfortable once

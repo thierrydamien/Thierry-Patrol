@@ -6,6 +6,10 @@
    ========================================================= */
 const VW = 390, VH = 620;
 
+// The ship can fly anywhere in the playfield, but not so high that it sits on
+// top of the spawn line (or behind the HUD) - this is the ceiling it stops at.
+const PLAY_TOP = 96;
+
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
 /* ---------------------------------------------------------
@@ -79,25 +83,30 @@ function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; 
    in turn make that tier comfortable. The top three unlock by proving
    yourself on the tier below.
    --------------------------------------------------------- */
+// `aimed` is the share of shooting enemies that lead their shots at you rather
+// than firing straight down; `fireRate` scales the gap between their shots
+// (below 1 = they shoot more often).
 const DIFFICULTIES = [
   { id:"rookie", name:"ROOKIE", tag:"Easy", color:"#2ecc71",
-    blurb:"Slow enemies, a free extra life. Learn the ropes.",
-    speed:0.70, spawn:1.40, hpBonus:0, bruteChance:0.5, bossHp:0.65, pay:0.7, shooter:0, bonusLives:1, unlock:null },
+    blurb:"Slow enemies, sparse fire, a free extra life. Learn the ropes.",
+    speed:0.70, spawn:1.40, hpBonus:0, bruteChance:0.5, bossHp:0.65, pay:0.7,
+    aimed:0, fireRate:1.6, bonusLives:1, unlock:null },
   { id:"pilot", name:"PILOT", tag:"Normal", color:"#3399ff",
     blurb:"The standard mission. Balanced pay.",
-    speed:1.00, spawn:1.00, hpBonus:0, bruteChance:1.0, bossHp:1.00, pay:1.0, shooter:0, bonusLives:0, unlock:null },
+    speed:1.00, spawn:1.00, hpBonus:0, bruteChance:1.0, bossHp:1.00, pay:1.0,
+    aimed:0, fireRate:1.2, bonusLives:0, unlock:null },
   { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
-    blurb:"Armoured enemies, and some of them shoot back. Pays 1.7x.",
-    speed:1.28, spawn:0.78, hpBonus:1, bruteChance:1.3, bossHp:1.45, pay:1.7, shooter:0.12,
-    bonusLives:0, unlock:{ diff:"pilot", level:4 } },
+    blurb:"Armoured enemies, and some of them aim at you. Pays 1.7x.",
+    speed:1.28, spawn:0.78, hpBonus:1, bruteChance:1.3, bossHp:1.45, pay:1.7,
+    aimed:0.20, fireRate:1.0, bonusLives:0, unlock:{ diff:"pilot", level:4 } },
   { id:"veteran", name:"VETERAN", tag:"Brutal", color:"#e74c3c",
-    blurb:"Heavy armour, swarms, lots of return fire. Pays 2.6x.",
-    speed:1.55, spawn:0.62, hpBonus:2, bruteChance:1.6, bossHp:1.90, pay:2.6, shooter:0.22,
-    bonusLives:0, unlock:{ diff:"ace", level:5 } },
+    blurb:"Heavy armour, swarms, lots of aimed return fire. Pays 2.6x.",
+    speed:1.55, spawn:0.62, hpBonus:2, bruteChance:1.6, bossHp:1.90, pay:2.6,
+    aimed:0.35, fireRate:0.85, bonusLives:0, unlock:{ diff:"ace", level:5 } },
   { id:"nightmare", name:"NIGHTMARE", tag:"Super Hard", color:"#9b59b6",
     blurb:"Everything at once. Only worth trying fully kitted out. Pays 4x.",
-    speed:1.90, spawn:0.50, hpBonus:3, bruteChance:2.0, bossHp:2.50, pay:4.0, shooter:0.32,
-    bonusLives:0, unlock:{ diff:"veteran", level:6 } },
+    speed:1.90, spawn:0.50, hpBonus:3, bruteChance:2.0, bossHp:2.50, pay:4.0,
+    aimed:0.50, fireRate:0.7, bonusLives:0, unlock:{ diff:"veteran", level:6 } },
 ];
 const DIFFICULTY_BY_ID = {};
 DIFFICULTIES.forEach(d => DIFFICULTY_BY_ID[d.id] = d);
@@ -335,16 +344,20 @@ function loadProfile(name){
 
 /**
  * Brings a save written before tiered upgrades / difficulties up to date.
- * The old flat booleans (hasSpread/hasRapid/hasShield/extraLives) become
- * level 1 of the matching upgrade, so nobody loses what they already bought.
+ * The old flat booleans (hasSpread/hasRapid/hasShield/extraLives) become the
+ * matching upgrade at the level that does what they used to do, so nobody
+ * loses what they already bought.
  */
 function migrateProfile(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.bestLevelByDiff) p.bestLevelByDiff = {};
   if(!p.bestScoreByDiff) p.bestScoreByDiff = {};
   if(!DIFFICULTY_BY_ID[p.difficulty]) p.difficulty = "pilot";
-  if(p.hasSpread && !p.upgrades.spread) p.upgrades.spread = 1;
-  if(p.hasRapid  && !p.upgrades.rapid)  p.upgrades.rapid  = 1;
+  // Granted at the level that reproduces what the old one-off purchase did,
+  // so nobody's ship gets weaker: old Spread was 3-way (= level 2) and old
+  // Rapid halved the fire interval (= level 4).
+  if(p.hasSpread && !p.upgrades.spread) p.upgrades.spread = 2;
+  if(p.hasRapid  && !p.upgrades.rapid)  p.upgrades.rapid  = 4;
   if(p.hasShield && !p.upgrades.shield) p.upgrades.shield = 1;
   if(p.extraLives > 0 && !p.upgrades.life) p.upgrades.life = Math.min(p.extraLives, UPGRADE_BY_ID.life.max);
   delete p.hasSpread; delete p.hasRapid; delete p.hasShield; delete p.extraLives;
@@ -668,14 +681,26 @@ window.addEventListener("keyup", e => {
   if(e.key===" ") firing = false;
 });
 
-let dragActive=false, dragX=VW/2;
-function pointerToVirtualX(clientX){
+// Touch steering: the ship follows your finger anywhere on the playfield,
+// lifted a little above it so your thumb isn't sitting on top of the ship.
+let dragActive=false, dragX=VW/2, dragY=VH-60;
+const TOUCH_LIFT = 34;
+function pointerToVirtual(clientX, clientY){
   const rect = canvas.getBoundingClientRect();
-  return clamp((clientX-rect.left)/rect.width*VW, 0, VW);
+  return {
+    x: clamp((clientX-rect.left)/rect.width*VW, 0, VW),
+    y: clamp((clientY-rect.top)/rect.height*VH - TOUCH_LIFT, 0, VH),
+  };
 }
-canvas.addEventListener("pointerdown", e => { dragActive=true; dragX=pointerToVirtualX(e.clientX); });
-window.addEventListener("pointermove", e => { if(dragActive) dragX = pointerToVirtualX(e.clientX); });
-window.addEventListener("pointerup", () => { dragActive=false; });
+function setDrag(e){ const p = pointerToVirtual(e.clientX, e.clientY); dragX = p.x; dragY = p.y; }
+// Track which pointer is steering, so letting go of the FIRE button with the
+// other thumb doesn't drop your steering finger.
+let dragPointerId = null;
+canvas.addEventListener("pointerdown", e => { dragActive=true; dragPointerId=e.pointerId; setDrag(e); });
+window.addEventListener("pointermove", e => { if(dragActive && e.pointerId===dragPointerId) setDrag(e); });
+function endDrag(e){ if(e.pointerId===dragPointerId){ dragActive=false; dragPointerId=null; } }
+window.addEventListener("pointerup", endDrag);
+window.addEventListener("pointercancel", endDrag);
 
 const fireBtn = document.getElementById("fireBtn");
 if(fireBtn){
@@ -706,7 +731,7 @@ function startRun(){
   difficulty = DIFFICULTY_BY_ID[pendingDifficulty] || DIFFICULTY_BY_ID.pilot;
   const lv = id => upgLevel(p, id);
   player = {
-    x: VW/2, y: VH-60, targetX: VW/2, r:9,
+    x: VW/2, y: VH-60, targetX: VW/2, targetY: VH-60, r:9,
     speed: 320 * (1 + lv("thrusters")*0.15),
     lives: 3 + lv("life") + difficulty.bonusLives,
     alive:true,
@@ -722,6 +747,7 @@ function startRun(){
     color: p.shipColor,
     tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0, tempHomingUntil:0,
   };
+  dragActive=false; dragX=VW/2; dragY=VH-60; // don't inherit last run's finger position
   bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[]; trail=[];
   shakeMag=0; hitFlash=0;
   level=1; killsInLevel=0; levelConfig=getLevel(level); bannerUntil=0;
@@ -822,12 +848,15 @@ function makeEnemy(){
   // Tougher tiers armour everything up; deep levels add a little more on top.
   // Plasma Rounds is the answer to this — damage scales the same way HP does.
   const hp = (brute?2:1) + difficulty.hpBonus + Math.floor(level/6);
-  const shooter = !brute && level>=2 && Math.random() < difficulty.shooter;
+  // Most enemies shoot back, firing straight down. On the harder tiers a share
+  // of them lead their shots at wherever you are instead (tinted purple).
+  const shooter = Math.random() < 0.7;
+  const aimed = shooter && Math.random() < difficulty.aimed;
   return {
     x, y:-30, r: brute?14:10, hp, maxhp: hp,
     speed: levelConfig.speed * difficulty.speed * (brute?0.75:1) * (0.85+Math.random()*0.3),
-    sway: Math.random()*Math.PI*2, brute, shooter,
-    shootTimer: 1.2 + Math.random()*1.6,
+    sway: Math.random()*Math.PI*2, brute, shooter, aimed,
+    shootTimer: (1.0 + Math.random()*2.2) * difficulty.fireRate,
   };
 }
 function makeBoss(){
@@ -909,14 +938,22 @@ function fireBullets(){
 function update(dt){
   if(!player.alive) return;
 
-  // movement
-  let dx=0;
+  // movement - free in both axes (arrows or WASD on a keyboard, drag on touch)
+  let dx=0, dy=0;
   if(keys["ArrowLeft"]||keys["a"]||keys["A"]) dx-=1;
   if(keys["ArrowRight"]||keys["d"]||keys["D"]) dx+=1;
-  if(dx!==0) player.targetX += dx*player.speed*dt;
-  if(dragActive) player.targetX = dragX;
+  if(keys["ArrowUp"]||keys["w"]||keys["W"]) dy-=1;
+  if(keys["ArrowDown"]||keys["s"]||keys["S"]) dy+=1;
+  if(dx!==0 || dy!==0){
+    const len = Math.hypot(dx,dy) || 1; // diagonals shouldn't be faster than straight lines
+    player.targetX += (dx/len)*player.speed*dt;
+    player.targetY += (dy/len)*player.speed*dt;
+  }
+  if(dragActive){ player.targetX = dragX; player.targetY = dragY; }
   player.targetX = clamp(player.targetX, 18, VW-18);
+  player.targetY = clamp(player.targetY, PLAY_TOP, VH-24);
   player.x += (player.targetX-player.x)*Math.min(1, dt*14);
+  player.y += (player.targetY-player.y)*Math.min(1, dt*14);
 
   trail.push({x:player.x, y:player.y+10, life:0, maxLife:0.35});
   trail.forEach(t=> t.life += dt);
@@ -972,14 +1009,18 @@ function update(dt){
   enemies.forEach(e=>{
     e.y += e.speed*dt;
     e.x += Math.sin(now/600 + e.sway)*20*dt;
-    // On the harder tiers some enemies shoot back on their way down.
-    if(e.shooter && e.y > 0 && e.y < VH*0.72){
+    // Enemies shoot on their way down: straight ahead normally, or led toward
+    // your ship if this one is an aimed shooter.
+    if(e.shooter && e.y > 0 && e.y < VH - 40){
       e.shootTimer -= dt;
       if(e.shootTimer <= 0){
-        const dx = player.x - e.x, dy = Math.max(60, player.y - e.y);
-        const vy = 200, vx = clamp((dx/dy)*vy, -110, 110);
-        enemyBullets.push({x:e.x, y:e.y+12, vx, vy, r:4});
-        e.shootTimer = 1.7 + Math.random()*1.2;
+        let vx = 0;
+        if(e.aimed){
+          const dx = player.x - e.x, dy = Math.max(60, player.y - e.y);
+          vx = clamp((dx/dy)*210, -110, 110);
+        }
+        enemyBullets.push({x:e.x, y:e.y+12, vx, vy:210, r:4});
+        e.shootTimer = (2.0 + Math.random()*2.0) * difficulty.fireRate;
       }
     }
   });
@@ -1125,11 +1166,15 @@ function checkCollisions(){
   bullets = bullets.filter(b=>!b.hit);
   enemies = enemies.filter(e=>!e.dead);
 
+  // Enemies that get past you simply leave — only flying into one, or being
+  // shot, costs a life.
+  enemies = enemies.filter(e => e.y <= VH+30);
+
   if(player.invuln<=0){
     for(const e of enemies){
-      if(e.y > VH+20 || dist2(e.x,e.y,player.x,player.y) < (e.r+player.r)*(e.r+player.r)){
+      if(dist2(e.x,e.y,player.x,player.y) < (e.r+player.r)*(e.r+player.r)){
         e.dead=true;
-        if(e.y<=VH+20) spawnParticles(e.x,e.y,10,"#ffd23f");
+        spawnParticles(e.x,e.y,10,"#ffd23f");
         damagePlayer();
         break;
       }
@@ -1148,8 +1193,6 @@ function checkCollisions(){
     if(boss && dist2(boss.x,boss.y,player.x,player.y) < (34+player.r)*(34+player.r)){
       damagePlayer();
     }
-  } else {
-    enemies = enemies.filter(e=> e.y <= VH+20);
   }
 
   for(const p of powerups){
@@ -1246,11 +1289,11 @@ function drawEnemies(){
       ctx.save();
       ctx.translate(e.x, e.y);
       ctx.rotate(Math.PI); // enemy sprite faces the same way as player art; flip to face downward
-      // Shooters are tinted so you can tell at a glance which ones fire back.
-      ctx.drawImage(e.shooter ? getTintedEnemy("#a855f7") : assets.enemy, -size/2, -size/2, size, size);
+      // Aimed shooters are tinted so you can tell which ones lead their shots.
+      ctx.drawImage(e.aimed ? getTintedEnemy("#a855f7") : assets.enemy, -size/2, -size/2, size, size);
       ctx.restore();
     } else {
-      ctx.fillStyle = e.shooter ? "#a855f7" : (e.brute ? "#ff5d73" : "#c0392b");
+      ctx.fillStyle = e.aimed ? "#a855f7" : (e.brute ? "#ff5d73" : "#c0392b");
       ctx.beginPath(); ctx.arc(e.x, e.y, size/2, 0, Math.PI*2); ctx.fill();
     }
     // Armoured enemies (harder tiers / deep levels) show how much is left.
