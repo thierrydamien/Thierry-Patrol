@@ -8,12 +8,114 @@ const VW = 390, VH = 620;
 
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
-const SHOP_ITEMS = [
-  { id:"spread", name:"Spread Shot", desc:"Fire 3 bullets at once", cost:150 },
-  { id:"rapid",  name:"Rapid Fire",  desc:"Fire twice as fast",    cost:120 },
-  { id:"shield", name:"Energy Shield", desc:"Absorb one hit per run", cost:100 },
-  { id:"life",   name:"Extra Life",  desc:"+1 starting life (max 3)", cost:80 },
+/* ---------------------------------------------------------
+   UPGRADES
+   Every item has several levels and each level costs more than
+   the one before it, so fully maxing the Armory is a long-haul
+   goal (~$65k of kills) rather than something you finish in an
+   afternoon. `effect` describes what owning `lvl` levels does.
+   --------------------------------------------------------- */
+const UPGRADES = [
+  { id:"spread", name:"Spread Shot", icon:"🔱", max:5, costs:[150,400,900,1800,3200],
+    desc:"More bullets in every shot",
+    effect: lvl => spreadPattern(lvl).length + "-way fire" },
+  { id:"rapid", name:"Rapid Fire", icon:"⚡", max:5, costs:[120,320,750,1500,2800],
+    desc:"Shorter gap between shots",
+    effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
+  { id:"damage", name:"Plasma Rounds", icon:"💥", max:5, costs:[200,500,1100,2200,4000],
+    desc:"Each bullet hits harder",
+    effect: lvl => (1+lvl) + " damage per hit" },
+  { id:"pierce", name:"Piercing Rounds", icon:"🗡️", max:3, costs:[600,1600,3400],
+    desc:"Bullets punch through enemies instead of stopping",
+    effect: lvl => "hits " + (1+lvl) + " enemies per bullet" },
+  { id:"homing", name:"Seeker Rounds", icon:"🎯", max:3, costs:[500,1400,3000],
+    desc:"Bullets curve toward the nearest target",
+    effect: lvl => "tracking " + lvl + "/3" },
+  { id:"shield", name:"Energy Shield", icon:"🛡️", max:4, costs:[100,350,900,2000],
+    desc:"Absorbs hits; one charge comes back each level cleared",
+    effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
+  { id:"life", name:"Extra Life", icon:"❤️", max:5, costs:[80,240,600,1400,2600],
+    desc:"Start every run with more lives",
+    effect: lvl => (3+lvl) + " starting lives" },
+  { id:"thrusters", name:"Ion Thrusters", icon:"🚀", max:4, costs:[130,340,800,1700],
+    desc:"Steer faster — the main way to survive fast enemies",
+    effect: lvl => "+" + (lvl*15) + "% ship speed" },
+  { id:"armor", name:"Hull Plating", icon:"🧱", max:3, costs:[250,700,1600],
+    desc:"Longer blinking-invincible window after you take a hit",
+    effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
+  { id:"magnet", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
+    desc:"Drags nearby power-ups toward your ship",
+    effect: lvl => (lvl*45) + "px pull range" },
+  { id:"fortune", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
+    desc:"Every kill pays out more — buy this early, it pays for itself",
+    effect: lvl => "+" + (lvl*15) + "% money" },
+  { id:"wingman", name:"Wingman Drone", icon:"🛩️", max:2, costs:[1200,3000],
+    desc:"Escort drones that fire alongside you",
+    effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
+  { id:"bomb", name:"Smart Bombs", icon:"💣", max:3, costs:[400,1000,2200],
+    desc:"Start each run with screen-clearing bombs (press B, or the 💣 button)",
+    effect: lvl => lvl + (lvl===1 ? " bomb per run" : " bombs per run") },
 ];
+const UPGRADE_BY_ID = {};
+UPGRADES.forEach(u => UPGRADE_BY_ID[u.id] = u);
+
+function upgLevel(p, id){ return (p.upgrades && p.upgrades[id]) || 0; }
+function nextCost(p, u){ const lvl = upgLevel(p, u.id); return lvl >= u.max ? null : u.costs[lvl]; }
+function totalUpgradeLevels(p){ return UPGRADES.reduce((n,u) => n + upgLevel(p,u.id), 0); }
+const MAX_UPGRADE_LEVELS = UPGRADES.reduce((n,u) => n + u.max, 0);
+
+/** Horizontal bullet velocities fired at a given Spread Shot level. */
+function spreadPattern(lvl){
+  return [[0], [-45,45], [-110,0,110], [-150,-50,50,150],
+          [-190,-95,0,95,190], [-230,-140,-50,50,140,230]][lvl] || [0];
+}
+/** Fire-interval multiplier at a given Rapid Fire level (lower = faster). */
+function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; }
+
+/* ---------------------------------------------------------
+   DIFFICULTIES
+   Higher tiers throw faster, tougher, shootier enemies at you but
+   pay out far more, so grinding a hard tier funds the upgrades that
+   in turn make that tier comfortable. The top three unlock by proving
+   yourself on the tier below.
+   --------------------------------------------------------- */
+const DIFFICULTIES = [
+  { id:"rookie", name:"ROOKIE", tag:"Easy", color:"#2ecc71",
+    blurb:"Slow enemies, a free extra life. Learn the ropes.",
+    speed:0.70, spawn:1.40, hpBonus:0, bruteChance:0.5, bossHp:0.65, pay:0.7, shooter:0, bonusLives:1, unlock:null },
+  { id:"pilot", name:"PILOT", tag:"Normal", color:"#3399ff",
+    blurb:"The standard mission. Balanced pay.",
+    speed:1.00, spawn:1.00, hpBonus:0, bruteChance:1.0, bossHp:1.00, pay:1.0, shooter:0, bonusLives:0, unlock:null },
+  { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
+    blurb:"Armoured enemies, and some of them shoot back. Pays 1.7x.",
+    speed:1.28, spawn:0.78, hpBonus:1, bruteChance:1.3, bossHp:1.45, pay:1.7, shooter:0.12,
+    bonusLives:0, unlock:{ diff:"pilot", level:4 } },
+  { id:"veteran", name:"VETERAN", tag:"Brutal", color:"#e74c3c",
+    blurb:"Heavy armour, swarms, lots of return fire. Pays 2.6x.",
+    speed:1.55, spawn:0.62, hpBonus:2, bruteChance:1.6, bossHp:1.90, pay:2.6, shooter:0.22,
+    bonusLives:0, unlock:{ diff:"ace", level:5 } },
+  { id:"nightmare", name:"NIGHTMARE", tag:"Super Hard", color:"#9b59b6",
+    blurb:"Everything at once. Only worth trying fully kitted out. Pays 4x.",
+    speed:1.90, spawn:0.50, hpBonus:3, bruteChance:2.0, bossHp:2.50, pay:4.0, shooter:0.32,
+    bonusLives:0, unlock:{ diff:"veteran", level:6 } },
+];
+const DIFFICULTY_BY_ID = {};
+DIFFICULTIES.forEach(d => DIFFICULTY_BY_ID[d.id] = d);
+
+/** A difficulty is locked until you've reached the required level on the tier below. */
+function difficultyLocked(p, d){
+  if(!d.unlock) return false;
+  return (p.bestLevelByDiff && p.bestLevelByDiff[d.unlock.diff] || 0) < d.unlock.level;
+}
+/** The hardest tier we'd suggest for someone with this much gear bought. */
+function recommendedDifficulty(p){
+  const power = totalUpgradeLevels(p);
+  if(power >= 30) return "nightmare";
+  if(power >= 20) return "veteran";
+  if(power >= 11) return "ace";
+  if(power >= 4)  return "pilot";
+  return "rookie";
+}
 
 const LEVELS = [
   { speed:65,  wave:2, spawnMs:2000, kills:12, bonus:50  },
@@ -45,13 +147,20 @@ const ACHIEVEMENTS = [
   { id:"level5",        icon:"🚀", name:"Level 5 Legend",  desc:"Reach level 5",                   check:p=>p.maxLevel>=5 },
   { id:"boss_slayer",   icon:"👾", name:"Boss Slayer",     desc:"Defeat a boss",                   check:p=>p.bossesDefeated>=1 },
   { id:"boss_hunter",   icon:"🛡️", name:"Boss Hunter",     desc:"Defeat 5 bosses",                 check:p=>p.bossesDefeated>=5 },
-  { id:"big_spender",   icon:"💰", name:"Fully Loaded",    desc:"Own every Armory upgrade",        check:p=>p.hasSpread&&p.hasRapid&&p.hasShield&&p.extraLives>=3 },
   { id:"century",       icon:"💯", name:"Century Club",    desc:"Destroy 100 enemies (lifetime)",  check:p=>p.totalKills>=100 },
   { id:"high_roller",   icon:"🤑", name:"High Roller",     desc:"Earn $1000 (lifetime)",           check:p=>p.lifetimeMoney>=1000 },
   { id:"unstoppable",   icon:"🌟", name:"Unstoppable",     desc:"Reach level 10",                  check:p=>p.maxLevel>=10 },
   { id:"speed_runner",  icon:"⏱️", name:"Speed Runner",    desc:"Clear level 1 in under 25 seconds", check:p=>p.fastestLevel1!=null && p.fastestLevel1<=25 },
   { id:"untouchable",   icon:"🧿", name:"Untouchable",     desc:"Clear a level without taking a hit", check:p=>p.untouchedLevelClears>=1 },
   { id:"collector",     icon:"🎁", name:"Powered Up",      desc:"Collect 15 power-ups (lifetime)", check:p=>p.powerupsCollected>=15 },
+  { id:"first_upgrade", icon:"🔧", name:"Kitted Out",      desc:"Buy your first Armory upgrade",   check:p=>totalUpgradeLevels(p)>=1 },
+  { id:"maxed_one",     icon:"⭐", name:"Specialist",      desc:"Max out any single upgrade",      check:p=>UPGRADES.some(u=>upgLevel(p,u.id)>=u.max) },
+  { id:"quartermaster", icon:"📦", name:"Quartermaster",   desc:"Buy 15 upgrade levels in total",  check:p=>totalUpgradeLevels(p)>=15 },
+  { id:"big_spender",   icon:"💰", name:"Fully Loaded",    desc:"Max out every Armory upgrade",    check:p=>UPGRADES.every(u=>upgLevel(p,u.id)>=u.max) },
+  { id:"warchest",      icon:"🏦", name:"War Chest",       desc:"Earn $25,000 (lifetime)",         check:p=>p.lifetimeMoney>=25000 },
+  { id:"ace_pilot",     icon:"🥇", name:"Ace Pilot",       desc:"Reach level 5 on ACE",            check:p=>(p.bestLevelByDiff&&p.bestLevelByDiff.ace||0)>=5 },
+  { id:"veteran_wings", icon:"🎖️", name:"Veteran Wings",   desc:"Reach level 5 on VETERAN",        check:p=>(p.bestLevelByDiff&&p.bestLevelByDiff.veteran||0)>=5 },
+  { id:"nightmare",     icon:"👑", name:"Nightmare Fuel",  desc:"Reach level 5 on NIGHTMARE",      check:p=>(p.bestLevelByDiff&&p.bestLevelByDiff.nightmare||0)>=5 },
 ];
 
 /* =========================================================
@@ -210,7 +319,8 @@ function addProfileName(name){
 function loadProfile(name){
   const base = {
     name, callsign:name, shipColor: SHIP_COLORS[0],
-    money:0, hasSpread:false, hasRapid:false, hasShield:false, extraLives:0,
+    money:0, upgrades:{},
+    difficulty:"pilot", bestLevelByDiff:{}, bestScoreByDiff:{},
     highscore:0,
     totalKills:0, bossesDefeated:0, maxLevel:0, maxCombo:0, lifetimeMoney:0,
     fastestLevel1:null, untouchedLevelClears:0, powerupsCollected:0,
@@ -218,9 +328,34 @@ function loadProfile(name){
   };
   const raw = localStorage.getItem(PROFILE_PREFIX+name);
   if(raw){
-    return Object.assign(base, JSON.parse(raw)); // old saves just fill in any new fields as defaults
+    return migrateProfile(Object.assign(base, JSON.parse(raw))); // old saves just fill in any new fields as defaults
   }
   return base;
+}
+
+/**
+ * Brings a save written before tiered upgrades / difficulties up to date.
+ * The old flat booleans (hasSpread/hasRapid/hasShield/extraLives) become
+ * level 1 of the matching upgrade, so nobody loses what they already bought.
+ */
+function migrateProfile(p){
+  if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
+  if(!p.bestLevelByDiff) p.bestLevelByDiff = {};
+  if(!p.bestScoreByDiff) p.bestScoreByDiff = {};
+  if(!DIFFICULTY_BY_ID[p.difficulty]) p.difficulty = "pilot";
+  if(p.hasSpread && !p.upgrades.spread) p.upgrades.spread = 1;
+  if(p.hasRapid  && !p.upgrades.rapid)  p.upgrades.rapid  = 1;
+  if(p.hasShield && !p.upgrades.shield) p.upgrades.shield = 1;
+  if(p.extraLives > 0 && !p.upgrades.life) p.upgrades.life = Math.min(p.extraLives, UPGRADE_BY_ID.life.max);
+  delete p.hasSpread; delete p.hasRapid; delete p.hasShield; delete p.extraLives;
+  // Old saves predate per-difficulty bests; credit their best run to Pilot.
+  if(p.maxLevel > 0 && !p.bestLevelByDiff.pilot) p.bestLevelByDiff.pilot = p.maxLevel;
+  UPGRADES.forEach(u => { // clamp anything out of range (e.g. a hand-edited save)
+    const lvl = p.upgrades[u.id];
+    if(typeof lvl !== "number" || lvl < 0) delete p.upgrades[u.id];
+    else if(lvl > u.max) p.upgrades[u.id] = u.max;
+  });
+  return p;
 }
 function saveProfile(p){
   localStorage.setItem(PROFILE_PREFIX+p.name, JSON.stringify(p));
@@ -275,9 +410,10 @@ document.getElementById("switchBtn").addEventListener("click", () => {
 /* ---- Main menu ---- */
 document.getElementById("playBtn").addEventListener("click", () => {
   initAudio();
-  showScreen("screen-game");
-  startRun();
+  renderDifficulties();
+  showScreen("screen-difficulty");
 });
+document.getElementById("difficultyBackBtn").addEventListener("click", () => showScreen("screen-menu"));
 document.getElementById("armoryBtn").addEventListener("click", () => {
   renderArmory();
   showScreen("screen-armory");
@@ -314,36 +450,90 @@ function renderArmory(){
     colorRow.appendChild(sw);
   });
 
+  document.getElementById("armoryPower").textContent =
+    "GEAR LEVEL " + totalUpgradeLevels(p) + " / " + MAX_UPGRADE_LEVELS;
+
   const shopItems = document.getElementById("shopItems");
   shopItems.innerHTML = "";
-  SHOP_ITEMS.forEach(item => {
-    const owned = item.id==="life" ? p.extraLives >= 3 : p["has"+capitalize(item.id)];
+  UPGRADES.forEach(u => {
+    const lvl = upgLevel(p, u.id);
+    const cost = nextCost(p, u);
+    const maxed = cost === null;
     const row = document.createElement("div");
-    row.className = "shop-item";
-    const label = item.id==="life"
-      ? (owned ? `Extra Life — MAXED (${p.extraLives}/3)` : `Extra Life — $${item.cost} (${p.extraLives}/3)`)
-      : (owned ? `${item.name} — OWNED` : `${item.name} — $${item.cost}`);
+    row.className = "shop-item" + (maxed ? " maxed" : "");
+    const pips = Array.from({length:u.max}, (_,i) =>
+      `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
     row.innerHTML = `
-      <div><div class="si-name">${label}</div><div class="si-desc">${item.desc}</div></div>
+      <div class="si-main">
+        <div class="si-name">${u.icon} ${escapeHtml(u.name)} <span class="si-lvl">Lv ${lvl}/${u.max}</span></div>
+        <div class="si-pips">${pips}</div>
+        <div class="si-desc">${escapeHtml(u.desc)}</div>
+        <div class="si-effect">${lvl > 0 ? "Now: " + escapeHtml(u.effect(lvl)) : "Not owned"}${
+          maxed ? "" : " → " + escapeHtml(u.effect(lvl+1))}</div>
+      </div>
     `;
     const btn = document.createElement("button");
-    btn.textContent = owned ? "OWNED" : "BUY";
-    btn.disabled = owned || p.money < item.cost;
-    btn.addEventListener("click", () => buyItem(item.id));
+    btn.textContent = maxed ? "MAX" : "$" + cost;
+    btn.disabled = maxed || p.money < cost;
+    btn.addEventListener("click", () => buyUpgrade(u.id));
     row.appendChild(btn);
     shopItems.appendChild(row);
   });
 }
-function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
-function buyItem(id){
+function buyUpgrade(id){
   const p = activeProfile;
-  const item = SHOP_ITEMS.find(i => i.id === id);
-  if(p.money < item.cost) return;
-  p.money -= item.cost;
-  if(id === "life") p.extraLives = Math.min(p.extraLives+1, 3);
-  else p["has"+capitalize(id)] = true;
+  const u = UPGRADE_BY_ID[id];
+  const cost = nextCost(p, u);
+  if(cost === null || p.money < cost) return;
+  p.money -= cost;
+  p.upgrades[id] = upgLevel(p, id) + 1;
   saveProfile(p);
+  playPowerup();
+  checkAchievements();
   renderArmory();
+}
+
+/* ---- Difficulty select ---- */
+let pendingDifficulty = "pilot";
+function renderDifficulties(){
+  const p = activeProfile;
+  const rec = recommendedDifficulty(p);
+  document.getElementById("difficultyPower").textContent =
+    "GEAR LEVEL " + totalUpgradeLevels(p) + " / " + MAX_UPGRADE_LEVELS +
+    " — suggested: " + DIFFICULTY_BY_ID[rec].name;
+
+  const list = document.getElementById("difficultyList");
+  list.innerHTML = "";
+  DIFFICULTIES.forEach(d => {
+    const locked = difficultyLocked(p, d);
+    const best = (p.bestLevelByDiff && p.bestLevelByDiff[d.id]) || 0;
+    const card = document.createElement("div");
+    card.className = "diff-card" + (locked ? " locked" : "") + (d.id === rec ? " suggested" : "");
+    card.style.borderColor = locked ? "" : d.color;
+    card.innerHTML = `
+      <div class="diff-head">
+        <span class="diff-name" style="color:${locked ? "" : d.color}">${locked ? "🔒 " : ""}${d.name}</span>
+        <span class="diff-tag">${d.tag}</span>
+      </div>
+      <div class="diff-blurb">${escapeHtml(locked
+        ? "Reach level " + d.unlock.level + " on " + DIFFICULTY_BY_ID[d.unlock.diff].name + " to unlock"
+        : d.blurb)}</div>
+      <div class="diff-best">${best ? "Best: level " + best : (locked ? "" : "Not flown yet")}${
+        d.id === rec && !locked ? " · suggested for your gear" : ""}</div>
+    `;
+    if(!locked){
+      card.addEventListener("click", () => startAtDifficulty(d.id));
+    }
+    list.appendChild(card);
+  });
+}
+function startAtDifficulty(id){
+  pendingDifficulty = id;
+  activeProfile.difficulty = id;
+  saveProfile(activeProfile);
+  initAudio();
+  showScreen("screen-game");
+  startRun();
 }
 document.getElementById("saveCallsignBtn").addEventListener("click", () => {
   const val = document.getElementById("callsignInput").value.trim();
@@ -471,6 +661,7 @@ window.addEventListener("keydown", e => {
   if(e.key===" ") firing = true;
   if(e.key===" "||e.key==="ArrowUp"||e.key==="ArrowDown") e.preventDefault();
   if(e.key==="p"||e.key==="P"||e.key==="Escape") togglePause();
+  if(e.key==="b"||e.key==="B") useBomb();
 });
 window.addEventListener("keyup", e => {
   keys[e.key]=false;
@@ -507,16 +698,28 @@ let combo, comboTimer;
 let boss, bossPending;
 let powerupTimer;
 let runStartTime, tookDamageThisLevel;
+let difficulty = DIFFICULTY_BY_ID.pilot;
 let gameState = "playing"; // playing | paused | over
 
 function startRun(){
   const p = activeProfile;
+  difficulty = DIFFICULTY_BY_ID[pendingDifficulty] || DIFFICULTY_BY_ID.pilot;
+  const lv = id => upgLevel(p, id);
   player = {
     x: VW/2, y: VH-60, targetX: VW/2, r:9,
-    speed: 320, lives: 3+p.extraLives, alive:true,
-    invuln: 1.6, shield: p.hasShield, cooldown:0,
-    fireInterval: p.hasRapid ? 0.16 : 0.30,
-    hasSpread: p.hasSpread, color: p.shipColor,
+    speed: 320 * (1 + lv("thrusters")*0.15),
+    lives: 3 + lv("life") + difficulty.bonusLives,
+    alive:true,
+    invulnTime: 1.8 + lv("armor")*0.6,
+    invuln: 1.6,
+    shield: lv("shield"), shieldMax: lv("shield"),
+    cooldown:0,
+    fireInterval: 0.30 * fireRateMult(lv("rapid")),
+    spreadLvl: lv("spread"), damage: 1 + lv("damage"), pierce: lv("pierce"),
+    homingLvl: lv("homing"), magnetRange: lv("magnet")*45,
+    moneyMult: 1 + lv("fortune")*0.15,
+    drones: lv("wingman"), bombs: lv("bomb"),
+    color: p.shipColor,
     tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0, tempHomingUntil:0,
   };
   bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[]; trail=[];
@@ -535,7 +738,23 @@ function startRun(){
   document.getElementById("muteBtn").textContent = muted ? "🔇" : "♪";
   document.getElementById("overlayPause").classList.add("hidden");
   document.getElementById("overlayOver").classList.add("hidden");
+  updateBombButton();
   resizeCanvas();
+}
+
+/** The 💣 button only exists for players who bought Smart Bombs, and shows what's left. */
+function updateBombButton(){
+  const btn = document.getElementById("bombBtn");
+  if(!btn) return;
+  const show = player && player.alive && player.bombs > 0 && gameState !== "over";
+  btn.classList.toggle("hidden", !show);
+  btn.textContent = "💣" + (player ? player.bombs : 0);
+}
+function useBomb(){
+  if(gameState !== "playing" || !player || !player.alive || player.bombs <= 0) return;
+  player.bombs--;
+  detonateBomb();
+  updateBombButton();
 }
 
 function togglePause(){
@@ -549,10 +768,20 @@ document.getElementById("quitBtn").addEventListener("click", () => {
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
   document.getElementById("fireBtn").classList.add("hidden");
+  document.getElementById("bombBtn").classList.add("hidden");
   showScreen("screen-menu");
 });
 document.getElementById("retryBtn").addEventListener("click", () => startRun());
+document.getElementById("changeDiffBtn").addEventListener("click", () => {
+  document.getElementById("overlayOver").classList.add("hidden");
+  renderDifficulties();
+  showScreen("screen-difficulty");
+});
 document.getElementById("menuBtn").addEventListener("click", () => showScreen("screen-menu"));
+const bombBtnEl = document.getElementById("bombBtn");
+if(bombBtnEl){
+  bombBtnEl.addEventListener("pointerdown", e => { e.preventDefault(); useBomb(); });
+}
 
 function endRun(){
   gameState="over";
@@ -564,14 +793,17 @@ function endRun(){
   if(level > p.maxLevel) p.maxLevel = level;
   if(combo > p.maxCombo) p.maxCombo = combo;
   if(score > p.highscore) p.highscore = score;
+  if(level > (p.bestLevelByDiff[difficulty.id]||0)) p.bestLevelByDiff[difficulty.id] = level;
+  if(score > (p.bestScoreByDiff[difficulty.id]||0)) p.bestScoreByDiff[difficulty.id] = score;
   saveProfile(p);
   checkAchievements();
-  document.getElementById("overScore").textContent = "SCORE " + score;
+  document.getElementById("overScore").textContent = "SCORE " + score + "  ·  " + difficulty.name + "  ·  LEVEL " + level;
   document.getElementById("overMoney").textContent = "+$" + sessionMoney + " earned (wallet: $" + p.money + ")";
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
   document.getElementById("overlayOver").classList.remove("hidden");
   document.getElementById("fireBtn").classList.add("hidden");
+  updateBombButton();
 }
 
 function addFloatingText(x,y,text,color,size){
@@ -585,16 +817,22 @@ function spawnParticles(x,y,count,color){
   }
 }
 function makeEnemy(){
-  const brute = level>=3 && Math.random()<0.25;
+  const brute = level>=3 && Math.random() < 0.25*difficulty.bruteChance;
   const x = 24 + Math.random()*(VW-48);
+  // Tougher tiers armour everything up; deep levels add a little more on top.
+  // Plasma Rounds is the answer to this — damage scales the same way HP does.
+  const hp = (brute?2:1) + difficulty.hpBonus + Math.floor(level/6);
+  const shooter = !brute && level>=2 && Math.random() < difficulty.shooter;
   return {
-    x, y:-30, r: brute?14:10, hp: brute?2:1, maxhp: brute?2:1,
-    speed: levelConfig.speed * (brute?0.75:1) * (0.85+Math.random()*0.3),
-    sway: Math.random()*Math.PI*2, brute,
+    x, y:-30, r: brute?14:10, hp, maxhp: hp,
+    speed: levelConfig.speed * difficulty.speed * (brute?0.75:1) * (0.85+Math.random()*0.3),
+    sway: Math.random()*Math.PI*2, brute, shooter,
+    shootTimer: 1.2 + Math.random()*1.6,
   };
 }
 function makeBoss(){
-  const hp = window.__SKYFORCE_TEST_EASY_BOSS__ ? 3 : (18 + level*7); // test-only hook, unused in real play
+  const hp = window.__SKYFORCE_TEST_EASY_BOSS__ ? 3 // test-only hook, unused in real play
+    : Math.round((18 + level*7) * difficulty.bossHp);
   const bossIndex = level / BOSS_EVERY; // 1st, 2nd, 3rd boss encounter...
   return {
     x: VW/2, y:-70, targetY:74, hp, maxhp:hp,
@@ -625,35 +863,45 @@ function applyPowerup(type){
   const now = performance.now();
   if(type.id==="rapid") player.tempRapidUntil = now + 8000;
   else if(type.id==="spread") player.tempSpreadUntil = now + 8000;
-  else if(type.id==="shield") player.shield = true;
+  else if(type.id==="shield") player.shield = Math.min(player.shield+1, player.shieldMax+1);
   else if(type.id==="score2x") player.tempScoreUntil = now + 8000;
   else if(type.id==="homing") player.tempHomingUntil = now + 8000;
-  else if(type.id==="bomb"){
-    playBomb();
-    screenShake(14);
-    enemies.forEach(e=>{
-      score += e.brute?12:5;
-      sessionMoney += e.brute?4:2;
-      sessionKills++; killsInLevel++;
-      spawnParticles(e.x,e.y,10,"#ffd23f");
-    });
-    enemies = [];
-    enemyBullets = [];
-    addFloatingText(VW/2, VH/2, "BOOM!", "#ff5d73", 22);
-  }
+  else if(type.id==="bomb") detonateBomb();
+}
+
+/** Wipes the screen: every enemy on it dies and pays out, all enemy fire clears. */
+function detonateBomb(){
+  playBomb();
+  screenShake(14);
+  const dying = enemies;
+  enemies = [];
+  enemyBullets = [];
+  dying.forEach(e => registerKill(e.x, e.y, e.brute?12:5, e.brute?4:2, e.brute));
+  addFloatingText(VW/2, VH/2, "BOOM!", "#ff5d73", 22);
 }
 
 function fireBullets(){
   const vy=-460;
   const now = performance.now();
-  const spreadActive = player.hasSpread || now < player.tempSpreadUntil;
-  const homing = now < player.tempHomingUntil;
-  if(spreadActive){
-    bullets.push({x:player.x,y:player.y-10,vx:-110,vy,r:3,homing});
-    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3,homing});
-    bullets.push({x:player.x,y:player.y-10,vx:110,vy,r:3,homing});
-  } else {
-    bullets.push({x:player.x,y:player.y-14,vx:0,vy,r:3,homing});
+  // The Spread Shot power-up is worth grabbing even when you own the upgrade:
+  // it temporarily bumps you to at least the level-3 pattern.
+  const spreadLvl = now < player.tempSpreadUntil ? Math.max(player.spreadLvl, 3) : player.spreadLvl;
+  const homingStrength = now < player.tempHomingUntil ? 3 : player.homingLvl;
+  const pierce = player.pierce;
+  spreadPattern(spreadLvl).forEach(vx => {
+    bullets.push({
+      x: player.x, y: player.y - (vx===0 ? 14 : 10), vx, vy, r:3,
+      homing: homingStrength, dmg: player.damage, pierceLeft: pierce, hitIds: null,
+    });
+  });
+  // Wingman drones add their own straight shot from each flank.
+  for(let i=0;i<player.drones;i++){
+    const side = i===0 ? -1 : 1;
+    bullets.push({
+      x: player.x + side*26, y: player.y, vx:0, vy, r:3,
+      homing: homingStrength, dmg: Math.max(1, Math.round(player.damage*0.6)),
+      pierceLeft: pierce, hitIds: null, drone:true,
+    });
   }
   playShoot();
 }
@@ -690,9 +938,9 @@ function update(dt){
       let target = null, bestD = Infinity;
       enemies.forEach(e=>{ const d=dist2(b.x,b.y,e.x,e.y); if(d<bestD){ bestD=d; target=e; } });
       if(boss){ const d=dist2(b.x,b.y,boss.x,boss.y); if(d<bestD){ bestD=d; target=boss; } }
-      if(target){
-        const desired = clamp((target.x-b.x)*3, -260, 260);
-        b.vx += clamp(desired-b.vx, -500*dt, 500*dt);
+      if(target){ // stronger Seeker Rounds levels turn harder and faster
+        const desired = clamp((target.x-b.x)*3, -90*b.homing, 90*b.homing);
+        b.vx += clamp(desired-b.vx, -200*b.homing*dt, 200*b.homing*dt);
       }
     }
     b.x+=b.vx*dt; b.y+=b.vy*dt;
@@ -712,7 +960,7 @@ function update(dt){
     spawnTimer -= dt*1000;
     if(spawnTimer<=0){
       for(let i=0;i<levelConfig.wave;i++) enemies.push(makeEnemy());
-      spawnTimer = levelConfig.spawnMs;
+      spawnTimer = levelConfig.spawnMs * difficulty.spawn;
     }
     powerupTimer -= dt;
     if(powerupTimer<=0){
@@ -724,6 +972,16 @@ function update(dt){
   enemies.forEach(e=>{
     e.y += e.speed*dt;
     e.x += Math.sin(now/600 + e.sway)*20*dt;
+    // On the harder tiers some enemies shoot back on their way down.
+    if(e.shooter && e.y > 0 && e.y < VH*0.72){
+      e.shootTimer -= dt;
+      if(e.shootTimer <= 0){
+        const dx = player.x - e.x, dy = Math.max(60, player.y - e.y);
+        const vy = 200, vx = clamp((dx/dy)*vy, -110, 110);
+        enemyBullets.push({x:e.x, y:e.y+12, vx, vy, r:4});
+        e.shootTimer = 1.7 + Math.random()*1.2;
+      }
+    }
   });
 
   if(boss){
@@ -749,7 +1007,18 @@ function update(dt){
     }
   }
 
-  powerups.forEach(p=>{ p.y += p.vy*dt; p.angle += dt*2.2; });
+  powerups.forEach(p=>{
+    p.y += p.vy*dt;
+    p.angle += dt*2.2;
+    if(player.magnetRange > 0){ // Tractor Beam reels in anything close enough
+      const d = Math.sqrt(dist2(p.x,p.y,player.x,player.y));
+      if(d < player.magnetRange && d > 1){
+        const pull = 240*dt;
+        p.x += (player.x-p.x)/d * pull;
+        p.y += (player.y-p.y)/d * pull;
+      }
+    }
+  });
   powerups = powerups.filter(p=> p.y < VH+20);
 
   particles.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life+=dt; p.vx*=0.94; p.vy*=0.94; });
@@ -773,16 +1042,16 @@ function update(dt){
 function damagePlayer(){
   if(window.__SKYFORCE_TEST_INVINCIBLE__) return; // test-only hook, unused in real play
   tookDamageThisLevel = true;
-  if(player.shield){
-    player.shield=false;
-    player.invuln=1.0;
+  if(player.shield > 0){
+    player.shield--;
+    player.invuln = Math.max(1.0, player.invulnTime*0.55);
     spawnParticles(player.x,player.y,14,player.color);
     screenShake(6);
     playHit();
     return;
   }
   player.lives--;
-  player.invuln=1.8;
+  player.invuln = player.invulnTime;
   spawnParticles(player.x,player.y,16,player.color);
   screenShake(10);
   hitFlash = 1;
@@ -795,8 +1064,9 @@ function registerKill(x, y, baseScore, baseMoney, isBrute){
   combo++; comboTimer = 1.3;
   if(combo > activeProfile.maxCombo){ activeProfile.maxCombo = combo; }
   const mult = comboMultiplier() * (performance.now() < player.tempScoreUntil ? 2 : 1);
-  const gainedScore = Math.round(baseScore*mult);
-  const gainedMoney = Math.round(baseMoney*mult);
+  // Harder tiers pay more (difficulty.pay); Salvage Rig levels pay more on top of that.
+  const gainedScore = Math.round(baseScore*mult*difficulty.pay);
+  const gainedMoney = Math.round(baseMoney*mult*difficulty.pay*player.moneyMult);
   score += gainedScore;
   sessionMoney += gainedMoney;
   sessionKills++;
@@ -818,22 +1088,28 @@ function checkCollisions(){
     for(const e of enemies){
       if(e.dead) continue;
       if(dist2(b.x,b.y,e.x,e.y) < (b.r+e.r)*(b.r+e.r)){
-        b.hit=true; e.hp--;
+        e.hp -= b.dmg;
         if(e.hp<=0){
           e.dead=true;
           registerKill(e.x, e.y, e.brute?12:5, e.brute?4:2, e.brute);
           playExplosion(e.brute);
+        } else {
+          spawnParticles(e.x, e.y, 3, "#ffd23f"); // armoured enemy shrugged it off
         }
+        // Piercing Rounds let a bullet carry on into the next enemy behind it.
+        if(b.pierceLeft > 0){ b.pierceLeft--; continue; }
+        b.hit=true;
         break;
       }
     }
     if(b.hit) continue;
     if(boss && dist2(b.x,b.y,boss.x,boss.y) < (b.r+34)*(b.r+34)){
       b.hit=true;
-      boss.hp--;
+      boss.hp -= b.dmg;
       spawnParticles(boss.x+((Math.random()-0.5)*40), boss.y+((Math.random()-0.5)*20), 4, "#ff5d73");
       if(boss.hp<=0){
-        score += 150; sessionMoney += 60;
+        score += Math.round(150*difficulty.pay);
+        sessionMoney += Math.round(60*difficulty.pay*player.moneyMult);
         activeProfile.bossesDefeated++;
         saveProfile(activeProfile);
         checkAchievements();
@@ -886,7 +1162,7 @@ function checkCollisions(){
 }
 
 function advanceLevel(bonus){
-  sessionMoney += bonus;
+  sessionMoney += Math.round(bonus*difficulty.pay*player.moneyMult);
   const wasLevel1 = (level === 1);
   if(!tookDamageThisLevel){
     activeProfile.untouchedLevelClears = (activeProfile.untouchedLevelClears||0) + 1;
@@ -903,8 +1179,14 @@ function advanceLevel(bonus){
   levelConfig = getLevel(level);
   enemies = [];
   enemyBullets = [];
+  if(player.shield < player.shieldMax){ // Energy Shield regains one charge per level cleared
+    player.shield++;
+  }
   if(level > activeProfile.maxLevel){
     activeProfile.maxLevel = level;
+  }
+  if(level > (activeProfile.bestLevelByDiff[difficulty.id]||0)){
+    activeProfile.bestLevelByDiff[difficulty.id] = level; // unlocks the next tier as you climb
   }
   saveProfile(activeProfile);
   checkAchievements();
@@ -936,17 +1218,24 @@ function drawPlayer(){
   if(player.invuln>0 && Math.floor(player.invuln*10)%2===0) return;
   const size = 46;
   const sprite = assetsReady ? getTintedShip(player.color) : null;
+  // Wingman drones ride alongside at 60% scale.
+  for(let i=0;i<player.drones;i++){
+    const dx = (i===0 ? -26 : 26), dsize = size*0.6;
+    if(sprite) ctx.drawImage(sprite, player.x+dx-dsize/2, player.y-dsize/2+4, dsize, dsize);
+    else { ctx.fillStyle=player.color; ctx.beginPath(); ctx.arc(player.x+dx, player.y+4, dsize/2, 0, Math.PI*2); ctx.fill(); }
+  }
   if(sprite){
     ctx.drawImage(sprite, player.x-size/2, player.y-size/2, size, size);
   } else {
     ctx.fillStyle = player.color;
     ctx.beginPath(); ctx.arc(player.x, player.y, size/2, 0, Math.PI*2); ctx.fill();
   }
-  if(player.shield){
+  // One ring per remaining shield charge.
+  for(let i=0;i<player.shield;i++){
     ctx.save();
-    ctx.strokeStyle="rgba(120,200,255,0.8)";
+    ctx.strokeStyle="rgba(120,200,255," + (0.8 - i*0.15) + ")";
     ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(player.x, player.y, size*0.7, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(player.x, player.y, size*0.7 + i*4, 0, Math.PI*2); ctx.stroke();
     ctx.restore();
   }
 }
@@ -957,11 +1246,20 @@ function drawEnemies(){
       ctx.save();
       ctx.translate(e.x, e.y);
       ctx.rotate(Math.PI); // enemy sprite faces the same way as player art; flip to face downward
-      ctx.drawImage(assets.enemy, -size/2, -size/2, size, size);
+      // Shooters are tinted so you can tell at a glance which ones fire back.
+      ctx.drawImage(e.shooter ? getTintedEnemy("#a855f7") : assets.enemy, -size/2, -size/2, size, size);
       ctx.restore();
     } else {
-      ctx.fillStyle = e.brute ? "#ff5d73" : "#c0392b";
+      ctx.fillStyle = e.shooter ? "#a855f7" : (e.brute ? "#ff5d73" : "#c0392b");
       ctx.beginPath(); ctx.arc(e.x, e.y, size/2, 0, Math.PI*2); ctx.fill();
+    }
+    // Armoured enemies (harder tiers / deep levels) show how much is left.
+    if(e.maxhp > 1 && e.hp < e.maxhp){
+      const w = size*0.8, pct = Math.max(0, e.hp/e.maxhp);
+      ctx.fillStyle="rgba(0,0,0,0.5)";
+      ctx.fillRect(e.x-w/2, e.y-size/2-6, w, 3);
+      ctx.fillStyle="#ffd23f";
+      ctx.fillRect(e.x-w/2, e.y-size/2-6, w*pct, 3);
     }
   });
 }
@@ -1065,6 +1363,20 @@ function drawHud(){
   ctx.fillStyle="#ffd23f";
   ctx.font="bold 13px Arial, sans-serif";
   ctx.fillText((activeProfile.callsign||"") + "   $" + (activeProfile.money+sessionMoney), 12, 32);
+
+  ctx.fillStyle=difficulty.color;
+  ctx.font="bold 11px Arial, sans-serif";
+  ctx.textAlign="center";
+  ctx.fillText(difficulty.name, VW/2, 12);
+  ctx.textAlign="left";
+
+  if(player.bombs > 0){
+    ctx.fillStyle="#ff5d73";
+    ctx.font="bold 12px Arial, sans-serif";
+    ctx.textAlign="right";
+    ctx.fillText("💣 x" + player.bombs, VW-12, 52);
+    ctx.textAlign="left";
+  }
 
   for(let i=0;i<player.lives;i++){
     ctx.save();

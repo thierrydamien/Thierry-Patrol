@@ -156,21 +156,51 @@ html, body {
 }
 .swatch.selected { border-color: white; }
 
+.power-line { font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.6); margin-top:-8px; margin-bottom:14px; }
+
 .shop-items { display:flex; flex-direction:column; gap:8px; }
 .shop-item {
-  display:flex; align-items:center; justify-content:space-between;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
   background: rgba(0,0,0,0.25);
   border-radius: 10px;
   padding: 10px 14px;
 }
+.shop-item.maxed { border: 1px solid rgba(255,210,63,0.45); }
+.shop-item .si-main { min-width:0; }
 .shop-item .si-name { font-weight:700; font-size:14px; }
+.shop-item .si-lvl { font-size:11px; color: rgba(255,255,255,0.5); font-weight:400; }
 .shop-item .si-desc { font-size:11px; color: rgba(255,255,255,0.55); }
+.shop-item .si-effect { font-size:11px; color: var(--accent); margin-top:2px; }
+.si-pips { display:flex; gap:4px; margin:5px 0 4px; }
+.pip {
+  width:14px; height:6px; border-radius:3px;
+  background: rgba(255,255,255,0.15);
+}
+.pip.on { background: var(--accent); box-shadow: 0 0 6px rgba(245,166,35,0.6); }
 .shop-item button {
   font-family: inherit; font-weight:700; border:none; border-radius:8px;
-  padding: 8px 12px; font-size:12px; cursor:pointer;
+  padding: 10px 12px; font-size:12px; cursor:pointer; white-space:nowrap;
   background: var(--accent); color:#241a00;
 }
 .shop-item button:disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); }
+
+.difficulty-list { width:100%; display:flex; flex-direction:column; gap:10px; }
+.diff-card {
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor:pointer;
+  transition: transform .12s ease;
+}
+.diff-card:active { transform: scale(0.98); }
+.diff-card.locked { opacity: 0.45; cursor: default; }
+.diff-card.suggested { box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset; }
+.diff-head { display:flex; align-items:baseline; justify-content:space-between; }
+.diff-name { font-weight:800; font-size:16px; letter-spacing:1px; }
+.diff-tag { font-size:11px; color: rgba(255,255,255,0.55); letter-spacing:1px; }
+.diff-blurb { font-size:12px; color: rgba(255,255,255,0.7); margin-top:4px; }
+.diff-best { font-size:11px; color: rgba(255,255,255,0.45); margin-top:4px; }
 
 .leaderboard-list { width:100%; margin-bottom: 10px; }
 .lb-row {
@@ -216,6 +246,19 @@ html, body {
 }
 .fire-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
 .fire-btn.hidden { display:none; }
+
+.bomb-btn {
+  position:absolute; z-index:5;
+  bottom: 40px; left: 18px;
+  width: 58px; height:58px; border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, #5b5f7a, #23263c);
+  color:white; border: 3px solid rgba(255,255,255,0.4);
+  font-size:20px;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+  touch-action:none;
+}
+.bomb-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+.bomb-btn.hidden { display:none; }
 
 .loading-overlay {
   position:fixed; inset:0; z-index:100;

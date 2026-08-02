@@ -31,6 +31,14 @@
     </div>
   </section>
 
+  <!-- ===================== DIFFICULTY SELECT ===================== -->
+  <section id="screen-difficulty" class="screen">
+    <h2 class="section-title">CHOOSE YOUR MISSION</h2>
+    <p id="difficultyPower" class="money-line"></p>
+    <div id="difficultyList" class="difficulty-list"></div>
+    <button id="difficultyBackBtn" class="ghost-btn">Back to Menu</button>
+  </section>
+
   <!-- ===================== ACHIEVEMENTS ===================== -->
   <section id="screen-achievements" class="screen">
     <h2 class="section-title">ACHIEVEMENTS</h2>
@@ -42,6 +50,7 @@
   <section id="screen-armory" class="screen">
     <h2 class="section-title">ARMORY</h2>
     <p id="armoryMoney" class="money-line"></p>
+    <p id="armoryPower" class="power-line"></p>
 
     <div class="panel">
       <label class="panel-label">CALLSIGN</label>
@@ -79,6 +88,7 @@
       <button id="pauseBtn" class="icon-btn top-left hidden">II</button>
       <button id="muteBtn" class="icon-btn top-right hidden">♪</button>
       <button id="fireBtn" class="fire-btn hidden">FIRE</button>
+      <button id="bombBtn" class="bomb-btn hidden">💣</button>
 
       <div id="overlayPause" class="overlay hidden">
         <h2>PAUSED</h2>
@@ -91,6 +101,7 @@
         <p id="overScore" class="money-line"></p>
         <p id="overMoney" class="money-line"></p>
         <button id="retryBtn" class="main-btn">▶ RETRY</button>
+        <button id="changeDiffBtn" class="ghost-btn">Change Difficulty</button>
         <button id="menuBtn" class="ghost-btn">Back to Menu</button>
       </div>
     </div>
