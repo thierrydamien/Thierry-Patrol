@@ -1,0 +1,179 @@
+/*
+ * The two systems that drive a mission: the wave director (what spawns, when,
+ * and in what shape) and collision resolution.
+ *
+ * Both are pure logic over the World - they own no rendering and no DOM.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp, rand, randInt, chance } = SF.core;
+const { FORMATIONS, ENEMY_TYPES } = SF.enemyData;
+const { VW, VH } = SF.entityConst;
+const fx = SF.fx;
+const audio = SF.audio;
+
+/* =========================================================
+   WAVE DIRECTOR
+   Reads a mission's wave script and spawns formations on
+   schedule. Knows nothing about scoring or UI.
+   ========================================================= */
+class WaveDirector {
+  constructor(mission, difficulty, world){
+    this.mission = mission;
+    this.difficulty = difficulty;
+    this.world = world;
+    this.time = 0;
+    this.nextWave = 0;
+    this.pending = [];       // enemies staged by a formation's per-slot delay
+    this.spawnedCount = 0;
+    this.totalPlanned = mission.waves.reduce((n,w) => n + w.n, 0);
+    this.rescuesPlanned = mission.waves.reduce((n,w) =>
+      n + (ENEMY_TYPES[w.type].carriesRescue ? w.n : 0), 0);
+  }
+
+  get finishedSpawning(){
+    return this.nextWave >= this.mission.waves.length && this.pending.length === 0;
+  }
+
+  update(dt){
+    this.time += dt;
+
+    // Start any wave whose time has come.
+    while(this.nextWave < this.mission.waves.length &&
+          this.time >= this.mission.waves[this.nextWave].t){
+      this.queueWave(this.mission.waves[this.nextWave]);
+      this.nextWave++;
+    }
+
+    // Release staged formation members.
+    for(let i = this.pending.length - 1; i >= 0; i--){
+      const s = this.pending[i];
+      s.delay -= dt;
+      if(s.delay <= 0){
+        this.world.spawnEnemy(s.type, s.x, s.y, {
+          difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
+        });
+        this.spawnedCount++;
+        this.pending.splice(i, 1);
+      }
+    }
+  }
+
+  queueWave(wave){
+    const form = FORMATIONS[wave.form] || FORMATIONS.line;
+    const slots = form(wave.n, VW);
+    const eliteCount = wave.elite || 0;
+    // Elites are spread through the wave rather than clumped at the front.
+    const eliteIdx = new Set();
+    while(eliteIdx.size < Math.min(eliteCount, slots.length)){
+      eliteIdx.add(randInt(0, slots.length-1));
+    }
+    slots.forEach((s, i) => {
+      this.pending.push({
+        type: wave.type, x: clamp(s.x, 24, VW-24), y: s.y,
+        delay: s.delay, elite: eliteIdx.has(i),
+        hoverY: 110 + (i % 3) * 42 + rand(-10, 10),
+      });
+    });
+  }
+}
+
+/* =========================================================
+   COLLISIONS
+   Enemies go into a uniform grid once per frame; bullets only
+   test their own neighbourhood. Player-vs-world is a handful
+   of circle checks and stays brute force.
+   ========================================================= */
+function resolve(world, ctxObj, dt){
+  const grid = world.grid;
+  grid.clear();
+  const enemies = world.enemies.items;
+  for(let i=0;i<enemies.length;i++){
+    const e = enemies[i];
+    if(e.alive) grid.insert(e);
+  }
+
+  /* --- player bullets vs enemies and boss --- */
+  const bullets = world.bullets.items;
+  for(let i=0;i<bullets.length;i++){
+    const b = bullets[i];
+    if(!b.alive) continue;
+    let pierceLeft = b.pierce;
+
+    grid.query(b.x, b.y, (e) => {
+      if(!e.alive || !b.alive) return false;
+      const rr = (b.r + e.r);
+      if((b.x-e.x)*(b.x-e.x) + (b.y-e.y)*(b.y-e.y) > rr*rr) return false;
+
+      e.hp -= b.dmg;
+      e.flash = 1;
+      fx.sparks(b.x, b.y, 3, "#ffe9a8", 130);
+      if(e.hp > 0){
+        fx.damageNumber(e.x, e.y - e.r, b.dmg, false);
+        audio.play("hitArmour");
+      } else {
+        ctxObj.onEnemyKilled(e, b);
+      }
+      if(pierceLeft > 0){ pierceLeft--; return false; }
+      b.alive = false;
+      return true;
+    });
+
+    if(!b.alive) continue;
+    const boss = world.boss;
+    if(boss && boss.alive && !boss.entering){
+      const rr = b.r + boss.r;
+      if((b.x-boss.x)*(b.x-boss.x) + (b.y-boss.y)*(b.y-boss.y) < rr*rr){
+        ctxObj.onBossHit(boss, b);
+        if(pierceLeft > 0) pierceLeft--; else b.alive = false;
+      }
+    }
+  }
+
+  /* --- everything that can hurt the player --- */
+  const p = world.player;
+  if(!p || !p.alive) return;
+  const invulnerable = p.invuln > 0 || ctxObj.godMode;
+
+  if(!invulnerable){
+    for(let i=0;i<enemies.length;i++){
+      const e = enemies[i];
+      if(!e.alive) continue;
+      const rr = e.r + p.r;
+      if((e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y) < rr*rr){
+        // Ramming an enemy destroys it too - a fair trade, and it stops the
+        // "invisible wall" feeling of bouncing off a sprite.
+        e.hp = 0;
+        ctxObj.onEnemyKilled(e, null, true);
+        ctxObj.onPlayerHit("collision");
+        break;
+      }
+    }
+  }
+
+  const ebs = world.enemyBullets.items;
+  for(let i=0;i<ebs.length;i++){
+    const b = ebs[i];
+    if(!b.alive) continue;
+    const rr = b.r + p.r;
+    if((b.x-p.x)*(b.x-p.x) + (b.y-p.y)*(b.y-p.y) < rr*rr){
+      b.alive = false;
+      if(!invulnerable) ctxObj.onPlayerHit("bullet");
+      break;
+    }
+  }
+
+  const boss = world.boss;
+  if(boss && boss.alive && !invulnerable){
+    const rr = boss.r + p.r;
+    if((boss.x-p.x)*(boss.x-p.x) + (boss.y-p.y)*(boss.y-p.y) < rr*rr){
+      ctxObj.onPlayerHit("boss");
+    } else if(SF.bosses.beamHits(boss, p.x, p.y)){
+      ctxObj.onPlayerHit("beam");
+    }
+  }
+}
+
+SF.systems = { WaveDirector, resolve };
+})();

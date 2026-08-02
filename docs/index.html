@@ -12,48 +12,57 @@
 
 <div id="app">
 
-  <!-- ===================== PROFILE PICKER ===================== -->
+  <!-- ===================== PILOT PICKER ===================== -->
   <section id="screen-profiles" class="screen menu-bg active">
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
-    <p class="tagline">Who's playing?</p>
+    <h1 class="game-title">SKY<span>FORCE</span></h1>
+    <p class="tagline">Who's flying today?</p>
     <div id="profileGrid" class="profile-grid"></div>
-    <button id="addProfileBtn" class="ghost-btn">+ Add Player</button>
+    <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
   </section>
 
   <!-- ===================== MAIN MENU ===================== -->
   <section id="screen-menu" class="screen menu-bg">
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
-    <p id="greeting" class="greeting"></p>
+    <h1 class="game-title">SKY<span>FORCE</span></h1>
+    <div id="menuPilot" class="menu-pilot"></div>
     <div class="menu-buttons">
-      <button id="playBtn" class="main-btn">▶ PLAY</button>
+      <button id="playBtn" class="main-btn">▶ FLY A MISSION</button>
       <button id="armoryBtn" class="main-btn">🛠 ARMORY</button>
+      <button id="achievementsBtn" class="main-btn">🏅 MEDALS</button>
       <button id="leaderboardBtn" class="main-btn">🏆 CHAMPIONSHIP</button>
-      <button id="achievementsBtn" class="main-btn">🏅 ACHIEVEMENTS</button>
-      <button id="switchBtn" class="ghost-btn">Switch Player</button>
+      <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
     </div>
   </section>
 
-  <!-- ===================== DIFFICULTY SELECT ===================== -->
-  <section id="screen-difficulty" class="screen">
-    <h2 class="section-title">CHOOSE YOUR MISSION</h2>
-    <p id="difficultyPower" class="money-line"></p>
-    <div id="difficultyList" class="difficulty-list"></div>
-    <p class="controls-hint">Fly anywhere: arrow keys / WASD, or drag on the screen.<br>Your guns fire by themselves &middot; tap 💣 (or press B) for a smart bomb</p>
-    <button id="difficultyBackBtn" class="ghost-btn">Back to Menu</button>
+  <!-- ===================== MISSION SELECT ===================== -->
+  <section id="screen-missions" class="screen">
+    <h2 class="section-title">CHOOSE A MISSION</h2>
+    <p id="missionStars" class="power-line"></p>
+    <div id="missionList" class="mission-list"></div>
+    <p class="controls-hint">Fly with the arrow keys, WASD, or by dragging on the screen.<br>
+      Your guns fire by themselves &middot; 💣 smart bomb &middot; 🔥 overdrive</p>
+    <button id="missionsBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
-  <!-- ===================== ACHIEVEMENTS ===================== -->
-  <section id="screen-achievements" class="screen">
-    <h2 class="section-title">ACHIEVEMENTS</h2>
-    <div id="achievementsList" class="achievements-list"></div>
-    <button id="achievementsBackBtn" class="ghost-btn">Back to Menu</button>
+  <!-- ===================== BRIEFING (difficulty per mission) ============ -->
+  <section id="screen-briefing" class="screen">
+    <h2 id="briefTitle" class="section-title">MISSION</h2>
+    <p id="briefSubtitle" class="brief-subtitle"></p>
+    <div class="panel">
+      <label class="panel-label">MISSION BRIEF</label>
+      <p id="briefText" class="brief-text"></p>
+      <div id="briefObjectives" class="brief-objectives"></div>
+    </div>
+    <label class="panel-label">CHOOSE DIFFICULTY</label>
+    <div id="briefDifficulties" class="difficulty-list"></div>
+    <button id="briefBackBtn" class="ghost-btn">Back to Missions</button>
   </section>
 
   <!-- ===================== ARMORY ===================== -->
   <section id="screen-armory" class="screen">
     <h2 class="section-title">ARMORY</h2>
 
-    <!-- Pilot ID card: who you are, what rank you've earned, what you can spend -->
     <div id="pilotCard" class="pilot-card">
       <div class="pc-left">
         <div id="pcShip" class="pc-ship"></div>
@@ -77,7 +86,7 @@
     </div>
 
     <div class="panel">
-      <label class="panel-label">SHIP COLOR</label>
+      <label class="panel-label">SHIP COLOUR</label>
       <div id="colorRow" class="color-row"></div>
     </div>
 
@@ -86,7 +95,15 @@
     <button id="armoryBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
-  <!-- ===================== LEADERBOARD ===================== -->
+  <!-- ===================== MEDALS ===================== -->
+  <section id="screen-achievements" class="screen">
+    <h2 class="section-title">MEDALS</h2>
+    <p id="achievementsCount" class="power-line"></p>
+    <div id="achievementsList" class="achievements-list"></div>
+    <button id="achievementsBackBtn" class="ghost-btn">Back to Menu</button>
+  </section>
+
+  <!-- ===================== CHAMPIONSHIP ===================== -->
   <section id="screen-leaderboard" class="screen">
     <h2 class="section-title">THIERRY FAMILY CHAMPIONSHIP</h2>
     <div id="leaderboardList" class="leaderboard-list"></div>
@@ -98,28 +115,35 @@
     <div class="game-frame">
       <canvas id="game"></canvas>
 
-      <button id="pauseBtn" class="icon-btn top-left hidden">II</button>
-      <button id="muteBtn" class="icon-btn top-right hidden">♪</button>
-      <!-- Guns are automatic; this is the special-weapon trigger, and it only
-           appears when the pilot actually has a special to fire. -->
-      <button id="bombBtn" class="special-btn hidden">
-        <span class="sb-icon">💣</span>
-        <span class="sb-count" id="bombCount">0</span>
-      </button>
+      <button id="pauseBtn" class="icon-btn top-left">II</button>
+      <button id="muteBtn" class="icon-btn top-right">♪</button>
+
+      <div class="ability-bar">
+        <button id="overdriveBtn" class="special-btn overdrive hidden">
+          <span class="sb-icon">🔥</span><span class="sb-count" id="overdriveCount">0</span>
+        </button>
+        <button id="bombBtn" class="special-btn hidden">
+          <span class="sb-icon">💣</span><span class="sb-count" id="bombCount">0</span>
+        </button>
+      </div>
 
       <div id="overlayPause" class="overlay hidden">
         <h2>PAUSED</h2>
         <button id="resumeBtn" class="main-btn">RESUME</button>
+        <button id="restartBtn" class="ghost-btn">Restart Mission</button>
         <button id="quitBtn" class="ghost-btn">Quit to Menu</button>
       </div>
 
-      <div id="overlayOver" class="overlay hidden">
-        <h2>SIGNAL LOST</h2>
-        <p id="overScore" class="money-line"></p>
-        <p id="overMoney" class="money-line"></p>
-        <button id="retryBtn" class="main-btn">▶ RETRY</button>
-        <button id="changeDiffBtn" class="ghost-btn">Change Difficulty</button>
-        <button id="menuBtn" class="ghost-btn">Back to Menu</button>
+      <div id="overlayResults" class="overlay hidden results">
+        <h2 id="resultTitle">MISSION COMPLETE</h2>
+        <div id="resultStars" class="result-stars"></div>
+        <div id="resultObjectives" class="result-objectives"></div>
+        <div id="resultLines" class="result-lines"></div>
+        <div class="result-buttons">
+          <button id="nextBtn" class="main-btn hidden">▶ NEXT MISSION</button>
+          <button id="retryBtn" class="main-btn">↻ RETRY</button>
+          <button id="resultsMenuBtn" class="ghost-btn">Back to Missions</button>
+        </div>
       </div>
     </div>
   </section>
@@ -133,11 +157,24 @@
 <div id="achievementToast" class="achievement-toast hidden">
   <div class="at-icon">🏆</div>
   <div>
-    <div class="at-label">ACHIEVEMENT UNLOCKED</div>
+    <div class="at-label">MEDAL UNLOCKED</div>
     <div id="at-name" class="at-name"></div>
   </div>
 </div>
 
-<script src="game.js"></script>
+<script src="src/core.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/data/config.js"></script>
+<script src="src/data/enemies.js"></script>
+<script src="src/data/missions.js"></script>
+<script src="src/profile.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/input.js"></script>
+<script src="src/entities.js"></script>
+<script src="src/bosses.js"></script>
+<script src="src/systems.js"></script>
+<script src="src/render.js"></script>
+<script src="src/game.js"></script>
+<script src="src/ui.js"></script>
 </body>
 </html>
