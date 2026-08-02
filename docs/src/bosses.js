@@ -24,8 +24,8 @@ function create(defId, difficulty){
   const hp = Math.round(def.hp * difficulty.bossHp);
   const boss = {
     alive: true, def, name: def.name, tint: def.tint,
-    x: VW/2, y: -110, targetY: def.entryY,
-    vx: 60, size: def.size, r: def.size*0.42,
+    x: VW/2, y: -150, targetY: def.entryY,
+    vx: 78, size: def.size, r: def.size*0.42,
     hp, maxHp: hp,
     entering: true,
     phaseIndex: 0, phase: def.phases[0],
@@ -40,8 +40,8 @@ function create(defId, difficulty){
     })),
     // Pre-rolled damage spots so scorching and chunks appear in stable places.
     wounds: Array.from({length:12}, () => {
-      const a = rand(0, TAU), rad = rand(12, 34);
-      return { x: Math.cos(a)*rad, y: Math.sin(a)*rad*0.8, r: rand(7, 16) };
+      const a = rand(0, TAU), rad = rand(16, 44);
+      return { x: Math.cos(a)*rad, y: Math.sin(a)*rad*0.8, r: rand(9, 21) };
     }),
   };
   return boss;
@@ -56,36 +56,36 @@ const ATTACKS = {
   spreadVolley: {
     telegraphKind: "muzzle",
     fire(boss, world){
-      const n = boss.phase.enrage ? 7 : 5;
-      const spread = 0.85;
+      const n = boss.phase.enrage ? 9 : 6;
+      const spread = 1.15;   // fans wider now there's width to cover
       for(let i=0;i<n;i++){
         const a = -spread/2 + (spread/(n-1))*i;
         world.spawnEnemyBullet(boss.x, boss.y + boss.r*0.6,
-          Math.sin(a)*230, Math.cos(a)*230, "bolt", 5);
+          Math.sin(a)*280, Math.cos(a)*280, "bolt", 6);
       }
     },
   },
   aimedBurst: {
     telegraphKind: "lock",
     fire(boss, world){
-      boss.burst = { attack:"aimedBurst", left: boss.phase.enrage ? 5 : 3, timer: 0, gap: 0.13 };
+      boss.burst = { attack:"aimedBurst", left: boss.phase.enrage ? 6 : 4, timer: 0, gap: 0.12 };
     },
     burstShot(boss, world){
       const p = world.player;
       const dx = (p ? p.x : VW/2) - boss.x, dy = Math.max(60, (p ? p.y : VH) - boss.y);
       const l = Math.hypot(dx, dy);
-      world.spawnEnemyBullet(boss.x, boss.y + boss.r*0.5, dx/l*280, dy/l*280, "aimed", 4.5);
+      world.spawnEnemyBullet(boss.x, boss.y + boss.r*0.5, dx/l*340, dy/l*340, "aimed", 5.5);
     },
   },
   ringBurst: {
     telegraphKind: "charge",
     fire(boss, world){
-      const n = boss.phase.enrage ? 18 : 12;
+      const n = boss.phase.enrage ? 24 : 16;
       for(let i=0;i<n;i++){
         const a = (TAU/n)*i + rand(-0.05, 0.05);
-        world.spawnEnemyBullet(boss.x, boss.y, Math.cos(a)*200, Math.sin(a)*200, "orb", 5);
+        world.spawnEnemyBullet(boss.x, boss.y, Math.cos(a)*245, Math.sin(a)*245, "orb", 6);
       }
-      fx.ring(boss.x, boss.y, 90, boss.tint, 3, 0.4);
+      fx.ring(boss.x, boss.y, 130, boss.tint, 3, 0.4);
     },
   },
   sweepBeam: {
@@ -94,7 +94,7 @@ const ATTACKS = {
       // A wide column that sweeps across the playfield - the "get out of the
       // way" attack. Telegraphed for the whole wind-up before it can hurt you.
       const fromLeft = boss.x < VW/2;
-      boss.beam = { x: boss.x, dir: fromLeft ? 1 : -1, timer: 1.5, width: 34 };
+      boss.beam = { x: boss.x, dir: fromLeft ? 1 : -1, timer: 1.7, width: 48 };
     },
   },
   callMinions: {
@@ -102,9 +102,9 @@ const ATTACKS = {
     fire(boss, world, ctxObj){
       const n = boss.phase.enrage ? 4 : 3;
       for(let i=0;i<n;i++){
-        const x = clamp(boss.x + (i - (n-1)/2)*50, 30, VW-30);
+        const x = clamp(boss.x + (i - (n-1)/2)*72, 45, VW-45);
         world.spawnEnemy(ctxObj.difficulty.smart >= 2 ? "swooper" : "grunt", x, boss.y + 10,
-          { difficulty: ctxObj.difficulty, hoverY: rand(150, 240) });
+          { difficulty: ctxObj.difficulty, hoverY: rand(210, 330) });
       }
     },
   },
@@ -137,7 +137,7 @@ function update(boss, dt, world, ctxObj, timeMs){
   }
 
   if(boss.entering){
-    boss.y += 150*dt;
+    boss.y += 190*dt;
     if(boss.y >= boss.targetY){ boss.y = boss.targetY; boss.entering = false; }
     return;
   }
@@ -152,15 +152,15 @@ function update(boss, dt, world, ctxObj, timeMs){
     boss.telegraph = null;
     boss.burst = null;
     audio.play("bossPhase");
-    fx.ring(boss.x, boss.y, 150, "#ffffff", 4, 0.6);
+    fx.ring(boss.x, boss.y, 210, "#ffffff", 4, 0.6);
     fx.shake(14);
-    fx.text(boss.x, boss.y - 40, next.enrage ? "ENRAGED!" : "PHASE " + (boss.phaseIndex+1), "#ff5d73", 18, true);
+    fx.text(boss.x, boss.y - 54, next.enrage ? "ENRAGED!" : "PHASE " + (boss.phaseIndex+1), "#ff5d73", 18, true);
   }
 
   // Patrol
   boss.x += boss.vx * (boss.phase.speed/70) * dt;
-  if(boss.x < 52){ boss.x = 52; boss.vx = Math.abs(boss.vx); }
-  if(boss.x > VW-52){ boss.x = VW-52; boss.vx = -Math.abs(boss.vx); }
+  if(boss.x < 78){ boss.x = 78; boss.vx = Math.abs(boss.vx); }
+  if(boss.x > VW-78){ boss.x = VW-78; boss.vx = -Math.abs(boss.vx); }
 
   // Multi-shot bursts
   if(boss.burst){
@@ -176,8 +176,8 @@ function update(boss, dt, world, ctxObj, timeMs){
   // Sweeping beam
   if(boss.beam){
     boss.beam.timer -= dt;
-    boss.beam.x += boss.beam.dir * 150 * dt;
-    if(boss.beam.x < 30 || boss.beam.x > VW-30) boss.beam.dir *= -1;
+    boss.beam.x += boss.beam.dir * 190 * dt;
+    if(boss.beam.x < 45 || boss.beam.x > VW-45) boss.beam.dir *= -1;
     if(boss.beam.timer <= 0) boss.beam = null;
   }
 
@@ -227,7 +227,7 @@ function damage(boss, amount, x, y){
       onWeak.destroyed = true;
       if(onWeak.disables) boss.disabled[onWeak.disables] = true;
       weakPointDestroyed = onWeak;
-      fx.explosion(boss.x + onWeak.ox, boss.y + onWeak.oy, 40, "#ffb03d", true);
+      fx.explosion(boss.x + onWeak.ox, boss.y + onWeak.oy, 52, "#ffb03d", true);
       fx.shake(12);
       fx.hitStop(70);
       audio.play("enemyExplode", true);

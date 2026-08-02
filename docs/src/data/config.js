@@ -65,7 +65,7 @@ const UPGRADES = [
     effect: lvl => "+" + (lvl*14) + "% speed" },
   { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
     desc:"Drags nearby coins, pick-ups and rescue pods toward you",
-    effect: lvl => (40 + lvl*45) + "px pull range" },
+    effect: lvl => (60 + lvl*68) + "px pull range" },
 
   { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
     desc:"Every kill pays out more - buy this early, it pays for itself",

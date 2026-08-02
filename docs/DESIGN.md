@@ -63,6 +63,37 @@ behaviour comes from the archetype's named function — data-oriented in the way
 that matter (contiguous reuse, no per-frame allocation, easy to add types)
 without the ceremony.
 
+## 2b. The playfield (tablet-first)
+
+The field is **800 tall, 440-640 wide**, chosen once at load from the device
+aspect. On an iPad that lands at ~556-600 - so the playfield fills the glass
+with no letterboxing, the 4:5 background art is cover-fitted instead of
+squashed, and the ship has ~13 ship-widths of lateral room instead of the 8 it
+had at the old phone-shaped 390x620. Landscape uses the full 640; phones get
+440, which is proportioned rather than a thin band.
+
+Widening was not a scale-up. Everything that lives in that space was retuned:
+
+- **Formations rebuilt** for the width, with a shared 50px edge margin, plus
+  three shapes that only make sense on a wide field: `tripleColumns` (three
+  lanes), `wall` (a solid rank with one gap to thread), `pincer` (two diagonal
+  streams crossing the middle).
+- **Wave sizes up ~45%** across all eight missions so the extra area is
+  populated - a wider screen with the old counts reads as empty.
+- **Speeds up ~25%** (enemies, their shots, player bullets) because the field
+  is 29% taller; pacing per screen-crossing is unchanged.
+- **Player**: top speed 330 → 430 and acceleration to match, so crossing the
+  wider field is still a fast, deliberate move rather than a slog.
+- **Sprites up ~22%**, four hover bands instead of three, wider weave
+  amplitudes, wider brute strafing, wider boss patrol and beam.
+- **HUD re-laid out** for the aspect: score left, mission centre, wallet right,
+  lives and mission bar on a second row, all positioned relative to VW.
+- **Star density is per-area**, so the parallax doesn't thin out.
+
+`entities.js` is the only file that states the field size; everything else
+derives from `SF.entityConst`. The smoke test asserts no formation can place
+an enemy outside the field at any supported width.
+
 ## 3. Game feel
 
 The things that actually make shooting feel good, in rough order of impact:

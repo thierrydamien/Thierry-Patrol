@@ -10,6 +10,14 @@ folder). Progress is saved per pilot, per browser.
 
 For how it's built and why, see **[DESIGN.md](DESIGN.md)**.
 
+## Built for the iPad
+The playfield is 800 tall and 440-640 wide, picked from your device's aspect
+when the game loads, so on an iPad it fills the screen edge to edge with no
+letterboxing and gives you real room to manoeuvre. Enemy formations, wave
+sizes, speeds, sprite scale and the HUD are all tuned for that width rather
+than stretched into it - including three formations (three-lane, gap-in-the-
+wall, and crossing pincers) that only work on a wide field.
+
 ## Playing it
 Pick your pilot, choose a mission, choose a difficulty, fly.
 

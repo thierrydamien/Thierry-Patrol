@@ -71,9 +71,9 @@ class WaveDirector {
     }
     slots.forEach((s, i) => {
       this.pending.push({
-        type: wave.type, x: clamp(s.x, 24, VW-24), y: s.y,
+        type: wave.type, x: clamp(s.x, 34, VW-34), y: s.y,
         delay: s.delay, elite: eliteIdx.has(i),
-        hoverY: 110 + (i % 3) * 42 + rand(-10, 10),
+        hoverY: 155 + (i % 4) * 52 + rand(-14, 14),   // four hover bands in the taller field
       });
     });
   }

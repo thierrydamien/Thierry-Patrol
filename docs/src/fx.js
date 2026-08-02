@@ -96,7 +96,7 @@ function text(x, y, str, color, size, rise){
 function damageNumber(x, y, amount, crit){
   const t = texts.spawn();
   t.x=x+rand(-4,4); t.y=y; t.text=String(amount); t.color = crit ? "#ffd23f" : "rgba(255,255,255,0.9)";
-  t.size = crit ? 15 : 11; t.life=0; t.max=0.55; t.vy=-52;
+  t.size = crit ? 18 : 14; t.life=0; t.max=0.55; t.vy=-52;
 }
 
 /* ---------------------------------------------------------

@@ -76,7 +76,7 @@ function buildLoadout(profile, difficulty){
     damage: 1 + lv("damage"),
     pierce: lv("pierce"),
     homingLvl: lv("homing"),
-    magnetRange: 40 + lv("magnet")*45,
+    magnetRange: 60 + lv("magnet")*68,
     moneyMult: 1 + lv("fortune")*0.15,
     drones: lv("wingman"),
     bombs: lv("bomb"),
@@ -196,11 +196,11 @@ const callbacks = {
     audio.play("enemyExplode", e.elite || e.maxHp >= 5);
 
     if(run.combo > 0 && run.combo % 5 === 0){
-      fx.text(e.x, e.y - 16, "x" + run.combo + "!", "#ffd23f", 15);
+      fx.text(e.x, e.y - 20, "x" + run.combo + "!", "#ffd23f", 19);
       audio.play("combo", run.combo);
     }
     if(e.elite){
-      fx.text(e.x, e.y - 24, "ELITE DOWN", "#ffd23f", 14, true);
+      fx.text(e.x, e.y - 30, "ELITE DOWN", "#ffd23f", 17, true);
       spawnPowerup(e.x, e.y);
     } else if(chance(0.045)){
       spawnPowerup(e.x, e.y);
@@ -208,7 +208,7 @@ const callbacks = {
     if(e.carriesRescue){
       const pod = game.world.spawnPickup("rescue", e.x, e.y);
       pod.vy = 30;
-      fx.text(e.x, e.y - 20, "PILOT FREED!", "#ffd23f", 14, true);
+      fx.text(e.x, e.y - 26, "PILOT FREED!", "#ffd23f", 17, true);
     }
   },
 
@@ -217,7 +217,7 @@ const callbacks = {
     if(e.fromBoss) return;
     run.stats.escaped++;
     if(e.carriesRescue){
-      fx.text(VW/2, VH*0.5, "HAULER ESCAPED", "#ff5d73", 15, true);
+      fx.text(VW/2, VH*0.5, "HAULER ESCAPED", "#ff5d73", 19, true);
     }
   },
 
@@ -243,7 +243,7 @@ const callbacks = {
     if(p.shield > 0){
       p.shield--;
       p.invuln = Math.max(0.9, p.invulnTime*0.5);
-      fx.ring(p.x, p.y, 46, "#7cc4ff", 3, 0.35);
+      fx.ring(p.x, p.y, 60, "#7cc4ff", 3, 0.35);
       fx.sparks(p.x, p.y, 14, "#7cc4ff", 180);
       fx.shake(7);
       fx.flash(0.5, "80,180,255");
@@ -255,7 +255,7 @@ const callbacks = {
     run.stats.livesLost++;
     run.combo = 0;
     p.invuln = p.invulnTime;
-    fx.explosion(p.x, p.y, 46, p.color, true);
+    fx.explosion(p.x, p.y, 58, p.color, true);
     fx.shake(16);
     fx.flash(1, "255,40,60");
     fx.hitStop(90);
@@ -287,10 +287,10 @@ function killBoss(boss){
   fx.explosion(bx, by, boss.size, "#ffb03d", true);
   wounds.forEach((w, i) => setTimeout(() => {
     if(game.state !== "playing" && game.state !== "ending") return;
-    fx.explosion(bx + w.x, by + w.y, 28, i%2 ? "#ffffff" : "#ff8a3d", false);
+    fx.explosion(bx + w.x, by + w.y, 36, i%2 ? "#ffffff" : "#ff8a3d", false);
     fx.shake(7);
   }, i*70));
-  fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 22, true);
+  fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 30, true);
   game.world.boss = null;
   run.bossActive = false;
   setTimeout(() => { if(!run.ended) endMission(true); }, 1200);
@@ -321,7 +321,7 @@ function useBomb(){
     const res = SF.bosses.damage(game.world.boss, Math.round(game.world.boss.maxHp*0.12), game.world.boss.x, game.world.boss.y);
     if(res.killed) killBoss(game.world.boss);
   }
-  fx.text(VW/2, VH*0.45, "BOOM!", "#ffd23f", 26, true);
+  fx.text(VW/2, VH*0.45, "BOOM!", "#ffd23f", 34, true);
   return true;
 }
 
@@ -332,8 +332,8 @@ function useOverdrive(){
   p.overdrives--;
   p.overdriveUntil = performance.now() + p.overdriveTime*1000;
   audio.play("overdrive");
-  fx.ring(p.x, p.y, 90, "#ff8a3d", 4, 0.5);
-  fx.text(p.x, p.y - 30, "OVERDRIVE!", "#ff8a3d", 17, true);
+  fx.ring(p.x, p.y, 120, "#ff8a3d", 4, 0.5);
+  fx.text(p.x, p.y - 38, "OVERDRIVE!", "#ff8a3d", 22, true);
   return true;
 }
 
@@ -435,7 +435,7 @@ function update(dt, timeMs){
   for(let i=0;i<run.objectiveDefs.length;i++) if(run.objectiveDefs[i].test(stats)) met++;
   if(met > run.objectivesMet){
     run.objectiveFlashUntil = timeMs + 2600;   // show the full list again briefly
-    fx.text(VW/2, VH*0.28, "OBJECTIVE COMPLETE", "#4ade80", 15, true);
+    fx.text(VW/2, VH*0.28, "OBJECTIVE COMPLETE", "#4ade80", 20, true);
     audio.play("star", met);
   }
   run.objectivesMet = met;
@@ -445,7 +445,7 @@ function onPickupCollected(item, lost){
   const run = game.run;
   const p = game.world.player;
   if(lost){
-    if(item.kind === "rescue") fx.text(VW/2, VH*0.55, "PILOT LOST", "#ff5d73", 14, true);
+    if(item.kind === "rescue") fx.text(VW/2, VH*0.55, "PILOT LOST", "#ff5d73", 18, true);
     return;
   }
   if(item.kind === "coin"){
@@ -458,13 +458,13 @@ function onPickupCollected(item, lost){
     run.money += Math.round(40 * run.difficulty.pay * p.moneyMult);
     audio.play("rescue");
     fx.ring(item.x, item.y, 40, "#ffd23f", 3, 0.4);
-    fx.text(item.x, item.y-14, "PILOT RESCUED", "#ffd23f", 14, true);
+    fx.text(item.x, item.y-18, "PILOT RESCUED", "#ffd23f", 17, true);
   } else {
     const def = item.data;
     const now = performance.now();
     game.profile.powerupsCollected++;
     audio.play("pickup");
-    fx.text(p.x, p.y-28, def.label + "!", def.color, 15, true);
+    fx.text(p.x, p.y-34, def.label + "!", def.color, 19, true);
     if(def.id === "rapid") p.tempRapidUntil = now + 9000;
     else if(def.id === "spread") p.tempSpreadUntil = now + 9000;
     else if(def.id === "shield") p.shield = Math.min(p.shield+1, Math.max(1, p.shieldMax)+1);

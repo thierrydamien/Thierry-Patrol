@@ -18,7 +18,7 @@ const state = {
 };
 
 let canvas = null, VW = 390, VH = 620;
-const TOUCH_LIFT = 36;
+const TOUCH_LIFT = 48;   // keeps a thumb clear of the (now larger) ship
 let dragPointerId = null;
 
 function keyDown(e){

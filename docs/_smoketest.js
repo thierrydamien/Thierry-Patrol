@@ -138,6 +138,15 @@ async function run(){
   check("bosses declare phases in descending health order",
     Object.values(SF.missions.BOSSES).every(b =>
       b.phases.every((p,i) => i === 0 || p.at < b.phases[i-1].at)));
+  check("playfield is tuned-range wide and 800 tall",
+    SF.entityConst.VH === 800 && SF.entityConst.VW >= 440 && SF.entityConst.VW <= 640);
+  check("nothing spawns outside the playfield",
+    SF.missions.MISSIONS.every(m => m.waves.every(wv => {
+      const slots = SF.enemyData.FORMATIONS[wv.form](wv.n, SF.entityConst.VW);
+      return slots.every(sl => sl.x >= 0 && sl.x <= SF.entityConst.VW);
+    })));
+  check("every wave references a real formation",
+    SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",
     Object.values(SF.missions.BOSSES).every(b =>
       b.weakPoints.every(wp => !wp.disables || !!SF.bosses.ATTACKS[wp.disables])));

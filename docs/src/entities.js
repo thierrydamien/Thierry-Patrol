@@ -16,18 +16,43 @@ const { spreadPattern, fireRateMult } = SF.config;
 const fx = SF.fx;
 const audio = SF.audio;
 
-const VW = 390, VH = 620;
-const PLAY_TOP = 110;      // ceiling the ship stops at, clear of the HUD
-const PLAY_BOTTOM = VH - 26;
+/*
+ * Playfield coordinate system.
+ *
+ * The height is fixed at 800; the width adapts to the device aspect within
+ * 440-640 and is decided once, at load. On the target device - an iPad - that
+ * lands at ~560-600, i.e. 3:4-ish: the playfield fills the glass, the 4:5
+ * background art is no longer squashed, and the ship has thirteen ship-widths
+ * of room to dodge in instead of the eight it had at the old phone-shaped
+ * 390x620. Phones still get a sensibly proportioned field rather than a
+ * letterboxed band, and landscape uses the full 640.
+ *
+ * Every other number in the game derives from these two, so this is the only
+ * place the field size is stated. Nothing else may hard-code a coordinate:
+ * formations, boss patrol limits, spawn margins and the HUD are all expressed
+ * relative to VW/VH.
+ */
+function pickFieldWidth(){
+  const w = (window.innerWidth || 820), h = (window.innerHeight || 1100);
+  // Match the device's own aspect so nothing is letterboxed, but stay inside a
+  // range the game is tuned for: never so narrow that formations collapse into
+  // a single lane, never so wide that the edges are unreachable.
+  return Math.round(Math.max(440, Math.min(640, 800 * (w / h))));
+}
+
+const VH = 800;
+const VW = pickFieldWidth();
+const PLAY_TOP = 150;      // ceiling the ship stops at, clear of the HUD
+const PLAY_BOTTOM = VH - 34;
 
 /* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric. */
 const BULLET_TIERS = [
-  { color:"#ffd23f", w:5,  h:14, glow:0 },
-  { color:"#ffe27a", w:6,  h:16, glow:4 },
-  { color:"#ffa94d", w:7,  h:18, glow:6 },
-  { color:"#4dd2ff", w:8,  h:20, glow:8 },
-  { color:"#7c9bff", w:9,  h:22, glow:10 },
-  { color:"#ff7ce5", w:10, h:26, glow:14 },
+  { color:"#ffd23f", w:6,  h:17, glow:0 },
+  { color:"#ffe27a", w:7,  h:19, glow:4 },
+  { color:"#ffa94d", w:8,  h:22, glow:6 },
+  { color:"#4dd2ff", w:9,  h:24, glow:8 },
+  { color:"#7c9bff", w:11, h:27, glow:10 },
+  { color:"#ff7ce5", w:12, h:31, glow:14 },
 ];
 
 class World {
@@ -36,7 +61,7 @@ class World {
     this.enemyBullets = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:4,kind:"bolt",age:0 }), 400);
     this.enemies      = new Pool(() => ({ alive:false }), 140);
     this.pickups      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,kind:"coin",value:0,life:0,angle:0,data:null }), 160);
-    this.grid         = new SpatialGrid(VW, VH, 48);
+    this.grid         = new SpatialGrid(VW, VH, 60);
     this.player       = null;
     this.boss         = null;
   }
@@ -52,15 +77,15 @@ class World {
   /* ---------------- PLAYER ---------------- */
   createPlayer(loadout){
     const p = {
-      x: VW/2, y: VH - 90, vx: 0, vy: 0,
-      targetX: VW/2, targetY: VH - 90,
-      r: 9, bank: 0,
+      x: VW/2, y: VH - 120, vx: 0, vy: 0,
+      targetX: VW/2, targetY: VH - 120,
+      r: 11, bank: 0,
       alive: true,
       lives: loadout.lives, maxLives: loadout.lives,
       shield: loadout.shieldMax, shieldMax: loadout.shieldMax,
       invuln: 1.4, invulnTime: loadout.invulnTime,
-      accel: 3400 * loadout.speedMult,
-      maxSpeed: 330 * loadout.speedMult,
+      accel: 4300 * loadout.speedMult,
+      maxSpeed: 430 * loadout.speedMult,
       fireInterval: loadout.fireInterval, cooldown: 0,
       spreadLvl: loadout.spreadLvl, damage: loadout.damage, pierce: loadout.pierce,
       homingLvl: loadout.homingLvl, magnetRange: loadout.magnetRange,
@@ -107,8 +132,8 @@ class World {
     if(sp > p.maxSpeed){ p.vx = p.vx/sp*p.maxSpeed; p.vy = p.vy/sp*p.maxSpeed; }
 
     p.x += p.vx*dt; p.y += p.vy*dt;
-    if(p.x < 18){ p.x = 18; p.vx = 0; }
-    if(p.x > VW-18){ p.x = VW-18; p.vx = 0; }
+    if(p.x < 24){ p.x = 24; p.vx = 0; }
+    if(p.x > VW-24){ p.x = VW-24; p.vx = 0; }
     if(p.y < PLAY_TOP){ p.y = PLAY_TOP; p.vy = 0; }
     if(p.y > PLAY_BOTTOM){ p.y = PLAY_BOTTOM; p.vy = 0; }
 
@@ -119,7 +144,7 @@ class World {
     if(p.invuln > 0) p.invuln -= dt;
 
     // Engine trail
-    p.trail.push({ x: p.x, y: p.y + 12, life: 0 });
+    p.trail.push({ x: p.x, y: p.y + 15, life: 0 });
     for(let i = p.trail.length-1; i >= 0; i--){
       p.trail[i].life += dt;
       if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
@@ -148,20 +173,20 @@ class World {
     for(let i=0;i<pattern.length;i++){
       const vx = pattern[i];
       const b = this.bullets.spawn();
-      b.x = p.x + vx*0.02; b.y = p.y - 14; b.vx = vx; b.vy = -520;
-      b.r = 4 + tier*0.4; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
+      b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
+      b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false;
     }
-    fx.muzzle(p.x, p.y - 18, BULLET_TIERS[tier].color, 0.8 + tier*0.16);
+    fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
 
     for(let i=0;i<p.drones;i++){
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
-      b.x = p.x + side*27; b.y = p.y + 2; b.vx = 0; b.vy = -500;
-      b.r = 3.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
+      b.x = p.x + side*34; b.y = p.y + 2; b.vx = 0; b.vy = -640;
+      b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true;
-      fx.muzzle(p.x + side*27, p.y - 4, "#9fe4ff", 0.6);
+      fx.muzzle(p.x + side*34, p.y - 4, "#9fe4ff", 0.75);
     }
     audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));
   }
@@ -236,8 +261,8 @@ class World {
     e.money = Math.round(type.money * (elite ? ELITE.moneyMult : 1));
     e.behaviour = type.behaviour;
     e.state = 0; e.stateTimer = 0; e.phase = rand(0, TAU); e.locked = false; e.speedMul = 1;
-    e.anchorX = x; e.weaveWidth = rand(40, 74); e.weaveSpeed = rand(1.4, 2.2);
-    e.hoverY = o.hoverY != null ? o.hoverY : rand(120, 250);
+    e.anchorX = x; e.weaveWidth = rand(62, 118); e.weaveSpeed = rand(1.3, 2.0);
+    e.hoverY = o.hoverY != null ? o.hoverY : rand(170, 340);
     e.hoverTime = rand(3.5, 6);
     e.flash = 0; e.hitTint = 0;
     e.carriesRescue = !!type.carriesRescue;
@@ -309,8 +334,8 @@ class World {
     let guard = 0;
     while(left > 0 && guard++ < 6){
       const chunk = left > 12 ? Math.ceil(left/2) : left;
-      const c = this.spawnPickup("coin", x + rand(-8,8), y + rand(-8,8), { value: chunk });
-      c.vx = rand(-70, 70); c.vy = rand(-60, 20);
+      const c = this.spawnPickup("coin", x + rand(-11,11), y + rand(-11,11), { value: chunk });
+      c.vx = rand(-95, 95); c.vy = rand(-75, 25);
       left -= chunk;
     }
   }
@@ -335,7 +360,7 @@ class World {
           const pull = (1 - d/range) * 900 * dt;
           it.vx += dx/d * pull; it.vy += dy/d * pull;
         }
-        if(d < p.r + 16){
+        if(d < p.r + 20){
           it.alive = false;
           onCollect(it);
           continue;
