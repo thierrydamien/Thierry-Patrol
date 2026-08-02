@@ -13,6 +13,13 @@ html, body {
   color: white;
   font-family: -apple-system, "Segoe UI", Verdana, Arial, sans-serif;
   overflow:hidden;
+  /* iPad: no rubber-band scroll behind the game, no double-tap zoom, and no
+     long-press text selection while steering with a thumb. */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 #app {
@@ -28,10 +35,32 @@ html, body {
   align-items:center;
   width: min(480px, 100vw);
   height:100%;
-  padding: 24px 20px;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 20px max(24px, env(safe-area-inset-bottom, 0px));
   overflow-y:auto;
+  -webkit-overflow-scrolling: touch;
 }
 .screen.active { display:flex; }
+/* The playfield never scrolls - every touch on it is steering - and it gets
+   the whole screen, so an iPad shows a big playfield rather than a phone-sized
+   strip in the middle of the glass. */
+#screen-game {
+  overflow:hidden; touch-action:none; justify-content:center;
+  width:100%; max-width:none; padding:10px;
+}
+
+/* Tablets: wider menu column, and the Armory shelves go two-up so you can see
+   more of your kit at once. */
+@media (min-width: 700px) {
+  .screen { width: min(680px, 100vw); }
+  .shop-group {
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    align-items:start;
+  }
+  .group-head { grid-column: 1 / -1; }
+  .shop-item { margin-bottom:0; }
+}
 
 .family-title {
   font-size: 12px;
@@ -77,8 +106,15 @@ html, body {
   margin: 0 auto 10px;
   box-shadow: 0 0 14px rgba(255,255,255,0.25);
 }
+.profile-card .avatar { position:relative; }
+.profile-card .avatar-badge {
+  position:absolute; bottom:-4px; right:-4px; font-size:18px;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7));
+}
 .profile-card .pname { font-weight:700; font-size:15px; }
+.profile-card .prank { font-size:9px; font-weight:800; letter-spacing:1px; margin-top:3px; }
 .profile-card .pscore { font-size:12px; color: rgba(255,255,255,0.6); margin-top:4px; }
+.greet-rank { font-size:12px; letter-spacing:2px; font-weight:800; }
 
 .main-btn, .ghost-btn, .small-btn {
   font-family: inherit;
@@ -156,33 +192,113 @@ html, body {
 }
 .swatch.selected { border-color: white; }
 
-.power-line { font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.6); margin-top:-8px; margin-bottom:14px; }
+/* ---- Pilot ID card ---- */
+.pilot-card {
+  width:100%;
+  display:flex; gap:14px; align-items:center;
+  background: linear-gradient(135deg, rgba(120,90,255,0.25), rgba(255,140,60,0.18));
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.pc-left { position:relative; flex:0 0 auto; }
+.pc-ship {
+  width: 62px; height:62px; border-radius:50%;
+  box-shadow: 0 0 20px rgba(255,255,255,0.28);
+}
+.pc-rank-badge {
+  position:absolute; bottom:-4px; right:-6px;
+  font-size: 22px;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+}
+.pc-right { flex:1; min-width:0; }
+.pc-name { font-weight:900; font-size:19px; letter-spacing:0.5px; }
+.pc-rank { font-weight:800; font-size:12px; letter-spacing:1.5px; margin-top:1px; }
+.pc-bar {
+  height:8px; border-radius:5px; margin:8px 0 5px;
+  background: rgba(0,0,0,0.35); overflow:hidden;
+}
+.pc-bar-fill { height:100%; border-radius:5px; transition: width .35s ease; }
+.pc-gear { font-size:11px; color: rgba(255,255,255,0.7); }
+.pc-money { font-size:14px; font-weight:800; color: var(--accent); margin-top:4px; }
 
-.shop-items { display:flex; flex-direction:column; gap:8px; }
+/* ---- Upgrade shelves ---- */
+.shop-items { display:flex; flex-direction:column; gap:16px; width:100%; }
+.shop-group {
+  background: rgba(0,0,0,0.22);
+  border: 1px solid var(--panel-border);
+  border-left: 5px solid var(--cat, var(--accent));
+  border-radius: 14px;
+  padding: 12px;
+}
+.group-head {
+  display:flex; align-items:center; gap:8px;
+  font-weight:900; font-size:13px; letter-spacing:2px;
+  color: var(--cat, var(--accent));
+  margin-bottom: 10px;
+}
+.group-icon { font-size:16px; }
+
 .shop-item {
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  background: rgba(0,0,0,0.25);
-  border-radius: 10px;
-  padding: 10px 14px;
+  display:flex; align-items:center; gap:11px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 11px;
+  margin-bottom: 9px;
 }
-.shop-item.maxed { border: 1px solid rgba(255,210,63,0.45); }
-.shop-item .si-main { min-width:0; }
-.shop-item .si-name { font-weight:700; font-size:14px; }
-.shop-item .si-lvl { font-size:11px; color: rgba(255,255,255,0.5); font-weight:400; }
-.shop-item .si-desc { font-size:11px; color: rgba(255,255,255,0.55); }
-.shop-item .si-effect { font-size:11px; color: var(--accent); margin-top:2px; }
-.si-pips { display:flex; gap:4px; margin:5px 0 4px; }
+.shop-item:last-child { margin-bottom:0; }
+.shop-item.affordable {
+  border-color: var(--cat, var(--accent));
+  box-shadow: 0 0 14px -2px var(--cat, var(--accent));
+}
+.shop-item.maxed { border-color: rgba(255,210,63,0.6); background: rgba(255,210,63,0.08); }
+.si-badge {
+  flex: 0 0 auto;
+  width: 42px; height:42px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 21px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.shop-item .si-main { min-width:0; flex:1; }
+.shop-item .si-name {
+  font-weight:800; font-size:14px;
+  display:flex; align-items:center; gap:6px; justify-content:space-between;
+}
+.shop-item .si-lvl {
+  flex: 0 0 auto; white-space:nowrap;
+  font-size:10px; font-weight:800; letter-spacing:1px;
+  color: #241a00; background: var(--cat, var(--accent));
+  border-radius:6px; padding:1px 6px;
+}
+.shop-item .si-desc { font-size:11px; color: rgba(255,255,255,0.6); line-height:1.35; }
+.shop-item .si-effect { font-size:11px; color: rgba(255,255,255,0.85); margin-top:3px; }
+.shop-item .si-next { color: var(--accent); font-weight:700; }
+.si-pips { display:flex; gap:4px; margin:6px 0 5px; }
 .pip {
-  width:14px; height:6px; border-radius:3px;
+  width:16px; height:7px; border-radius:4px;
   background: rgba(255,255,255,0.15);
+  transition: background .2s ease;
 }
-.pip.on { background: var(--accent); box-shadow: 0 0 6px rgba(245,166,35,0.6); }
+.pip.on { background: var(--cat, var(--accent)); box-shadow: 0 0 8px var(--cat, var(--accent)); }
 .shop-item button {
-  font-family: inherit; font-weight:700; border:none; border-radius:8px;
-  padding: 10px 12px; font-size:12px; cursor:pointer; white-space:nowrap;
-  background: var(--accent); color:#241a00;
+  flex: 0 0 auto;
+  font-family: inherit; font-weight:900; border:none; border-radius:12px;
+  min-width: 66px; min-height: 52px; padding: 8px 10px; font-size:14px;
+  cursor:pointer; white-space:nowrap; line-height:1.15;
+  background: linear-gradient(160deg, #ffd777, var(--accent));
+  color:#241a00;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3);
 }
-.shop-item button:disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); }
+.shop-item button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+.shop-item button:disabled {
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.45);
+  box-shadow:none; transform:none;
+}
+.shop-item.maxed button { background: rgba(255,210,63,0.25); color: var(--accent); }
 
 .difficulty-list { width:100%; display:flex; flex-direction:column; gap:10px; }
 .diff-card {
@@ -242,31 +358,27 @@ html, body {
 .icon-btn.top-right { top:10px; right:10px; }
 .icon-btn.hidden { display:none; }
 
-.fire-btn {
+/* Special-weapon trigger. Guns are automatic, so this is the only thing to
+   press mid-flight — big, thumb-sized, and out of the way of the ship. */
+.special-btn {
   position:absolute; z-index:5;
-  bottom: 22px; right: 18px;
-  width: 76px; height:76px; border-radius:50%;
-  background: radial-gradient(circle at 35% 30%, #ff6b4a, var(--accent2));
-  color:white; border: 3px solid rgba(255,255,255,0.5);
-  font-weight:800; letter-spacing:1px; font-size:14px;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: 16px;
+  width: 78px; height:78px; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  background: radial-gradient(circle at 35% 28%, #ff9d5c, #b3341f);
+  color:white; border: 3px solid rgba(255,255,255,0.55);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.35), 0 0 22px -4px #ff8a3d;
   touch-action:none;
+  animation: specialPulse 2.2s ease-in-out infinite;
 }
-.fire-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
-.fire-btn.hidden { display:none; }
-
-.bomb-btn {
-  position:absolute; z-index:5;
-  bottom: 40px; left: 18px;
-  width: 58px; height:58px; border-radius:50%;
-  background: radial-gradient(circle at 35% 30%, #5b5f7a, #23263c);
-  color:white; border: 3px solid rgba(255,255,255,0.4);
-  font-size:20px;
-  box-shadow: 0 5px 0 rgba(0,0,0,0.35);
-  touch-action:none;
+.special-btn .sb-icon { font-size:26px; line-height:1; }
+.special-btn .sb-count { font-size:11px; font-weight:900; letter-spacing:1px; }
+.special-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); animation:none; }
+.special-btn.hidden { display:none; }
+@keyframes specialPulse {
+  0%, 100% { box-shadow: 0 6px 0 rgba(0,0,0,0.35), 0 0 16px -6px #ff8a3d; }
+  50%      { box-shadow: 0 6px 0 rgba(0,0,0,0.35), 0 0 26px 0px #ff8a3d; }
 }
-.bomb-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
-.bomb-btn.hidden { display:none; }
 
 .loading-overlay {
   position:fixed; inset:0; z-index:100;

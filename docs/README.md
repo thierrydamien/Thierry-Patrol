@@ -21,11 +21,15 @@ device.
 ## Playing it
 Open `index.html` (or the hosted GitHub Pages URL once deployed). Pick
 your name on the "Who's playing?" screen, then Play / Armory / Championship.
-- **Desktop:** arrow keys or WASD to fly **in any direction**, **hold Space
-  to fire** (it's not automatic). **B** sets off a smart bomb.
-- **Touch:** drag anywhere on the game to fly the ship around (it rides
-  just above your finger), **hold the FIRE button** (bottom-right) to
-  shoot, tap 💣 (bottom-left) for a smart bomb.
+- **The guns are automatic** — you never hold a fire button. All you do is
+  fly, and set off specials.
+- **Desktop:** arrow keys or WASD to fly **in any direction**. **B** (or
+  Space) sets off a smart bomb.
+- **Touch / iPad:** drag anywhere on the playfield to fly the ship around
+  (it rides just above your finger, so your thumb never covers it), and
+  tap the 💣 button (bottom-right) for a smart bomb. The special button
+  only appears when you actually have a special to fire, and shows how
+  many are left.
 - **Most enemies shoot back**, firing straight down as they descend; on
   the harder tiers a share of them lead their shots at you instead (those
   are tinted purple). Only flying into an enemy or being hit costs a life
@@ -36,8 +40,44 @@ your name on the "Who's playing?" screen, then Play / Armory / Championship.
   temporary boost (rapid fire, spread shot, shield, 2x score, homing
   shot, or a screen-clearing bomb).
 - 20 achievements to unlock, viewable from the menu.
+- Bosses visibly come apart as you damage them — hit flashes, scorch
+  marks, chunks torn out of the hull, smoke, then fire and a shudder when
+  they're nearly done.
 - Speaker icon in the top-right of the game mutes sound; setting is
   remembered per browser.
+
+## About the sound
+With automatic guns the shot sound plays several times a second all
+session, so it's deliberately tiny: a soft triangle blip at about a third
+of the old volume, rate-limited to at most one every 130ms (so a high fire
+rate can't stack it into a buzzsaw) and slightly detuned each time so it
+never drones. The punch was moved to the things worth hearing — hits,
+explosions, level clears, boss alerts. If it's still too much, the ♪ button
+in the top-right mutes everything and the setting sticks per browser.
+
+## On an iPad
+This is the main way it gets played, so: the playfield uses the whole
+screen rather than a phone-sized strip, the page can't rubber-band scroll
+or double-tap-zoom while you're steering, safe areas are respected, and
+the Armory lays its shelves out two-up on a tablet-width screen. Sound is
+unlocked on the first tap (iOS refuses to start audio any other way).
+Nothing needs holding down — one thumb steers, and the only button is the
+special-weapon trigger.
+
+## The background
+The nebula is drawn slightly oversized and drifted around inside that
+margin — a slow camera pan, so there's never a seam — with three parallax
+star layers scrolling over it at different speeds and the odd comet
+streaking through. It all speeds up as the levels climb, so later levels
+feel faster before an enemy even appears.
+
+## Pilot ranks
+Buying Armory levels earns rank: **Rookie Cadet → Wing Cadet → Squadron
+Pilot → Flight Leader → Star Ace → Wing Commander → Space Legend →
+Thierry Legend**. Your rank badge shows on the player picker, the menu
+greeting and the Armory's pilot card, and a promotion pops a banner. The
+game also calls you by your callsign when you clear a level or drop a
+boss.
 
 ## Difficulty tiers
 Pressing PLAY asks which mission you want. Harder tiers send faster,

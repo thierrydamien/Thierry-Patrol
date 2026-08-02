@@ -8,7 +8,7 @@ const VW = 390, VH = 620;
 
 // The ship can fly anywhere in the playfield, but not so high that it sits on
 // top of the spawn line (or behind the HUD) - this is the ceiling it stops at.
-const PLAY_TOP = 96;
+const PLAY_TOP = 118;
 
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
@@ -19,44 +19,53 @@ const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff
    goal (~$65k of kills) rather than something you finish in an
    afternoon. `effect` describes what owning `lvl` levels does.
    --------------------------------------------------------- */
+/* Upgrades are grouped into four colour-coded shelves in the Armory so the
+   list reads as a kit to build, not a wall of text. */
+const CATEGORIES = [
+  { id:"guns",   name:"GUNS",          icon:"🔫", color:"#ff8a3d" },
+  { id:"armour", name:"STAYING ALIVE", icon:"🛡️", color:"#3fc9ff" },
+  { id:"ship",   name:"SHIP",          icon:"🚀", color:"#9b6bff" },
+  { id:"extras", name:"SPECIALS",      icon:"✨", color:"#ffd23f" },
+];
+
 const UPGRADES = [
-  { id:"spread", name:"Spread Shot", icon:"🔱", max:5, costs:[150,400,900,1800,3200],
+  { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:[150,400,900,1800,3200],
     desc:"More bullets in every shot",
     effect: lvl => spreadPattern(lvl).length + "-way fire" },
-  { id:"rapid", name:"Rapid Fire", icon:"⚡", max:5, costs:[120,320,750,1500,2800],
+  { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:[120,320,750,1500,2800],
     desc:"Shorter gap between shots",
     effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
-  { id:"damage", name:"Plasma Rounds", icon:"💥", max:5, costs:[200,500,1100,2200,4000],
+  { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:[200,500,1100,2200,4000],
     desc:"Each bullet hits harder",
     effect: lvl => (1+lvl) + " damage per hit" },
-  { id:"pierce", name:"Piercing Rounds", icon:"🗡️", max:3, costs:[600,1600,3400],
+  { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:[600,1600,3400],
     desc:"Bullets punch through enemies instead of stopping",
     effect: lvl => "hits " + (1+lvl) + " enemies per bullet" },
-  { id:"homing", name:"Seeker Rounds", icon:"🎯", max:3, costs:[500,1400,3000],
+  { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:[500,1400,3000],
     desc:"Bullets curve toward the nearest target",
     effect: lvl => "tracking " + lvl + "/3" },
-  { id:"shield", name:"Energy Shield", icon:"🛡️", max:4, costs:[100,350,900,2000],
+  { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:[100,350,900,2000],
     desc:"Absorbs hits; one charge comes back each level cleared",
     effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
-  { id:"life", name:"Extra Life", icon:"❤️", max:5, costs:[80,240,600,1400,2600],
+  { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:[80,240,600,1400,2600],
     desc:"Start every run with more lives",
     effect: lvl => (3+lvl) + " starting lives" },
-  { id:"thrusters", name:"Ion Thrusters", icon:"🚀", max:4, costs:[130,340,800,1700],
+  { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:[130,340,800,1700],
     desc:"Steer faster — the main way to survive fast enemies",
     effect: lvl => "+" + (lvl*15) + "% ship speed" },
-  { id:"armor", name:"Hull Plating", icon:"🧱", max:3, costs:[250,700,1600],
+  { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:[250,700,1600],
     desc:"Longer blinking-invincible window after you take a hit",
     effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
-  { id:"magnet", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
+  { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
     desc:"Drags nearby power-ups toward your ship",
     effect: lvl => (lvl*45) + "px pull range" },
-  { id:"fortune", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
+  { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
     desc:"Every kill pays out more — buy this early, it pays for itself",
     effect: lvl => "+" + (lvl*15) + "% money" },
-  { id:"wingman", name:"Wingman Drone", icon:"🛩️", max:2, costs:[1200,3000],
+  { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:[1200,3000],
     desc:"Escort drones that fire alongside you",
     effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
-  { id:"bomb", name:"Smart Bombs", icon:"💣", max:3, costs:[400,1000,2200],
+  { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:[400,1000,2200],
     desc:"Start each run with screen-clearing bombs (press B, or the 💣 button)",
     effect: lvl => lvl + (lvl===1 ? " bomb per run" : " bombs per run") },
 ];
@@ -116,6 +125,33 @@ function difficultyLocked(p, d){
   if(!d.unlock) return false;
   return (p.bestLevelByDiff && p.bestLevelByDiff[d.unlock.diff] || 0) < d.unlock.level;
 }
+/* ---------------------------------------------------------
+   PILOT RANKS
+   A ladder of titles earned from the gear you've bought, so the
+   Armory screen and the menu greeting always show how far along
+   this particular pilot is.
+   --------------------------------------------------------- */
+const RANKS = [
+  { at:0,  name:"ROOKIE CADET",   badge:"🌱", color:"#8fd3a7" },
+  { at:4,  name:"WING CADET",     badge:"🛩️", color:"#7fc4ff" },
+  { at:9,  name:"SQUADRON PILOT", badge:"⭐", color:"#3399ff" },
+  { at:15, name:"FLIGHT LEADER",  badge:"🌟", color:"#f39c12" },
+  { at:22, name:"STAR ACE",       badge:"🔥", color:"#ff8a3d" },
+  { at:30, name:"WING COMMANDER", badge:"🚀", color:"#e74c3c" },
+  { at:38, name:"SPACE LEGEND",   badge:"👑", color:"#9b59b6" },
+  { at:50, name:"THIERRY LEGEND", badge:"🏆", color:"#ffd23f" },
+];
+function rankFor(p){
+  const gear = totalUpgradeLevels(p);
+  let rank = RANKS[0];
+  RANKS.forEach(r => { if(gear >= r.at) rank = r; });
+  return rank;
+}
+function nextRank(p){
+  const gear = totalUpgradeLevels(p);
+  return RANKS.find(r => gear < r.at) || null;
+}
+
 /** The hardest tier we'd suggest for someone with this much gear bought. */
 function recommendedDifficulty(p){
   const power = totalUpgradeLevels(p);
@@ -181,7 +217,13 @@ function initAudio(){
     try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
     catch(e){ actx = null; }
   }
+  // iPads/iPhones start the audio context suspended and will only resume it
+  // from inside a real user gesture, so every tap gets a chance to wake it.
+  if(actx && actx.state === "suspended" && actx.resume) actx.resume();
 }
+// Any first touch/click anywhere counts as the gesture that unlocks sound.
+["pointerdown","touchstart","keydown"].forEach(evt =>
+  window.addEventListener(evt, initAudio, { passive:true }));
 function tone(freq, dur, type, gainStart, glideTo){
   if(!actx || muted) return;
   const osc = actx.createOscillator();
@@ -194,7 +236,21 @@ function tone(freq, dur, type, gainStart, glideTo){
   osc.connect(gain); gain.connect(actx.destination);
   osc.start(); osc.stop(actx.currentTime+dur+0.02);
 }
-function playShoot(){ tone(760,0.06,"square",0.045,420); }
+/*
+ * Guns are automatic now, so this fires several times a second for a whole
+ * session. A loud square-wave "pew" every 0.2s is exhausting, so the shot
+ * sound is deliberately tiny: a soft triangle blip at a fraction of the old
+ * volume, rate-limited so a high fire rate can't stack it into a buzzsaw, and
+ * slightly detuned each time so it doesn't drone. The punch lives in the
+ * explosions and hits instead - those are what you actually want to hear.
+ */
+let lastShootSoundAt = -1;
+function playShoot(){
+  const now = actx ? actx.currentTime*1000 : 0;
+  if(now - lastShootSoundAt < 130) return;
+  lastShootSoundAt = now;
+  tone(520 + Math.random()*90, 0.035, "triangle", 0.016, 360);
+}
 function playExplosion(big){ tone(big?220:300,big?0.32:0.22,"sawtooth",big?0.11:0.08, big?25:40); }
 function playHit(){ tone(140,0.2,"sawtooth",0.09,55); }
 function playPowerup(){ if(!actx||muted) return; [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.08,"square",0.06),i*55)); }
@@ -261,11 +317,37 @@ function hsbToRgb(h,s,v){
   return { r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255) };
 }
 
+/**
+ * True when the sprite pixels can actually be read back. Serving the game over
+ * http(s) - GitHub Pages, or any local server - this is always true. Opening
+ * index.html directly off the filesystem taints the canvas and blocks it, in
+ * which case the game just uses the sprites untinted instead of breaking.
+ */
+let pixelsReadable = null;
+function canReadPixels(){
+  if(pixelsReadable !== null) return pixelsReadable;
+  try {
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 2;
+    const pctx = probe.getContext("2d");
+    pctx.drawImage(assets.ship, 0, 0, 2, 2);
+    pctx.getImageData(0, 0, 1, 1);
+    pixelsReadable = true;
+  } catch(e){
+    pixelsReadable = false;
+  }
+  return pixelsReadable;
+}
+
 /** Recolors the ship sprite to a target hue while preserving its original shading (same technique as ImageTint.java). Cached per color. */
 const tintCache = {};
 function getTintedShip(hex){
   if(tintCache[hex]) return tintCache[hex];
   const img = assets.ship;
+  // Reading pixels back is blocked when the page is opened straight off disk
+  // (file:// taints the canvas). Fall back to the untinted sprite rather than
+  // throwing every frame and leaving an invisible ship.
+  if(!canReadPixels()) return img;
   const off = document.createElement("canvas");
   off.width = img.naturalWidth; off.height = img.naturalHeight;
   const octx = off.getContext("2d");
@@ -289,6 +371,7 @@ const enemyTintCache = {};
 function getTintedEnemy(hex){
   if(enemyTintCache[hex]) return enemyTintCache[hex];
   const img = assets.enemy;
+  if(!canReadPixels()) return img; // see getTintedShip
   const off = document.createElement("canvas");
   off.width = img.naturalWidth; off.height = img.naturalHeight;
   const octx = off.getContext("2d");
@@ -392,11 +475,13 @@ function renderProfileGrid(){
   grid.innerHTML = "";
   listProfileNames().forEach(name => {
     const p = loadProfile(name);
+    const rank = rankFor(p);
     const card = document.createElement("div");
     card.className = "profile-card";
     card.innerHTML = `
-      <div class="avatar" style="background:${p.shipColor}"></div>
+      <div class="avatar" style="background:${p.shipColor}"><span class="avatar-badge">${rank.badge}</span></div>
       <div class="pname">${escapeHtml(p.callsign || p.name)}</div>
+      <div class="prank" style="color:${rank.color}">${rank.name}</div>
       <div class="pscore">Best: ${p.highscore}</div>
     `;
     card.addEventListener("click", () => selectProfile(name));
@@ -405,7 +490,10 @@ function renderProfileGrid(){
 }
 function selectProfile(name){
   activeProfile = loadProfile(name);
-  document.getElementById("greeting").textContent = "Ready for launch, " + activeProfile.callsign + "!";
+  const rank = rankFor(activeProfile);
+  document.getElementById("greeting").innerHTML =
+    `<span class="greet-rank" style="color:${rank.color}">${rank.badge} ${rank.name}</span><br>` +
+    `Ready for launch, ${escapeHtml(activeProfile.callsign)}!`;
   showScreen("screen-menu");
 }
 document.getElementById("addProfileBtn").addEventListener("click", () => {
@@ -446,8 +534,9 @@ document.getElementById("achievementsBtn").addEventListener("click", () => {
 /* ---- Armory ---- */
 function renderArmory(){
   const p = activeProfile;
-  document.getElementById("armoryMoney").textContent = "MONEY: $" + p.money;
+  document.getElementById("armoryMoney").textContent = "$" + p.money + " to spend";
   document.getElementById("callsignInput").value = p.callsign;
+  renderPilotCard(p);
 
   const colorRow = document.getElementById("colorRow");
   colorRow.innerHTML = "";
@@ -463,47 +552,80 @@ function renderArmory(){
     colorRow.appendChild(sw);
   });
 
-  document.getElementById("armoryPower").textContent =
-    "GEAR LEVEL " + totalUpgradeLevels(p) + " / " + MAX_UPGRADE_LEVELS;
-
   const shopItems = document.getElementById("shopItems");
   shopItems.innerHTML = "";
-  UPGRADES.forEach(u => {
-    const lvl = upgLevel(p, u.id);
-    const cost = nextCost(p, u);
-    const maxed = cost === null;
-    const row = document.createElement("div");
-    row.className = "shop-item" + (maxed ? " maxed" : "");
-    const pips = Array.from({length:u.max}, (_,i) =>
-      `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
-    row.innerHTML = `
-      <div class="si-main">
-        <div class="si-name">${u.icon} ${escapeHtml(u.name)} <span class="si-lvl">Lv ${lvl}/${u.max}</span></div>
-        <div class="si-pips">${pips}</div>
-        <div class="si-desc">${escapeHtml(u.desc)}</div>
-        <div class="si-effect">${lvl > 0 ? "Now: " + escapeHtml(u.effect(lvl)) : "Not owned"}${
-          maxed ? "" : " → " + escapeHtml(u.effect(lvl+1))}</div>
-      </div>
-    `;
-    const btn = document.createElement("button");
-    btn.textContent = maxed ? "MAX" : "$" + cost;
-    btn.disabled = maxed || p.money < cost;
-    btn.addEventListener("click", () => buyUpgrade(u.id));
-    row.appendChild(btn);
-    shopItems.appendChild(row);
+  CATEGORIES.forEach(cat => {
+    const group = document.createElement("div");
+    group.className = "shop-group";
+    group.style.setProperty("--cat", cat.color);
+    group.innerHTML = `<div class="group-head"><span class="group-icon">${cat.icon}</span>${cat.name}</div>`;
+
+    UPGRADES.filter(u => u.cat === cat.id).forEach(u => {
+      const lvl = upgLevel(p, u.id);
+      const cost = nextCost(p, u);
+      const maxed = cost === null;
+      const affordable = !maxed && p.money >= cost;
+      const row = document.createElement("div");
+      row.className = "shop-item" + (maxed ? " maxed" : "") + (affordable ? " affordable" : "");
+      const pips = Array.from({length:u.max}, (_,i) =>
+        `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
+      row.innerHTML = `
+        <div class="si-badge">${u.icon}</div>
+        <div class="si-main">
+          <div class="si-name">${escapeHtml(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
+          <div class="si-pips">${pips}</div>
+          <div class="si-desc">${escapeHtml(u.desc)}</div>
+          <div class="si-effect">${lvl > 0 ? "Now: " + escapeHtml(u.effect(lvl)) : "Not owned yet"}${
+            maxed ? "" : ' <span class="si-next">→ ' + escapeHtml(u.effect(lvl+1)) + "</span>"}</div>
+        </div>
+      `;
+      const btn = document.createElement("button");
+      btn.innerHTML = maxed ? "★<br>MAX" : "$" + cost;
+      btn.disabled = maxed || !affordable;
+      btn.addEventListener("click", () => buyUpgrade(u.id));
+      row.appendChild(btn);
+      group.appendChild(row);
+    });
+    shopItems.appendChild(group);
   });
 }
+
+/** The "who am I" card at the top of the Armory: ship, rank badge, progress. */
+function renderPilotCard(p){
+  const rank = rankFor(p), next = nextRank(p);
+  const gear = totalUpgradeLevels(p);
+  document.getElementById("pcShip").style.background =
+    `radial-gradient(circle at 35% 30%, #fff6, ${p.shipColor})`;
+  document.getElementById("pcRankBadge").textContent = rank.badge;
+  document.getElementById("pcName").textContent = p.callsign || p.name;
+  const rankEl = document.getElementById("pcRank");
+  rankEl.textContent = rank.name;
+  rankEl.style.color = rank.color;
+  const pctToNext = next ? Math.round((gear - rank.at) / (next.at - rank.at) * 100) : 100;
+  const fill = document.getElementById("pcBarFill");
+  fill.style.width = pctToNext + "%";
+  fill.style.background = rank.color;
+  document.getElementById("pcGear").textContent = next
+    ? `Gear ${gear}/${MAX_UPGRADE_LEVELS} · ${next.at - gear} more to ${next.name}`
+    : `Gear ${gear}/${MAX_UPGRADE_LEVELS} · everything unlocked!`;
+}
+
 function buyUpgrade(id){
   const p = activeProfile;
   const u = UPGRADE_BY_ID[id];
   const cost = nextCost(p, u);
   if(cost === null || p.money < cost) return;
+  const rankBefore = rankFor(p).name;
   p.money -= cost;
   p.upgrades[id] = upgLevel(p, id) + 1;
   saveProfile(p);
   playPowerup();
   checkAchievements();
   renderArmory();
+  const rankNow = rankFor(p);
+  if(rankNow.name !== rankBefore){ // promotions are a big deal - say so
+    queueAchievementToast({ icon: rankNow.badge, name: "PROMOTED: " + rankNow.name });
+  }
 }
 
 /* ---- Difficulty select ---- */
@@ -667,19 +789,16 @@ function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
 /* ---- Input ---- */
+// The guns fire themselves - all you do is fly (and set off specials). That
+// keeps one-handed iPad play possible: steer with a thumb, nothing to hold.
 const keys = {};
-let firing = false;
 window.addEventListener("keydown", e => {
   keys[e.key] = true;
-  if(e.key===" ") firing = true;
   if(e.key===" "||e.key==="ArrowUp"||e.key==="ArrowDown") e.preventDefault();
   if(e.key==="p"||e.key==="P"||e.key==="Escape") togglePause();
-  if(e.key==="b"||e.key==="B") useBomb();
+  if(e.key==="b"||e.key==="B"||e.key===" ") useBomb(); // Space doubles as the special key
 });
-window.addEventListener("keyup", e => {
-  keys[e.key]=false;
-  if(e.key===" ") firing = false;
-});
+window.addEventListener("keyup", e => { keys[e.key]=false; });
 
 // Touch steering: the ship follows your finger anywhere on the playfield,
 // lifted a little above it so your thumb isn't sitting on top of the ship.
@@ -701,16 +820,6 @@ window.addEventListener("pointermove", e => { if(dragActive && e.pointerId===dra
 function endDrag(e){ if(e.pointerId===dragPointerId){ dragActive=false; dragPointerId=null; } }
 window.addEventListener("pointerup", endDrag);
 window.addEventListener("pointercancel", endDrag);
-
-const fireBtn = document.getElementById("fireBtn");
-if(fireBtn){
-  const startFiring = e => { firing = true; e.preventDefault(); };
-  const stopFiring = () => { firing = false; };
-  fireBtn.addEventListener("pointerdown", startFiring);
-  fireBtn.addEventListener("pointerup", stopFiring);
-  fireBtn.addEventListener("pointerleave", stopFiring);
-  fireBtn.addEventListener("pointercancel", stopFiring);
-}
 
 /* ---- Entity state ---- */
 let player, bullets, enemyBullets, enemies, particles, floatingTexts, powerups, trail;
@@ -748,6 +857,7 @@ function startRun(){
     tempRapidUntil:0, tempSpreadUntil:0, tempScoreUntil:0, tempHomingUntil:0,
   };
   dragActive=false; dragX=VW/2; dragY=VH-60; // don't inherit last run's finger position
+  initBackground();
   bullets=[]; enemyBullets=[]; enemies=[]; particles=[]; floatingTexts=[]; powerups=[]; trail=[];
   shakeMag=0; hitFlash=0;
   level=1; killsInLevel=0; levelConfig=getLevel(level); bannerUntil=0;
@@ -759,7 +869,6 @@ function startRun(){
   tookDamageThisLevel = false;
   gameState="playing";
   document.getElementById("pauseBtn").classList.remove("hidden");
-  document.getElementById("fireBtn").classList.remove("hidden");
   document.getElementById("muteBtn").classList.remove("hidden");
   document.getElementById("muteBtn").textContent = muted ? "🔇" : "♪";
   document.getElementById("overlayPause").classList.add("hidden");
@@ -768,13 +877,14 @@ function startRun(){
   resizeCanvas();
 }
 
-/** The 💣 button only exists for players who bought Smart Bombs, and shows what's left. */
+/** The special-weapon button only appears when the pilot has a special to fire. */
 function updateBombButton(){
   const btn = document.getElementById("bombBtn");
   if(!btn) return;
   const show = player && player.alive && player.bombs > 0 && gameState !== "over";
   btn.classList.toggle("hidden", !show);
-  btn.textContent = "💣" + (player ? player.bombs : 0);
+  const count = document.getElementById("bombCount");
+  if(count) count.textContent = player ? player.bombs : 0;
 }
 function useBomb(){
   if(gameState !== "playing" || !player || !player.alive || player.bombs <= 0) return;
@@ -793,7 +903,6 @@ document.getElementById("quitBtn").addEventListener("click", () => {
   document.getElementById("overlayPause").classList.add("hidden");
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
-  document.getElementById("fireBtn").classList.add("hidden");
   document.getElementById("bombBtn").classList.add("hidden");
   showScreen("screen-menu");
 });
@@ -828,8 +937,28 @@ function endRun(){
   document.getElementById("pauseBtn").classList.add("hidden");
   document.getElementById("muteBtn").classList.add("hidden");
   document.getElementById("overlayOver").classList.remove("hidden");
-  document.getElementById("fireBtn").classList.add("hidden");
   updateBombButton();
+}
+
+/* Callouts use the pilot's own callsign so it reads like the game knows who's
+   flying it, rather than generic arcade text. */
+function pilotName(){ return (activeProfile && (activeProfile.callsign || activeProfile.name) || "PILOT").toUpperCase(); }
+function pick(list){ return list[Math.floor(Math.random()*list.length)]; }
+function levelClearLine(){
+  return pick([
+    "NICE FLYING, " + pilotName() + "!",
+    "SECTOR CLEAR, " + pilotName() + "!",
+    "GO " + pilotName() + "!",
+    pilotName() + " DOES IT AGAIN!",
+    "KEEP GOING, " + pilotName() + "!",
+  ]);
+}
+function bossDownLine(){
+  return pick([
+    "BOSS DOWN, " + pilotName() + "!",
+    pilotName() + " WINS!",
+    "SMASHED IT, " + pilotName() + "!",
+  ]);
 }
 
 function addFloatingText(x,y,text,color,size){
@@ -863,11 +992,19 @@ function makeBoss(){
   const hp = window.__SKYFORCE_TEST_EASY_BOSS__ ? 3 // test-only hook, unused in real play
     : Math.round((18 + level*7) * difficulty.bossHp);
   const bossIndex = level / BOSS_EVERY; // 1st, 2nd, 3rd boss encounter...
+  // Pre-rolled damage spots: as its health drops, scorch marks appear and then
+  // chunks are torn out of its silhouette at these positions, in this order.
+  const wounds = [];
+  for(let i=0;i<10;i++){
+    const a = (Math.PI*2/10)*i + Math.random()*0.5;
+    const rad = 14 + Math.random()*22;
+    wounds.push({ x: Math.cos(a)*rad, y: Math.sin(a)*rad*0.8, r: 7+Math.random()*9 });
+  }
   return {
-    x: VW/2, y:-70, targetY:74, hp, maxhp:hp,
+    x: VW/2, y:-70, targetY:104, hp, maxhp:hp,
     vx: 55 + level*3, shootTimer: 1.3, entering:true,
     pattern: (bossIndex % 2 === 0) ? "aimed" : "spread",
-    aimStep: 0,
+    aimStep: 0, wounds, hitFlash: 0, smokeTimer: 0, wobble: 0,
   };
 }
 
@@ -968,7 +1105,7 @@ function update(dt){
   let interval = player.fireInterval;
   if(now < player.tempRapidUntil) interval *= 0.55;
   player.cooldown -= dt;
-  if(firing && player.cooldown<=0){ fireBullets(); player.cooldown = interval; }
+  if(player.cooldown<=0){ fireBullets(); player.cooldown = interval; } // auto-fire
 
   bullets.forEach(b=>{
     if(b.homing){
@@ -1026,8 +1163,25 @@ function update(dt){
   });
 
   if(boss){
+    boss.hitFlash = Math.max(0, boss.hitFlash - dt*6);
+    const hurt = 1 - boss.hp/boss.maxhp;
+    boss.wobble = hurt > 0.75 ? 3.5 : (hurt > 0.5 ? 1.5 : 0); // shudders when it's badly hurt
+    // Wounded bosses trail smoke, and burning ones throw sparks.
+    if(hurt > 0.3){
+      boss.smokeTimer -= dt;
+      if(boss.smokeTimer <= 0){
+        const w = boss.wounds[Math.floor(Math.random()*boss.wounds.length)];
+        particles.push({
+          x: boss.x + w.x, y: boss.y + w.y,
+          vx: (Math.random()-0.5)*20, vy: 30+Math.random()*30,
+          life:0, maxLife: 0.8+Math.random()*0.5,
+          color: hurt > 0.6 ? "#ff8a3d" : "#6b6b78",
+        });
+        boss.smokeTimer = hurt > 0.6 ? 0.045 : 0.12;
+      }
+    }
     if(boss.entering){
-      boss.y += 70*dt;
+      boss.y += 150*dt; // arrives quickly so it always makes its entrance
       if(boss.y >= boss.targetY){ boss.y = boss.targetY; boss.entering=false; }
     } else {
       boss.x += boss.vx*dt;
@@ -1147,7 +1301,11 @@ function checkCollisions(){
     if(boss && dist2(b.x,b.y,boss.x,boss.y) < (b.r+34)*(b.r+34)){
       b.hit=true;
       boss.hp -= b.dmg;
-      spawnParticles(boss.x+((Math.random()-0.5)*40), boss.y+((Math.random()-0.5)*20), 4, "#ff5d73");
+      boss.hitFlash = 0.45; // it visibly flinches on every hit
+      spawnParticles(b.x, b.y, 4, boss.hp/boss.maxhp < 0.5 ? "#ffb03d" : "#ff5d73");
+      if(boss.hp > 0 && Math.random() < 0.35){
+        spawnParticles(b.x, b.y, 2, "#ffffff"); // sparks off the armour
+      }
       if(boss.hp<=0){
         score += Math.round(150*difficulty.pay);
         sessionMoney += Math.round(60*difficulty.pay*player.moneyMult);
@@ -1155,9 +1313,18 @@ function checkCollisions(){
         saveProfile(activeProfile);
         checkAchievements();
         playBossDefeat();
-        screenShake(18);
-        spawnParticles(boss.x,boss.y,40,"#ff5d73");
-        addFloatingText(boss.x, boss.y, "BOSS DOWN!", "#ff5d73", 20);
+        screenShake(22);
+        // It comes apart in stages rather than vanishing in one puff. Positions
+        // are captured up front because `boss` is cleared on the next line.
+        const bx0 = boss.x, by0 = boss.y, wounds = boss.wounds;
+        spawnParticles(bx0, by0, 46, "#ffb03d");
+        spawnParticles(bx0, by0, 30, "#ff5d73");
+        wounds.forEach((w,i) => setTimeout(() => {
+          if(gameState !== "playing") return;
+          spawnParticles(bx0 + w.x, by0 + w.y, 8, i%2 ? "#ffffff" : "#ff8a3d");
+          screenShake(6);
+        }, i*55));
+        addFloatingText(bx0, by0, bossDownLine(), "#ffd23f", 19);
         boss=null;
         advanceLevel(0);
       }
@@ -1233,6 +1400,7 @@ function advanceLevel(bonus){
   }
   saveProfile(activeProfile);
   checkAchievements();
+  addFloatingText(VW/2, VH*0.62, levelClearLine(), "#ffd23f", 17);
   if(isBossLevel(level)){
     bannerUntil = performance.now() + 2200;
     bossPending = true;
@@ -1252,9 +1420,99 @@ function checkLevelClear(){
 }
 
 /* ---- Rendering ---- */
+/* ---- Living background ----
+   The nebula art scrolls past instead of sitting still, with three parallax
+   star layers over it (far/mid/near) and the odd comet streaking through, so
+   it always reads as flying somewhere rather than hovering on a wallpaper.
+   Everything scrolls faster as the levels climb. */
+let bgPhase = 0, stars = [], comets = [], cometTimer = 6;
+// The nebula art isn't tileable, so instead of scrolling it (which leaves a
+// hard seam where the copies meet) it's drawn slightly oversized and drifted
+// around inside that margin, like a slow camera pan. The sense of speed comes
+// from the star layers on top of it.
+const BG_ZOOM = 1.14;
+
+function initBackground(){
+  stars = [];
+  const layers = [
+    { count: 46, speed: 14, size: 1.0, alpha: 0.45 },
+    { count: 26, speed: 34, size: 1.5, alpha: 0.65 },
+    { count: 14, speed: 68, size: 2.2, alpha: 0.9  },
+  ];
+  layers.forEach((L, li) => {
+    for(let i=0;i<L.count;i++){
+      stars.push({
+        x: Math.random()*VW, y: Math.random()*VH,
+        speed: L.speed, size: L.size, alpha: L.alpha, layer: li,
+        twinkle: Math.random()*Math.PI*2,
+      });
+    }
+  });
+  comets = [];
+  cometTimer = 4 + Math.random()*7;
+  bgPhase = Math.random()*Math.PI*2;
+}
+
+function updateBackground(dt){
+  // Deeper levels feel faster; capped so it never turns into a blur.
+  const warp = Math.min(1 + (level-1)*0.09, 2.2);
+  bgPhase += dt*0.075*warp;
+
+  stars.forEach(s => {
+    s.y += s.speed*warp*dt;
+    s.twinkle += dt*2.5;
+    if(s.y > VH){ s.y -= VH; s.x = Math.random()*VW; }
+  });
+
+  cometTimer -= dt;
+  if(cometTimer <= 0){
+    const fromLeft = Math.random() < 0.5;
+    comets.push({
+      x: fromLeft ? -20 : VW+20, y: Math.random()*VH*0.55,
+      vx: (fromLeft ? 1 : -1) * (150+Math.random()*120), vy: 90+Math.random()*70,
+      life: 0, maxLife: 2.4,
+    });
+    cometTimer = 7 + Math.random()*11;
+  }
+  comets.forEach(c => { c.x += c.vx*dt; c.y += c.vy*dt; c.life += dt; });
+  comets = comets.filter(c => c.life < c.maxLife);
+}
+
 function drawBackground(){
-  if(assetsReady) ctx.drawImage(assets.playfieldBg, 0, 0, VW, VH);
-  else { ctx.fillStyle="#05040f"; ctx.fillRect(0,0,VW,VH); }
+  if(assetsReady){
+    const marginX = VW*(BG_ZOOM-1)/2, marginY = VH*(BG_ZOOM-1)/2;
+    ctx.drawImage(assets.playfieldBg,
+      -marginX + Math.sin(bgPhase)*marginX,
+      -marginY + Math.sin(bgPhase*0.63)*marginY,
+      VW*BG_ZOOM, VH*BG_ZOOM);
+  } else {
+    ctx.fillStyle="#05040f"; ctx.fillRect(0,0,VW,VH);
+  }
+
+  ctx.save();
+  stars.forEach(s => {
+    const flicker = 0.75 + Math.sin(s.twinkle)*0.25;
+    ctx.globalAlpha = s.alpha*flicker;
+    ctx.fillStyle = s.layer===2 ? "#cfe8ff" : "#ffffff";
+    ctx.fillRect(s.x, s.y, s.size, s.size + (s.layer===2 ? 2 : 0));
+  });
+  ctx.globalAlpha = 1;
+
+  comets.forEach(c => {
+    const fade = 1 - c.life/c.maxLife;
+    const len = 26;
+    const nx = c.vx/Math.hypot(c.vx,c.vy), ny = c.vy/Math.hypot(c.vx,c.vy);
+    const grad = ctx.createLinearGradient(c.x, c.y, c.x-nx*len, c.y-ny*len);
+    grad.addColorStop(0, `rgba(255,255,255,${0.85*fade})`);
+    grad.addColorStop(1, "rgba(120,180,255,0)");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x-nx*len, c.y-ny*len);
+    ctx.stroke();
+  });
+  ctx.restore();
 }
 function drawPlayer(){
   if(!player.alive) return;
@@ -1306,26 +1564,105 @@ function drawEnemies(){
     }
   });
 }
+/* The boss is drawn through an offscreen buffer so damage can be composited
+   onto the sprite itself: scorch marks burned in with "source-atop", and at
+   low health actual chunks erased out of the silhouette with "destination-out".
+   That way you can see it coming apart, not just a bar going down. */
+const bossBuf = document.createElement("canvas");
+bossBuf.width = 128; bossBuf.height = 128;
+const bossBufCtx = bossBuf.getContext("2d");
+
 function drawBoss(){
   if(!boss) return;
   const size = 96;
   const tintHex = boss.pattern === "aimed" ? "#a855f7" : "#ff2d55";
+  const pct = Math.max(0, boss.hp/boss.maxhp);
+  const damage = 1 - pct;
+
+  const bx = boss.x + (boss.wobble ? (Math.random()-0.5)*boss.wobble : 0);
+  const by = boss.y + (boss.wobble ? (Math.random()-0.5)*boss.wobble : 0);
+
   if(assetsReady){
-    ctx.save();
-    ctx.translate(boss.x, boss.y);
-    ctx.rotate(Math.PI);
-    ctx.drawImage(getTintedEnemy(tintHex), -size/2, -size/2, size, size);
-    ctx.restore();
+    const B = bossBufCtx;
+    B.setTransform(1,0,0,1,0,0);
+    B.clearRect(0,0,128,128);
+    B.save();
+    B.translate(64,64);
+    B.rotate(Math.PI);
+    B.drawImage(getTintedEnemy(tintHex), -size/2, -size/2, size, size);
+    B.restore();
+
+    // Burn scorch marks in as health falls - one per 10% lost.
+    const scorched = Math.min(boss.wounds.length, Math.floor(damage*10));
+    B.save();
+    B.globalCompositeOperation = "source-atop";
+    for(let i=0;i<scorched;i++){
+      const w = boss.wounds[i];
+      const g = B.createRadialGradient(64+w.x, 64+w.y, 1, 64+w.x, 64+w.y, w.r);
+      g.addColorStop(0, "rgba(20,10,10,0.95)");
+      g.addColorStop(1, "rgba(40,20,20,0)");
+      B.fillStyle = g;
+      B.beginPath(); B.arc(64+w.x, 64+w.y, w.r, 0, Math.PI*2); B.fill();
+    }
+    B.restore();
+
+    // Below half health, start tearing pieces off it for real.
+    if(damage > 0.5){
+      const broken = Math.floor((damage-0.5)*2*boss.wounds.length);
+      B.save();
+      B.globalCompositeOperation = "destination-out";
+      for(let i=0;i<broken;i++){
+        const w = boss.wounds[boss.wounds.length-1-i];
+        B.beginPath(); B.arc(64+w.x, 64+w.y, w.r*0.7, 0, Math.PI*2); B.fill();
+      }
+      B.restore();
+      // Glowing molten edges around the holes
+      B.save();
+      B.globalCompositeOperation = "source-atop";
+      B.strokeStyle = "rgba(255,150,40,0.85)";
+      B.lineWidth = 2;
+      for(let i=0;i<broken;i++){
+        const w = boss.wounds[boss.wounds.length-1-i];
+        B.beginPath(); B.arc(64+w.x, 64+w.y, w.r*0.75, 0, Math.PI*2); B.stroke();
+      }
+      B.restore();
+    }
+
+    // White flash on the frames right after it's been hit.
+    if(boss.hitFlash > 0){
+      B.save();
+      B.globalCompositeOperation = "source-atop";
+      B.fillStyle = `rgba(255,255,255,${Math.min(0.45, boss.hitFlash)})`;
+      B.fillRect(0,0,128,128);
+      B.restore();
+    }
+
+    ctx.drawImage(bossBuf, bx-64, by-64);
   } else {
     ctx.fillStyle = tintHex;
-    ctx.beginPath(); ctx.arc(boss.x, boss.y, size/2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx, by, size/2*(0.7+0.3*pct), 0, Math.PI*2); ctx.fill();
   }
 
-  const w=140, pct=Math.max(0,boss.hp/boss.maxhp);
-  ctx.fillStyle="rgba(0,0,0,0.5)";
-  ctx.fillRect(VW/2-w/2, boss.y-64, w, 8);
-  ctx.fillStyle=tintHex;
-  ctx.fillRect(VW/2-w/2, boss.y-64, w*pct, 8);
+  // Boss health lives in its own strip below the HUD, so it never tangles
+  // with the score/lives readouts or hides behind the boss itself.
+  const w = VW-56, barY = 74;
+  ctx.save();
+  ctx.fillStyle="rgba(0,0,0,0.45)";
+  ctx.fillRect(28, barY, w, 10);
+  // Bar shifts red as it weakens, so a glance tells you how close it is.
+  ctx.fillStyle = pct > 0.5 ? tintHex : (pct > 0.25 ? "#ffa726" : "#ff3b30");
+  ctx.fillRect(28, barY, w*pct, 10);
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "bold 9px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("BOSS", VW/2, barY-3);
+  ctx.textAlign = "left";
+  if(pct <= 0.25){ // "nearly there" pulse
+    ctx.strokeStyle = `rgba(255,60,60,${0.4+0.4*Math.sin(performance.now()/120)})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(27, barY-1, w+2, 12);
+  }
+  ctx.restore();
 }
 function drawPowerups(){
   powerups.forEach(p=>{
@@ -1476,14 +1813,17 @@ function render(dt){
 
 let lastTime = performance.now();
 function loop(now){
+  // Queue the next frame first: if one frame ever throws, the game keeps
+  // running instead of freezing solid on whoever's playing.
+  requestAnimationFrame(loop);
   let dt = (now-lastTime)/1000;
   lastTime = now;
   dt = Math.min(dt, 0.05);
   if(screens["screen-game"].classList.contains("active")){
+    if(stars.length) updateBackground(dt); // keeps drifting even while paused
     if(gameState==="playing") update(dt);
     render(dt);
   }
-  requestAnimationFrame(loop);
 }
 
 renderProfileGrid();

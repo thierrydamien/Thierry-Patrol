@@ -18,9 +18,13 @@ const { window } = dom;
 // generic no-op), since the sprite-tinting code path calls .data on it.
 window.HTMLCanvasElement.prototype.getContext = function(){
   const noop = () => {};
+  const gradientStub = { addColorStop: noop };
   const ctxStub = new Proxy({}, { get: (target, prop) => {
     if(prop === "getImageData") return (x,y,w,h) => ({ width:w, height:h, data: new Uint8ClampedArray(w*h*4) });
     if(prop === "canvas") return { width:1, height:1 };
+    // Real browsers hand back a CanvasGradient here; the background and boss
+    // damage both call addColorStop on it, so a bare no-op won't do.
+    if(prop === "createLinearGradient" || prop === "createRadialGradient") return () => gradientStub;
     return noop;
   }});
   return ctxStub;
@@ -42,7 +46,6 @@ window.requestAnimationFrame = (cb) => {
   if (frameCount >= frameLimit) return 1;
   frameCount++;
   fakeNow += 16.7;
-  if (frameCount === 1) window.dispatchEvent(new window.KeyboardEvent("keydown", { key: " " })); // hold fire for the whole run
   if (Math.floor(fakeNow / 500) % 2 === 0) {
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowLeft" }));
     window.dispatchEvent(new window.KeyboardEvent("keyup", { key: "ArrowRight" }));
@@ -117,7 +120,8 @@ async function run() {
   check("armory lists all 13 tiered upgrades", doc.querySelectorAll("#shopItems .shop-item").length === 13);
   check("upgrade rows show level pips", doc.querySelectorAll("#shopItems .si-pips .pip").length === 50);
   check("armory has 6 color swatches", doc.querySelectorAll("#colorRow .swatch").length === 6);
-  check("gear level line rendered", /GEAR LEVEL 0 \/ 50/.test(doc.getElementById("armoryPower").textContent));
+  check("pilot card shows gear progress", /Gear 0\/50/.test(doc.getElementById("pcGear").textContent));
+  check("pilot card shows a starting rank", doc.getElementById("pcRank").textContent.length > 0);
 
   // --- Tiered buying: levels stack, cost climbs, and it stops at max ---
   const rich = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc") || "{}");
@@ -132,21 +136,21 @@ async function run() {
   const priceBefore = buyBtnFor(0).textContent;
   buyBtnFor(0).dispatchEvent(new window.MouseEvent("click", {bubbles:true}));
   check("buying a level raises the next level's price", buyBtnFor(0).textContent !== priceBefore);
-  check("gear level went up after a purchase", /GEAR LEVEL 1 \/ 50/.test(doc.getElementById("armoryPower").textContent));
+  check("gear level went up after a purchase", /Gear 1\/50/.test(doc.getElementById("pcGear").textContent));
   for (let i = 0; i < 6; i++) buyBtnFor(0).dispatchEvent(new window.MouseEvent("click", {bubbles:true})); // over-buy past the cap
   const spreadLvl = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).upgrades.spread;
   check("upgrade level caps at its max (5)", spreadLvl === 5);
-  check("maxed upgrade button reads MAX", buyBtnFor(0).textContent === "MAX");
+  check("maxed upgrade button reads MAX", buyBtnFor(0).textContent.includes("MAX"));
 
   // Max everything out, so the play simulation below exercises the gear that
   // only exists at higher levels (drones, piercing, seekers, bombs, magnet).
   const rowCount = doc.querySelectorAll("#shopItems .shop-item").length;
   for (let r = 0; r < rowCount; r++) {
-    for (let n = 0; n < 6 && buyBtnFor(r).textContent !== "MAX"; n++) {
+    for (let n = 0; n < 6 && !buyBtnFor(r).textContent.includes("MAX"); n++) {
       buyBtnFor(r).dispatchEvent(new window.MouseEvent("click", {bubbles:true}));
     }
   }
-  check("every upgrade can be maxed out", /GEAR LEVEL 50 \/ 50/.test(doc.getElementById("armoryPower").textContent));
+  check("every upgrade can be maxed out", /Gear 50\/50/.test(doc.getElementById("pcGear").textContent));
   const maxedProfile = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc"));
   check("maxing the armory costs about $65k", maxedProfile.money === 100000 - 65250);
   doc.getElementById("armoryBackBtn").dispatchEvent(new window.MouseEvent("click", {bubbles:true}));
@@ -175,7 +179,8 @@ async function run() {
   diffCards[1].dispatchEvent(new window.MouseEvent("click", {bubbles:true})); // PILOT (unlocked)
   check("game screen active after picking a difficulty", doc.getElementById("screen-game").classList.contains("active"));
   check("mute button visible during play", !doc.getElementById("muteBtn").classList.contains("hidden"));
-  check("bomb button shown for a player who owns Smart Bombs", !doc.getElementById("bombBtn").classList.contains("hidden"));
+  check("no FIRE button any more - guns are automatic", doc.getElementById("fireBtn") === null);
+  check("special-weapon button shown for a pilot who owns Smart Bombs", !doc.getElementById("bombBtn").classList.contains("hidden"));
 
   // let the frame budget play out
   while (frameCount < FRAME_BUDGET) {

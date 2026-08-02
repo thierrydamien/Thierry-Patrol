@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SkyForce — Thierry Family Edition</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -36,7 +38,7 @@
     <h2 class="section-title">CHOOSE YOUR MISSION</h2>
     <p id="difficultyPower" class="money-line"></p>
     <div id="difficultyList" class="difficulty-list"></div>
-    <p class="controls-hint">Fly anywhere: arrow keys / WASD, or drag on the screen.<br>Hold Space (or FIRE) to shoot &middot; B for a smart bomb</p>
+    <p class="controls-hint">Fly anywhere: arrow keys / WASD, or drag on the screen.<br>Your guns fire by themselves &middot; tap 💣 (or press B) for a smart bomb</p>
     <button id="difficultyBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
@@ -50,8 +52,21 @@
   <!-- ===================== ARMORY ===================== -->
   <section id="screen-armory" class="screen">
     <h2 class="section-title">ARMORY</h2>
-    <p id="armoryMoney" class="money-line"></p>
-    <p id="armoryPower" class="power-line"></p>
+
+    <!-- Pilot ID card: who you are, what rank you've earned, what you can spend -->
+    <div id="pilotCard" class="pilot-card">
+      <div class="pc-left">
+        <div id="pcShip" class="pc-ship"></div>
+        <div id="pcRankBadge" class="pc-rank-badge"></div>
+      </div>
+      <div class="pc-right">
+        <div id="pcName" class="pc-name"></div>
+        <div id="pcRank" class="pc-rank"></div>
+        <div class="pc-bar"><div id="pcBarFill" class="pc-bar-fill"></div></div>
+        <div id="pcGear" class="pc-gear"></div>
+        <div id="armoryMoney" class="pc-money"></div>
+      </div>
+    </div>
 
     <div class="panel">
       <label class="panel-label">CALLSIGN</label>
@@ -66,10 +81,7 @@
       <div id="colorRow" class="color-row"></div>
     </div>
 
-    <div class="panel">
-      <label class="panel-label">WEAPONS &amp; GEAR</label>
-      <div id="shopItems" class="shop-items"></div>
-    </div>
+    <div id="shopItems" class="shop-items"></div>
 
     <button id="armoryBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
@@ -88,8 +100,12 @@
 
       <button id="pauseBtn" class="icon-btn top-left hidden">II</button>
       <button id="muteBtn" class="icon-btn top-right hidden">♪</button>
-      <button id="fireBtn" class="fire-btn hidden">FIRE</button>
-      <button id="bombBtn" class="bomb-btn hidden">💣</button>
+      <!-- Guns are automatic; this is the special-weapon trigger, and it only
+           appears when the pilot actually has a special to fire. -->
+      <button id="bombBtn" class="special-btn hidden">
+        <span class="sb-icon">💣</span>
+        <span class="sb-count" id="bombCount">0</span>
+      </button>
 
       <div id="overlayPause" class="overlay hidden">
         <h2>PAUSED</h2>
