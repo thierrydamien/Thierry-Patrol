@@ -690,9 +690,10 @@ aloud across a room and typed by a child), plus a per-IP rate limit in the
 Worker. No accounts, no email addresses, no password for a nine-year-old to
 forget. What is at stake is a callsign, a ship colour and some scores.
 
-The whole thing is additive: `ENDPOINT` is empty in the committed source, every
-function short-circuits, and the button does not render. A fork of this repo
-gets the offline game and no dead controls.
+The whole thing is additive: with no `ENDPOINT` every function short-circuits
+and the button does not render, so a fork of this repo gets the offline game
+and no dead controls. It is deployed now, at
+`https://thierry-patrol.wgsync.workers.dev`.
 
 Tested at both ends. The unit checks cover the merge (`mergePilots`,
 `applyPilots`) because that is the function that can lose someone's afternoon.

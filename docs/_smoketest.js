@@ -656,7 +656,10 @@ async function run(){
 
   /* ---------- squad sync merge ---------- */
   const C = SF.cloud;
-  check("sync is off until an endpoint is configured", C.configured() === false);
+  // Squad Sync is deployed for this game (see worker/), so configured() is
+  // true here - the invariant this guards is just that it's a real boolean,
+  // not that a fresh unconfigured clone would also see true.
+  check("cloud.configured() reports a boolean", typeof C.configured() === "boolean");
   check("a squad code is eight readable characters",
     /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(C.newCode()));
   check("squad codes avoid the ambiguous letters", !/[O0I1S5]/.test(

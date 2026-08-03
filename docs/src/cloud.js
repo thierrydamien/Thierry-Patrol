@@ -23,7 +23,7 @@ const SF = window.SF;
 
 /* Set this to the Worker's URL after deploying it - see worker/README.md.
    Empty means "no cloud", which is a perfectly good state for this game. */
-const ENDPOINT = "";
+const ENDPOINT = "https://thierry-patrol.wgsync.workers.dev";
 
 const CODE_KEY = "patrol_squad_code";
 /* Unambiguous alphabet: no O/0, no I/1, no 5/S. Kids read these aloud and
