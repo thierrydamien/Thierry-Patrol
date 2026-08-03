@@ -297,6 +297,54 @@ assertion that checked enemies were alive *on one specific frame*. The check
 was wrong, not the code - it now asserts cumulative spawns. Any test that
 depends on the exact frame something happens is a test that will flap.
 
+## 8e. Boss scaling, and the bug underneath it
+
+The complaint was "bosses die way too easily". Instrumenting it first was worth
+more than any amount of re-tuning, because it found two separate causes.
+
+**A boss sized in hit points cannot work.** Measured single-target DPS runs
+~4 for a stock ship, 81 mid-game and 295 maxed - a **70x** span - while boss
+health scaled 2.2x with the difficulty tier and not at all with gear. A maxed
+ship killed the Sky Sentinel in five seconds. Bosses are now sized in *seconds
+of fight*: `hp = fightSeconds x dps x ACCURACY x tier`, where `dps` comes from
+the loadout and ACCURACY (0.32) is measured from instrumented bot runs, not
+guessed. Because the pool derives from firepower, fight length is independent
+of gear - and one constant moves every boss fight at once.
+
+**And a real bug was doing most of the damage.** `pierceLeft` is recomputed
+every frame, so a piercing bullet that survived hitting the boss stayed alive
+*inside* the boss hitbox and re-damaged it on every subsequent frame - up to 48
+hits from a single bullet against a big target. Enemies hid this because they
+die and get removed; a boss just sits there. Bullets now carry a `hitBoss` flag
+and can damage a boss exactly once, whatever their pierce. The smoke test
+asserts it directly.
+
+Worth keeping in mind for whatever comes next: any per-frame "how many things
+may this hit" counter is a bug waiting to happen against a target that doesn't
+die on the first hit.
+
+## 8f. Interactions, not just more enemies
+
+The other complaint was repetition. The fix wasn't more shooting archetypes -
+it was four things that need a *different answer*:
+
+- **Guardian**: a shield dome over everything near it, so your shots splash
+  off. Recomputed from scratch every frame rather than tracked as state, which
+  means killing the Guardian drops the bubble on everyone instantly with no
+  bookkeeping and no stale flags.
+- **Splitter**: bursts into three homing shards, so the kill escalates.
+- **Coin Thief**: hunts loose coins and flees upward with them. This is the
+  only enemy that can take something you already earned, which is why it is the
+  one worth chasing.
+- **Asteroids**: scenery with mass. Flagged `hazard`, so the wave director
+  leaves them out of `totalPlanned` and they never count against a
+  "destroy the enemies" star - they'd otherwise silently make objectives
+  unachievable.
+
+Each gets one explanatory radio line the first time it appears in a run. A new
+mechanic nobody explains reads as the game being broken ("why aren't my bullets
+working?"), and that is worth a line of dialogue.
+
 ## 9. What I'd do next
 
 Roughly in value order:

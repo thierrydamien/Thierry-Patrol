@@ -19,9 +19,34 @@ const { VW, VH } = SF.entityConst;
 const fx = SF.fx;
 const audio = SF.audio;
 
-function create(defId, difficulty){
+/*
+ * A boss is sized in *seconds of fight*, not in hit points.
+ *
+ * `def.fightSeconds` is how long the encounter should last for the ship that
+ * turns up; the pool is derived from the loadout's real single-target DPS.
+ * ACCURACY is the share of that DPS that actually lands on a patrolling boss
+ * while you are also dodging it. It is *measured*, not guessed: instrumented
+ * bot runs land 18-33% depending on how wide the spread is, so 0.32 puts a
+ * competent run at the target and a scrappy one somewhat over it. Because the
+ * pool is derived from dps, the fight length is independent of firepower -
+ * changing this number moves every boss fight at once.
+ */
+const ACCURACY = 0.32;
+function bossHpFor(def, difficulty, dps){
+  const target = def.fightSeconds || 30;
+  // The dps floor only guards against a divide-by-nothing loadout; it is
+  // deliberately low, because scaling *down* for a weak ship is the whole
+  // point - a stock ship should get a boss it can actually chew through.
+  const scaled = target * Math.max(5, dps) * ACCURACY;
+  return Math.round(clamp(scaled, def.hp*0.15, def.hp*20) * difficulty.bossHp);
+}
+
+function create(defId, difficulty, dps){
   const def = BOSSES[defId];
-  const hp = Math.round(def.hp * difficulty.bossHp);
+  const hp = bossHpFor(def, difficulty, dps || 0);
+  // Weak points stay a fixed share of the hull, so "shoot the guns off" is
+  // worth the same detour whatever you fly in with.
+  const wpScale = hp / Math.round(def.hp * difficulty.bossHp);
   const boss = {
     alive: true, def, name: def.name, tint: def.tint,
     x: VW/2, y: -150, targetY: def.entryY,
@@ -35,7 +60,8 @@ function create(defId, difficulty){
     flash: 0, wobble: 0, smokeTimer: 0, deathTimer: 0,
     weakPoints: def.weakPoints.map(wp => ({
       id: wp.id, ox: wp.x, oy: wp.y, r: wp.r,
-      hp: Math.round(wp.hp * difficulty.bossHp), maxHp: Math.round(wp.hp * difficulty.bossHp),
+      hp: Math.round(wp.hp * difficulty.bossHp * wpScale),
+      maxHp: Math.round(wp.hp * difficulty.bossHp * wpScale),
       disables: wp.disables, destroyed: false, flash: 0,
     })),
     // Pre-rolled damage spots so scorching and chunks appear in stable places.
@@ -253,5 +279,6 @@ function beamHits(boss, x, y){
   return Math.abs(x - boss.beam.x) < boss.beam.width/2 && y > boss.y;
 }
 
-SF.bosses = { create, update, damage, beamHits, ATTACKS };
+SF.bosses = {
+  bossHpFor, create, update, damage, beamHits, ATTACKS };
 })();

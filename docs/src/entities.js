@@ -94,7 +94,7 @@ class World {
       fireInterval: loadout.fireInterval, cooldown: 0,
       spreadLvl: loadout.spreadLvl, damage: loadout.damage, pierce: loadout.pierce,
       homingLvl: loadout.homingLvl, magnetRange: loadout.magnetRange,
-      moneyMult: loadout.moneyMult, drones: loadout.drones,
+      moneyMult: loadout.moneyMult, drones: loadout.drones, dps: loadout.dps || 0,
       crew: loadout.crew || [],
       bombs: loadout.bombs, bombsMax: loadout.bombs,
       overdrives: loadout.overdrives, overdrivesMax: loadout.overdrives,
@@ -181,7 +181,7 @@ class World {
       const b = this.bullets.spawn();
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
-      b.tier = tier; b.age = 0; b.fromDrone = false;
+      b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false;
     }
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
@@ -191,7 +191,7 @@ class World {
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
-      b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true;
+      b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false;
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
     }
     audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));
@@ -274,6 +274,12 @@ class World {
     e.carriesRescue = !!type.carriesRescue;
     e.escaped = false;
     e.fromBoss = false;   // set by the boss for summoned adds
+    e.hazard = !!type.hazard;
+    e.shielded = false;   // recomputed every frame from live Guardians
+    e.loot = 0; e.stolen = 0; e.fleeing = false; e.patience = 0;
+    e.spin = 0; e.spinRate = rand(-1.6, 1.6);
+    if(o.vx != null) e.vx = o.vx;
+    if(o.vy != null) e.vy = o.vy;
     e.life = 0;
     e.fireTimer = type.fire ? rand(type.fire.every[0], type.fire.every[1]) * (diff ? diff.fireRate : 1) : Infinity;
     e.spawnAnim = 0;
@@ -282,6 +288,7 @@ class World {
 
   updateEnemies(dt, ctxObj){
     const items = this.enemies.items;
+    this.applyGuardianShields();
     for(let i=0;i<items.length;i++){
       const e = items[i];
       if(!e.alive) continue;
@@ -308,10 +315,39 @@ class World {
         }
       }
 
-      if(e.y > VH + 40 || e.x < -80 || e.x > VW + 80){
+      // A fleeing thief leaves through the top with your money; everything
+      // else leaves through the bottom or the sides.
+      if(e.y > VH + 40 || e.y < -120 || e.x < -80 || e.x > VW + 80){
         e.alive = false;
         e.escaped = true;
         if(ctxObj.onEscape) ctxObj.onEscape(e);
+      }
+    }
+  }
+
+  /*
+   * Guardians make everything around them untouchable. Recomputed from
+   * scratch each frame rather than tracked as state, so a Guardian dying
+   * instantly drops the bubble on everyone it was covering - no bookkeeping,
+   * no stale flags, and it is O(guardians x enemies) with at most a couple of
+   * guardians alive.
+   */
+  applyGuardianShields(){
+    const items = this.enemies.items;
+    let guards = null;
+    for(let i=0;i<items.length;i++){
+      const e = items[i];
+      if(e.alive) e.shielded = false;
+      if(e.alive && e.type.shieldRadius){ (guards = guards || []).push(e); }
+    }
+    if(!guards) return;
+    for(let g=0; g<guards.length; g++){
+      const gd = guards[g], rad = gd.type.shieldRadius, rr = rad*rad;
+      for(let i=0;i<items.length;i++){
+        const e = items[i];
+        if(!e.alive || e === gd || e.type.shieldRadius) continue;
+        const dx = e.x-gd.x, dy = e.y-gd.y;
+        if(dx*dx + dy*dy < rr) e.shielded = true;
       }
     }
   }

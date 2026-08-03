@@ -54,6 +54,31 @@ const COMMS = {
     "x{n} combo - that's a streak, {you}!",
     "Don't stop, {you}, that's x{n}!",
   ]},
+  guardian: { speaker:"control", cooldown:20, lines:[
+    "Your shots are bouncing - kill the Guardian first!",
+    "That blue one is shielding them. Take it out.",
+    "Nothing gets through while the Guardian is up, {you}.",
+  ]},
+  thiefSpotted: { speaker:"mate", cooldown:20, lines:[
+    "It's going for your coins, {you}!",
+    "Hey! That one's stealing your money.",
+  ]},
+  thiefDown: { speaker:"control", cooldown:6, lines:[
+    "Got your money back.",
+    "Cash recovered, {you}.",
+  ]},
+  thiefEscaped: { speaker:"mate", cooldown:8, lines:[
+    "It got away with ${n}! Get the next one.",
+    "There goes ${n}. Faster next time, {you}.",
+  ]},
+  asteroids: { speaker:"control", cooldown:30, lines:[
+    "Rocks ahead - fly around them or break them up.",
+    "Asteroid field, {you}. Mind the big ones.",
+  ]},
+  splitter: { speaker:"mate", cooldown:22, lines:[
+    "It split! Watch out, {you}.",
+    "They come apart when you shoot them!",
+  ]},
   rescue: { speaker:"control", cooldown:8, lines:[
     "Pilot aboard. Good work, {you}.",
     "That's one of ours home safe.",

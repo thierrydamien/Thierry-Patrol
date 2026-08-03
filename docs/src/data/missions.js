@@ -53,7 +53,7 @@ const OBJECTIVES = {
 const BOSSES = {
   marauder: {
     name: "THE MARAUDER",
-    hp: 380, size: 132, tint: "#ff2d55", entryY: 150,
+    hp: 380, fightSeconds: 26, size: 132, tint: "#ff2d55", entryY: 150,
     weakPoints: [
       { id:"leftGun",  x:-44, y:14, r:18, hp:70, disables:"spreadVolley" },
       { id:"rightGun", x: 44, y:14, r:18, hp:70, disables:"spreadVolley" },
@@ -66,7 +66,7 @@ const BOSSES = {
   },
   sentinel: {
     name: "SKY SENTINEL",
-    hp: 820, size: 150, tint: "#a855f7", entryY: 158,
+    hp: 820, fightSeconds: 44, size: 150, tint: "#a855f7", entryY: 158,
     weakPoints: [
       { id:"core",     x:  0, y:-8, r:20, hp:150, disables:"sweepBeam" },
       { id:"leftPod",  x:-52, y:18, r:17, hp:95, disables:"ringBurst" },
@@ -124,6 +124,7 @@ const MISSIONS = [
       w(39,  "grunt",  9, "wall"),
       w(47,  "carrier",1, "column"),        // first rescue
       w(52,  "weaver", 7, "arc"),
+      w(58,  "thief",  1, "column"),        // first thief: your coins are a target now
       w(60,  "grunt",  9, "pincer"),
       w(68,  "weaver", 8, "line"),
       w(76,  "grunt", 10, "scatter"),
@@ -145,12 +146,14 @@ const MISSIONS = [
       w(32,  "grunt",  10, "scatter"),
       w(40,  "striker", 4, "sides"),
       w(48,  "carrier", 1, "column"),
+      w(50,  "asteroid",4, "scatter"),      // first rocks: dodge them or break them
       w(53,  "weaver",  8, "wall"),
       w(61,  "striker", 5, "tripleColumns"),
       w(69,  "grunt",  10, "pincer"),
       w(77,  "striker", 5, "arc"),
       w(85,  "weaver",  9, "line"),
       w(93,  "carrier", 1, "column"),
+      w(96,  "asteroid",5, "scatter"),
       w(98,  "striker", 6, "sides"),
       w(106, "grunt",  12, "wall"),
       w(114, "striker", 6, "vee"),
@@ -167,6 +170,8 @@ const MISSIONS = [
       w(24,  "brute",   3, "tripleColumns"),
       w(32,  "grunt",  10, "wall"),
       w(40,  "turret",  2, "sides"),
+      w(44,  "shielder",1, "column"),       // first Guardian, over the next wave
+      w(46,  "grunt",   8, "arc"),
       w(49,  "carrier", 1, "column"),
       w(54,  "striker", 5, "vee"),
       w(62,  "brute",   4, "line"),
@@ -174,6 +179,8 @@ const MISSIONS = [
       w(78,  "turret",  3, "tripleColumns"),
       w(87,  "striker", 6, "scatter"),
       w(95,  "brute",   4, "twinColumns"),
+      w(99,  "shielder",1, "column"),
+      w(101, "brute",   3, "vee"),
       w(103, "grunt",  12, "wall"),
     ],
     boss: "marauder",
@@ -191,6 +198,7 @@ const MISSIONS = [
       w(39,  "kamikaze", 6, "pincer"),
       w(47,  "carrier",  1, "column"),
       w(52,  "swooper",  7, "arc"),
+      w(56,  "splitter", 3, "twinColumns"), // they come apart when you shoot them
       w(60,  "grunt",   11, "wall"),
       w(68,  "kamikaze", 7, "scatter"),
       w(76,  "swooper",  7, "twinColumns"),
@@ -198,6 +206,7 @@ const MISSIONS = [
       w(89,  "kamikaze", 8, "sides"),
       w(97,  "weaver",  10, "line"),
       w(105, "swooper",  8, "pincer"),
+      w(109, "splitter", 4, "arc"),
       w(113, "kamikaze", 9, "arc"),
       w(121, "grunt",   12, "wall"),
     ],
@@ -218,10 +227,12 @@ const MISSIONS = [
       w(64,  "striker", 6, "vee"),
       w(72,  "swooper", 8, "pincer"),
       w(80,  "carrier", 3, "tripleColumns"),
+      w(84,  "thief",   2, "sides"),
       w(89,  "weaver",  9, "arc"),
       w(97,  "brute",   4, "line", { elite: 1 }),
       w(105, "carrier", 2, "sides"),
       w(113, "grunt",  12, "scatter"),
+      w(117, "thief",   2, "twinColumns"),
       w(121, "striker", 7, "wall"),
       w(129, "carrier", 3, "tripleColumns"),
     ],
@@ -238,12 +249,16 @@ const MISSIONS = [
       w(33,  "brute",    4, "vee"),
       w(41,  "grunt",   12, "wall"),
       w(49,  "carrier",  2, "twinColumns"),
+      w(53,  "shielder", 2, "sides"),
+      w(55,  "brute",    4, "wall"),        // ...under two Guardians
       w(57,  "swooper",  8, "scatter", { elite: 2 }),
       w(65,  "striker",  7, "line"),
       w(73,  "kamikaze", 8, "sides"),
       w(81,  "brute",    4, "tripleColumns", { elite: 2 }),
       w(90,  "weaver",  10, "pincer"),
       w(98,  "turret",   3, "arc", { elite: 1 }),
+      w(102, "splitter", 5, "tripleColumns"),
+      w(105, "asteroid", 6, "scatter"),
       w(107, "carrier",  2, "sides"),
       w(115, "swooper",  9, "vee", { elite: 2 }),
       w(123, "grunt",   13, "wall"),
@@ -264,6 +279,8 @@ const MISSIONS = [
       w(41,  "weaver",  10, "wall"),
       w(49,  "carrier",  2, "twinColumns"),
       w(57,  "turret",   3, "arc"),
+      w(60,  "shielder", 2, "twinColumns"),
+      w(62,  "splitter", 5, "wall"),
       w(65,  "swooper",  9, "pincer", { elite: 2 }),
       w(73,  "striker",  7, "sides"),
       w(81,  "brute",    5, "line", { elite: 2 }),

@@ -74,6 +74,70 @@ const BEHAVIOURS = {
   },
 
   /**
+   * Holds a high line and sweeps across it. It never shoots - its job is the
+   * bubble it projects over everything near it, which is applied in
+   * updateEnemies. Kill it and the wave it was protecting opens up.
+   */
+  shielder(e, dt, c){
+    if(e.state === 0){
+      e.y += e.vy * dt;
+      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; e.vx = (Math.random()<0.5?-1:1) * e.speed * 0.55; }
+    } else {
+      e.x += e.vx * dt;
+      if(e.x < 70 || e.x > c.VW - 70) e.vx *= -1;
+      e.y += Math.sin(e.phase += dt) * 8 * dt;
+    }
+  },
+
+  /**
+   * Goes after your money. Picks the nearest loose coin, hoovers it up, and
+   * once it is carrying enough it runs for the top of the screen. Shoot it
+   * down and it drops everything it stole; let it go and that cash is gone.
+   */
+  thief(e, dt, c){
+    if(e.fleeing){
+      e.y -= e.speed * 1.35 * dt;
+      return;
+    }
+    let target = null, bestD = 1e9;
+    const items = c.pickups ? c.pickups.items : null;
+    if(items){
+      for(let i=0;i<items.length;i++){
+        const it = items[i];
+        if(!it.alive || it.kind !== "coin") continue;
+        const d = (it.x-e.x)*(it.x-e.x) + (it.y-e.y)*(it.y-e.y);
+        if(d < bestD){ bestD = d; target = it; }
+      }
+    }
+    if(target){
+      const dx = target.x - e.x, dy = target.y - e.y;
+      const l = Math.max(1, Math.hypot(dx, dy));
+      e.x += dx/l * e.speed * 1.25 * dt;
+      e.y += dy/l * e.speed * 1.25 * dt;
+      if(l < e.r + 12){
+        target.alive = false;
+        e.loot = (e.loot || 0) + target.value;
+        e.stolen = (e.stolen || 0) + 1;
+        if(e.stolen >= 4) e.fleeing = true;
+      }
+    } else {
+      // Nothing to steal yet: drift down the screen looking for some.
+      e.y += e.speed * 0.55 * dt;
+      e.x += Math.sin(e.phase += dt*1.6) * 90 * dt;
+      if(e.y > c.VH * 0.72) e.fleeing = true;
+    }
+    e.patience = (e.patience || 0) + dt;
+    if(e.patience > 11) e.fleeing = true;
+  },
+
+  /** A rock. Tumbles down on a fixed drift - no thinking, just mass. */
+  tumble(e, dt){
+    e.y += e.vy * dt;
+    e.x += e.vx * dt;
+    e.spin = (e.spin || 0) + dt * (e.spinRate || 1);
+  },
+
+  /**
    * Drops in, then patrols its line shelling the playfield. It has a tour of
    * duty: once that expires it leaves under its own power. Nothing may park on
    * the field forever - a permanent enemy the player can't reach would stall
@@ -158,6 +222,33 @@ const ENEMY_TYPES = {
     name:"Prison Hauler", behaviour:"carrier", hp:8, r:23, size:72, speed:76,
     score:40, money:42, tint:"#facc15", carriesRescue:true,
     fire:{ pattern:"straight", every:[2.6,3.6], speed:220 },
+  },
+
+  /* --- the ones that change how you play, not just what you shoot --- */
+
+  shielder: {
+    name:"Guardian", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
+    score:34, money:34, tint:"#22d3ee", fire:null,
+    shieldRadius:135,          // everything inside this is untouchable
+  },
+  splitter: {
+    name:"Splitter", behaviour:"dive", hp:4, r:19, size:58, speed:118,
+    score:20, money:18, tint:"#4ade80",
+    splitsInto:{ type:"shard", n:3 },
+    fire:{ pattern:"straight", every:[2.6,4.0], speed:240 },
+  },
+  shard: {
+    name:"Shard", behaviour:"kamikaze", hp:1, r:10, size:30, speed:230,
+    score:6, money:5, tint:"#86efac", fire:null,
+  },
+  thief: {
+    name:"Coin Thief", behaviour:"thief", hp:3, r:15, size:46, speed:190,
+    score:18, money:16, tint:"#facc15", fire:null,
+  },
+  asteroid: {
+    name:"Asteroid", behaviour:"tumble", hp:9, r:26, size:74, speed:104,
+    score:8, money:14, tint:"#94a3b8", fire:null,
+    hazard:true,               // scenery, not opposition: never counted as a kill
   },
 };
 

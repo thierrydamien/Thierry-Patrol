@@ -250,12 +250,38 @@ function drawPlayer(ctx, p, timeMs){
   }
 }
 
-function drawEnemies(ctx, world){
+function drawEnemies(ctx, world, timeMs){
   const items = world.enemies.items;
+  const t = (timeMs || 0)/1000;
+
+  // Guardian bubbles go down first, so every shielded enemy sits inside a
+  // visibly intact dome rather than on top of it.
+  for(let i=0;i<items.length;i++){
+    const g = items[i];
+    if(!g.alive || !g.type.shieldRadius) continue;
+    const rad = g.type.shieldRadius * (0.4 + 0.6*easeOutCubic(g.spawnAnim));
+    const pulse = 0.5 + Math.sin(t*3)*0.5;
+    const grad = ctx.createRadialGradient(g.x, g.y, rad*0.35, g.x, g.y, rad);
+    grad.addColorStop(0, "rgba(34,211,238,0.02)");
+    grad.addColorStop(0.75, "rgba(34,211,238," + (0.07 + pulse*0.06) + ")");
+    grad.addColorStop(1, "rgba(34,211,238,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(g.x, g.y, rad, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "rgba(34,211,238," + (0.30 + pulse*0.28) + ")";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 9]);
+    ctx.save();
+    ctx.translate(g.x, g.y); ctx.rotate(t*0.5); ctx.translate(-g.x, -g.y);
+    ctx.beginPath(); ctx.arc(g.x, g.y, rad, 0, TAU); ctx.stroke();
+    ctx.restore();
+    ctx.setLineDash([]);
+  }
+
   for(let i=0;i<items.length;i++){
     const e = items[i];
     if(!e.alive) continue;
     const size = e.size * (0.4 + 0.6*easeOutCubic(e.spawnAnim));
+    if(e.type.behaviour === "tumble"){ drawAsteroid(ctx, e, size); continue; }
     ctx.save();
     ctx.translate(e.x, e.y);
     if(e.elite){
@@ -285,6 +311,25 @@ function drawEnemies(ctx, world){
       ctx.fillText("SOS", e.x, e.y - e.r - 8);
       ctx.textAlign = "left";
     }
+    if(e.shielded){
+      // A hard skin, not a hint: "my shots are doing nothing" has to be
+      // readable at a glance or it reads as the game being broken.
+      ctx.save();
+      ctx.globalAlpha = 0.18;   // enough to read as sealed, not enough to hide the target
+      ctx.fillStyle = "#22d3ee";
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 7, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(120,240,255,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 7, 0, TAU); ctx.stroke();
+    }
+    if(e.loot > 0){                               // what this thief is carrying
+      ctx.fillStyle = "#ffd23f";
+      ctx.font = "bold 12px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("$" + e.loot, e.x, e.y - e.r - 8);
+      ctx.textAlign = "left";
+    }
     if(e.maxHp > 1 && e.hp < e.maxHp){            // health pip for armoured enemies
       const w = size*0.8, pct = clamp(e.hp/e.maxHp, 0, 1);
       ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -292,6 +337,54 @@ function drawEnemies(ctx, world){
       ctx.fillStyle = e.elite ? "#ffd23f" : "#ff6b6b";
       ctx.fillRect(e.x-w/2, e.y-size/2-7, w*pct, 3);
     }
+  }
+}
+
+/* Rocks are drawn, not sprited: the enemy art is a ship, and a tumbling
+   ship reads as a bug. A fixed seed per rock keeps its outline stable. */
+function drawAsteroid(ctx, e, size){
+  const R = size*0.5;
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  ctx.rotate(e.spin || 0);
+  // Lit from the upper left, like everything else on screen, so a rock reads
+  // as a solid lump rather than a flat grey polygon.
+  const lit = ctx.createLinearGradient(-R*0.7, -R*0.7, R*0.6, R*0.7);
+  lit.addColorStop(0, "#9aa4b4");
+  lit.addColorStop(0.55, "#6b7280");
+  lit.addColorStop(1, "#3f4653");
+  ctx.fillStyle = lit;
+  ctx.strokeStyle = "rgba(12,16,26,0.85)";
+  ctx.lineWidth = Math.max(1.5, R*0.07);
+  ctx.beginPath();
+  for(let n=0;n<9;n++){
+    const a = n/9*TAU;
+    const wob = 0.72 + ((Math.sin(n*12.9898 + e.spinRate*78.233)*43758.5453) % 1 + 1) % 1 * 0.42;
+    const x = Math.cos(a)*R*wob, y = Math.sin(a)*R*wob;
+    if(n === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  [[0.28,-0.2,0.20],[-0.3,0.14,0.15],[0.06,0.34,0.12]].forEach(([cx,cy,cr]) => {
+    ctx.fillStyle = "rgba(28,34,48,0.5)";         // crater floor
+    ctx.beginPath(); ctx.arc(cx*R, cy*R, cr*R, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(190,200,215,0.22)";     // and its lit rim
+    ctx.beginPath(); ctx.arc(cx*R - cr*R*0.22, cy*R - cr*R*0.26, cr*R*0.72, 0, TAU); ctx.fill();
+  });
+  ctx.restore();
+  if(e.flash > 0){
+    ctx.save();
+    ctx.globalAlpha = clamp(e.flash, 0, 1)*0.7;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(e.x, e.y, R*0.9, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  if(e.hp < e.maxHp){
+    const w = size*0.7, pct = clamp(e.hp/e.maxHp, 0, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(e.x-w/2, e.y-R-7, w, 3);
+    ctx.fillStyle = "#cbd5e1";
+    ctx.fillRect(e.x-w/2, e.y-R-7, w*pct, 3);
   }
 }
 

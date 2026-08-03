@@ -27,7 +27,10 @@ class WaveDirector {
     this.nextWave = 0;
     this.pending = [];       // enemies staged by a formation's per-slot delay
     this.spawnedCount = 0;
-    this.totalPlanned = mission.waves.reduce((n,w) => n + w.n, 0);
+    // Asteroids and other scenery are spawned like waves but are not the
+    // opposition, so "destroy 90% of enemies" doesn't count them.
+    this.totalPlanned = mission.waves.reduce((n,w) =>
+      n + (ENEMY_TYPES[w.type].hazard ? 0 : w.n), 0);
     this.rescuesPlanned = mission.waves.reduce((n,w) =>
       n + (ENEMY_TYPES[w.type].carriesRescue ? w.n : 0), 0);
   }
@@ -51,10 +54,10 @@ class WaveDirector {
       const s = this.pending[i];
       s.delay -= dt;
       if(s.delay <= 0){
-        this.world.spawnEnemy(s.type, s.x, s.y, {
+        const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
         });
-        this.spawnedCount++;
+        if(!spawned.hazard) this.spawnedCount++;
         this.pending.splice(i, 1);
       }
     }
@@ -106,6 +109,16 @@ function resolve(world, ctxObj, dt){
       const rr = (b.r + e.r);
       if((b.x-e.x)*(b.x-e.x) + (b.y-e.y)*(b.y-e.y) > rr*rr) return false;
 
+      // Inside a Guardian's bubble nothing gets through - the shot splashes
+      // off and the player is told, loudly, to shoot the Guardian instead.
+      if(e.shielded){
+        fx.sparks(b.x, b.y, 5, "#22d3ee", 150);
+        fx.ring(b.x, b.y, 16, "#22d3ee", 2, 0.2);
+        audio.play("hitArmour");
+        b.alive = false;
+        return true;
+      }
+
       e.hp -= b.dmg;
       e.flash = 1;
       fx.sparks(b.x, b.y, 3, "#ffe9a8", 130);
@@ -122,11 +135,17 @@ function resolve(world, ctxObj, dt){
 
     if(!b.alive) continue;
     const boss = world.boss;
-    if(boss && boss.alive && !boss.entering){
+    if(boss && boss.alive && !boss.entering && !b.hitBoss){
       const rr = b.r + boss.r;
       if((b.x-boss.x)*(b.x-boss.x) + (b.y-boss.y)*(b.y-boss.y) < rr*rr){
+        // One hit per bullet, always. `pierceLeft` is recomputed every frame,
+        // so without this flag a piercing round that survived the hit stayed
+        // alive *inside* the boss hitbox and re-damaged it every frame it took
+        // to fly through - up to 48 hits from a single bullet. That, not the
+        // HP number, is why bosses were evaporating.
+        b.hitBoss = true;
         ctxObj.onBossHit(boss, b);
-        if(pierceLeft > 0) pierceLeft--; else b.alive = false;
+        if(pierceLeft <= 0) b.alive = false;
       }
     }
   }

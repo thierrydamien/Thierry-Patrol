@@ -317,6 +317,47 @@ async function run(){
   check("mission 2 unlocked after clearing mission 1",
     !qa("#missionList .mission-card")[1].classList.contains("locked"));
 
+  /* ---------- the interactions that make a wave a puzzle ---------- */
+  {
+    const W = SF.game.world, diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")), diff));
+    const ctxb = { VW:SF.entityConst.VW, VH:SF.entityConst.VH, player:W.player, difficulty:diff,
+                   smart:0, pickups:W.pickups, onEscape(){}, onEnemyKilled(e){ e.alive = false; } };
+
+    // Guardian: everything inside the bubble is untouchable until it dies.
+    const guard = W.spawnEnemy("shielder", 200, 200, { difficulty: diff });
+    const under = W.spawnEnemy("grunt", 215, 220, { difficulty: diff });
+    const far   = W.spawnEnemy("grunt", 215, 700, { difficulty: diff });
+    W.applyGuardianShields();
+    check("a Guardian shields enemies near it", under.shielded === true);
+    check("a Guardian does not shield the whole field", far.shielded === false);
+    check("a Guardian is not shielded by itself", guard.shielded === false);
+    guard.alive = false;
+    W.applyGuardianShields();
+    check("killing the Guardian drops the bubble immediately", under.shielded === false);
+
+    // Thief: steals loose coins, and hands them back if you shoot it down.
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")), diff));
+    ctxb.player = W.player; ctxb.pickups = W.pickups;
+    W.dropCoins(300, 300, 40);
+    const coinsBefore = W.pickups.items.filter(i => i.alive && i.kind === "coin").length;
+    const thief = W.spawnEnemy("thief", 300, 260, { difficulty: diff });
+    for(let i=0;i<240;i++) SF.enemyData.BEHAVIOURS.thief(thief, 1/60, ctxb);
+    check("a thief actually takes coins off the field", thief.loot > 0);
+    check("a thief runs for it once it is loaded", thief.fleeing === true);
+    check("the coins it took are really gone",
+      W.pickups.items.filter(i => i.alive && i.kind === "coin").length < coinsBefore);
+
+    // Asteroids are scenery: they never count toward "destroy the enemies".
+    const rockWave = { waves:[{ t:0, type:"asteroid", n:5, form:"scatter" }], boss:null };
+    const rockDir = new SF.systems.WaveDirector(rockWave, diff, W);
+    check("asteroids are not counted as enemies to destroy", rockDir.totalPlanned === 0);
+    check("asteroids are flagged as hazards",
+      W.spawnEnemy("asteroid", 100, 100, { difficulty: diff }).hazard === true);
+  }
+
   /* ---------- boss mission ---------- */
   const p2 = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc"));
   [1,2,3,4].forEach(mid => { p2.missions[mid] = { cleared:true, stars:{ pilot:3 }, best:{} }; });
@@ -338,6 +379,37 @@ async function run(){
   check("boss fight resolved or is still running cleanly",
     !!(SF.game.world.boss || SF.game.run.stats.completed || SF.game.state === "ending" || SF.game.run.ended));
   check("no runtime errors during the boss mission", errors.length === 0);
+
+  /* A piercing bullet used to sit inside the boss hitbox and re-damage it
+     every frame it took to fly through - dozens of hits from one bullet, and
+     the reason a maxed ship deleted a boss in three seconds. */
+  {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    W.reset();
+    const prof = SF.profile.blank("Pierce"); prof.upgrades = { pierce:3, damage:5, spread:5, rapid:5 };
+    const loadout = SF.game.buildLoadout(prof, diff);
+    W.createPlayer(loadout);
+    W.boss = SF.bosses.create("sentinel", diff, loadout.dps);
+    W.boss.entering = false;
+    const hp0 = W.boss.hp;
+    const b = W.bullets.spawn();
+    b.x = W.boss.x; b.y = W.boss.y; b.vx = 0; b.vy = -10; b.r = 5;
+    b.dmg = 5; b.pierce = 3; b.homing = 0; b.tier = 0; b.age = 0; b.hitBoss = false;
+    const ctxc = { onBossHit:(boss, bl) => SF.bosses.damage(boss, bl.dmg, bl.x, bl.y),
+                   onEnemyKilled(){}, onPlayerHit(){}, godMode:true };
+    for(let f=0; f<40; f++) SF.systems.resolve(W, ctxc, 1/60);
+    check("one bullet damages a boss once, however much it pierces",
+      hp0 - W.boss.hp <= b.dmg * 2);
+
+    // And the pool itself is sized from firepower, not fixed.
+    const weak = SF.bosses.bossHpFor(SF.missions.BOSSES.sentinel, diff, 20);
+    const strong = SF.bosses.bossHpFor(SF.missions.BOSSES.sentinel, diff, 300);
+    check("a boss is sized from the firepower you bring", strong > weak * 8);
+    check("boss fight length is independent of gear",
+      Math.abs((strong/300) - (weak/20)) < 0.5);
+    W.boss = null;
+  }
   if(SF.game.world.boss){
     const b = SF.game.world.boss;
     check("boss took damage from the bot", b.hp < b.maxHp);

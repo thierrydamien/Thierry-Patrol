@@ -77,6 +77,25 @@ Buying gear earns **rank**: Rookie Cadet → Wing Cadet → Squadron Pilot →
 Flight Leader → Star Ace → Wing Commander → Space Legend → Thierry Legend.
 Your rank badge shows on the pilot picker, the menu and the Armory card.
 
+## Enemies that change how you play
+Beyond the eight shooting archetypes, four kinds of trouble that need a
+different answer rather than more bullets:
+
+- **Guardian** — projects a shield dome over everything near it. Your shots
+  splash off until you kill the Guardian, which turns a wave into a priority
+  problem.
+- **Splitter** — bursts into three homing shards when you kill it. The kill is
+  the start of the problem, not the end of it.
+- **Coin Thief** — hunts your dropped coins and runs for the top of the screen
+  with them. Shoot it down and it drops everything; let it go and that money is
+  gone for good.
+- **Asteroids** — drifting rocks. Dodge them or break them up for cash. They're
+  scenery, not opposition, so they never count against your "destroy the
+  enemies" star.
+
+The first one of each in a run gets a radio line explaining what it wants —
+a new mechanic nobody explains just reads as the game being broken.
+
 ## Bosses
 Two encounters, both with:
 - **Phases** at health thresholds that change how they attack, ending in an enrage
@@ -85,6 +104,11 @@ Two encounters, both with:
 - **Weak points** (the glowing yellow rings) that take double damage and, when
   destroyed, permanently disable the attack they power
 - Visible damage: scorching, chunks torn out of the hull, smoke, then fire
+
+A boss is sized in **seconds of fight, not hit points** — its health pool is
+derived from the firepower you actually turn up with, so the Marauder is a
+~30-second fight and the Sky Sentinel a ~50-second one whether you fly in with
+a stock hull or a maxed one. The difficulty tier still scales it on top.
 
 ## Made for this family, not for a store page
 The other pilot in the house isn't a leaderboard row — they're in the game:

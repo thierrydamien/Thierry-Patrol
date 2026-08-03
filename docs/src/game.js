@@ -92,7 +92,25 @@ function buildLoadout(profile, difficulty){
     overdrives: lv("overdrive"),
     overdriveTime: 4 + lv("overdrive"),
     color: profile.shipColor,
+    dps: singleTargetDps(lv),
   };
+}
+
+/*
+ * Sustained damage-per-second this loadout can put into ONE target.
+ *
+ * Bosses are sized from this rather than from a fixed number, because player
+ * firepower spans ~70x between a stock ship and a maxed one while a fixed HP
+ * pool spans 1x: measured, a maxed ship killed the Sky Sentinel in five
+ * seconds. Piercing is deliberately excluded - it hits *more* enemies, not the
+ * same one harder - and drones count at their real 60% damage.
+ */
+function singleTargetDps(lv){
+  const shots = SF.config.spreadPattern(lv("spread")).length;
+  const interval = 0.30 * SF.config.fireRateMult(lv("rapid"));
+  const dmg = 1 + lv("damage");
+  const drones = lv("wingman") * Math.max(1, Math.round(dmg*0.6));
+  return (shots*dmg + drones) / interval;
 }
 
 /* ---------------------------------------------------------
@@ -191,7 +209,30 @@ const callbacks = {
   onEnemyKilled(e, bullet, byRamming){
     const run = game.run;
     e.alive = false;
-    if(!e.fromBoss){ run.stats.kills++; }
+    if(!e.fromBoss && !e.hazard){ run.stats.kills++; }
+
+    // A thief drops everything it lifted. Killing one mid-run is a real save,
+    // so it pays back visibly rather than silently.
+    if(e.loot > 0){
+      game.world.dropCoins(e.x, e.y, e.loot);
+      fx.text(e.x, e.y - 26, "+$" + e.loot + " BACK!", "#ffd23f", 18, true);
+      SF.comms.say("thiefDown");
+    }
+
+    // Splitters burst into shards that immediately come at you - the kill is
+    // the start of the problem, not the end of it.
+    const split = e.type.splitsInto;
+    if(split && !byRamming){
+      for(let i=0;i<split.n;i++){
+        const a = (i/split.n)*Math.PI - Math.PI/2;
+        const shard = game.world.spawnEnemy(split.type, e.x, e.y, {
+          difficulty: run.difficulty,
+          vx: Math.cos(a)*120, vy: Math.sin(a)*120 + 60,
+        });
+        shard.fromBoss = e.fromBoss;
+      }
+      fx.ring(e.x, e.y, 34, "#86efac", 3, 0.3);
+    }
 
     run.combo++;
     run.comboTimer = 1.4;
@@ -229,6 +270,11 @@ const callbacks = {
   onEnemyEscaped(e){
     const run = game.run;
     if(e.fromBoss) return;
+    if(e.loot > 0){
+      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH $" + e.loot, "#ff5d73", 19, true);
+      SF.comms.say("thiefEscaped", { n: e.loot });
+    }
+    if(e.hazard) return;
     run.stats.escaped++;
     if(e.carriesRescue){
       fx.text(VW/2, VH*0.5, "HAULER ESCAPED", "#ff5d73", 19, true);
@@ -370,6 +416,7 @@ function useOverdrive(){
    --------------------------------------------------------- */
 const behaviourCtx = {
   VW, VH, player: null, difficulty: null, smart: 0,
+  pickups: null,          // the Coin Thief hunts loose coins
   onEscape: null,
   onEnemyKilled: null, onBossHit: null, onPlayerHit: null, godMode: false,
 };
@@ -385,6 +432,7 @@ function update(dt, timeMs){
   run.time += dt;
 
   behaviourCtx.player = game.world.player;
+  behaviourCtx.pickups = game.world.pickups;
   behaviourCtx.difficulty = run.difficulty;
   behaviourCtx.smart = run.difficulty.smart;
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
@@ -405,7 +453,7 @@ function update(dt, timeMs){
         run.phase = "boss";
         run.bossActive = true;
         run.bossSpawned = true;
-        game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty);
+        game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
         run.bannerText = "⚠ WARNING ⚠";
         run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
         run.bannerColor = "#ff5d73";
@@ -480,6 +528,7 @@ function update(dt, timeMs){
   }
   SF.comms.update(dt);
   checkCloseCall();
+  announceNewThreats();
 
   fx.update(dt, timeMs);
   SF.render.updateBackground(dt);
@@ -502,6 +551,22 @@ function update(dt, timeMs){
  * without ever touching it. Cheap to spot (enemy bullets are a bounded pool)
  * and it's the moment kids actually feel - so it gets a line.
  */
+/*
+ * The first Guardian, thief, splitter or rock of a run gets a line explaining
+ * what it wants from you. A new mechanic that nobody explains just reads as
+ * the game being broken ("why aren't my bullets working?").
+ */
+const THREAT_LINES = { shielder:"guardian", thief:"thiefSpotted", splitter:"splitter", asteroid:"asteroids" };
+function announceNewThreats(){
+  const items = game.world.enemies.items;
+  for(let i=0;i<items.length;i++){
+    const e = items[i];
+    if(!e.alive || e.y < 0) continue;
+    const line = THREAT_LINES[e.typeId];
+    if(line) SF.comms.say(line);
+  }
+}
+
 const CLOSE_R = 26;
 function checkCloseCall(){
   const p = game.world.player;
@@ -570,7 +635,7 @@ function draw(timeMs){
   ctx.clearRect(-30, -30, VW+60, VH+60);
   SF.render.drawBackground(ctx);
   SF.render.drawPickups(ctx, world, timeMs);
-  SF.render.drawEnemies(ctx, world);
+  SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
   SF.render.drawBullets(ctx, world);
   SF.render.drawPlayer(ctx, world.player, timeMs);
