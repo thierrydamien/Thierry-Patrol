@@ -215,7 +215,6 @@ html, body {
 .pc-log { font-size:10px; color: rgba(255,255,255,0.55); margin-top:3px; line-height:1.4; }
 .pc-money { font-size:14px; font-weight:800; color: var(--accent); margin-top:4px; }
 
-.shop-items { display:flex; flex-direction:column; gap:16px; width:100%; }
 .shop-group {
   background: rgba(0,0,0,0.22); border:1px solid var(--panel-border);
   border-left:5px solid var(--cat, var(--accent)); border-radius:14px; padding:12px;
@@ -375,29 +374,63 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   .game-title { font-size: 36px; }
 }
 
-/* ===================== HANGAR ===================== */
-.hangar-pilot { font-size:12px; color: rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.5px; }
-.hangar-stage {
-  position:relative; width:100%; max-width:420px; aspect-ratio: 620 / 440;
-  border-radius:18px; border:1px solid rgba(255,255,255,0.10);
+/* ===================== ARMORY / HANGAR ===================== */
+/* The bay is pinned so a part you buy appears on the hull under your thumb,
+   without scrolling back up. It sticks to the scroll container (.screen). */
+.armory-top {
+  position: sticky; top: 0; z-index: 5;
+  width:100%; padding-bottom:8px;
+  /* Solid, not a fade: a translucent tail let the shelves scroll up *through*
+     the "next part" line and read as overlapping text. */
+  background: #16143c;
+  box-shadow: 0 8px 14px -8px rgba(0,0,0,0.85);
+}
+.armory-stage {
+  /* Capped in viewport height as well as ratio: pinned to the top of a short
+     laptop window, a 620x360 box would eat half the screen and leave no room
+     for the thing you came here to buy. */
+  position:relative; width:100%; aspect-ratio: 620 / 340; max-height: 32vh;
+  border-radius:16px; border:1px solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(30,42,90,0.55), rgba(8,10,26,0.75));
   overflow:hidden;
 }
-.hangar-canvas { display:block; width:100%; height:auto; }
+.hangar-canvas { display:block; width:100%; height:100%; object-fit:contain; }
 .hangar-labels {
-  position:absolute; left:0; right:0; bottom:8px;
+  position:absolute; left:0; right:0; bottom:6px;
   display:flex; justify-content:space-around;
   font-size:10px; letter-spacing:2px; color: rgba(255,255,255,0.55); font-weight:800;
 }
-.hangar-next {
-  display:flex; flex-direction:column; align-items:center; gap:2px;
-  margin:12px 0 6px; text-align:center; max-width:340px;
+.compare-btn {
+  position:absolute; top:8px; right:8px;
+  font-family:inherit; font-weight:800; font-size:10px; letter-spacing:1px;
+  padding:6px 10px; border-radius:8px; cursor:pointer;
+  border:1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.45);
 }
-.hangar-next b { font-size:16px; }
+.armory-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px 0; }
+.hangar-next { display:flex; flex-direction:column; gap:1px; text-align:left; min-width:0; }
+.hangar-next b { font-size:14px; }
 .hn-label { font-size:9px; letter-spacing:2px; color: var(--accent); font-weight:800; }
-.hn-blurb { font-size:12px; color: rgba(255,255,255,0.66); }
-.hn-how { font-size:11px; color: rgba(255,255,255,0.42); font-style:italic; }
-.hangar-compare { margin-bottom:14px; }
+.hn-how { font-size:10px; color: rgba(255,255,255,0.45); font-style:italic; }
+.armory-bar .pc-money { margin:0; font-size:17px; white-space:nowrap; }
+
+/* Shelves as tabs: only one is ever on screen. */
+.armory-tabs {
+  display:flex; gap:6px; width:100%; margin:10px 0 12px;
+  overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;
+}
+.armory-tab {
+  flex:1 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px;
+  font-family:inherit; font-weight:800; font-size:9px; letter-spacing:0.5px;
+  padding:8px 9px; border-radius:11px; cursor:pointer; white-space:nowrap;
+  background: rgba(0,0,0,0.30); border:2px solid transparent; color: rgba(255,255,255,0.5);
+}
+.armory-tab .at-ic { font-size:17px; }
+.armory-tab.on { border-color: var(--cat); color:#fff; background: rgba(255,255,255,0.07); }
+.armory-panel { width:100%; }
+.parts-head { font-size:11px; color: rgba(255,255,255,0.6); margin-bottom:8px; letter-spacing:0.5px; }
+.si-part { font-size:10px; color:#8fd3a7; margin-top:3px; }
+
 .hangar-parts { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:7px; }
 .part-chip {
   padding:7px 9px; border-radius:9px; font-size:11px; line-height:1.35;

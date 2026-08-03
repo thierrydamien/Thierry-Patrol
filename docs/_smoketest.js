@@ -181,27 +181,37 @@ async function run(){
   check("menu active after picking a pilot", id("screen-menu").classList.contains("active"));
   check("menu shows the pilot's rank", /CADET|PILOT|LEADER|ACE|COMMANDER|LEGEND/.test(id("menuPilot").textContent));
 
-  /* ---------- hangar (stock ship) ---------- */
-  clickEl(id("hangarBtn"));
-  check("hangar opens from the menu", id("screen-hangar").classList.contains("active"));
-  check("a stock ship lists every part as unfitted",
-    qa("#hangarParts .part-chip").length === SF.shipart.PARTS.length &&
-    qa("#hangarParts .part-chip.owned").length === 0);
-  check("hangar names the next part to earn", /NEXT PART/.test(id("hangarNext").textContent));
-  check("hangar marks which part is next", qa("#hangarParts .part-chip.next").length === 1);
+  /* ---------- armory + hangar, one screen ---------- */
+  clickEl(id("armoryBtn"));
+  check("armory opens from the menu", id("screen-armory").classList.contains("active"));
+  check("armory offers a tab per shelf plus parts and pilot",
+    qa("#armoryTabs .armory-tab").length === SF.config.CATEGORIES.length + 2);
+  check("only one shelf is on screen at a time", qa("#armoryPanel .shop-group").length === 1);
+  check("the open shelf shows only its own upgrades",
+    qa("#armoryPanel .shop-item").length ===
+      SF.config.UPGRADES.filter(u => u.cat === "guns").length);
+  check("the ship bay names the next part", /NEXT PART/.test(id("hangarNext").textContent));
   clickEl(id("hangarCompareBtn"));
   check("compare mode labels stock vs yours", !id("hangarCompareLabels").classList.contains("hidden"));
   clickEl(id("hangarCompareBtn"));
   check("compare mode toggles back off", id("hangarCompareLabels").classList.contains("hidden"));
   await runFrames(4);
-  check("hangar animates without errors", errors.length === 0);
-  clickEl(id("hangarBackBtn"));
+  check("the ship bay animates without errors", errors.length === 0);
 
-  /* ---------- armory ---------- */
-  clickEl(id("armoryBtn"));
-  check("armory lists every upgrade", qa("#shopItems .shop-item").length === 14);
-  check("armory groups upgrades into 4 shelves", qa("#shopItems .shop-group").length === 4);
+  const tabByName = n => qa("#armoryTabs .armory-tab").find(t => t.textContent.includes(n));
+  clickEl(tabByName("MY SHIP"));
+  check("a stock ship lists every part as unfitted",
+    qa("#armoryPanel .part-chip").length === SF.shipart.PARTS.length &&
+    qa("#armoryPanel .part-chip.owned").length === 0);
+  check("the parts tab marks which part is next", qa("#armoryPanel .part-chip.next").length === 1);
+  clickEl(tabByName("PILOT"));
   check("pilot card shows gear progress", /Gear 0\/53/.test(id("pcGear").textContent));
+  check("pilot tab carries callsign, colour and badge",
+    !!id("callsignInput") && qa("#colorRow .swatch").length > 0 && qa("#badgeRow .badge-pick").length > 0);
+  check("every upgrade is reachable across the shelves",
+    SF.config.CATEGORIES.reduce((n,c) =>
+      n + SF.config.UPGRADES.filter(u => u.cat === c.id).length, 0) === 14);
+  clickEl(tabByName("GUNS"));
 
   const rich = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc") || "{}");
   rich.name = "Marc"; rich.money = 200000; rich.upgrades = {};
@@ -211,20 +221,26 @@ async function run(){
   clickEl(qa("#profileGrid .profile-card")[0]);
   clickEl(id("armoryBtn"));
 
-  const buyBtn = i => qa("#shopItems .shop-item")[i].querySelector("button");
+  const buyBtn = i => qa("#armoryPanel .shop-item")[i].querySelector("button");
   const priceBefore = buyBtn(0).textContent;
   clickEl(buyBtn(0));
   check("buying a level raises the next price", buyBtn(0).textContent !== priceBefore);
+  clickEl(tabByName("PILOT"));
   check("gear level tracks purchases", /Gear 1\/53/.test(id("pcGear").textContent));
+  clickEl(tabByName("GUNS"));
   for(let n=0;n<8;n++) clickEl(buyBtn(0));
   check("upgrade level caps at its max", JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).upgrades.spread === 5);
   check("maxed upgrade reads MAX", buyBtn(0).textContent.includes("MAX"));
 
   // Buy everything: exercises drones, piercing, seekers, bombs, overdrive in play.
-  const rows = qa("#shopItems .shop-item").length;
-  for(let r=0;r<rows;r++){
-    for(let n=0;n<7 && !buyBtn(r).textContent.includes("MAX"); n++) clickEl(buyBtn(r));
-  }
+  SF.config.CATEGORIES.forEach(cat => {
+    clickEl(tabByName(cat.name));
+    const rows = qa("#armoryPanel .shop-item").length;
+    for(let r=0;r<rows;r++){
+      for(let n=0;n<7 && !buyBtn(r).textContent.includes("MAX"); n++) clickEl(buyBtn(r));
+    }
+  });
+  clickEl(tabByName("PILOT"));
   check("every upgrade can be maxed", /Gear 53\/53/.test(id("pcGear").textContent));
   const spent = 200000 - JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).money;
   check("maxing the armory costs about $70k", spent === SF.config.TOTAL_UPGRADE_COST);
@@ -235,12 +251,11 @@ async function run(){
     qa("#storyPanels .story-panel").length === SF.storyData.STORY.ace.panels.length);
   clickEl(id("storyBtn"));
   check("story closes on continue", id("storyOverlay").classList.contains("hidden"));
-  clickEl(id("armoryBackBtn"));
-  clickEl(id("hangarBtn"));
+  clickEl(tabByName("MY SHIP"));
   check("a maxed ship has every part fitted",
-    qa("#hangarParts .part-chip.owned").length === SF.shipart.PARTS.length);
+    qa("#armoryPanel .part-chip.owned").length === SF.shipart.PARTS.length);
   check("a maxed ship has nothing left to want", /COMPLETE/.test(id("hangarNext").textContent));
-  clickEl(id("hangarBackBtn"));
+  clickEl(id("armoryBackBtn"));
 
   /* ---------- mission select ---------- */
   clickEl(id("playBtn"));

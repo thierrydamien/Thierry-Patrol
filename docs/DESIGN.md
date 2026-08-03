@@ -252,6 +252,16 @@ voice lines. Those belong to whoever knows them.
 
 Two systems, one idea: the numbers should show up somewhere you can look at.
 
+**One screen, not two.** The hangar and the Armory are the same screen, because
+buying a part and seeing it appear are the same moment - a navigation step
+between them puts the payoff somewhere the purchase isn't. The ship bay is
+`position: sticky` inside the scrolling `.screen`, so it stays on the glass
+while you shop. The shelves are tabs rather than one long scroll: four
+categories plus a parts ladder and a pilot tab, one on screen at a time, which
+gets a whole shelf onto an iPad with no scrolling at all. The pilot tab's
+markup lives in a `<template>` and is cloned on demand, so the ids it owns
+only exist while it's open (`renderPilotCard` returns early if it isn't).
+
 **The hangar and `shipart.js`.** A single procedural pass draws a pilot's ship
 from a plain `{upgradeId: level}` object - hull sprite plus one bolted-on part
 per upgrade tier owned, 21 parts over the 14 tracks. It takes no gameplay
@@ -266,6 +276,13 @@ The hangar's idle loop queues its *next* frame last (the opposite of the game
 loop, which queues first so a bad frame can't freeze it) - an idle animation
 must stop dead when you leave the screen rather than keep a callback alive
 behind every other screen.
+
+One layout rule earned its place: `.screen` is a scrolling flex column, and
+flex items shrink by default, so a fixed-ratio block (the ship bay) got crushed
+into a strip on a short viewport instead of the page scrolling - visible at
+100% browser zoom, invisible at 75%. Nothing on a scrolling screen should ever
+be shrunk to fit, so `flex-shrink` is off for every direct child except on the
+playfield, which is deliberately window-sized.
 
 **Comms.** `comms.js` holds one active line, never a queue: if something better
 happens mid-line it takes over. Pacing is three rules - a per-event cooldown, a

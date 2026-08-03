@@ -113,12 +113,20 @@ outer pylons, then a full broadside; Energy Shield lights a containment ring
 around the hull; Ion Thrusters open the exhaust into afterburners. **21 parts**
 in all.
 
-- The ship **idles** in the bay — bobbing, exhaust flickering, rings turning.
+The hangar *is* the Armory — one screen, because buying a part and seeing it
+appear are the same moment:
+
+- The ship sits **pinned at the top** and idles there (bobbing, exhaust
+  flickering, rings turning) while you shop, so a part you buy appears on the
+  hull without going anywhere.
 - The **next part you haven't earned** is ghosted onto the hull, named, with
-  exactly which upgrade level buys it.
-- **COMPARE TO STOCK** puts the factory ship beside yours at the same scale, so
-  the transformation actually registers.
-- A part list shows all 21, lit or grey.
+  exactly which upgrade level buys it — and each shop row says which part it
+  will fit.
+- **COMPARE** puts the factory ship beside yours at the same scale, so the
+  transformation actually registers.
+- The shelves are **tabs** — Guns, Staying Alive, Ship, Specials, plus My Ship
+  (all 21 parts, lit or grey) and Pilot (callsign, colour, badge, flight log).
+  Only one is ever on screen, so a whole shelf fits an iPad without scrolling.
 
 ## Comms
 Someone talks to you about more than shooting: pick-ups ("Shield online!"), a

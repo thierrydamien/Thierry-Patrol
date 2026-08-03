@@ -122,46 +122,142 @@ function familyBestLine(missionId){
 }
 
 /* ---------------------------------------------------------
-   HANGAR
-   The Armory sells numbers; the hangar is where those numbers
-   turn into a machine you can look at. One animation loop
-   drives the whole screen - a slow bob, a flickering exhaust,
-   and the next unearned part ghosted on so there's always
-   something visibly missing.
+   THE ARMORY / HANGAR
+   One screen, because buying a part and seeing it appear are
+   the same moment. The ship bay is pinned at the top while
+   you shop; the shelves are tabbed so only one is ever on
+   screen, which keeps the scroll short on a tablet.
    --------------------------------------------------------- */
 const hangar = { raf:0, t:0, compare:false, ctx:null };
+let armoryTab = "guns";
 
-function renderHangar(){
+/** Tabs: the four shelves, then the parts ladder, then everything about you. */
+function armoryTabs(){
+  return CATEGORIES.map(c => ({ id:c.id, icon:c.icon, name:c.name, color:c.color }))
+    .concat([{ id:"parts", icon:"🔧", name:"MY SHIP", color:"#8fd3a7" },
+             { id:"pilot", icon:"👤", name:"PILOT",   color:"#c9a7ff" }]);
+}
+
+function renderArmory(){
   const A = SF.shipart;
   const levels = A.levelsOf(profile);
   const next = A.nextPart(levels);
-  const owned = A.ownedCount(levels);
 
-  $("hangarPilot").innerHTML =
-    `<b style="color:${profile.shipColor}">${esc(profile.callsign || profile.name)}'S SHIP</b> · ` +
-    `${owned}/${A.PARTS.length} parts fitted`;
-
+  $("armoryMoney").textContent = "$" + profile.money;
   $("hangarNext").innerHTML = next
-    ? `<span class="hn-label">NEXT PART</span>
-       <b>${esc(next.name)}</b>
-       <span class="hn-blurb">${esc(next.blurb)}</span>
-       <span class="hn-how">Buy ${esc(UPGRADE_BY_ID[next.up].name)} level ${next.at}</span>`
+    ? `<span class="hn-label">NEXT PART</span><b>${esc(next.name)}</b>
+       <span class="hn-how">${esc(UPGRADE_BY_ID[next.up].name)} lv${next.at}</span>`
     : `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>
-       <span class="hn-blurb">There is nothing left to bolt on. Go and use it.</span>`;
+       <span class="hn-how">Nothing left to bolt on</span>`;
+  $("hangarCompareBtn").textContent = hangar.compare ? "MY SHIP" : "COMPARE";
+  $("hangarCompareLabels").classList.toggle("hidden", !hangar.compare);
 
-  const parts = $("hangarParts");
-  parts.innerHTML = "";
+  const tabs = $("armoryTabs");
+  tabs.innerHTML = "";
+  armoryTabs().forEach(t => {
+    const el = document.createElement("button");
+    el.className = "armory-tab" + (t.id === armoryTab ? " on" : "");
+    el.style.setProperty("--cat", t.color);
+    el.innerHTML = `<span class="at-ic">${t.icon}</span><span>${esc(t.name)}</span>`;
+    click(el, () => { armoryTab = t.id; renderArmory(); });
+    tabs.appendChild(el);
+  });
+
+  const panel = $("armoryPanel");
+  panel.innerHTML = "";
+  if(armoryTab === "parts") renderPartsTab(panel, levels, next);
+  else if(armoryTab === "pilot") renderPilotTab(panel);
+  else renderShelf(panel, armoryTab);
+
+  startHangarLoop();
+}
+
+/** One shelf of upgrades - only ever the tab you're looking at. */
+function renderShelf(panel, catId){
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const group = document.createElement("div");
+  group.className = "shop-group";
+  group.style.setProperty("--cat", cat.color);
+  UPGRADES.filter(u => u.cat === cat.id).forEach(u => {
+    const lvl = P.upgradeLevel(profile, u.id);
+    const cost = P.nextCost(profile, u);
+    const maxed = cost === null;
+    const affordable = !maxed && profile.money >= cost;
+    // The part this level bolts on, so the shop says what you'll *see*.
+    const part = SF.shipart.PARTS.find(pt => pt.up === u.id && pt.at === lvl+1);
+    const row = document.createElement("div");
+    row.className = "shop-item" + (maxed ? " maxed" : "") + (affordable ? " affordable" : "");
+    const pips = Array.from({length:u.max}, (_,i) => `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
+    row.innerHTML = `
+      <div class="si-badge">${u.icon}</div>
+      <div class="si-main">
+        <div class="si-name">${esc(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
+        <div class="si-pips">${pips}</div>
+        <div class="si-desc">${esc(u.desc)}</div>
+        <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(lvl)) : "Not owned yet"}${
+          maxed ? "" : ' <span class="si-next">→ ' + esc(u.effect(lvl+1)) + "</span>"}</div>
+        ${part ? `<div class="si-part">🔧 fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
+      </div>`;
+    const btn = document.createElement("button");
+    btn.innerHTML = maxed ? "★<br>MAX" : "$" + cost;
+    btn.disabled = maxed || !affordable;
+    click(btn, () => buyUpgrade(u.id));
+    row.appendChild(btn);
+    group.appendChild(row);
+  });
+  panel.appendChild(group);
+}
+
+/** The parts ladder: what's on the ship and what's still missing. */
+function renderPartsTab(panel, levels, next){
+  const A = SF.shipart;
+  const head = document.createElement("div");
+  head.className = "parts-head";
+  head.textContent = A.ownedCount(levels) + " of " + A.PARTS.length + " parts fitted";
+  panel.appendChild(head);
+  const grid = document.createElement("div");
+  grid.className = "hangar-parts";
   A.partList(levels).forEach(({ part, owned:has }) => {
     const chip = document.createElement("div");
     chip.className = "part-chip" + (has ? " owned" : "") + (next && part.id === next.id ? " next" : "");
     chip.innerHTML = `<b>${esc(part.name)}</b><span>${has ? esc(part.blurb)
       : esc(UPGRADE_BY_ID[part.up].name) + " lv" + part.at}</span>`;
-    parts.appendChild(chip);
+    grid.appendChild(chip);
+  });
+  panel.appendChild(grid);
+}
+
+/** Everything about the pilot rather than the ship. */
+function renderPilotTab(panel){
+  panel.appendChild($("pilotTabTpl").content.cloneNode(true));
+  $("callsignInput").value = profile.callsign;
+  click($("saveCallsignBtn"), () => {
+    const v = $("callsignInput").value.trim();
+    if(!v) return;
+    profile.callsign = v;
+    P.save(profile);
+    renderArmory();
+    renderMenu();
+  });
+  renderPilotCard();
+
+  const colorRow = $("colorRow");
+  SHIP_COLORS.forEach(hex => {
+    const sw = document.createElement("div");
+    sw.className = "swatch" + (hex === profile.shipColor ? " selected" : "");
+    sw.style.background = hex;
+    click(sw, () => { profile.shipColor = hex; P.save(profile); renderArmory(); renderMenu(); });
+    colorRow.appendChild(sw);
   });
 
-  $("hangarCompareBtn").textContent = hangar.compare ? "BACK TO MY SHIP" : "COMPARE TO STOCK";
-  $("hangarCompareLabels").classList.toggle("hidden", !hangar.compare);
-  startHangarLoop();
+  const badgeRow = $("badgeRow");
+  BADGES.forEach(b => {
+    const el = document.createElement("div");
+    el.className = "badge-pick" + (b === P.badgeFor(profile) ? " selected" : "");
+    el.textContent = b;
+    click(el, () => { profile.badge = b; P.save(profile); renderArmory(); renderMenu(); });
+    badgeRow.appendChild(el);
+  });
 }
 
 function startHangarLoop(){
@@ -174,7 +270,7 @@ function startHangarLoop(){
   // callback alive behind every other screen in the app.
   const step = () => {
     hangar.raf = 0;
-    if(!screens["screen-hangar"].classList.contains("active")) return;
+    if(!screens["screen-armory"].classList.contains("active")) return;
     hangar.t += 1/60;
     drawHangar();
     hangar.raf = requestAnimationFrame(step);
@@ -202,17 +298,17 @@ function drawHangar(){
 
   if(hangar.compare){
     // Side by side, same scale: the whole point is that the difference is obvious.
-    A.drawShip(ctx, W*0.28, H*0.55, Math.min(W*0.34, H*0.62), {
+    A.drawShip(ctx, W*0.28, H*0.52, Math.min(W*0.30, H*0.62), {
       color: profile.shipColor, levels: {}, t: hangar.t });
-    A.drawShip(ctx, W*0.72, H*0.55, Math.min(W*0.34, H*0.62), {
+    A.drawShip(ctx, W*0.72, H*0.52, Math.min(W*0.30, H*0.62), {
       color: profile.shipColor, levels, t: hangar.t });
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(W/2, H*0.12); ctx.lineTo(W/2, H*0.88); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2, H*0.10); ctx.lineTo(W/2, H*0.90); ctx.stroke();
   } else {
     // Sized so the widest parts - the aegis halo and the drone cradle - still
     // sit inside the bay rather than being cropped by it.
-    A.drawShip(ctx, W/2, H*0.52, Math.min(W*0.46, H*0.66), {
+    A.drawShip(ctx, W/2, H*0.50, Math.min(W*0.40, H*0.66), {
       color: profile.shipColor, levels, t: hangar.t,
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
@@ -340,67 +436,8 @@ function launch(index, difficultyId){
 /* ---------------------------------------------------------
    ARMORY
    --------------------------------------------------------- */
-function renderArmory(){
-  $("armoryMoney").textContent = "$" + profile.money + " to spend";
-  $("callsignInput").value = profile.callsign;
-  renderPilotCard();
-
-  const colorRow = $("colorRow");
-  colorRow.innerHTML = "";
-  SHIP_COLORS.forEach(hex => {
-    const sw = document.createElement("div");
-    sw.className = "swatch" + (hex === profile.shipColor ? " selected" : "");
-    sw.style.background = hex;
-    click(sw, () => { profile.shipColor = hex; P.save(profile); renderArmory(); });
-    colorRow.appendChild(sw);
-  });
-
-  const badgeRow = $("badgeRow");
-  badgeRow.innerHTML = "";
-  BADGES.forEach(b => {
-    const el = document.createElement("div");
-    el.className = "badge-pick" + (b === P.badgeFor(profile) ? " selected" : "");
-    el.textContent = b;
-    click(el, () => { profile.badge = b; P.save(profile); renderArmory(); renderMenu(); });
-    badgeRow.appendChild(el);
-  });
-
-  const shop = $("shopItems");
-  shop.innerHTML = "";
-  CATEGORIES.forEach(cat => {
-    const group = document.createElement("div");
-    group.className = "shop-group";
-    group.style.setProperty("--cat", cat.color);
-    group.innerHTML = `<div class="group-head"><span class="group-icon">${cat.icon}</span>${cat.name}</div>`;
-    UPGRADES.filter(u => u.cat === cat.id).forEach(u => {
-      const lvl = P.upgradeLevel(profile, u.id);
-      const cost = P.nextCost(profile, u);
-      const maxed = cost === null;
-      const affordable = !maxed && profile.money >= cost;
-      const row = document.createElement("div");
-      row.className = "shop-item" + (maxed ? " maxed" : "") + (affordable ? " affordable" : "");
-      const pips = Array.from({length:u.max}, (_,i) => `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
-      row.innerHTML = `
-        <div class="si-badge">${u.icon}</div>
-        <div class="si-main">
-          <div class="si-name">${esc(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
-          <div class="si-pips">${pips}</div>
-          <div class="si-desc">${esc(u.desc)}</div>
-          <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(lvl)) : "Not owned yet"}${
-            maxed ? "" : ' <span class="si-next">→ ' + esc(u.effect(lvl+1)) + "</span>"}</div>
-        </div>`;
-      const btn = document.createElement("button");
-      btn.innerHTML = maxed ? "★<br>MAX" : "$" + cost;
-      btn.disabled = maxed || !affordable;
-      click(btn, () => buyUpgrade(u.id));
-      row.appendChild(btn);
-      group.appendChild(row);
-    });
-    shop.appendChild(group);
-  });
-}
-
 function renderPilotCard(){
+  if(!$("pcShip")) return;          // only mounted while the PILOT tab is open
   const rank = P.rankFor(profile), next = P.nextRank(profile);
   const gear = P.gearLevel(profile);
   $("pcShip").style.background = `radial-gradient(circle at 35% 30%, #fff6, ${profile.shipColor})`;
@@ -649,10 +686,7 @@ click($("addProfileBtn"), () => {
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
 click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
-click($("hangarBtn"), () => { renderHangar(); show("screen-hangar"); });
-click($("hangarBackBtn"), () => { renderMenu(); show("screen-menu"); });
-click($("hangarShopBtn"), () => { renderArmory(); show("screen-armory"); });
-click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderHangar(); });
+click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderArmory(); });
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });
 click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard"); });
@@ -661,15 +695,6 @@ click($("briefBackBtn"), () => { renderMissions(); show("screen-missions"); });
 click($("armoryBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("achievementsBackBtn"), () => show("screen-menu"));
 click($("leaderboardBackBtn"), () => show("screen-menu"));
-click($("saveCallsignBtn"), () => {
-  const v = $("callsignInput").value.trim();
-  if(!v) return;
-  profile.callsign = v;
-  P.save(profile);
-  renderPilotCard();
-  renderMenu();
-});
-
 click($("pauseBtn"), togglePause);
 click($("resumeBtn"), togglePause);
 click($("restartBtn"), () => {
@@ -718,7 +743,7 @@ SF.game.start();
 SF.render.loadAssets(() => document.body.classList.add("assets-ready"));
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
-          renderHangar, queueToast, maybeStory,
+          queueToast, maybeStory,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile };
 })();
