@@ -37,50 +37,74 @@ function spreadPattern(lvl){
 /** Fire-interval multiplier at a given Rapid Fire level (lower = faster). */
 function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; }
 
+/*
+ * COST CURVE
+ *
+ * Each level costs COST_GROWTH times the last. One constant, because the
+ * fourteen hand-written price lists could not be reasoned about together: a
+ * simulated career (fly, bank, buy the cheapest thing, repeat) maxed the whole
+ * Armory in 17 runs / 55 minutes, which is not a long-term goal, it is an
+ * afternoon.
+ *
+ * The growth is steep on purpose. The first level of anything stays pocket
+ * money so a new pilot gets a win in their first mission or two; it is the
+ * last level of each track that is meant to be a trophy you fly a campaign
+ * for. Prices round to 10 so they stay readable to a child.
+ */
+const COST_GROWTH = 4.6;   // how much steeper each level is than the last
+const COST_BASE   = 1.6;   // flat multiplier on every price
+function costCurve(first, levels){
+  const out = [];
+  for(let i=0;i<levels;i++){
+    out.push(Math.round(first * COST_BASE * Math.pow(COST_GROWTH, i) / 10) * 10);
+  }
+  return out;
+}
+
 const UPGRADES = [
-  { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:[150,400,900,1800,3200],
+  { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:costCurve(150,5),
     desc:"Shoot more bullets at once, in a wider fan",
     effect: lvl => spreadPattern(lvl).length + "-way fire" },
-  { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:[120,320,750,1500,2800],
+  { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:costCurve(120,5),
     desc:"Your guns shoot way faster",
     effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
-  { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:[200,500,1100,2200,4000],
+  { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:costCurve(200,5),
     desc:"Every bullet hits much harder",
     effect: lvl => (1+lvl) + " damage per hit" },
-  { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:[600,1600,3400],
+  { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
     desc:"Bullets go straight through enemies and keep flying",
     effect: lvl => "hits " + (1+lvl) + " enemies per bullet" },
-  { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:[500,1400,3000],
+  { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
     desc:"Your bullets bend through the air to chase enemies",
     effect: lvl => "tracking " + lvl + "/3" },
 
-  { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:[100,350,900,2000],
+  { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:costCurve(100,4),
     desc:"A bubble that eats a hit for you. It refills when you clear a wave",
     effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
-  { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:[80,240,600,1400,2600],
+  { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:costCurve(80,5),
     desc:"Start every mission with extra lives",
     effect: lvl => (3+lvl) + " starting lives" },
-  { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:[250,700,1600],
+  { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:costCurve(250,3),
     desc:"After a hit you flash and nothing can hurt you - this makes it last longer",
     effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
 
-  { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:[130,340,800,1700],
+  { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:costCurve(130,4),
     desc:"Zoom around faster and turn on a dime",
     effect: lvl => "+" + (lvl*14) + "% speed" },
-  { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
+  { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:costCurve(220,3),
     desc:"Coins, power-ups and rescue pods fly straight to you",
     effect: lvl => (60 + lvl*68) + "px pull range" },
 
-  { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
+  { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:costCurve(300,5),
     desc:"Everything you blow up drops more money. Get this early!",
     effect: lvl => "+" + (lvl*15) + "% money" },
-  { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:[1200,3000],
+  { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:costCurve(1200,2),
     desc:"Little robot buddies fly next to you and shoot too",
     effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
-  { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:[400,1000,2200],
+  { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:costCurve(400,3),
     desc:"BOOM - wipes out the whole screen. Tap 💣 or press B",
     effect: lvl => lvl + (lvl===1 ? " bomb per mission" : " bombs per mission") },
-  { id:"overdrive", cat:"extras", name:"Overdrive", icon:"🔥", max:3, costs:[600,1500,3200],
+  { id:"overdrive", cat:"extras", name:"Overdrive", icon:"🔥", max:3, costs:costCurve(600,3),
     desc:"Super mode: double speed guns and double damage. Tap 🔥 or press V",
     effect: lvl => lvl + " use" + (lvl===1?"":"s") + " · " + (4 + lvl) + "s each" },
 ];

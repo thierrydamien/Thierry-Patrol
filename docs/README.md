@@ -73,16 +73,22 @@ you go, so turning up to NIGHTMARE fully kitted out is still a fight rather
 than a victory lap.
 
 ## The Armory
-14 upgrades across 53 levels (~$70,000 to max everything) in four shelves:
+14 upgrades across 53 levels in four shelves:
 
 - **Guns** — Spread Shot, Rapid Fire, Plasma Rounds, Piercing Rounds, Seeker Rounds
 - **Staying Alive** — Energy Shield, Extra Life, Hull Plating
 - **Ship** — Ion Thrusters, Tractor Beam
 - **Specials** — Salvage Rig, Wingman Drone, Smart Bombs, Overdrive
 
-Every level costs more than the last and visibly changes the ship — bullets
-grow and change colour as Plasma Rounds levels up, drones fly alongside you,
-shield charges show as rings.
+**Each level costs 4.6x the one before it**, so the first level of anything is
+pocket money and the last level of a track is a trophy. Maxing everything is
+~$944,000 — a simulated career (fly the hardest tier you've unlocked, bank,
+buy) reaches half a ship in 16 runs and a *complete* one in **118 runs, about
+6.5 hours of flying**. You get strong quickly; you get finished slowly.
+
+Every level visibly changes the ship — bullets grow and change colour as Plasma
+Rounds levels up, drones fly alongside you, shield charges show as rings, and
+each level bolts a physical part onto the hull in the hangar.
 
 Buying gear earns **rank**: Rookie Cadet → Wing Cadet → Squadron Pilot →
 Flight Leader → Star Ace → Wing Commander → Space Legend → Thierry Legend.

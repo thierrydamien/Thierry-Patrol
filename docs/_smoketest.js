@@ -214,7 +214,7 @@ async function run(){
   clickEl(tabByName("GUNS"));
 
   const rich = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc") || "{}");
-  rich.name = "Marc"; rich.money = 200000; rich.upgrades = {};
+  rich.name = "Marc"; rich.money = 2000000;   // enough to buy the whole (much pricier) Armory rich.upgrades = {};
   window.localStorage.setItem("skyforce_profile_Marc", JSON.stringify(rich));
   clickEl(id("armoryBackBtn"));
   clickEl(id("switchBtn"));
@@ -242,8 +242,14 @@ async function run(){
   });
   clickEl(tabByName("PILOT"));
   check("every upgrade can be maxed", /Gear 53\/53/.test(id("pcGear").textContent));
-  const spent = 200000 - JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).money;
-  check("maxing the armory costs about $70k", spent === SF.config.TOTAL_UPGRADE_COST);
+  const spent = 2000000 - JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).money;
+  check("buying every level costs exactly the catalogue total", spent === SF.config.TOTAL_UPGRADE_COST);
+  check("maxing the armory is a long-haul goal, not an afternoon",
+    SF.config.TOTAL_UPGRADE_COST > 600000);
+  check("the first level of anything is pocket money",
+    SF.config.UPGRADES.every(u => u.costs[0] <= 2000));
+  check("each level costs meaningfully more than the last",
+    SF.config.UPGRADES.every(u => u.costs.every((c,i) => i === 0 || c > u.costs[i-1]*3)));
   check("passing 20 gear levels plays the ace story",
     !id("storyOverlay").classList.contains("hidden") &&
     /SQUADRON ACE/.test(id("storyTitle").textContent));

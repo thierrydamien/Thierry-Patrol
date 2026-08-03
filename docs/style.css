@@ -251,8 +251,8 @@ html, body {
 .pip.on { background: var(--cat, var(--accent)); box-shadow: 0 0 8px var(--cat, var(--accent)); }
 .shop-item button {
   flex:0 0 auto; font-family:inherit; font-weight:900; border:none; border-radius:12px;
-  min-width:66px; min-height:52px; padding:8px 10px; font-size:14px; cursor:pointer;
-  white-space:nowrap; line-height:1.15;
+  min-width:66px; min-height:52px; padding:8px 9px; font-size:13px; cursor:pointer;
+  white-space:nowrap; line-height:1.15; letter-spacing:-0.2px;
   background: linear-gradient(160deg, #ffd777, var(--accent)); color:#241a00;
   box-shadow: 0 4px 0 rgba(0,0,0,0.3);
 }

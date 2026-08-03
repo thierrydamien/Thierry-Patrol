@@ -129,7 +129,7 @@ fly a mission → collect coins + rescue pilots → earn stars for objectives
   stars unlock harder tiers  ←  gear makes hard tiers survivable
 ```
 
-- **14 upgrades, 53 levels, ~$70k** to max out. Four colour-coded shelves:
+- **14 upgrades, 53 levels, ~$944k** to max out. Four colour-coded shelves:
   Guns, Staying Alive, Ship, Specials.
 - **Abilities**: Smart Bomb and Overdrive are levelled upgrades with per-mission
   charges and their own buttons.
@@ -460,7 +460,7 @@ Two supporting details:
   apart rather than spawned as one enormous formation, so a "wall" of thirty
   stays a readable shape instead of a solid bar.
 - Per-kill payout is divided by `sqrt(density)`. Tripling the headcount had
-  tripled income - one NIGHTMARE run paid $30k against a $70k Armory, enough
+  tripled income - one NIGHTMARE run paid $30k against the Armory total, enough
   to buy the game out in two flights. The square root keeps hard tiers clearly
   more lucrative without letting headcount run the economy. Completion and
   rescue bonuses are per-mission rather than per-head, so they keep the full
@@ -469,6 +469,36 @@ Two supporting details:
 The general lesson, and the reason to instrument before tuning: **check the
 stock, not the flow.** Kill counts and per-enemy stats both looked healthy
 while the screen was empty.
+
+## 8k. Pricing the Armory with a simulated career
+
+"Too easy to max out" was measurable too. A career simulator - fly the hardest
+unlocked tier, bank, greedily buy the cheapest thing affordable, repeat -
+finished the entire Armory in **17 runs / 55 minutes**. Fourteen hand-written
+price lists could not be reasoned about as a whole, which is how that happened
+without anyone noticing.
+
+They are now one curve: `costCurve(first, levels)` with a shared `COST_GROWTH`
+(4.6) and `COST_BASE` (1.6), so the whole economy is two numbers. The growth is
+deliberately steep rather than the base being high - the first level of
+anything stays pocket money so a new pilot gets a win in their first mission or
+two, and it is the *last* level of each track that costs a campaign.
+
+Calibrated by sweeping the constants against the simulator:
+
+| growth / base | runs to max | 50% | 75% |
+|---|---|---|---|
+| old hand-written | 17 | 9 | 13 |
+| 4.2 / 1.0 | 57 | 11 | 18 |
+| **4.6 / 1.6** | **118** (6.5h) | 16 | 32 |
+
+The shape matters as much as the total: half a ship in 16 runs, three quarters
+in 32, and the last quarter takes 86 more. You get strong quickly and finished
+slowly, which is the right way round - a child should feel powerful early and
+still have something to want in six months.
+
+Prices now reach six figures, so the UI formats with separators
+(`$394,240`, not `$394240`) and the buy button lost a point of font size to fit.
 
 ## 9. What I'd do next
 

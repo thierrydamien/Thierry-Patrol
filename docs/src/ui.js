@@ -28,6 +28,8 @@ function show(id){
   if(id === "screen-game") SF.game.resize();
 }
 function $(id){ return document.getElementById(id); }
+/** Prices run to six figures now, so they need separators to stay readable. */
+function money(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -73,7 +75,7 @@ function renderMenu(){
     <div>
       <div class="mp-name">${esc(profile.callsign)}</div>
       <div class="mp-rank" style="color:${rank.color}">${rank.name}</div>
-      <div class="mp-stats">${stars} ★ collected · $${profile.money}</div>
+      <div class="mp-stats">${stars} ★ collected · ${money(profile.money)}</div>
     </div>`;
 }
 
@@ -143,7 +145,7 @@ function renderArmory(){
   const levels = A.levelsOf(profile);
   const next = A.nextPart(levels);
 
-  $("armoryMoney").textContent = "$" + profile.money;
+  $("armoryMoney").textContent = money(profile.money);
   $("hangarNext").innerHTML = next
     ? `<span class="hn-label">NEXT PART</span><b>${esc(next.name)}</b>
        <span class="hn-how">${esc(UPGRADE_BY_ID[next.up].name)} lv${next.at}</span>`
@@ -199,7 +201,7 @@ function renderShelf(panel, catId){
         ${part ? `<div class="si-part">🔧 fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
       </div>`;
     const btn = document.createElement("button");
-    btn.innerHTML = maxed ? "★<br>MAX" : "$" + cost;
+    btn.innerHTML = maxed ? "★<br>MAX" : money(cost);
     btn.disabled = maxed || !affordable;
     click(btn, () => buyUpgrade(u.id));
     row.appendChild(btn);
@@ -586,7 +588,7 @@ function showResults(result){
     <div class="rl"><span>Pilots rescued</span><b>${s.rescues}/${s.rescuesTotal}</b></div>
     <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
     ${crewLine()}
-    <div class="rl"><span>Wallet</span><b class="money">$${profile.money}</b></div>
+    <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
     ${recordLine(run)}`;
 
   renderResultComms(run, completed, stars);
