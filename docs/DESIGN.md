@@ -429,6 +429,47 @@ Side effect worth having: enemies no longer go through the runtime tinting
 path, so they render correctly even on `file://` where pixel read-back is
 blocked.
 
+## 8j. Why the hard tiers were still easy: an empty screen
+
+After the health rework the hard tiers still played easy with good guns, and
+the instinct to raise health again would have been wrong. Instrumenting a
+maxed-ship run without god mode showed why:
+
+| tier | enemies on screen (avg/peak) | enemy bullets (avg/peak) |
+|---|---|---|
+| PILOT | 1.1 / 11 | 1.8 / 38 |
+| ACE | 1.3 / 10 | 1.3 / 24 |
+| VETERAN | 1.7 / 12 | 1.0 / 24 |
+| NIGHTMARE | **3.0 / 16** | 2.0 / 24 |
+
+Three enemies on screen at a time is an empty playfield. A well-armed ship
+deletes everything on arrival, so the *stock* of enemies stays near zero
+whatever their individual health is - health changes how long one kill takes,
+not how much is happening. Difficulty in a shooter is pressure, and pressure is
+population.
+
+And the knob for it was dead code. Every tier declared a `spawn` field
+(ROOKIE 1.35 down to NIGHTMARE 0.52) that **nothing in the codebase ever
+read** - the hard tiers had never once been denser. It is now `density`, it is
+applied in `WaveDirector.waveSize`, and NIGHTMARE runs at 9.6/34 with 9.2
+bullets on screen.
+
+Two supporting details:
+
+- A wave whose count more than doubles is **split into two salvos** ~2.6s
+  apart rather than spawned as one enormous formation, so a "wall" of thirty
+  stays a readable shape instead of a solid bar.
+- Per-kill payout is divided by `sqrt(density)`. Tripling the headcount had
+  tripled income - one NIGHTMARE run paid $30k against a $70k Armory, enough
+  to buy the game out in two flights. The square root keeps hard tiers clearly
+  more lucrative without letting headcount run the economy. Completion and
+  rescue bonuses are per-mission rather than per-head, so they keep the full
+  tier rate.
+
+The general lesson, and the reason to instrument before tuning: **check the
+stock, not the flow.** Kill counts and per-enemy stats both looked healthy
+while the screen was empty.
+
 ## 9. What I'd do next
 
 Roughly in value order:

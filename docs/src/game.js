@@ -138,6 +138,15 @@ function startMission(missionIndex, difficultyId){
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
     halfwayShown: false, boulderShown: false,
+    /*
+     * Per-kill payout, damped by the tier's density. A hard tier now sends
+     * three times as many enemies, so paying `pay` per head would have made
+     * one NIGHTMARE run worth $30k against a $70k Armory - the tier would buy
+     * the game out in two flights. The square root keeps hard tiers clearly
+     * more lucrative without letting headcount run the economy. Completion and
+     * rescue bonuses are per-mission, not per-head, so they keep the full rate.
+     */
+    payScale: difficulty.pay / Math.sqrt(difficulty.density || 1),
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, progress: 0,
@@ -241,7 +250,7 @@ const callbacks = {
     const scoreMult = comboMult * run.difficulty.pay * (performance.now() < game.world.player.tempScoreUntil ? 2 : 1);
 
     run.score += Math.round(e.score * scoreMult);
-    const coin = Math.max(1, Math.round(e.money * run.difficulty.pay * game.world.player.moneyMult * comboMult));
+    const coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
     game.world.dropCoins(e.x, e.y, coin);
 
     fx.explosion(e.x, e.y, e.size, e.elite ? "#ffd23f" : "#ffb03d", e.elite || e.maxHp >= 5);

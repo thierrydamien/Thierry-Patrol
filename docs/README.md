@@ -53,13 +53,18 @@ bonus, and a build to the finale:
 Finish a mission to unlock the next one. Stars unlock the harder difficulty
 tiers, which pay far more — so the campaign and the Armory feed each other.
 
-| Tier | Enemies | Return fire | Pays | Needs |
+| Tier | How many | Health | Return fire | Needs |
 |---|---|---|---|---|
-| ROOKIE | slow, fragile, +1 life | sparse, never aimed | 0.7x | — |
-| PILOT | standard | occasional | 1x | — |
-| ACE | 2.6x health, faster | 28% aimed, they strafe | 1.8x | 6 ★ |
-| VETERAN | 4.4x health | 45% aimed, smarter | 2.8x | 14 ★ |
-| NIGHTMARE | 7.5x health | 62% aimed, ruthless | 4.5x | 24 ★ |
+| ROOKIE | 0.75x | 0.8x, +1 life | sparse, never aimed | — |
+| PILOT | 1x | standard | occasional | — |
+| ACE | **2.05x** | 2.6x | 28% aimed, they strafe | 6 ★ |
+| VETERAN | **2.8x** | 4.4x | 45% aimed, smarter | 14 ★ |
+| NIGHTMARE | **3.6x** | 7.5x | 62% aimed, ruthless | 24 ★ |
+
+The "how many" column is the one that actually makes a tier hard. On a maxed
+ship, NIGHTMARE now keeps around **10 enemies on screen at a time and peaks
+above 30**, against 1–3 before — a well-armed ship deletes things on arrival,
+so health alone can never fill an empty screen.
 
 On ROOKIE and PILOT enemy health is exactly as written, so buying guns visibly
 makes things melt — that's the reward for upgrading. The three hard tiers also

@@ -384,6 +384,33 @@ async function run(){
     }
   }
 
+  /* ---------- how full the screen gets ---------- */
+  {
+    const W = SF.game.world;
+    const m8 = SF.missions.MISSIONS[7];
+    const plannedOn = tierId => new SF.systems.WaveDirector(
+      m8, SF.config.DIFFICULTY_BY_ID[tierId], W).totalPlanned;
+    check("every tier declares a density", SF.config.DIFFICULTIES.every(d => d.density > 0));
+    check("hard tiers send far more enemies than normal",
+      plannedOn("nightmare") > plannedOn("pilot") * 3 &&
+      plannedOn("veteran") > plannedOn("ace") &&
+      plannedOn("ace") > plannedOn("pilot"));
+    check("the easy tier sends fewer", plannedOn("rookie") < plannedOn("pilot"));
+    // Density used to be dead config: declared on every tier, read by nothing.
+    const dir = new SF.systems.WaveDirector(m8, SF.config.DIFFICULTY_BY_ID.nightmare, W);
+    check("density actually reaches the wave director",
+      dir.waveSize(m8.waves[0]) > m8.waves[0].n * 2);
+    check("a dense wave is split into salvos, not one huge formation", (() => {
+      dir.pending = []; dir.queueWave(m8.waves[0]);
+      const late = dir.pending.filter(x => x.delay > 2).length;
+      return late > 0 && late < dir.pending.length;
+    })());
+    check("headcount does not run the economy",
+      SF.config.DIFFICULTY_BY_ID.nightmare.pay /
+        Math.sqrt(SF.config.DIFFICULTY_BY_ID.nightmare.density) <
+      SF.config.DIFFICULTY_BY_ID.nightmare.pay);
+  }
+
   /* ---------- the health curve across tiers ---------- */
   {
     const W = SF.game.world;

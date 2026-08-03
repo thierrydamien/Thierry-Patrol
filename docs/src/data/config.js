@@ -111,6 +111,15 @@ const RANKS = [
    often anything shoots; `smart` unlocks the cleverer enemy
    behaviours (dodging, flanking) rather than just more health.
 
+   `density` is how many enemies a wave actually puts on the
+   screen, as a multiple of what the mission script says. It
+   matters more than any other knob: instrumented at the old
+   settings a maxed ship on NIGHTMARE faced an average of THREE
+   enemies at a time, because it deleted everything on arrival.
+   Health can't fix an empty screen. (This replaces a `spawn`
+   field that was declared on every tier and never read by
+   anything - hard tiers had never actually been denser.)
+
    `hpMult` is the flat health multiplier. `hpTrack` is the part
    that follows the player's own firepower: at 0 (ROOKIE, PILOT)
    enemies stay exactly as written, so buying guns visibly makes
@@ -122,23 +131,23 @@ const RANKS = [
 const DIFFICULTIES = [
   { id:"rookie", name:"ROOKIE", tag:"Easy", color:"#2ecc71",
     blurb:"Slow enemies, hardly any shooting, and a free extra life.",
-    speed:0.72, spawn:1.35, hpMult:0.8, bossHp:0.8, pay:0.7,
+    speed:0.72, density:0.75, hpMult:0.8, bossHp:0.8, pay:0.7,
     aimed:0, fireRate:1.6, smart:0, bonusLives:1, unlockStars:0 },
   { id:"pilot", name:"PILOT", tag:"Normal", color:"#3399ff",
     blurb:"The normal mission. Fair fight, normal pay.",
-    speed:1.00, spawn:1.00, hpMult:1.0, bossHp:1.0, pay:1.0,
+    speed:1.00, density:1.00, hpMult:1.0, bossHp:1.0, pay:1.0,
     aimed:0.10, fireRate:1.15, smart:0, bonusLives:0, unlockStars:0 },
   { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
     blurb:"Tougher enemies that aim right at you. Pays 1.8x.",
-    speed:1.26, spawn:0.80, hpMult:2.6, bossHp:1.15, pay:1.8, hpTrack:0.35,
+    speed:1.26, density:2.05, hpMult:2.6, bossHp:1.15, pay:1.8, hpTrack:0.35,
     aimed:0.28, fireRate:0.95, smart:1, bonusLives:0, unlockStars:6 },
   { id:"veteran", name:"VETERAN", tag:"Brutal", color:"#e74c3c",
     blurb:"Thick armour, clever attackers, bullets everywhere. Pays 2.8x.",
-    speed:1.50, spawn:0.66, hpMult:4.4, bossHp:1.3, pay:2.8, hpTrack:0.6,
+    speed:1.50, density:2.80, hpMult:4.4, bossHp:1.3, pay:2.8, hpTrack:0.6,
     aimed:0.45, fireRate:0.82, smart:2, bonusLives:0, unlockStars:14 },
   { id:"nightmare", name:"NIGHTMARE", tag:"Insane", color:"#9b59b6",
     blurb:"All of it at once. Bring your very best gear. Pays 4.5x.",
-    speed:1.80, spawn:0.52, hpMult:7.5, bossHp:1.5, pay:4.5, hpTrack:0.85,
+    speed:1.80, density:3.60, hpMult:7.5, bossHp:1.5, pay:4.5, hpTrack:0.85,
     aimed:0.62, fireRate:0.7, smart:3, bonusLives:0, unlockStars:24 },
 ];
 const DIFFICULTY_BY_ID = {};

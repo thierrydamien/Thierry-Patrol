@@ -27,10 +27,11 @@ class WaveDirector {
     this.nextWave = 0;
     this.pending = [];       // enemies staged by a formation's per-slot delay
     this.spawnedCount = 0;
+    this.density = difficulty.density || 1;
     // Asteroids and other scenery are spawned like waves but are not the
     // opposition, so "destroy 90% of enemies" doesn't count them.
     this.totalPlanned = mission.waves.reduce((n,w) =>
-      n + (ENEMY_TYPES[w.type].hazard ? 0 : w.n), 0);
+      n + (ENEMY_TYPES[w.type].hazard ? 0 : this.waveSize(w)), 0);
     this.rescuesPlanned = mission.waves.reduce((n,w) =>
       n + (ENEMY_TYPES[w.type].carriesRescue ? w.n : 0), 0);
   }
@@ -63,10 +64,28 @@ class WaveDirector {
     }
   }
 
+  /** How many of this wave actually fly, after the tier's density. */
+  waveSize(wave){
+    return Math.max(1, Math.round(wave.n * this.density));
+  }
+
+  /*
+   * A dense wave is split into two salvos a few seconds apart rather than one
+   * enormous formation: the same pressure, but the shapes stay readable and a
+   * "wall" of thirty doesn't collapse into a solid bar.
+   */
   queueWave(wave){
+    const total = this.waveSize(wave);
+    const split = total > wave.n * 1.35 && total > 6;
+    const first = split ? Math.ceil(total*0.55) : total;
+    this.queueSalvo(wave, first, 0);
+    if(split) this.queueSalvo(wave, total - first, 2.6);
+  }
+
+  queueSalvo(wave, count, extraDelay){
     const form = FORMATIONS[wave.form] || FORMATIONS.line;
-    const slots = form(wave.n, VW);
-    const eliteCount = wave.elite || 0;
+    const slots = form(count, VW);
+    const eliteCount = Math.round((wave.elite || 0) * (count / Math.max(1, wave.n)));
     // Elites are spread through the wave rather than clumped at the front.
     const eliteIdx = new Set();
     while(eliteIdx.size < Math.min(eliteCount, slots.length)){
@@ -75,7 +94,7 @@ class WaveDirector {
     slots.forEach((s, i) => {
       this.pending.push({
         type: wave.type, x: clamp(s.x, 34, VW-34), y: s.y,
-        delay: s.delay, elite: eliteIdx.has(i),
+        delay: s.delay + extraDelay, elite: eliteIdx.has(i),
         hoverY: 155 + (i % 4) * 52 + rand(-14, 14),   // four hover bands in the taller field
       });
     });
