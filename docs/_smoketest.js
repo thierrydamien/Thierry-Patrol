@@ -272,6 +272,24 @@ async function run(){
   check("a maxed ship has nothing left to want", /COMPLETE/.test(id("hangarNext").textContent));
   clickEl(id("armoryBackBtn"));
 
+  /* ---------- medals + championship ---------- */
+  clickEl(id("achievementsBtn"));
+  check("medals screen shows a tile per medal",
+    qa("#achievementsList .medal").length === SF.config.ACHIEVEMENTS.length);
+  check("earned medals are marked apart from the rest",
+    qa("#achievementsList .medal.won").length === SF.ui.getProfile().achievements.length);
+  check("medals name the next one to chase", /NEXT UP|COMPLETE/.test(id("medalNext").textContent));
+  check("medals show overall progress", /of \d+ medals/.test(id("achievementsCount").textContent));
+  clickEl(id("achievementsBackBtn"));
+
+  clickEl(id("leaderboardBtn"));
+  check("the championship puts the pilots on a podium",
+    qa("#podium .podium-step").length === Math.min(3, SF.profile.listNames().length));
+  check("the winner stands on the top step", qa("#podium .place-1").length === 1);
+  check("the record board lists every mission",
+    qa("#recordBoard .rb-row").length === SF.missions.MISSIONS.length);
+  clickEl(id("leaderboardBackBtn"));
+
   /* ---------- mission select ---------- */
   clickEl(id("playBtn"));
   check("the campaign map has a stop for every mission", qa("#campaignNodes .map-node").length === 8);

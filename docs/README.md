@@ -240,9 +240,19 @@ Comic-style beats fire once each and are drawn with your *actual* ship:
 - **campaign cleared** — a curtain, and a push toward the tiers that used to be
   impossible.
 
-## Medals, records and the family board
-22 medals to unlock, a best score and star count per pilot, and a
-Championship screen ranking everyone in the family by stars.
+## Medals
+22 to unlock, shown as a grid of discs with a progress ring and — more usefully
+— **the next one still to win** called out at the top, so the screen is a
+to-do list rather than a record of things that already happened. Locked medals
+are greyed silhouettes, not blanks: you can see the shape of what you haven't
+got.
+
+## The Championship
+A **podium**: second place left, first in the middle and taller, third right,
+each pilot standing behind their own ship drawn from their own upgrades. Below
+it, **who holds what** — every mission with the name of whoever in the house
+owns the record and the score to beat, with your own rows highlighted. A total
+tells you who's ahead; this tells you which mission to go and take back.
 
 ## Running the tests
 ```

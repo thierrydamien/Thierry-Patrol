@@ -612,6 +612,34 @@ Two details worth keeping:
   same art just looks like it failed to load. The lift is applied in the
   briefing only - the playfield keeps its contrast.
 
+## 8o. Medals and the championship
+
+Same treatment as the briefing, same two ideas.
+
+**Medals** were a flat list of rows. Now: a progress ring, the count, and
+*"NEXT UP: Star Collector - collect 15 stars in total"*. That last line is the
+point - a medal screen that only shows what you have already done has nothing
+to offer, while naming the nearest unearned one turns it into a to-do list.
+Locked medals are greyed silhouettes rather than blanks, so you can see the
+shape of what you have not won.
+
+**The championship** was two lines of text, which is what a ranked list
+degenerates into when a household has two or three pilots. Now it is a podium -
+second left, first centre and taller, third right, the arrangement everyone can
+read without a legend - with each pilot standing behind their own ship, drawn
+from their own upgrades via `shipart`.
+
+Underneath is the part that will actually get played for: **who holds what**,
+every mission with its record holder and score, your own rows highlighted. The
+star total tells you who is ahead; this tells you which mission to go and take
+back. It reuses `P.familyBest()`, so it is the same data the mission cards and
+the results screen already quote.
+
+One CSS note: the podium blocks originally just stopped, and read as clipped
+rather than as standing on something. They needed a floor - a border under the
+whole row - which is the kind of thing that is obvious in a screenshot and
+invisible in code review.
+
 ## 9. What I'd do next
 
 Roughly in value order:

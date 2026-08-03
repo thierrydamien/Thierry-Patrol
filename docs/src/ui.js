@@ -892,25 +892,111 @@ function buyUpgrade(id){
    --------------------------------------------------------- */
 function renderAchievements(){
   const owned = profile.achievements;
-  $("achievementsCount").textContent = owned.length + " / " + ACHIEVEMENTS.length + " medals earned";
+  const stats = P.achievementStats(profile);
+  $("achievementsCount").innerHTML =
+    `<b>${owned.length}</b> of ${ACHIEVEMENTS.length} medals`;
+
+  // Name the nearest thing still to win, so the screen is a to-do list rather
+  // than a scoreboard of things that already happened.
+  const next = ACHIEVEMENTS.find(a => !owned.includes(a.id));
+  $("medalNext").innerHTML = next
+    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)}`
+    : `<span>COMPLETE</span>Every medal earned. Nothing left to win.`;
+
+  drawMedalRing(owned.length / ACHIEVEMENTS.length);
+
   $("achievementsList").innerHTML = ACHIEVEMENTS.map(a => {
     const has = owned.includes(a.id);
-    return `<div class="ach-row${has ? " unlocked" : ""}">
-      <div class="ach-icon">${has ? a.icon : "🔒"}</div>
-      <div><div class="ach-name">${esc(a.name)}</div><div class="ach-desc">${esc(a.desc)}</div></div>
+    return `<div class="medal${has ? " won" : ""}">
+      <div class="medal-disc"><span>${has ? a.icon : "🔒"}</span></div>
+      <div class="medal-name">${esc(a.name)}</div>
+      <div class="medal-desc">${esc(a.desc)}</div>
     </div>`;
   }).join("");
+}
+
+/** A progress ring - the one number that says how far through you are. */
+function drawMedalRing(frac){
+  const cv = $("medalRing");
+  const ctx = cv && cv.getContext("2d");
+  if(!ctx) return;
+  const W = cv.width, H = cv.height, cx = W/2, cy = H/2, r = W*0.38;
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineWidth = W*0.11;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  if(frac > 0){
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#ffd23f");
+    g.addColorStop(1, "#ff8a3d");
+    ctx.strokeStyle = g;
+    ctx.shadowColor = "rgba(255,210,63,0.7)"; ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI*2*frac);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold " + Math.round(W*0.26) + "px Arial, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(Math.round(frac*100) + "%", cx, cy + 1);
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
 
 function renderLeaderboard(){
   const rows = P.listNames().map(P.load)
     .sort((a,b) => (P.totalStars(b) - P.totalStars(a)) || (b.highscore - a.highscore));
-  $("leaderboardList").innerHTML = rows.map((p,i) => {
+
+  /*
+   * A podium, because with two or three pilots in a house a ranked list is
+   * just two lines of text. Second place stands left, first in the middle and
+   * taller, third right - the arrangement everyone already knows how to read.
+   */
+  const order = [1, 0, 2].filter(i => i < rows.length);
+  const podium = $("podium");
+  podium.innerHTML = "";
+  order.forEach(i => {
+    const p = rows[i];
+    const step = document.createElement("div");
+    step.className = "podium-step place-" + (i+1);
+    step.innerHTML = `
+      <canvas width="96" height="96"></canvas>
+      <div class="ps-badge">${P.badgeFor(p)}</div>
+      <div class="ps-name">${esc(p.callsign || p.name)}</div>
+      <div class="ps-rank" style="color:${P.rankFor(p).color}">${P.rankFor(p).name}</div>
+      <div class="ps-block"><span class="ps-place">${i+1}</span>
+        <span class="ps-stars">${P.totalStars(p)} ★</span></div>`;
+    podium.appendChild(step);
+    const c = step.querySelector("canvas").getContext("2d");
+    if(c) SF.shipart.drawShip(c, 48, 50, 84,
+      { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+  });
+
+  // Everyone below the podium, if this household ever gets that big.
+  $("leaderboardList").innerHTML = rows.slice(3).map((p,i) => {
     const rank = P.rankFor(p);
     return `<div class="lb-row">
-      <span class="lb-rank">#${i+1}</span>
-      <span class="lb-name">${esc(p.callsign || p.name)}<br><span class="lb-sub" style="color:${rank.color}">${rank.name}</span></span>
+      <span class="lb-rank">#${i+4}</span>
+      <span class="lb-name">${esc(p.callsign || p.name)}<br>
+        <span class="lb-sub" style="color:${rank.color}">${rank.name}</span></span>
       <span class="lb-score">${P.totalStars(p)} ★<br><span class="lb-sub">${p.highscore}</span></span>
+    </div>`;
+  }).join("");
+
+  /*
+   * Who holds each mission. This is the part that actually gets played for -
+   * a single total tells you who is ahead, but a per-mission board tells you
+   * exactly which one to go and take back.
+   */
+  $("recordBoard").innerHTML = MISSIONS.map(m => {
+    const best = P.familyBest(m.id);
+    const mine = best && best.name === (profile.callsign || profile.name);
+    return `<div class="rb-row${mine ? " mine" : ""}">
+      <span class="rb-num">${m.id}</span>
+      <span class="rb-name">${esc(m.name)}</span>
+      <span class="rb-holder">${best ? esc(best.name) : "—"}</span>
+      <span class="rb-score">${best ? best.score : "unflown"}</span>
     </div>`;
   }).join("");
 }

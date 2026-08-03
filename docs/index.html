@@ -145,15 +145,24 @@
   <!-- ===================== MEDALS ===================== -->
   <section id="screen-achievements" class="screen">
     <h2 class="section-title">MEDALS</h2>
-    <p id="achievementsCount" class="power-line"></p>
-    <div id="achievementsList" class="achievements-list"></div>
+    <div class="medal-hero">
+      <canvas id="medalRing" class="medal-ring" width="150" height="150"></canvas>
+      <div class="medal-hero-text">
+        <div id="achievementsCount" class="mh-count"></div>
+        <div id="medalNext" class="mh-next"></div>
+      </div>
+    </div>
+    <div id="achievementsList" class="medal-grid"></div>
     <button id="achievementsBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
   <!-- ===================== CHAMPIONSHIP ===================== -->
   <section id="screen-leaderboard" class="screen">
-    <h2 class="section-title">THIERRY FAMILY CHAMPIONSHIP</h2>
+    <h2 class="section-title">THE CHAMPIONSHIP</h2>
+    <div id="podium" class="podium"></div>
     <div id="leaderboardList" class="leaderboard-list"></div>
+    <label class="panel-label brief-label">WHO HOLDS WHAT</label>
+    <div id="recordBoard" class="record-board"></div>
     <button id="leaderboardBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
