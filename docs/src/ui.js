@@ -91,7 +91,115 @@ function renderMenu(){
    the canvas (which draws it) and the DOM buttons (which
    catch the taps) can never disagree about where a stop is.
    --------------------------------------------------------- */
-const campaign = { raf:0, t:0, ctx:null, stars:null };
+const campaign = { raf:0, t:0, ctx:null, stars:null, sky:null };
+
+/* A deterministic little RNG so the sky is elaborate but always the same sky. */
+function skyRand(i){ return ((Math.sin(i*127.1 + 311.7)*43758.5453) % 1 + 1) % 1; }
+
+/*
+ * The backdrop is static, so it is painted once into an offscreen canvas and
+ * blitted every frame - nebula clouds, planets, a distant galaxy and dust.
+ * Only the star twinkle is live. Redrawing a dozen radial gradients at 60fps
+ * to produce an identical image would be silly.
+ */
+function buildSky(W, H){
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const c = cv.getContext("2d");
+  if(!c) return cv;
+
+  const bg = c.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#2b2465");
+  bg.addColorStop(0.5, "#151338");
+  bg.addColorStop(1, "#080718");
+  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+
+  // Nebula: a few big soft clouds, deliberately low contrast so the route
+  // stays the brightest thing on the map.
+  [["#7c3aed", 0.30, 0.22, 0.46], ["#0ea5e9", 0.76, 0.44, 0.40],
+   ["#db2777", 0.24, 0.72, 0.38], ["#14b8a6", 0.62, 0.90, 0.30]]
+    .forEach(([col, x, y, r]) => {
+      const g = c.createRadialGradient(x*W, y*H, 0, x*W, y*H, r*W);
+      g.addColorStop(0, col + "44");
+      g.addColorStop(0.5, col + "1a");
+      g.addColorStop(1, col + "00");
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, H);
+    });
+
+  // Wispy filaments through the clouds.
+  c.globalAlpha = 0.16;
+  for(let i=0;i<26;i++){
+    const x = skyRand(i)*W, y = skyRand(i+40)*H;
+    const len = 60 + skyRand(i+80)*180, ang = skyRand(i+120)*Math.PI;
+    c.strokeStyle = i%3 === 0 ? "#a78bfa" : "#67e8f9";
+    c.lineWidth = 1 + skyRand(i+160)*2;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.quadraticCurveTo(x + Math.cos(ang)*len*0.5 + 40, y + Math.sin(ang)*len*0.5,
+                       x + Math.cos(ang)*len, y + Math.sin(ang)*len);
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+
+  // A distant galaxy: an ellipse of dots with a bright core.
+  (function galaxy(cx, cy, rr){
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    g.addColorStop(0, "rgba(255,240,210,0.55)");
+    g.addColorStop(0.35, "rgba(200,170,255,0.14)");
+    g.addColorStop(1, "rgba(120,90,200,0)");
+    c.fillStyle = g;
+    c.save(); c.translate(cx, cy); c.rotate(-0.5); c.scale(1, 0.42);
+    c.beginPath(); c.arc(0, 0, rr, 0, Math.PI*2); c.fill();
+    for(let i=0;i<160;i++){
+      const a = skyRand(i+200)*Math.PI*2, d = Math.pow(skyRand(i+260), 0.6)*rr;
+      c.globalAlpha = 0.5*(1 - d/rr);
+      c.fillStyle = "#ffffff";
+      c.fillRect(Math.cos(a + d*0.02)*d, Math.sin(a + d*0.02)*d, 1.4, 1.4);
+    }
+    c.globalAlpha = 1;
+    c.restore();
+  })(W*0.16, H*0.17, W*0.28);
+
+  // Planets. Lit from the upper left like everything else in the game.
+  // Placed in the gaps the serpentine route leaves: it runs x 0.20-0.80, so
+  // the planets live out at the edges and never sit under a stop.
+  [[0.85, 0.25, 0.115, "#c2703a", "#5a2a12"],
+   [0.15, 0.63, 0.075, "#3f8fd8", "#12294d"],
+   [0.93, 0.55, 0.042, "#8b9bb4", "#2b3244"]]
+    .forEach(([x, y, r, lit, dark], idx) => {
+      const cx = x*W, cy = y*H, rr = r*W;
+      const g = c.createRadialGradient(cx - rr*0.4, cy - rr*0.45, rr*0.1, cx, cy, rr);
+      g.addColorStop(0, lit);
+      g.addColorStop(0.65, dark);
+      g.addColorStop(1, "#05060f");
+      c.fillStyle = g;
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+      // Bands on the big one, a ring on the small one.
+      if(idx === 0){
+        c.save();
+        c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.clip();
+        c.globalAlpha = 0.18; c.fillStyle = "#ffd9a8";
+        [-0.45, -0.1, 0.3, 0.6].forEach(o =>
+          c.fillRect(cx - rr, cy + o*rr, rr*2, rr*0.14));
+        c.restore();
+        c.globalAlpha = 1;
+      }
+      c.strokeStyle = "rgba(255,235,200,0.28)";
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(cx, cy, rr, -2.5, -0.9); c.stroke();
+    });
+
+  // Far dust, so the empty corners aren't empty.
+  for(let i=0;i<70;i++){
+    c.globalAlpha = 0.10 + skyRand(i+300)*0.16;
+    c.fillStyle = i%4 === 0 ? "#ffd9a8" : "#9fb6ff";
+    const sz = 1 + skyRand(i+340)*2.4;
+    c.fillRect(skyRand(i+380)*W, skyRand(i+420)*H, sz, sz);
+  }
+  c.globalAlpha = 1;
+  return cv;
+}
 
 /** Serpentine route from the bottom of the map to the top. */
 function campaignLayout(){
@@ -187,11 +295,8 @@ function drawCampaign(){
   const nodes = campaignLayout();
   const px = n => n.x*W, py = n => n.y*H;
 
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#241f52");
-  bg.addColorStop(0.55, "#141235");
-  bg.addColorStop(1, "#0a0920");
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  campaign.sky = campaign.sky || buildSky(W, H);
+  ctx.drawImage(campaign.sky, 0, 0);
 
   campaign.stars.forEach(s => {
     ctx.globalAlpha = 0.35 + Math.sin(t*1.6 + s.tw)*0.3;
@@ -243,8 +348,9 @@ function drawCampaign(){
     const R = boss ? 40 : 32;
     const isNext = i === reached;
 
-    if(boss && unlocked){
+    if(boss){
       ctx.save();
+      ctx.globalAlpha = unlocked ? 1 : 0.35;
       ctx.strokeStyle = "rgba(255,45,85,0.7)";
       ctx.lineWidth = 3;
       for(let k=0;k<12;k++){
@@ -278,12 +384,43 @@ function drawCampaign(){
     ctx.font = "bold " + (boss ? 26 : 22) + "px Arial, sans-serif";
     ctx.fillText(unlocked ? String(node.mission.id) : "🔒", x, y + (boss ? 9 : 8));
 
+    const starY = y - R - (boss ? 22 : 6);
     if(unlocked){                                  // stars earned, on the rim
       ctx.font = "13px Arial, sans-serif";
       for(let sIdx=0; sIdx<3; sIdx++){
         ctx.fillStyle = sIdx < earned ? "#ffd23f" : "rgba(255,255,255,0.22)";
-        ctx.fillText("★", x + (sIdx-1)*15, y - R - 6);
+        ctx.fillText("★", x + (sIdx-1)*15, starY);
       }
+    }
+    /*
+     * A boss stop says BOSS. Red spikes read as "danger" only if you already
+     * know the convention, and an eight-year-old doesn't - a label costs
+     * nothing and removes the guess entirely.
+     */
+    if(boss){
+      ctx.save();
+      ctx.globalAlpha = unlocked ? 1 : 0.45;
+      const label = "☠ BOSS", padX = 9, h = 19;
+      ctx.font = "bold 12px Arial, sans-serif";
+      const w = ctx.measureText(label).width + padX*2;
+      const bx = x - w/2, by = y - R - 20;
+      ctx.fillStyle = "#c2123a";
+      ctx.beginPath();
+      ctx.moveTo(bx + h/2, by);
+      ctx.lineTo(bx + w - h/2, by);
+      ctx.quadraticCurveTo(bx + w, by, bx + w, by + h/2);
+      ctx.quadraticCurveTo(bx + w, by + h, bx + w - h/2, by + h);
+      ctx.lineTo(bx + h/2, by + h);
+      ctx.quadraticCurveTo(bx, by + h, bx, by + h/2);
+      ctx.quadraticCurveTo(bx, by, bx + h/2, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,180,190,0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, by + h/2 + 1);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
     }
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
     ctx.font = "bold 13px Arial, sans-serif";

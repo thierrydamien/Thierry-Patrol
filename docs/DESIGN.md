@@ -522,6 +522,20 @@ The serpentine period needed care: at `sin(i*1.15)` the last two stops landed
 almost on top of each other. `sin(i*0.85 + 0.6)` keeps every neighbour on the
 opposite side.
 
+Two notes from the first pass:
+
+- **The sky is painted once.** Nebula clouds, filaments, a galaxy, three
+  planets and dust are rendered into an offscreen canvas the first time the map
+  is shown and blitted every frame; only the star twinkle is live. Redrawing a
+  dozen radial gradients at 60fps to produce an identical image would be
+  pointless. Planet positions are chosen for the gaps the route leaves (it runs
+  x 0.20-0.80), so nothing ever sits under a stop.
+- **Red does not mean boss to a child.** The spiked ring was the only marker
+  and it relied on a convention an eight-year-old has not learned yet. Boss
+  stops now carry a literal `☠ BOSS` tag, shown dimmed on locked stops too, so
+  you can see what is coming. Colour should reinforce a label, never replace
+  one.
+
 ## 9. What I'd do next
 
 Roughly in value order:
