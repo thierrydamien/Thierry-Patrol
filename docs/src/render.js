@@ -354,12 +354,13 @@ function drawAsteroid(ctx, e, size){
   lit.addColorStop(0.55, "#6b7280");
   lit.addColorStop(1, "#3f4653");
   ctx.fillStyle = lit;
-  ctx.strokeStyle = "rgba(12,16,26,0.85)";
-  ctx.lineWidth = Math.max(1.5, R*0.07);
+  ctx.strokeStyle = e.type.tough ? "rgba(8,11,18,0.95)" : "rgba(12,16,26,0.85)";
+  ctx.lineWidth = Math.max(1.5, R*(e.type.tough ? 0.055 : 0.07));
   ctx.beginPath();
-  for(let n=0;n<9;n++){
-    const a = n/9*TAU;
-    const wob = 0.72 + ((Math.sin(n*12.9898 + e.spinRate*78.233)*43758.5453) % 1 + 1) % 1 * 0.42;
+  const verts = e.type.tough ? 13 : 9;
+  for(let n=0;n<verts;n++){
+    const a = n/verts*TAU;
+    const wob = 0.74 + ((Math.sin(n*12.9898 + e.spinRate*78.233)*43758.5453) % 1 + 1) % 1 * 0.38;
     const x = Math.cos(a)*R*wob, y = Math.sin(a)*R*wob;
     if(n === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
@@ -370,6 +371,26 @@ function drawAsteroid(ctx, e, size){
     ctx.fillStyle = "rgba(190,200,215,0.22)";     // and its lit rim
     ctx.beginPath(); ctx.arc(cx*R - cr*R*0.22, cy*R - cr*R*0.26, cr*R*0.72, 0, TAU); ctx.fill();
   });
+  // Cracks open up as it takes damage, so a boulder visibly comes apart
+  // rather than just having a bar tick down.
+  const wear = 1 - clamp(e.hp/e.maxHp, 0, 1);
+  if(wear > 0.15){
+    ctx.strokeStyle = "rgba(16,21,32," + Math.min(0.85, 0.3 + wear*0.6) + ")";
+    ctx.lineWidth = Math.max(1, R*0.035);
+    ctx.lineCap = "round";
+    const cracks = wear > 0.6 ? 3 : wear > 0.35 ? 2 : 1;
+    for(let c=0;c<cracks;c++){
+      const a0 = (c/3)*TAU + (e.spinRate||0);
+      // Kept well inside the silhouette so they read as fractures in the rock
+      // rather than scratches drawn over the top of it.
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a0)*R*0.66, Math.sin(a0)*R*0.66);
+      ctx.lineTo(Math.cos(a0+0.55)*R*0.18, Math.sin(a0+0.55)*R*0.18);
+      ctx.lineTo(Math.cos(a0+1.5)*R*0.60, Math.sin(a0+1.5)*R*0.60);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+  }
   ctx.restore();
   if(e.flash > 0){
     ctx.save();

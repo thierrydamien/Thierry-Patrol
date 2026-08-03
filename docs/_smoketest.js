@@ -350,12 +350,38 @@ async function run(){
     check("the coins it took are really gone",
       W.pickups.items.filter(i => i.alive && i.kind === "coin").length < coinsBefore);
 
+    // Boulders: sized from your guns, split into asteroids, and can't be rammed away.
+    W.reset();
+    const strong = SF.profile.blank("Strong"); strong.upgrades = { spread:5, rapid:5, damage:5 };
+    W.createPlayer(SF.game.buildLoadout(strong, diff));
+    const bigA = W.spawnEnemy("boulder", 300, 100, { difficulty: diff });
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Weak"), diff));
+    const bigB = W.spawnEnemy("boulder", 300, 100, { difficulty: diff });
+    check("a boulder is sized from the guns pointed at it", bigA.hp > bigB.hp * 3);
+    check("a boulder outlasts a plain asteroid",
+      bigA.hp > W.spawnEnemy("asteroid", 10, 10, { difficulty: diff }).hp * 2);
+    check("a boulder breaks into asteroids", SF.enemyData.ENEMY_TYPES.boulder.splitsInto.type === "asteroid");
+
     // Asteroids are scenery: they never count toward "destroy the enemies".
     const rockWave = { waves:[{ t:0, type:"asteroid", n:5, form:"scatter" }], boss:null };
     const rockDir = new SF.systems.WaveDirector(rockWave, diff, W);
     check("asteroids are not counted as enemies to destroy", rockDir.totalPlanned === 0);
     check("asteroids are flagged as hazards",
       W.spawnEnemy("asteroid", 100, 100, { difficulty: diff }).hazard === true);
+    check("boulders show up on some missions but not most",
+      SF.missions.MISSIONS.filter(m => m.waves.some(wv => wv.type === "boulder")).length === 3);
+
+    // Ramming a rock costs a life and leaves the rock exactly where it was.
+    {
+      const rock = W.spawnEnemy("boulder", W.player.x, W.player.y, { difficulty: diff });
+      const rockHp = rock.hp;
+      let hits = 0;
+      W.player.invuln = 0;
+      SF.systems.resolve(W, { onEnemyKilled(){}, onBossHit(){}, onPlayerHit(){ hits++; }, godMode:false }, 1/60);
+      check("ramming a rock hurts you", hits === 1);
+      check("ramming a rock does not destroy it", rock.alive === true && rock.hp === rockHp);
+    }
   }
 
   /* ---------- boss mission ---------- */

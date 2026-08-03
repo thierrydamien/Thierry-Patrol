@@ -162,9 +162,16 @@ function resolve(world, ctxObj, dt){
       const rr = e.r + p.r;
       if((e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y) < rr*rr){
         // Ramming an enemy destroys it too - a fair trade, and it stops the
-        // "invisible wall" feeling of bouncing off a sprite.
-        e.hp = 0;
-        ctxObj.onEnemyKilled(e, null, true);
+        // "invisible wall" feeling of bouncing off a sprite. A rock is not a
+        // fair trade: it costs you a life and is still there afterwards, which
+        // is what makes a boulder something you actually have to fly around.
+        if(!e.hazard){
+          e.hp = 0;
+          ctxObj.onEnemyKilled(e, null, true);
+        } else {
+          fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
+          fx.shake(10);
+        }
         ctxObj.onPlayerHit("collision");
         break;
       }

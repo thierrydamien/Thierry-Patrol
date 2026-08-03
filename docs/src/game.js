@@ -137,7 +137,7 @@ function startMission(missionIndex, difficultyId){
 
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
-    halfwayShown: false,
+    halfwayShown: false, boulderShown: false,
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, progress: 0,
@@ -556,14 +556,25 @@ function update(dt, timeMs){
  * what it wants from you. A new mechanic that nobody explains just reads as
  * the game being broken ("why aren't my bullets working?").
  */
-const THREAT_LINES = { shielder:"guardian", thief:"thiefSpotted", splitter:"splitter", asteroid:"asteroids" };
+const THREAT_LINES = { shielder:"guardian", thief:"thiefSpotted", splitter:"splitter",
+                       asteroid:"asteroids", boulder:"boulders" };
 function announceNewThreats(){
+  const run = game.run;
   const items = game.world.enemies.items;
   for(let i=0;i<items.length;i++){
     const e = items[i];
     if(!e.alive || e.y < 0) continue;
     const line = THREAT_LINES[e.typeId];
     if(line) SF.comms.say(line);
+    // A boulder is a set piece, so it gets the full banner treatment once.
+    if(e.typeId === "boulder" && !run.boulderShown){
+      run.boulderShown = true;
+      run.bannerText = "⚠ ASTEROID FIELD ⚠";
+      run.bannerSub = "Break the big ones up - they pay";
+      run.bannerColor = "#cbd5e1";
+      run.bannerUntil = performance.now() + 2400;
+      audio.play("alarm");
+    }
   }
 }
 

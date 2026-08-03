@@ -257,7 +257,17 @@ class World {
 
     e.typeId = typeId; e.type = type; e.elite = elite;
     e.x = x; e.y = y;
-    e.hp = Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1) * (elite ? ELITE.hpMult : 1)));
+    /*
+     * Rocks are terrain, and terrain that evaporates isn't terrain. So a
+     * `toughSeconds` type is sized from the player's firepower - the same
+     * trick the bosses use - and stays roughly N seconds of concentrated fire
+     * however kitted out you are. Ordinary enemies deliberately do NOT do
+     * this: getting easier to sweep aside is the reward for upgrading.
+     */
+    const dps = this.player ? this.player.dps : 0;
+    e.hp = type.toughSeconds && dps > 0
+      ? Math.max(type.hp, Math.round(type.toughSeconds * dps * 0.5 * (diff ? diff.hpMult : 1)))
+      : Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1) * (elite ? ELITE.hpMult : 1)));
     e.maxHp = e.hp;
     e.r = type.r * (elite ? ELITE.sizeMult : 1);
     e.size = type.size * (elite ? ELITE.sizeMult : 1);

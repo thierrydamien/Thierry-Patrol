@@ -71,6 +71,11 @@ const COMMS = {
     "It got away with ${n}! Get the next one.",
     "There goes ${n}. Faster next time, {you}.",
   ]},
+  boulders: { speaker:"control", cooldown:40, lines:[
+    "Those big ones take a beating, {you} - keep on them.",
+    "Boulder field. Break them up and collect, or fly around.",
+    "That rock won't budge for a couple of shots, {you}.",
+  ]},
   asteroids: { speaker:"control", cooldown:30, lines:[
     "Rocks ahead - fly around them or break them up.",
     "Asteroid field, {you}. Mind the big ones.",

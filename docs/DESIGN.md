@@ -340,6 +340,14 @@ it was four things that need a *different answer*:
   leaves them out of `totalPlanned` and they never count against a
   "destroy the enemies" star - they'd otherwise silently make objectives
   unachievable.
+- **Boulders**: the set piece version, on three missions out of eight so they
+  stay an event. Two decisions make them work. First, `toughSeconds` sizes them
+  from the player's DPS the way bosses are sized - *terrain that evaporates
+  isn't terrain*, and a fixed 52 HP would be a wall early and confetti later.
+  (Ordinary enemies deliberately do **not** scale this way: becoming easy to
+  sweep aside is the reward for upgrading.) Second, ramming a hazard costs a
+  life and leaves the rock intact, unlike every other enemy, which is the
+  difference between an obstacle and a target.
 
 Each gets one explanatory radio line the first time it appears in a run. A new
 mechanic nobody explains reads as the game being broken ("why aren't my bullets

@@ -153,6 +153,7 @@ const MISSIONS = [
       w(77,  "striker", 5, "arc"),
       w(85,  "weaver",  9, "line"),
       w(93,  "carrier", 1, "column"),
+      w(94,  "boulder", 1, "column"),       // first big one
       w(96,  "asteroid",5, "scatter"),
       w(98,  "striker", 6, "sides"),
       w(106, "grunt",  12, "wall"),
@@ -228,6 +229,7 @@ const MISSIONS = [
       w(72,  "swooper", 8, "pincer"),
       w(80,  "carrier", 3, "tripleColumns"),
       w(84,  "thief",   2, "sides"),
+      w(86,  "boulder", 2, "twinColumns"),  // asteroid field, mid-rescue
       w(89,  "weaver",  9, "arc"),
       w(97,  "brute",   4, "line", { elite: 1 }),
       w(105, "carrier", 2, "sides"),
@@ -281,6 +283,7 @@ const MISSIONS = [
       w(57,  "turret",   3, "arc"),
       w(60,  "shielder", 2, "twinColumns"),
       w(62,  "splitter", 5, "wall"),
+      w(70,  "boulder",  3, "tripleColumns"),
       w(65,  "swooper",  9, "pincer", { elite: 2 }),
       w(73,  "striker",  7, "sides"),
       w(81,  "brute",    5, "line", { elite: 2 }),

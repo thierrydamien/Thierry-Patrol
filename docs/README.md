@@ -92,6 +92,11 @@ different answer rather than more bullets:
 - **Asteroids** — drifting rocks. Dodge them or break them up for cash. They're
   scenery, not opposition, so they never count against your "destroy the
   enemies" star.
+- **Boulders** — an occasional set piece (three missions out of eight, with a
+  ⚠ ASTEROID FIELD ⚠ warning). Roughly **five seconds of concentrated fire**
+  whatever you fly, they crack visibly as you work on them, and they break into
+  three asteroids and a fat payout. Ramming one costs you a life *and the rock
+  is still there* — so a boulder is a decision, not a target.
 
 The first one of each in a run gets a radio line explaining what it wants —
 a new mechanic nobody explains just reads as the game being broken.

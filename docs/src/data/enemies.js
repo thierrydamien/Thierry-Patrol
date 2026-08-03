@@ -249,6 +249,19 @@ const ENEMY_TYPES = {
     name:"Asteroid", behaviour:"tumble", hp:9, r:26, size:74, speed:104,
     score:8, money:14, tint:"#94a3b8", fire:null,
     hazard:true,               // scenery, not opposition: never counted as a kill
+    toughSeconds:1.1,          // sized from your guns, so it stays an obstacle
+  },
+  /*
+   * The big one. Deliberately slow to kill: a boulder is a decision, not a
+   * target. Break it and you get three asteroids and a real payout; leave it
+   * and you have to fly around a rock the size of your ship for ten seconds.
+   */
+  boulder: {
+    name:"Boulder", behaviour:"tumble", hp:52, r:50, size:142, speed:62,
+    score:60, money:95, tint:"#94a3b8", fire:null,
+    hazard:true, tough:true,
+    toughSeconds:5,            // five seconds of concentrated fire, at any gear level
+    splitsInto:{ type:"asteroid", n:3 },
   },
 };
 
