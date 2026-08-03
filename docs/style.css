@@ -69,11 +69,15 @@ html, body {
 }
 .game-title span { -webkit-text-fill-color: #ff6b4a; }
 
-.menu-bg {
-  background-image: linear-gradient(rgba(5,4,15,0.35), rgba(5,4,15,0.62) 70%, rgba(5,4,15,0.92)), url("assets/Menu.jpg");
-  background-size: cover; background-position: center top;
-  justify-content: flex-end; padding-bottom: 40px;
+/* The home screens paint their own sky (see drawTitleArt). The artwork that
+   used to live here was the real Sky Force game's promotional image - its
+   logo was literally on our home screen. */
+.menu-bg { position:relative; justify-content: flex-end; padding-bottom: 40px; }
+.title-art {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; z-index:0; pointer-events:none;
 }
+.menu-bg > *:not(.title-art) { position:relative; z-index:1; }
 #screen-profiles.menu-bg { justify-content: center; }
 
 .tagline { color: rgba(255,255,255,0.85); margin: 10px 0 18px; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
@@ -104,34 +108,57 @@ html, body {
 .menu-buttons { display:flex; flex-direction:column; align-items:center; }
 
 /* ---------------- pilot picker ---------------- */
-.profile-grid { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:16px; width:100%; }
+.profile-grid { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:18px; width:100%; }
 .profile-card {
-  width: 140px; padding: 16px 10px; border-radius:16px;
-  background: var(--panel); border: 2px solid var(--panel-border);
-  text-align:center; cursor:pointer; transition: transform .12s ease;
+  width: 160px; padding: 14px 12px 16px; border-radius:20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 14px 30px -16px rgba(0,0,0,0.9);
+  text-align:center; cursor:pointer; transition: transform .12s ease, border-color .12s ease;
 }
-.profile-card:active { transform: scale(0.96); }
-.profile-card .avatar {
-  position:relative; width:48px; height:48px; border-radius:50%; margin: 0 auto 10px;
-  box-shadow: 0 0 14px rgba(255,255,255,0.25);
-}
-.profile-card .avatar-badge { position:absolute; bottom:-4px; right:-4px; font-size:18px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)); }
-.profile-card .pname { font-weight:700; font-size:15px; }
-.profile-card .prank { font-size:9px; font-weight:800; letter-spacing:1px; margin-top:3px; }
-.profile-card .pscore { font-size:12px; color: rgba(255,255,255,0.6); margin-top:4px; }
+.profile-card:active { transform: scale(0.96); border-color: var(--accent); }
+.pc-art { position:relative; height:78px; display:flex; align-items:center; justify-content:center; }
+.pc-art canvas { width:88px; height:88px; }
+.pc-patch { position:absolute; right:6px; bottom:-2px; line-height:0; }
+.profile-card .pname { font-weight:900; font-size:16px; margin-top:8px; }
+.profile-card .prank { font-size:9px; font-weight:800; letter-spacing:1.5px; margin-top:2px; }
+.profile-card .pstats { font-size:11px; color: rgba(255,255,255,0.55); margin-top:6px; }
+.profile-card .pstats b { color:#fff; font-weight:800; }
+.profile-card .pstats i { color: rgba(255,255,255,0.25); font-style:normal; }
 
+/* ---------------- main menu ---------------- */
 .menu-pilot {
-  display:flex; align-items:center; gap:12px; margin: 6px 0 18px;
-  background: rgba(0,0,0,0.35); border:1px solid var(--panel-border);
-  border-radius:14px; padding: 10px 16px;
+  display:flex; align-items:center; gap:14px; margin: 6px 0 16px; width:100%; max-width:400px;
+  background: rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px; padding: 12px 16px;
+  box-shadow: 0 12px 28px -16px rgba(0,0,0,0.9);
 }
-.mp-badge {
-  width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-size:20px; box-shadow: 0 0 14px rgba(255,255,255,0.25);
+.mp-patch { flex:0 0 auto; line-height:0; }
+.mp-main { flex:1; min-width:0; text-align:left; }
+.mp-name { font-weight:900; font-size:18px; line-height:1.1; }
+.mp-rank { font-size:9px; font-weight:800; letter-spacing:1.8px; margin-top:1px; }
+/* Progress to the next rank, so the menu always shows you moving. */
+.mp-bar { height:5px; border-radius:3px; background: rgba(0,0,0,0.5); overflow:hidden; margin:7px 0 5px; }
+.mp-bar i { display:block; height:100%; border-radius:3px; transition: width .4s ease; }
+.mp-stats { font-size:10px; color: rgba(255,255,255,0.6); }
+
+.menu-buttons { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-width:400px; }
+.menu-btn {
+  width:100%; font-family:inherit; cursor:pointer; text-align:left;
+  display:flex; flex-direction:column; gap:1px;
+  padding: 12px 18px; border-radius:15px;
+  background: rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
+  color:#fff; backdrop-filter: blur(4px);
 }
-.mp-name { font-weight:900; font-size:16px; }
-.mp-rank { font-size:10px; font-weight:800; letter-spacing:1.5px; }
-.mp-stats { font-size:11px; color: rgba(255,255,255,0.7); margin-top:2px; }
+.menu-btn b { font-size:15px; font-weight:900; letter-spacing:1.5px; }
+.menu-btn span { font-size:11px; color: rgba(255,255,255,0.6); }
+.menu-btn:active { transform: scale(0.985); }
+.menu-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-color: rgba(255,255,255,0.3); color:#241a00;
+  box-shadow: 0 8px 22px -8px rgba(245,166,35,0.9);
+}
+.menu-btn.primary span { color: rgba(36,26,0,0.72); }
 
 /* ---------------- campaign map ---------------- */
 .campaign-map {
@@ -270,7 +297,7 @@ html, body {
 }
 .pc-left { position:relative; flex:0 0 auto; }
 .pc-ship { width:62px; height:62px; border-radius:50%; box-shadow: 0 0 20px rgba(255,255,255,0.28); }
-.pc-rank-badge { position:absolute; bottom:-4px; right:-6px; font-size:22px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+.pc-rank-badge { position:absolute; bottom:-4px; right:-6px; line-height:0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
 .pc-right { flex:1; min-width:0; }
 .pc-name { font-weight:900; font-size:19px; letter-spacing:0.5px; }
 .pc-rank { font-weight:800; font-size:12px; letter-spacing:1.5px; margin-top:1px; }
@@ -380,7 +407,7 @@ html, body {
 }
 .podium-step { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; }
 .podium-step canvas { width:72px; height:72px; }
-.podium-step .ps-badge { font-size:19px; margin-top:-8px; }
+.podium-step .ps-badge { margin-top:-10px; line-height:0; }
 .podium-step .ps-name { font-weight:900; font-size:14px; margin-top:2px; }
 .podium-step .ps-rank { font-size:8px; font-weight:800; letter-spacing:1px; }
 .ps-block {
@@ -482,7 +509,7 @@ html, body {
 .rl.record b { color: var(--accent); }
 .badge-row { display:flex; gap:8px; flex-wrap:wrap; }
 .badge-pick {
-  width:42px; height:42px; border-radius:12px; font-size:22px; cursor:pointer;
+  width:52px; height:52px; border-radius:14px; cursor:pointer; line-height:0;
   display:flex; align-items:center; justify-content:center;
   background: rgba(0,0,0,0.3); border:2px solid transparent;
 }

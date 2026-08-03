@@ -14,6 +14,7 @@
 
   <!-- ===================== PILOT PICKER ===================== -->
   <section id="screen-profiles" class="screen menu-bg active">
+    <canvas id="titleArt" class="title-art" width="720" height="1000"></canvas>
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
     <h1 class="game-title">SKY<span>FORCE</span></h1>
     <p class="tagline">Who's flying today?</p>
@@ -23,14 +24,19 @@
 
   <!-- ===================== MAIN MENU ===================== -->
   <section id="screen-menu" class="screen menu-bg">
+    <canvas id="menuArt" class="title-art" width="720" height="1000"></canvas>
     <div class="family-title">THE THIERRY FAMILY PRESENTS</div>
     <h1 class="game-title">SKY<span>FORCE</span></h1>
     <div id="menuPilot" class="menu-pilot"></div>
     <div class="menu-buttons">
-      <button id="playBtn" class="main-btn">▶ FLY A MISSION</button>
-      <button id="armoryBtn" class="main-btn">🛠 ARMORY</button>
-      <button id="achievementsBtn" class="main-btn">🏅 MEDALS</button>
-      <button id="leaderboardBtn" class="main-btn">🏆 CHAMPIONSHIP</button>
+      <button id="playBtn" class="menu-btn primary">
+        <b>FLY A MISSION</b><span id="playSub"></span></button>
+      <button id="armoryBtn" class="menu-btn">
+        <b>ARMORY</b><span id="armorySub"></span></button>
+      <button id="achievementsBtn" class="menu-btn">
+        <b>MEDALS</b><span id="medalsSub"></span></button>
+      <button id="leaderboardBtn" class="menu-btn">
+        <b>CHAMPIONSHIP</b><span id="champSub"></span></button>
       <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
     </div>
   </section>
@@ -247,6 +253,7 @@
 <script src="src/systems.js"></script>
 <script src="src/render.js"></script>
 <script src="src/enemyart.js"></script>
+<script src="src/insignia.js"></script>
 <script src="src/skygen.js"></script>
 <script src="src/shipart.js"></script>
 <script src="src/comms.js"></script>

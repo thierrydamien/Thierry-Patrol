@@ -122,8 +122,15 @@ function nextRank(p){
   return RANKS.find(r => gear < r.at) || null;
 }
 
-/** The pilot's chosen badge, falling back to whatever their rank awards. */
-function badgeFor(p){ return p.badge || rankFor(p).badge; }
+/**
+ * The pilot's chosen insignia, falling back to whatever their rank awards.
+ * Old saves stored an emoji here; anything that isn't a known design is
+ * treated as unset so those profiles quietly pick up their rank patch.
+ */
+function badgeFor(p){
+  const known = SF.insignia && SF.insignia.DESIGNS.indexOf(p.badge) >= 0;
+  return known ? p.badge : rankFor(p).badge;
+}
 
 /** Stars are the campaign currency of pride: best stars per mission, summed. */
 function starsForMission(p, missionId){

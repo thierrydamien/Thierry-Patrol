@@ -108,7 +108,7 @@ const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/skygen.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
@@ -158,7 +158,15 @@ async function run(){
     SF.config.UPGRADES.every(u => typeof u.desc === "string" && u.desc.length > 12));
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
-  check("badge picker offers a real set of badges", SF.config.BADGES.length >= 12);
+  check("badge picker offers a real set of insignia", SF.config.BADGES.length >= 12);
+  check("every insignia is a drawn design, not an emoji",
+    SF.config.BADGES.every(b => typeof SF.insignia.EMBLEMS[b] === "function"));
+  check("every rank awards a drawn insignia too",
+    SF.config.RANKS.every(r => typeof SF.insignia.EMBLEMS[r.badge] === "function"));
+  check("an old emoji badge falls back to the rank patch", (() => {
+    const p = SF.profile.blank("Old"); p.badge = "🦄";
+    return SF.profile.badgeFor(p) === SF.profile.rankFor(p).badge;
+  })());
   check("every mission has its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
   check("no two missions look alike",
     new Set(SF.skygen.SKIES.map(k => k.photo || k.clouds.join(""))).size === SF.skygen.SKIES.length);

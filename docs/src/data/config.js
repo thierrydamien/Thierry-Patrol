@@ -11,7 +11,12 @@ const SF = window.SF;
 
 /* A pilot's own badge - picked, not earned. Rank is what the game gives you;
    this is the bit that's yours. */
-const BADGES = ["🚀","⚡","🦈","🐉","🐺","🦅","🔥","👽","🤖","🐱","⚽","🎸","🦖","🌟","🍕","🦄"];
+/* Pickable squadron insignia, drawn in src/insignia.js. These were emoji; they
+   rendered differently on every device and looked like clip art next to
+   hand-drawn ships. */
+const BADGES = ["star","chevrons","wings","bolt","comet","trident",
+                "orbit","flame","crown","target","crescent","arrowhead",
+                "hex","sixstar"];
 
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
@@ -117,14 +122,14 @@ const TOTAL_UPGRADE_COST = UPGRADES.reduce((n,u) => n + u.costs.reduce((a,b)=>a+
    PILOT RANKS - earned from gear owned, shown everywhere.
    --------------------------------------------------------- */
 const RANKS = [
-  { at:0,  name:"ROOKIE CADET",   badge:"🌱", color:"#8fd3a7" },
-  { at:4,  name:"WING CADET",     badge:"🛩️", color:"#7fc4ff" },
-  { at:10, name:"SQUADRON PILOT", badge:"⭐", color:"#3399ff" },
-  { at:17, name:"FLIGHT LEADER",  badge:"🌟", color:"#f39c12" },
-  { at:24, name:"STAR ACE",       badge:"🔥", color:"#ff8a3d" },
-  { at:32, name:"WING COMMANDER", badge:"🚀", color:"#e74c3c" },
-  { at:41, name:"SPACE LEGEND",   badge:"👑", color:"#9b59b6" },
-  { at:53, name:"THIERRY LEGEND", badge:"🏆", color:"#ffd23f" },
+  { at:0,  name:"ROOKIE CADET",   badge:"chevrons", color:"#8fd3a7" },
+  { at:4,  name:"WING CADET",     badge:"wings", color:"#7fc4ff" },
+  { at:10, name:"SQUADRON PILOT", badge:"star", color:"#3399ff" },
+  { at:17, name:"FLIGHT LEADER",  badge:"sixstar", color:"#f39c12" },
+  { at:24, name:"STAR ACE",       badge:"flame", color:"#ff8a3d" },
+  { at:32, name:"WING COMMANDER", badge:"arrowhead", color:"#e74c3c" },
+  { at:41, name:"SPACE LEGEND",   badge:"crown", color:"#9b59b6" },
+  { at:53, name:"THIERRY LEGEND", badge:"trident", color:"#ffd23f" },
 ];
 
 /* ---------------------------------------------------------

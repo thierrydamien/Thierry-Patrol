@@ -39,9 +39,58 @@ function click(el, fn){
 }
 
 /* ---------------------------------------------------------
+   TITLE ART
+   The home screens used to sit on assets/Menu.jpg, which was
+   the real Sky Force game's promotional artwork - complete
+   with its logo. This paints our own instead: a generated
+   sky, a planet, and the pilot's ship coming at you.
+   --------------------------------------------------------- */
+function drawTitleArt(canvasId, p){
+  const cv = $(canvasId);
+  const ctx = cv && cv.getContext("2d");
+  if(!ctx) return;
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const sky = SF.skygen.build(7, W, H);           // The Deep: the most dramatic
+  if(sky) ctx.drawImage(sky, 0, 0);
+  else { ctx.fillStyle = "#070716"; ctx.fillRect(0, 0, W, H); }
+
+  // A big planet low and left, so the ship has something to fly past.
+  const g = ctx.createRadialGradient(W*0.16, H*0.86, W*0.05, W*0.30, H*0.94, W*0.62);
+  g.addColorStop(0, "#4a6fd8");
+  g.addColorStop(0.5, "#17224f");
+  g.addColorStop(1, "#04050f");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "rgba(160,200,255,0.35)";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, -2.9, -1.4); ctx.stroke();
+
+  // The hero: their ship if we know who is flying, a stock one otherwise.
+  const levels = p ? SF.shipart.levelsOf(p) : {};
+  const col = p ? p.shipColor : "#f5a623";
+  SF.shipart.drawShip(ctx, W*0.66, H*0.22, W*0.28, { color: col, levels, t: 1.1, idle:false });
+
+  // A wing of three behind it, small, for depth.
+  [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz]) => {
+    SF.shipart.drawShip(ctx, W*x, H*y, W*sz, { color: col, levels:{}, t: 0.4, idle:false });
+  });
+
+  // Darken toward the bottom so the UI over it stays readable.
+  const fade = ctx.createLinearGradient(0, 0, 0, H);
+  fade.addColorStop(0, "rgba(5,4,15,0.25)");
+  fade.addColorStop(0.5, "rgba(5,4,15,0.55)");
+  fade.addColorStop(1, "rgba(5,4,15,0.95)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/* ---------------------------------------------------------
    PILOT PICKER
    --------------------------------------------------------- */
 function renderProfiles(){
+  drawTitleArt("titleArt", null);
   const grid = $("profileGrid");
   grid.innerHTML = "";
   P.listNames().forEach(name => {
@@ -50,13 +99,20 @@ function renderProfiles(){
     const card = document.createElement("div");
     card.className = "profile-card";
     card.innerHTML = `
-      <div class="avatar" style="background:${p.shipColor}"><span class="avatar-badge">${P.badgeFor(p)}</span></div>
+      <div class="pc-art"><canvas width="132" height="132"></canvas>
+        <span class="pc-patch"></span></div>
       <div class="pname">${esc(p.callsign || p.name)}</div>
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
-      <div class="pscore">${P.totalStars(p)} ★ · ${p.highscore}</div>
+      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i></i> <b>${p.highscore}</b> best</div>
     `;
     click(card, () => selectProfile(name));
     grid.appendChild(card);
+    // Their actual ship, with everything they have bought on it - a pilot
+    // picker should show who you are, not a coloured circle.
+    const ctx = card.querySelector("canvas").getContext("2d");
+    if(ctx) SF.shipart.drawShip(ctx, 66, 68, 108,
+      { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+    SF.insignia.mount(card.querySelector(".pc-patch"), P.badgeFor(p), p.shipColor, 34);
   });
 }
 
@@ -68,16 +124,38 @@ function selectProfile(name){
 }
 
 function renderMenu(){
+  drawTitleArt("menuArt", profile);
   const rank = P.rankFor(profile);
+  const next = P.nextRank(profile);
+  const gear = P.gearLevel(profile);
   const stars = P.totalStars(profile);
+  const pct = next ? Math.round((gear - rank.at) / (next.at - rank.at) * 100) : 100;
+
   $("menuPilot").innerHTML = `
-    <div class="mp-badge" style="background:${profile.shipColor}">${P.badgeFor(profile)}</div>
-    <div>
+    <span class="mp-patch"></span>
+    <div class="mp-main">
       <div class="mp-name">${esc(profile.callsign)}</div>
       <div class="mp-rank" style="color:${rank.color}">${rank.name}</div>
-      <div class="mp-stats">${stars} ★ collected · ${money(profile.money)}</div>
+      <div class="mp-bar"><i style="width:${pct}%;background:${rank.color}"></i></div>
+      <div class="mp-stats">${stars} ★ · ${money(profile.money)}${
+        next ? " · " + (next.at - gear) + " more gear to " + next.name : " · fully kitted out"}</div>
     </div>`;
+  SF.insignia.mount($("menuPilot").querySelector(".mp-patch"), P.badgeFor(profile), profile.shipColor, 52);
+
+  // Each button says what it is *for* right now, not just where it goes.
+  let nextMission = 0;
+  for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
+  const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
+  setSub("playSub", MISSIONS[nextMission].name);
+  setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
+  setSub("medalsSub", profile.achievements.length + " of " + ACHIEVEMENTS.length + " earned");
+  const rows = P.listNames().map(P.load)
+    .sort((a,b) => P.totalStars(b) - P.totalStars(a));
+  setSub("champSub", rows.length > 1
+    ? (rows[0].callsign || rows[0].name) + " leads with " + P.totalStars(rows[0]) + " ★"
+    : "No one to race yet");
 }
+function setSub(id, text){ const el = $(id); if(el) el.textContent = text; }
 
 /* ---------------------------------------------------------
    THE CAMPAIGN MAP
@@ -571,9 +649,9 @@ function renderPilotTab(panel){
   BADGES.forEach(b => {
     const el = document.createElement("div");
     el.className = "badge-pick" + (b === P.badgeFor(profile) ? " selected" : "");
-    el.textContent = b;
     click(el, () => { profile.badge = b; P.save(profile); renderArmory(); renderMenu(); });
     badgeRow.appendChild(el);
+    SF.insignia.mount(el, b, profile.shipColor, 40);
   });
 }
 
@@ -843,7 +921,7 @@ function renderPilotCard(){
   const rank = P.rankFor(profile), next = P.nextRank(profile);
   const gear = P.gearLevel(profile);
   $("pcShip").style.background = `radial-gradient(circle at 35% 30%, #fff6, ${profile.shipColor})`;
-  $("pcRankBadge").textContent = P.badgeFor(profile);
+  SF.insignia.mount($("pcRankBadge"), P.badgeFor(profile), profile.shipColor, 34);
   $("pcName").textContent = profile.callsign || profile.name;
   const rankEl = $("pcRank");
   rankEl.textContent = rank.name;
@@ -962,7 +1040,7 @@ function renderLeaderboard(){
     step.className = "podium-step place-" + (i+1);
     step.innerHTML = `
       <canvas width="96" height="96"></canvas>
-      <div class="ps-badge">${P.badgeFor(p)}</div>
+      <div class="ps-badge"></div>
       <div class="ps-name">${esc(p.callsign || p.name)}</div>
       <div class="ps-rank" style="color:${P.rankFor(p).color}">${P.rankFor(p).name}</div>
       <div class="ps-block"><span class="ps-place">${i+1}</span>
@@ -971,6 +1049,7 @@ function renderLeaderboard(){
     const c = step.querySelector("canvas").getContext("2d");
     if(c) SF.shipart.drawShip(c, 48, 50, 84,
       { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+    SF.insignia.mount(step.querySelector(".ps-badge"), P.badgeFor(p), p.shipColor, 26);
   });
 
   // Everyone below the podium, if this household ever gets that big.
@@ -1229,7 +1308,14 @@ $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
 renderProfiles();
 SF.game.resize();
 SF.game.start();
-SF.render.loadAssets(() => document.body.classList.add("assets-ready"));
+SF.render.loadAssets(() => {
+  document.body.classList.add("assets-ready");
+  // The title art composites the ship sprite, which is not loaded on the very
+  // first paint - without this the home screen keeps the flat vector fallback
+  // until you navigate away and back.
+  drawTitleArt("titleArt", null);
+  if(profile) drawTitleArt("menuArt", profile);
+});
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory,
