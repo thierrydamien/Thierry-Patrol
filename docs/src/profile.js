@@ -92,8 +92,33 @@ function load(name){
   return migrate(saved ? Object.assign(base, saved) : base);
 }
 
+/**
+ * Every save is stamped, because that timestamp is the whole conflict
+ * resolution story for cloud sync: when the same pilot exists on two devices,
+ * the newer record wins. Without it a stale tab could overwrite a real run.
+ */
 function save(p){
+  p.savedAt = Date.now();
+  saveRaw(p);
+  if(SF.cloud) SF.cloud.touch();
+  return p;
+}
+
+/** Writes a record exactly as given - used when applying a record from sync. */
+function saveRaw(p){
   localStorage.setItem(PREFIX + p.name, JSON.stringify(p));
+  addName(p.name);
+}
+
+/** Every pilot on this device, as a plain { name: record } map. */
+function snapshot(){
+  const out = {};
+  listNames().forEach(n => {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(PREFIX + n) || "null"); } catch(e){ raw = null; }
+    if(raw) out[n] = raw;
+  });
+  return out;
 }
 
 /**
@@ -265,7 +290,7 @@ function recordMission(p, missionId, difficultyId, stars, score, cleared){
 }
 
 SF.profile = {
-  listNames, addName, load, save, blank, migrate, adoptOldSaves,
+  listNames, addName, load, save, saveRaw, snapshot, blank, migrate, adoptOldSaves,
   upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,

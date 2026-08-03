@@ -641,3 +641,31 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .result-comms canvas { width:52px; height:52px; flex:0 0 auto; }
 .rc-who { font-size:9px; font-weight:800; letter-spacing:1.5px; }
 .rc-text { font-size:13px; color: rgba(255,255,255,0.92); }
+
+/* ===================== SQUAD SYNC ===================== */
+.picker-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+/* A panel, not floating text: the home screen's artwork is directly behind
+   this and every label was competing with a starfield. */
+.cloud-inner {
+  max-width: 380px;
+  background: #16143c;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.cloud-blurb { font-size:13px; line-height:1.5; color: rgba(255,255,255,0.7); text-align:center; margin-bottom:16px; }
+/* The code is read aloud across a room and typed on the other device, so it
+   is the biggest thing on the panel and monospaced to kill A/4 confusion. */
+.cloud-code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 30px; font-weight: 700; letter-spacing: 5px;
+  color: #fff; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 12px;
+  padding: 12px 16px; margin-bottom: 10px; user-select: all;
+}
+.cloud-status { font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.55); margin-bottom:18px; min-height:16px; }
+.cloud-status.ok { color:#5fd38d; }
+.cloud-status.error { color:#ff7a6b; }
+.cloud-actions { display:flex; flex-direction:column; gap:9px; width:100%; align-items:center; }
+.cloud-actions .main-btn { width:100%; max-width:280px; }

@@ -1,0 +1,9 @@
+name = "thierry-patrol-sync"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Created by:  npx wrangler kv namespace create SAVES
+# Paste the id it prints below, then:  npx wrangler deploy
+[[kv_namespaces]]
+binding = "SAVES"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"

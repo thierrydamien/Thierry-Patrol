@@ -19,7 +19,10 @@
     <h1 class="game-title">THIERRY <span>PATROL</span></h1>
     <p class="tagline">Who's flying today?</p>
     <div id="profileGrid" class="profile-grid"></div>
-    <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
+    <div class="picker-actions">
+      <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
+      <button id="cloudBtn" class="ghost-btn hidden">☁ Squad Sync</button>
+    </div>
   </section>
 
   <!-- ===================== MAIN MENU ===================== -->
@@ -230,6 +233,22 @@
   </div>
 </div>
 
+<div id="cloudOverlay" class="story-overlay hidden">
+  <div class="story-inner cloud-inner">
+    <div class="story-title">SQUAD SYNC</div>
+    <p class="cloud-blurb">Progress follows your pilots to any device that
+      knows this squad code.</p>
+    <div class="cloud-code" id="cloudCode">----&nbsp;----</div>
+    <div id="cloudStatus" class="cloud-status">Off</div>
+    <div class="cloud-actions">
+      <button id="cloudSyncBtn" class="main-btn">SYNC NOW</button>
+      <button id="cloudCopyBtn" class="ghost-btn">Copy code</button>
+      <button id="cloudJoinBtn" class="ghost-btn">Join another squad</button>
+      <button id="cloudCloseBtn" class="ghost-btn">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="achievementToast" class="achievement-toast hidden">
   <div class="at-icon">🏆</div>
   <div>
@@ -246,6 +265,7 @@
 <script src="src/data/comms.js"></script>
 <script src="src/data/story.js"></script>
 <script src="src/profile.js"></script>
+<script src="src/cloud.js"></script>
 <script src="src/fx.js"></script>
 <script src="src/input.js"></script>
 <script src="src/entities.js"></script>

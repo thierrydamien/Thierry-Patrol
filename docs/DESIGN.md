@@ -664,6 +664,42 @@ in place, so an older build still finds its own save. The mute flag falls back
 the same way. The prefix is generic now (`patrol_`), so a third rename costs
 nothing. Nobody notices a rename, which is the point.
 
+## 8q. Squad Sync
+
+Saves lived in `localStorage`, which is per browser, per device. Clear the site
+data or pick up the other iPad and a season of progress is gone. So: a
+Cloudflare Worker over KV, one entry per squad code.
+
+Three decisions worth writing down.
+
+**The backend knows nothing about the game.** It stores a blob under a key and
+validates the key's shape; it has never heard of an upgrade, a mission or a
+star. The game's data model changes most weeks and none of those changes can
+break sync or need a deploy on the other side.
+
+**Conflicts resolve per pilot, not per device.** Every `save()` is stamped, and
+the newer record wins for each pilot independently. Whole-blob last-write-wins
+would have been three lines shorter and would silently roll back Charles's run
+because Marc's iPad pushed last — the exact failure that makes people stop
+trusting sync. Each push also pulls and merges first, so the window in which
+anything can be lost is one request long.
+
+**The squad code is the entire auth story.** Eight characters from a 30-letter
+alphabet with the ambiguous glyphs removed (no O/0, I/1, S/5 — these get read
+aloud across a room and typed by a child), plus a per-IP rate limit in the
+Worker. No accounts, no email addresses, no password for a nine-year-old to
+forget. What is at stake is a callsign, a ship colour and some scores.
+
+The whole thing is additive: `ENDPOINT` is empty in the committed source, every
+function short-circuits, and the button does not render. A fork of this repo
+gets the offline game and no dead controls.
+
+Tested at both ends. The unit checks cover the merge (`mergePilots`,
+`applyPilots`) because that is the function that can lose someone's afternoon.
+End-to-end, a throwaway harness runs the *real* `worker/src/index.js` against a
+`Map`-backed KV shim and drives two independent browser contexts through it:
+join, pull, per-pilot merge, and same-pilot last-write-wins.
+
 ## 9. What I'd do next
 
 Roughly in value order:

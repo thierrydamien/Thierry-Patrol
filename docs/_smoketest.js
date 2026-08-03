@@ -107,7 +107,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -653,6 +653,43 @@ async function run(){
     JSON.stringify({ name:"Renamed", callsign:"Renamed", money: 5678, totalKills: 21 }));
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
+
+  /* ---------- squad sync merge ---------- */
+  const C = SF.cloud;
+  check("sync is off until an endpoint is configured", C.configured() === false);
+  check("a squad code is eight readable characters",
+    /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(C.newCode()));
+  check("squad codes avoid the ambiguous letters", !/[O0I1S5]/.test(
+    Array.from({length:40}, () => C.newCode()).join("")));
+  check("codes are normalised, not rejected, for case and spacing",
+    C.formatCode("abcd efgh") === "ABCD-EFGH" && C.validCode("nope") === false);
+
+  const mineSide  = { Marc: { name:"Marc", money: 10, savedAt: 200 },
+                      Charles: { name:"Charles", money: 5, savedAt: 100 } };
+  const theirSide = { Marc: { name:"Marc", money: 99, savedAt: 150 },
+                      Charles: { name:"Charles", money: 7, savedAt: 400 },
+                      Ada: { name:"Ada", money: 1, savedAt: 50 } };
+  const merged = C.mergePilots(mineSide, theirSide);
+  check("the newer record wins per pilot", merged.Marc.money === 10 && merged.Charles.money === 7);
+  check("a pilot who only exists remotely is kept", merged.Ada.money === 1);
+  check("merging is per pilot, not per device",
+    merged.Marc.savedAt === 200 && merged.Charles.savedAt === 400);
+  check("an unstamped record never beats a stamped one",
+    C.mergePilots({ X: { name:"X", money: 3, savedAt: 1 } }, { X: { name:"X", money: 9 } }).X.money === 3);
+  check("merging nothing in changes nothing",
+    JSON.stringify(C.mergePilots(mineSide, {})) === JSON.stringify(mineSide));
+
+  // Applying a merge must not resurrect an older record over a newer local one.
+  SF.profile.saveRaw({ name:"SyncTest", callsign:"SyncTest", money: 500, savedAt: 9000 });
+  C.applyPilots({ SyncTest: { name:"SyncTest", callsign:"SyncTest", money: 1, savedAt: 10 } });
+  check("applying a stale record leaves the local save alone",
+    SF.profile.load("SyncTest").money === 500);
+  C.applyPilots({ SyncTest: { name:"SyncTest", callsign:"SyncTest", money: 2500, savedAt: 99999 } });
+  check("applying a newer record updates the local save",
+    SF.profile.load("SyncTest").money === 2500);
+
+  const stamped = SF.profile.save(SF.profile.load("Marc"));
+  check("every save is stamped for conflict resolution", stamped.savedAt > 0);
 
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");

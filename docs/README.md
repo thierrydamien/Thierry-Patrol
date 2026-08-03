@@ -6,7 +6,8 @@ more stars. Runs in any browser — no install, no MySQL, nothing to sign up
 for.
 
 Live at **https://thierrydamien.github.io/space/** (served from this `docs/`
-folder). Progress is saved per pilot, per browser.
+folder). Progress is saved per pilot, per browser — and optionally synced
+across devices, see **Squad Sync** below.
 
 For how it's built and why, see **[DESIGN.md](DESIGN.md)**.
 
@@ -253,6 +254,21 @@ each pilot standing behind their own ship drawn from their own upgrades. Below
 it, **who holds what** — every mission with the name of whoever in the house
 owns the record and the score to beat, with your own rows highlighted. A total
 tells you who's ahead; this tells you which mission to go and take back.
+
+## Squad Sync (optional)
+Progress lives in the browser, which means it is tied to one device. Squad Sync
+lifts that: a **Cloudflare Worker** over KV, one entry per eight-character squad
+code, holding every pilot's save. Enter the same code on the iPad and the laptop
+and progress follows the pilots between them.
+
+It is off unless configured. `ENDPOINT` in `src/cloud.js` is empty by default and
+every sync function is a no-op, so the game stays fully offline until you deploy
+the Worker — see **[../worker/README.md](../worker/README.md)** for the five-minute
+setup. The free tier covers this many times over.
+
+Conflicts are resolved **per pilot** by save timestamp: Marc finishing a mission
+on the iPad never rolls back what Charles just did on the laptop, and every push
+pulls and merges first.
 
 ## Running the tests
 ```

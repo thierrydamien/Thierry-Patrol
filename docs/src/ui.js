@@ -1246,6 +1246,54 @@ function nextToast(){
 /* ---------------------------------------------------------
    WIRING
    --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   SQUAD SYNC
+   The button only exists when an endpoint is configured, so
+   an unconfigured build shows no dead controls.
+   --------------------------------------------------------- */
+function renderCloud(){
+  const cloud = SF.cloud;
+  $("cloudCode").textContent = cloud.code() || "----\u00a0----";
+  paintCloudStatus(cloud.status);
+}
+function paintCloudStatus(st){
+  const el = $("cloudStatus");
+  if(!el) return;
+  const text = {
+    off: "Not syncing yet - tap SYNC NOW to start",
+    syncing: "Syncing\u2026",
+    ok: "Up to date",
+    error: "Couldn't reach the squad: " + (st.error || "unknown"),
+  }[st.state] || "";
+  el.textContent = text;
+  el.className = "cloud-status" + (st.state === "ok" ? " ok" : st.state === "error" ? " error" : "");
+}
+
+if(SF.cloud && SF.cloud.configured()){
+  $("cloudBtn").classList.remove("hidden");
+  SF.cloud.onStatus(paintCloudStatus);
+  click($("cloudBtn"), () => { renderCloud(); $("cloudOverlay").classList.remove("hidden"); });
+  click($("cloudCloseBtn"), () => { $("cloudOverlay").classList.add("hidden"); renderProfiles(); });
+  click($("cloudSyncBtn"), () => {
+    SF.cloud.ensureCode();
+    renderCloud();
+    SF.cloud.sync().then(() => { renderCloud(); renderProfiles(); });
+  });
+  click($("cloudCopyBtn"), () => {
+    const c = SF.cloud.ensureCode();
+    renderCloud();
+    if(navigator.clipboard) navigator.clipboard.writeText(c).catch(() => {});
+  });
+  click($("cloudJoinBtn"), () => {
+    const entered = prompt("Squad code from the other device?");
+    if(!entered) return;
+    SF.cloud.join(entered)
+      .then(() => { renderCloud(); renderProfiles(); })
+      .catch(err => { paintCloudStatus({ state:"error", error: String(err.message || err) }); });
+  });
+  SF.cloud.boot();
+}
+
 click($("addProfileBtn"), () => {
   const name = prompt("Pilot's name?");
   if(name && name.trim()){ P.addName(name.trim()); renderProfiles(); }
