@@ -37,6 +37,10 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 .screen.active { display:flex; }
+/* Flex items shrink by default, so on a short viewport a fixed-ratio block
+   (the hangar's ship bay) gets crushed into a strip instead of scrolling.
+   Nothing on a scrolling screen should ever be squashed to fit. */
+.screen:not(#screen-game) > * { flex-shrink: 0; }
 /* The playfield never scrolls, and gets the whole screen on a tablet. */
 #screen-game {
   overflow:hidden; touch-action:none; justify-content:center;
@@ -374,7 +378,7 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 /* ===================== HANGAR ===================== */
 .hangar-pilot { font-size:12px; color: rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.5px; }
 .hangar-stage {
-  position:relative; width:100%; max-width:420px;
+  position:relative; width:100%; max-width:420px; aspect-ratio: 620 / 440;
   border-radius:18px; border:1px solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(30,42,90,0.55), rgba(8,10,26,0.75));
   overflow:hidden;
