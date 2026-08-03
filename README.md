@@ -4,8 +4,8 @@ A Java arcade-style 2D shooter, forked and personalized for the Thierry
 family. Based on **Java-SkyForce-2D-Game** by Ranmal Dewage and the ALPHA
 Team (Apache-2.0 licensed — see LICENSE).
 
-**🌐 Also playable in the browser** — see `docs/` for a from-scratch web
-port with no install/MySQL required. Once GitHub Pages is enabled for this
+**🌐 Also playable in the browser** — `docs/` holds **Novawing**, a
+from-scratch web game with no install/MySQL required. Once GitHub Pages is enabled for this
 repo (Settings → Pages → Deploy from branch → `main` / `docs`), it's live
 at `https://<your-username>.github.io/<repo-name>/`.
 

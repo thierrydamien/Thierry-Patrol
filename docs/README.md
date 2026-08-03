@@ -1,6 +1,6 @@
-# SkyForce — Thierry Family Edition (Web)
+# Novawing — Thierry Family Edition (Web)
 
-An arcade shooter in the spirit of Sky Force: fly missions, rescue people,
+An arcade shooter for the two pilots of this house: fly missions, rescue people,
 earn coins, spend them in the Armory, replay missions on harder tiers for
 more stars. Runs in any browser — no install, no MySQL, nothing to sign up
 for.

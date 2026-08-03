@@ -1,7 +1,7 @@
 {
-  "name": "skyforce-web",
+  "name": "novawing-web",
   "version": "1.0.0",
-  "description": "Thierry Family SkyForce - browser port smoke test",
+  "description": "Novawing - Thierry family browser game smoke test",
   "private": true,
   "scripts": {
     "test": "node _smoketest.js"

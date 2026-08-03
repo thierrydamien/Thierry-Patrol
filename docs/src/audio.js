@@ -19,7 +19,10 @@ const { clamp, rand } = SF.core;
 
 let ctx = null;
 let master = null;
-let muted = localStorage.getItem("skyforce_muted") === "1";
+// The old key is still read once so the game doesn't come back unmuted for
+// anyone who silenced it before the rename.
+let muted = (localStorage.getItem("novawing_muted") ||
+             localStorage.getItem("skyforce_muted")) === "1";
 const lastPlayed = Object.create(null); // per-sound rate limiting
 
 function init(){
@@ -37,7 +40,7 @@ function init(){
 function isMuted(){ return muted; }
 function setMuted(v){
   muted = !!v;
-  localStorage.setItem("skyforce_muted", muted ? "1" : "0");
+  localStorage.setItem("novawing_muted", muted ? "1" : "0");
 }
 
 /** One oscillator blip. `glide` bends the pitch over the note's life. */

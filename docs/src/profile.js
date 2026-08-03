@@ -12,8 +12,36 @@ const { UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, RANKS, SHIP_COLORS,
         DIFFICULTY_BY_ID, DIFFICULTIES, ACHIEVEMENTS } = SF.config;
 const { MISSIONS } = SF.missions;
 
-const INDEX_KEY = "skyforce_profiles";
-const PREFIX = "skyforce_profile_";
+const INDEX_KEY = "novawing_profiles";
+const PREFIX = "novawing_profile_";
+
+/*
+ * The game used to be called SkyForce, and saves are keyed by name. Renaming
+ * the keys without this would strand every pilot's money, gear and records in
+ * localStorage under a prefix nothing reads any more. So: on first load after
+ * the rename, copy the old records across. The originals are left alone - a
+ * player who somehow opens an old build still finds their save intact.
+ */
+const OLD_INDEX_KEY = "skyforce_profiles";
+const OLD_PREFIX = "skyforce_profile_";
+
+function adoptOldSaves(){
+  try {
+    if(localStorage.getItem(INDEX_KEY)) return;          // already on the new keys
+    const old = localStorage.getItem(OLD_INDEX_KEY);
+    if(!old) return;
+    const names = JSON.parse(old);
+    if(!Array.isArray(names) || !names.length) return;
+    names.forEach(n => {
+      const rec = localStorage.getItem(OLD_PREFIX + n);
+      if(rec != null && localStorage.getItem(PREFIX + n) == null){
+        localStorage.setItem(PREFIX + n, rec);
+      }
+    });
+    localStorage.setItem(INDEX_KEY, old);
+  } catch(e){ /* a corrupt or unavailable store just means a fresh start */ }
+}
+adoptOldSaves();
 
 function listNames(){
   let names = null;
@@ -229,7 +257,7 @@ function recordMission(p, missionId, difficultyId, stars, score, cleared){
 }
 
 SF.profile = {
-  listNames, addName, load, save, blank, migrate,
+  listNames, addName, load, save, blank, migrate, adoptOldSaves,
   upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,

@@ -1,4 +1,4 @@
-# SkyForce — design & architecture notes
+# Novawing — design & architecture notes
 
 Written as a working document for whoever touches this next. It covers what
 the game is now, why it's built the way it is, and what I'd do next.
@@ -640,6 +640,23 @@ rather than as standing on something. They needed a floor - a border under the
 whole row - which is the kind of thing that is obvious in a screenshot and
 invisible in code review.
 
+## 8p. The name, and the art that came with it
+
+The game was called SkyForce, after the Java project it grew out of - which
+was itself named after **Sky Force**, a real commercial game by Infinite Dice.
+That is a borrowed name, and two things had to change with it.
+
+The worse of the two was not the name. `assets/Menu.jpg` - the home screen
+background - *was the actual Sky Force promotional artwork, logo included*. It
+is gone; the home screens now paint their own sky (`drawTitleArt`), with the
+pilot's real ship and a wing of three flying out of it.
+
+The name is now **Novawing**, which leaves one trap: saves are keyed by pilot
+name under a prefix, so renaming the keys silently orphans everyone's money,
+gear and records. `profile.js` copies the old `skyforce_profile_*` records to
+the new prefix once on load and leaves the originals in place. The mute flag
+does the same thing in one line. Nobody notices a rename, which is the point.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -649,13 +666,9 @@ Roughly in value order:
 2. **Ship classes** — a second hull with different stats (glass cannon vs
    tank), which doubles the reason to keep earning.
 3. **Wingman AI** — drones that drift and target rather than firing straight.
-4. **Sprite sheets** — the art is 3 PNGs recoloured at runtime, which is now
-   the single biggest weakness: nineteen archetypes share one silhouette and
-   lean on tint plus an emblem to be told apart. Per-archetype art would lift
-   the game more than any code change left on this list.
-5. **Music** — a two-loop synth track (menu/combat) from the existing audio
+4. **Music** — a two-loop synth track (menu/combat) from the existing audio
    engine; no files needed.
-6. **Endless mode** — after mission 8, procedurally generated waves using the
+5. **Endless mode** — after mission 8, procedurally generated waves using the
    same director, for score chasing.
 
 ## 10. Testing
