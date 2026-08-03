@@ -20,9 +20,8 @@ const ASSET_PATHS = {
   ship: "assets/orange.png",
   enemy: "assets/red.png",
   bulletImg: "assets/bullet.png",
-  // No playfield background here any more: each mission generates its own
-  // (src/skygen.js), which saves a 180KB download and means every level looks
-  // like a different part of space.
+  playfieldBg: "assets/BackNew.jpg",
+  backAlt: "assets/BackBack.jpg",
 };
 const assets = {};
 let assetsReady = false;
@@ -107,14 +106,20 @@ function tinted(img, hex){
 const BG_ZOOM = 1.16;
 let bgPhase = 0, stars = [], comets = [], cometTimer = 5, warp = 1;
 // The generated backdrop for this mission, and how far we've flown through it.
-let skyCanvas = null, skyScroll = 0, skyIndex = -1;
+let skyCanvas = null, skyScroll = 0, skyIndex = -1, skyPhoto = null;
 
 function initBackground(missionIndex){
-  // One nebula per mission, generated once and cached: eight levels that used
-  // to share a single JPG now each look like a different part of space.
+  /*
+   * Two kinds of backdrop, by mission. Some missions use the painted artwork
+   * (which can only pan - a photograph has no seamless wrap), the rest use a
+   * generated nebula (which is tileable, so it genuinely scrolls). Mixing them
+   * is deliberate: the paintings look better than anything generated, and the
+   * generated ones stop all eight levels looking identical.
+   */
   const idx = missionIndex || 0;
-  if(idx !== skyIndex || !skyCanvas){
-    skyCanvas = SF.skygen.build(idx, VW, VH);
+  if(idx !== skyIndex){
+    skyPhoto = SF.skygen.photoFor(idx);
+    skyCanvas = skyPhoto ? null : SF.skygen.build(idx, VW, VH);
     skyIndex = idx;
   }
   skyScroll = 0;
@@ -122,7 +127,7 @@ function initBackground(missionIndex){
   // Star counts are per-area, not per-layer-constant: the playfield is 2.5x
   // the area it used to be, so a fixed count would read as empty space.
   const density = (VW*VH) / (390*620);
-  [{n:46,s:18,size:1.1,a:0.45},{n:26,s:44,size:1.7,a:0.65},{n:14,s:88,size:2.6,a:0.9}]
+  [{n:18,s:18,size:1.1,a:0.38},{n:11,s:44,size:1.7,a:0.55},{n:6,s:88,size:2.6,a:0.8}]
     .forEach((L, li) => {
       const count = Math.round(L.n * density);
       for(let i=0;i<count;i++){
@@ -162,7 +167,21 @@ function updateBackground(dt){
 }
 
 function drawBackground(ctx){
-  if(skyCanvas){
+  if(skyPhoto && assetsReady && assets[skyPhoto]){
+    // Cover-fit, not stretch: the art is 4:5 and the field is 3:4, so scaling
+    // each axis independently would visibly squash it. Scale by whichever axis
+    // needs more, then drift inside the overflow.
+    const img = assets[skyPhoto];
+    const iw = img.naturalWidth || img.width || 400;
+    const ih = img.naturalHeight || img.height || 500;
+    const cover = Math.max(VW/iw, VH/ih) * BG_ZOOM;
+    const dw = iw*cover, dh = ih*cover;
+    const mx = (dw - VW)/2, my = (dh - VH)/2;
+    ctx.drawImage(img,
+      -mx + Math.sin(bgPhase)*mx*0.9,
+      -my + Math.sin(bgPhase*0.63)*my*0.9,
+      dw, dh);
+  } else if(skyCanvas){
     // Drawn twice, offset by a screen height, so the wrap is seamless.
     const y = skyScroll;
     ctx.drawImage(skyCanvas, 0, y);

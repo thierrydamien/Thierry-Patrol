@@ -147,13 +147,13 @@ Almost all of it is **drawn in code**, so it needs no image files at all.
   from polygons with a fixed light source, rasterised once into an offscreen
   canvas and blitted. Nineteen distinct ships cost exactly what one shared
   sprite cost.
-- **The skies** (`src/skygen.js`) — **a different nebula for every mission**,
-  from Home Reach through the Rust Belt and Ice Fields to The Deep. Each is
-  built from a palette and a seed: clustered emission clouds, dark dust lanes
-  carved back out of them, filaments, and three grades of star up to suns with
-  diffraction spikes. All eight generate in about 170ms total, and they're
-  **vertically tileable**, so the playfield genuinely scrolls through them
-  instead of drifting past a photograph.
+- **The skies** (`src/skygen.js`) — **a different backdrop for every mission**.
+  Missions 1 and 5 use the original painted artwork (Home Reach and Ice
+  Fields); the other six are generated from a palette and a seed, each with its
+  own furniture — ringed gas giants, banded worlds, cracked moons, a red dwarf,
+  asteroid fields, distant galaxies — over clustered emission clouds and dark
+  dust lanes. The generated ones are **vertically tileable**, so the playfield
+  genuinely scrolls through them; the paintings pan, as they always did.
 
 The player's ship and the two bosses still use the original artwork.
 

@@ -160,8 +160,14 @@ async function run(){
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
   check("badge picker offers a real set of badges", SF.config.BADGES.length >= 12);
   check("every mission has its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
-  check("no two missions share a sky palette",
-    new Set(SF.skygen.SKIES.map(k => k.clouds.join(""))).size === SF.skygen.SKIES.length);
+  check("no two missions look alike",
+    new Set(SF.skygen.SKIES.map(k => k.photo || k.clouds.join(""))).size === SF.skygen.SKIES.length);
+  check("the original artwork is still in use",
+    SF.skygen.SKIES.some(k => k.photo === "playfieldBg") &&
+    SF.skygen.SKIES.some(k => k.photo === "backAlt"));
+  check("every generated sky has something with an edge in it",
+    SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
+  check("a photo mission generates no canvas", SF.skygen.build(0, 100, 100) === null);
   check("every ship part hangs off a real upgrade",
     SF.shipart.PARTS.every(pt => !!SF.config.UPGRADE_BY_ID[pt.up]));
   check("no ship part asks for a level its upgrade can't reach",

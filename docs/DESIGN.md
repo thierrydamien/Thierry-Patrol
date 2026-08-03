@@ -562,9 +562,27 @@ The first attempt looked like wallpaper, and the reasons are worth keeping:
    halo 4x that, and four-point diffraction spikes on the brightest few - those
    spikes are what makes it read as astrophotography, and they cost four lines.
 
-Side benefit: the generated skies are darker than the photograph was, so
-bullets and coins read better against them, and dropping `BackNew.jpg` saves a
-180KB download.
+A second pass fixed three more things, and they are the ones that matter for
+any future backdrop work:
+
+- **Keep the paintings.** Generated art is not automatically better art. The
+  original `BackNew.jpg` (a planet and two moons) and the never-used
+  `BackBack.jpg` (the Milky Way core) are now missions 1 and 5. `skygen.build()`
+  returns `null` for those and the renderer falls back to the old cover-fit pan,
+  because a photograph has no seamless wrap. Mixing the two is deliberate.
+- **Empty is not the same as dark.** Eight moody nebulae with nothing in them
+  all read as the same nebula. Each generated sky now carries two or three
+  *props* - a ringed gas giant, a banded world, a cracked moon, a red dwarf, an
+  asteroid field, a distant galaxy - and that, not the palette, is what makes
+  them tell apart.
+- **Scenery has to stay scenery.** At full size and opacity the first gas giant
+  filled the playfield and bullets stopped reading against its bands. Props are
+  drawn at 62% alpha and roughly half the radius I first chose. If a background
+  object competes with a bullet, the background object is wrong.
+
+Star counts came down hard too - 520 specks per sky to 165, and the foreground
+parallax layer from 86 to 35. They were reading as noise over the gameplay
+rather than as depth behind it.
 
 ## 9. What I'd do next
 
