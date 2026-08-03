@@ -66,7 +66,14 @@ function resize(){
    --------------------------------------------------------- */
 function buildLoadout(profile, difficulty){
   const lv = id => P.upgradeLevel(profile, id);
+  // Wingman drones are flown by the *other* pilots in the household, in their
+  // own ship colours and under their own callsigns. Buying a Wingman Drone
+  // doesn't summon a nameless escort - it calls your brother in.
+  const crew = P.squadmates(profile.name).slice(0, 2).map(m => ({
+    callsign: m.callsign || m.name, color: m.shipColor,
+  }));
   return {
+    crew,
     lives: 3 + lv("life") + difficulty.bonusLives,
     shieldMax: lv("shield"),
     invulnTime: 1.7 + lv("armor")*0.6,

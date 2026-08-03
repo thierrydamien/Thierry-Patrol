@@ -203,14 +203,31 @@ function drawPlayer(ctx, p, timeMs){
   }
   ctx.globalAlpha = 1;
 
+  // Wingmen are the household's other pilots: their ship, their colour, their
+  // name under it. Seeing "CHARLIE" flying off your wing is the whole point.
   for(let i=0;i<p.drones;i++){
-    const dx = i===0 ? -34 : 34, ds = size*0.58;
+    const mate = p.crew[i];
+    const dx = i===0 ? -52 : 52, ds = size*0.58;
+    const droneSprite = assetsReady ? tinted(assets.ship, mate ? mate.color : p.color) : null;
     ctx.save();
     ctx.translate(p.x+dx, y+6);
     ctx.rotate(p.bank*0.5);
-    if(sprite) ctx.drawImage(sprite, -ds/2, -ds/2, ds, ds);
-    else { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(0,0,ds/2,0,TAU); ctx.fill(); }
+    if(droneSprite) ctx.drawImage(droneSprite, -ds/2, -ds/2, ds, ds);
+    else { ctx.fillStyle = mate ? mate.color : p.color; ctx.beginPath(); ctx.arc(0,0,ds/2,0,TAU); ctx.fill(); }
     ctx.restore();
+    if(mate){
+      ctx.save();
+      ctx.font = "bold 10px Arial, sans-serif";
+      ctx.textAlign = "center";
+      // Outlined so the name stays readable against a busy background.
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0,0,0,0.65)";
+      ctx.strokeText(mate.callsign.toUpperCase(), p.x+dx, y+6+ds*0.95);
+      ctx.fillStyle = mate.color;
+      ctx.fillText(mate.callsign.toUpperCase(), p.x+dx, y+6+ds*0.95);
+      ctx.restore();
+      ctx.textAlign = "left";
+    }
   }
 
   ctx.save();

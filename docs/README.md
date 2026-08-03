@@ -86,6 +86,25 @@ Two encounters, both with:
   destroyed, permanently disable the attack they power
 - Visible damage: scorching, chunks torn out of the hull, smoke, then fire
 
+## Made for this family, not for a store page
+The other pilot in the house isn't a leaderboard row — they're in the game:
+
+- **Your wingmen are your siblings.** Buy the Wingman Drone and the escorts that
+  appear fly in the other pilot's own ship colour with their callsign printed
+  underneath. The results screen tells you who flew with you.
+- **Records are household records.** Every mission card says who holds it —
+  "🏅 Charlie holds this · 5120", or "Nobody has flown this yet - claim it" — and
+  after a run you're told either "🏆 new best!" or exactly how many points you
+  still need.
+- **Pick your own badge.** 16 emoji (🦈 🐉 🍕 🦄 …) in the Armory; it shows on the
+  pilot picker, the menu and your pilot card, on top of the rank you've earned.
+- **A flight log** on the pilot card: missions flown, pilots rescued, enemies
+  down, best combo — their record, not the game's.
+- **Losing isn't a telling-off.** A failed run says **SHIP DOWN**, tells you how
+  far you got, and reminds you that you keep every coin you collected.
+- **The copy is written for kids** — "Little robot buddies fly next to you and
+  shoot too", not "Escort drones that fire alongside you".
+
 ## Medals, records and the family board
 22 medals to unlock, a best score and star count per pilot, and a
 Championship screen ranking everyone in the family by stars.

@@ -78,6 +78,11 @@ html, body {
 .power-line { font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.65); margin-bottom:14px; }
 .controls-hint { font-size:11px; line-height:1.6; color: rgba(255,255,255,0.55); text-align:center; margin-top:14px; }
 
+/* One rule for everything the UI hides. Without it, .hidden only worked on the
+   handful of elements that had their own rule - which is why NEXT MISSION used
+   to show up after a failed run. */
+.hidden { display:none !important; }
+
 .main-btn, .ghost-btn, .small-btn {
   font-family: inherit; font-weight:700; border:none; border-radius:12px; cursor:pointer; letter-spacing:1px;
 }
@@ -144,6 +149,9 @@ html, body {
 .mc-name { font-weight:800; font-size:15px; }
 .mc-sub { font-size:11px; color: rgba(255,255,255,0.6); }
 .mc-meta { font-size:10px; color: rgba(255,255,255,0.4); margin-top:3px; }
+.mc-record { font-size:10px; color: rgba(255,255,255,0.5); margin-top:3px; }
+.mc-record.mine { color: var(--accent); }
+.mc-record.none { color: rgba(255,255,255,0.3); font-style:italic; }
 .mc-stars { flex:0 0 auto; font-size:15px; letter-spacing:1px; }
 .mc-stars .ms { color: rgba(255,255,255,0.18); }
 .mc-stars .ms.on { color: var(--accent); text-shadow: 0 0 8px rgba(245,166,35,0.7); }
@@ -200,6 +208,7 @@ html, body {
 .pc-bar { height:8px; border-radius:5px; margin:8px 0 5px; background: rgba(0,0,0,0.35); overflow:hidden; }
 .pc-bar-fill { height:100%; border-radius:5px; transition: width .35s ease; }
 .pc-gear { font-size:11px; color: rgba(255,255,255,0.7); }
+.pc-log { font-size:10px; color: rgba(255,255,255,0.55); margin-top:3px; line-height:1.4; }
 .pc-money { font-size:14px; font-weight:800; color: var(--accent); margin-top:4px; }
 
 .shop-items { display:flex; flex-direction:column; gap:16px; width:100%; }
@@ -310,6 +319,7 @@ html, body {
 .overlay.hidden { display:none; }
 .overlay h2 { font-size:23px; letter-spacing:2px; margin-bottom:2px; }
 
+.result-subtitle { font-size:13px; color: rgba(255,255,255,0.8); margin-bottom:4px; max-width:320px; }
 .result-stars { display:flex; gap:14px; margin: 4px 0 8px; }
 .result-stars .rs {
   font-size:42px; color: rgba(255,255,255,0.15);
@@ -323,6 +333,14 @@ html, body {
 .rl { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.08); }
 .rl b { font-weight:800; }
 .rl b.money { color: var(--accent); }
+.rl.record b { color: var(--accent); }
+.badge-row { display:flex; gap:8px; flex-wrap:wrap; }
+.badge-pick {
+  width:42px; height:42px; border-radius:12px; font-size:22px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(0,0,0,0.3); border:2px solid transparent;
+}
+.badge-pick.selected { border-color: var(--accent); background: rgba(245,166,35,0.18); }
 .result-buttons { display:flex; flex-direction:column; align-items:center; }
 .result-buttons .main-btn { width:220px; }
 

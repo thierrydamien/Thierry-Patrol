@@ -91,7 +91,7 @@ function w(t, type, n, form, opts){
 const MISSIONS = [
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
-    brief:"Fly with your finger or the arrow keys. Your guns fire on their own.",
+    brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves.",
     waves: [
       // Act 1 - one shape at a time, with room to breathe
       w(1,   "grunt", 5, "line"),
@@ -114,7 +114,7 @@ const MISSIONS = [
   },
   {
     id:2, name:"Weaving Through", subtitle:"Moving targets",
-    brief:"Weavers slide side to side. Lead your shots and use the whole width.",
+    brief:"These ones slide left and right. Shoot where they are going, not where they are.",
     waves: [
       w(1,   "grunt",  6, "line"),
       w(8,   "weaver", 5, "arc"),
@@ -136,7 +136,7 @@ const MISSIONS = [
   },
   {
     id:3, name:"Return Fire", subtitle:"They shoot back",
-    brief:"Strikers hold station and aim at you. Keep moving - never sit still.",
+    brief:"These ones stop and aim at you. Keep moving and they will miss!",
     waves: [
       w(1,   "grunt",   7, "arc"),
       w(8,   "striker", 3, "line"),
@@ -159,7 +159,7 @@ const MISSIONS = [
   },
   {
     id:4, name:"Heavy Metal", subtitle:"First boss",
-    brief:"Brutes are armoured - Plasma Rounds help. Then something big arrives.",
+    brief:"Brutes wear thick armour - Plasma Rounds chew through it. Then something HUGE shows up.",
     waves: [
       w(1,   "grunt",   8, "line"),
       w(8,   "brute",   2, "twinColumns"),
@@ -181,7 +181,7 @@ const MISSIONS = [
   },
   {
     id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
-    brief:"Kamikazes lock onto where you are and accelerate. Bait them, then slide away.",
+    brief:"Kamikazes pick a spot and rocket at it. Let them come close, then swerve away.",
     waves: [
       w(1,   "kamikaze", 3, "arc"),
       w(8,   "swooper",  4, "line"),
@@ -205,7 +205,7 @@ const MISSIONS = [
   },
   {
     id:6, name:"Prison Break", subtitle:"Rescue mission",
-    brief:"Haulers are carrying our people. Shoot them down before they escape.",
+    brief:"Those big ships have our friends locked inside. Blast them before they get away!",
     waves: [
       w(1,   "carrier", 1, "column"),
       w(7,   "striker", 4, "line"),
@@ -229,7 +229,7 @@ const MISSIONS = [
   },
   {
     id:7, name:"The Gauntlet", subtitle:"Elites inbound",
-    brief:"Elite enemies glow gold - they hit hard and pay out four times as much.",
+    brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
     waves: [
       w(1,   "weaver",   8, "arc"),
       w(8,   "striker",  5, "sides", { elite: 1 }),
@@ -254,7 +254,7 @@ const MISSIONS = [
   },
   {
     id:8, name:"Sky Sentinel", subtitle:"Final stand",
-    brief:"Everything they have left, and their flagship. Good luck out there.",
+    brief:"Everything they have left, plus their giant flagship. You have got this.",
     waves: [
       w(1,   "grunt",   10, "arc"),
       w(8,   "swooper",  6, "vee", { elite: 1 }),

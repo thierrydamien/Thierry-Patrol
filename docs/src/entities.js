@@ -95,6 +95,7 @@ class World {
       spreadLvl: loadout.spreadLvl, damage: loadout.damage, pierce: loadout.pierce,
       homingLvl: loadout.homingLvl, magnetRange: loadout.magnetRange,
       moneyMult: loadout.moneyMult, drones: loadout.drones,
+      crew: loadout.crew || [],
       bombs: loadout.bombs, bombsMax: loadout.bombs,
       overdrives: loadout.overdrives, overdrivesMax: loadout.overdrives,
       overdriveTime: loadout.overdriveTime, overdriveUntil: 0,
@@ -188,10 +189,10 @@ class World {
     for(let i=0;i<p.drones;i++){
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
-      b.x = p.x + side*34; b.y = p.y + 2; b.vx = 0; b.vy = -640;
+      b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true;
-      fx.muzzle(p.x + side*34, p.y - 4, "#9fe4ff", 0.75);
+      fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
     }
     audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));
   }

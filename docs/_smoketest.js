@@ -150,6 +150,13 @@ async function run(){
   check("every boss weak point disables a real attack",
     Object.values(SF.missions.BOSSES).every(b =>
       b.weakPoints.every(wp => !wp.disables || !!SF.bosses.ATTACKS[wp.disables])));
+  // Copy is aimed at kids, so every shelf item and every mission has to actually
+  // explain itself - a blank description reads as a bug to an 8-year-old.
+  check("every upgrade explains itself in plain words",
+    SF.config.UPGRADES.every(u => typeof u.desc === "string" && u.desc.length > 12));
+  check("every mission has a brief and a subtitle",
+    SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
+  check("badge picker offers a real set of badges", SF.config.BADGES.length >= 12);
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
@@ -221,6 +228,10 @@ async function run(){
   const res1 = !id("overlayResults").classList.contains("hidden");
   check("mission 1 reached the results screen", res1);
   check("results show 3 star slots", qa("#resultStars .rs").length === 3);
+  check("results name the family record", /record|to beat/i.test(id("resultLines").textContent));
+  check("a cleared mission offers the next one", !id("nextBtn").classList.contains("hidden"));
+  check("wingmen fly under a squadmate's name",
+    SF.game.world.player.crew.some(c => c.callsign === "Charles"));
   const marc = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc"));
   check("mission 1 recorded as cleared", !!(marc.missions && marc.missions[1] && marc.missions[1].cleared));
   check("earned at least one star", SF.profile.totalStars(marc) >= 1);

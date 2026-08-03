@@ -217,6 +217,33 @@ Related geometry rule: the ship's ceiling (`PLAY_TOP`) must sit *below* where
 bosses park. When it didn't, bullets spawned above the boss and sailed past it
 - the fight was unwinnable from the top of the screen.
 
+## 8c. Designing it for two specific kids
+
+Everything above is generic arcade-shooter craft. What makes this *theirs* is
+that the game knows there is more than one of them and that they are children:
+
+- **The other pilot is content, not a leaderboard row.** `P.squadmates()` feeds
+  `buildLoadout`, so Wingman Drones are flown by the household's other pilots -
+  their colour, their callsign under the sprite. Nothing about the drone system
+  changed; the data it reads did.
+- **Every mission card carries a household record** (`P.familyBest()` scans all
+  profiles). "Charlie holds this · 5120" is a far stronger hook at this age than
+  an abstract high score, and it makes replaying a mission you've already
+  three-starred worth doing.
+- **Failure is softened, not hidden.** "SHIP DOWN", the percentage you reached,
+  and the fact that you keep every coin. The run still failed and the stars are
+  still unearned - the framing just doesn't scold.
+- **Identity is cheap and immediate.** A badge is one tap and free, unlike gear;
+  it sits next to the rank badge you earn, so there's a thing to express and a
+  thing to work toward.
+- **The copy is at reading level.** Upgrade descriptions and mission briefs are
+  written for an 8-year-old ("Little robot buddies fly next to you and shoot
+  too"), and the smoke test asserts none of them is missing.
+
+Deliberately *not* done, because it needs facts about the kids I don't have:
+real names/photos in the art, birthdays, favourite colours as defaults, or
+voice lines. Those belong to whoever knows them.
+
 ## 9. What I'd do next
 
 Roughly in value order:

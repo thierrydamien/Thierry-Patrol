@@ -9,6 +9,10 @@
 "use strict";
 const SF = window.SF;
 
+/* A pilot's own badge - picked, not earned. Rank is what the game gives you;
+   this is the bit that's yours. */
+const BADGES = ["🚀","⚡","🦈","🐉","🐺","🦅","🔥","👽","🤖","🐱","⚽","🎸","🦖","🌟","🍕","🦄"];
+
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
 /* ---------------------------------------------------------
@@ -35,49 +39,49 @@ function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; 
 
 const UPGRADES = [
   { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:[150,400,900,1800,3200],
-    desc:"More bullets in every shot",
+    desc:"Shoot more bullets at once, in a wider fan",
     effect: lvl => spreadPattern(lvl).length + "-way fire" },
   { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:[120,320,750,1500,2800],
-    desc:"Shorter gap between shots",
+    desc:"Your guns shoot way faster",
     effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
   { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:[200,500,1100,2200,4000],
-    desc:"Each bullet hits harder",
+    desc:"Every bullet hits much harder",
     effect: lvl => (1+lvl) + " damage per hit" },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:[600,1600,3400],
-    desc:"Bullets punch through enemies instead of stopping",
+    desc:"Bullets go straight through enemies and keep flying",
     effect: lvl => "hits " + (1+lvl) + " enemies per bullet" },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:[500,1400,3000],
-    desc:"Bullets curve toward the nearest target",
+    desc:"Your bullets bend through the air to chase enemies",
     effect: lvl => "tracking " + lvl + "/3" },
 
   { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:[100,350,900,2000],
-    desc:"Absorbs hits; one charge comes back each wave cleared",
+    desc:"A bubble that eats a hit for you. It refills when you clear a wave",
     effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
   { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:[80,240,600,1400,2600],
-    desc:"Start every mission with more lives",
+    desc:"Start every mission with extra lives",
     effect: lvl => (3+lvl) + " starting lives" },
   { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:[250,700,1600],
-    desc:"Longer blinking-invincible window after you take a hit",
+    desc:"After a hit you flash and nothing can hurt you - this makes it last longer",
     effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
 
   { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:[130,340,800,1700],
-    desc:"Fly faster and turn sharper",
+    desc:"Zoom around faster and turn on a dime",
     effect: lvl => "+" + (lvl*14) + "% speed" },
   { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:[220,600,1400],
-    desc:"Drags nearby coins, pick-ups and rescue pods toward you",
+    desc:"Coins, power-ups and rescue pods fly straight to you",
     effect: lvl => (60 + lvl*68) + "px pull range" },
 
   { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:[300,700,1500,3000,5500],
-    desc:"Every kill pays out more - buy this early, it pays for itself",
+    desc:"Everything you blow up drops more money. Get this early!",
     effect: lvl => "+" + (lvl*15) + "% money" },
   { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:[1200,3000],
-    desc:"Escort drones that fire alongside you",
+    desc:"Little robot buddies fly next to you and shoot too",
     effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
   { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:[400,1000,2200],
-    desc:"Screen-clearing blast. Tap 💣 or press B",
+    desc:"BOOM - wipes out the whole screen. Tap 💣 or press B",
     effect: lvl => lvl + (lvl===1 ? " bomb per mission" : " bombs per mission") },
   { id:"overdrive", cat:"extras", name:"Overdrive", icon:"🔥", max:3, costs:[600,1500,3200],
-    desc:"Doubles your fire rate and damage for a few seconds. Tap 🔥 or press V",
+    desc:"Super mode: double speed guns and double damage. Tap 🔥 or press V",
     effect: lvl => lvl + " use" + (lvl===1?"":"s") + " · " + (4 + lvl) + "s each" },
 ];
 const UPGRADE_BY_ID = {};
@@ -109,23 +113,23 @@ const RANKS = [
    --------------------------------------------------------- */
 const DIFFICULTIES = [
   { id:"rookie", name:"ROOKIE", tag:"Easy", color:"#2ecc71",
-    blurb:"Slow enemies, sparse fire, a free extra life.",
+    blurb:"Slow enemies, hardly any shooting, and a free extra life.",
     speed:0.72, spawn:1.35, hpMult:0.8, bossHp:0.65, pay:0.7,
     aimed:0, fireRate:1.6, smart:0, bonusLives:1, unlockStars:0 },
   { id:"pilot", name:"PILOT", tag:"Normal", color:"#3399ff",
-    blurb:"The standard mission. Balanced pay.",
+    blurb:"The normal mission. Fair fight, normal pay.",
     speed:1.00, spawn:1.00, hpMult:1.0, bossHp:1.00, pay:1.0,
     aimed:0.10, fireRate:1.15, smart:0, bonusLives:0, unlockStars:0 },
   { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
-    blurb:"Armoured enemies that aim at you. Pays 1.8x.",
+    blurb:"Tougher enemies that aim right at you. Pays 1.8x.",
     speed:1.26, spawn:0.80, hpMult:1.6, bossHp:1.35, pay:1.8,
     aimed:0.28, fireRate:0.95, smart:1, bonusLives:0, unlockStars:6 },
   { id:"veteran", name:"VETERAN", tag:"Brutal", color:"#e74c3c",
-    blurb:"Heavy armour, smarter attackers, lots of return fire. Pays 2.8x.",
+    blurb:"Thick armour, clever attackers, bullets everywhere. Pays 2.8x.",
     speed:1.50, spawn:0.66, hpMult:2.3, bossHp:1.7, pay:2.8,
     aimed:0.45, fireRate:0.82, smart:2, bonusLives:0, unlockStars:14 },
   { id:"nightmare", name:"NIGHTMARE", tag:"Insane", color:"#9b59b6",
-    blurb:"Everything at once. Only worth trying fully kitted out. Pays 4.5x.",
+    blurb:"All of it at once. Bring your very best gear. Pays 4.5x.",
     speed:1.80, spawn:0.52, hpMult:3.2, bossHp:2.2, pay:4.5,
     aimed:0.62, fireRate:0.7, smart:3, bonusLives:0, unlockStars:24 },
 ];
@@ -172,7 +176,7 @@ const ACHIEVEMENTS = [
 ];
 
 SF.config = {
-  SHIP_COLORS, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
+  SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS,
   spreadPattern, fireRateMult,
 };

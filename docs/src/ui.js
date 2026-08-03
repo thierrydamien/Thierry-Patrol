@@ -8,7 +8,7 @@
 "use strict";
 const SF = window.SF;
 const { clamp } = SF.core;
-const { SHIP_COLORS, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS,
+const { SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS,
         DIFFICULTIES, DIFFICULTY_BY_ID, ACHIEVEMENTS } = SF.config;
 const { MISSIONS, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount } = SF.missions;
 const P = SF.profile;
@@ -48,7 +48,7 @@ function renderProfiles(){
     const card = document.createElement("div");
     card.className = "profile-card";
     card.innerHTML = `
-      <div class="avatar" style="background:${p.shipColor}"><span class="avatar-badge">${rank.badge}</span></div>
+      <div class="avatar" style="background:${p.shipColor}"><span class="avatar-badge">${P.badgeFor(p)}</span></div>
       <div class="pname">${esc(p.callsign || p.name)}</div>
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
       <div class="pscore">${P.totalStars(p)} ★ · ${p.highscore}</div>
@@ -69,7 +69,7 @@ function renderMenu(){
   const rank = P.rankFor(profile);
   const stars = P.totalStars(profile);
   $("menuPilot").innerHTML = `
-    <div class="mp-badge" style="background:${profile.shipColor}">${rank.badge}</div>
+    <div class="mp-badge" style="background:${profile.shipColor}">${P.badgeFor(profile)}</div>
     <div>
       <div class="mp-name">${esc(profile.callsign)}</div>
       <div class="mp-rank" style="color:${rank.color}">${rank.name}</div>
@@ -98,12 +98,27 @@ function renderMissions(){
         <div class="mc-name">${esc(m.name)}</div>
         <div class="mc-sub">${unlocked ? esc(m.subtitle) : "Finish mission " + (m.id-1) + " to unlock"}</div>
         ${unlocked ? `<div class="mc-meta">${enemyCount(m)} enemies · ${rescueCount(m) ? rescueCount(m)+" to rescue" : "no rescues"}${m.boss ? " · BOSS" : ""}</div>` : ""}
+        ${unlocked ? familyBestLine(m.id) : ""}
       </div>
       <div class="mc-stars">${unlocked ? starHtml : ""}</div>
     `;
     if(unlocked) click(card, () => openBriefing(i));
     list.appendChild(card);
   });
+}
+
+/**
+ * "Charlie holds this one" - the household record, shown on the mission card.
+ * With two pilots sharing one game, the person to beat is at the kitchen
+ * table, and that's a far better hook than an abstract high score.
+ */
+function familyBestLine(missionId){
+  const best = P.familyBest(missionId);
+  if(!best) return `<div class="mc-record none">Nobody has flown this yet - claim it</div>`;
+  const mine = (best.name === (profile.callsign || profile.name));
+  return `<div class="mc-record${mine ? " mine" : ""}">${
+    mine ? "🏅 You hold this one · " + best.score
+         : "🏅 " + esc(best.name) + " holds this · " + best.score}</div>`;
 }
 
 /* ---------------------------------------------------------
@@ -169,6 +184,16 @@ function renderArmory(){
     colorRow.appendChild(sw);
   });
 
+  const badgeRow = $("badgeRow");
+  badgeRow.innerHTML = "";
+  BADGES.forEach(b => {
+    const el = document.createElement("div");
+    el.className = "badge-pick" + (b === P.badgeFor(profile) ? " selected" : "");
+    el.textContent = b;
+    click(el, () => { profile.badge = b; P.save(profile); renderArmory(); renderMenu(); });
+    badgeRow.appendChild(el);
+  });
+
   const shop = $("shopItems");
   shop.innerHTML = "";
   CATEGORIES.forEach(cat => {
@@ -208,7 +233,7 @@ function renderPilotCard(){
   const rank = P.rankFor(profile), next = P.nextRank(profile);
   const gear = P.gearLevel(profile);
   $("pcShip").style.background = `radial-gradient(circle at 35% 30%, #fff6, ${profile.shipColor})`;
-  $("pcRankBadge").textContent = rank.badge;
+  $("pcRankBadge").textContent = P.badgeFor(profile);
   $("pcName").textContent = profile.callsign || profile.name;
   const rankEl = $("pcRank");
   rankEl.textContent = rank.name;
@@ -220,6 +245,10 @@ function renderPilotCard(){
   $("pcGear").textContent = next
     ? `Gear ${gear}/${MAX_UPGRADE_LEVELS} · ${next.at - gear} more to ${next.name}`
     : `Gear ${gear}/${MAX_UPGRADE_LEVELS} · everything unlocked!`;
+  // A flight log of what this pilot has actually done - their record, not the game's.
+  $("pcLog").textContent =
+    `${profile.missionsCompleted} missions flown · ${profile.rescues} pilots rescued · ` +
+    `${profile.totalKills} enemies down · best combo x${profile.maxCombo}`;
 }
 
 function buyUpgrade(id){
@@ -302,8 +331,19 @@ function hideResults(){ $("overlayResults").classList.add("hidden"); }
 
 function showResults(result){
   const { completed, stars, run, objectives, unlocked } = result;
-  $("resultTitle").textContent = completed ? "MISSION COMPLETE" : "MISSION FAILED";
-  $("resultTitle").style.color = completed ? "#4ade80" : "#ff5d73";
+  $("resultTitle").textContent = completed ? "MISSION COMPLETE" : "SHIP DOWN";
+  $("resultTitle").style.color = completed ? "#4ade80" : "#ff9d5c";
+
+  // Losing should read as "you nearly had it", not as a telling-off - and you
+  // always keep the money you collected, so a failed run is never wasted.
+  const sub = $("resultSubtitle");
+  if(completed){
+    sub.textContent = stars === 3
+      ? "Perfect flying, " + (profile.callsign || profile.name) + "!"
+      : "Nice work, " + (profile.callsign || profile.name) + "!";
+  } else {
+    sub.textContent = "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
+  }
 
   // Stars pop in one at a time - the small ceremony that makes replaying worth it.
   const starBox = $("resultStars");
@@ -326,13 +366,36 @@ function showResults(result){
     <div class="rl"><span>Enemies destroyed</span><b>${s.kills}/${Math.max(s.spawned, run.director.totalPlanned)}</b></div>
     <div class="rl"><span>Pilots rescued</span><b>${s.rescues}/${s.rescuesTotal}</b></div>
     <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
-    <div class="rl"><span>Wallet</span><b class="money">$${profile.money}</b></div>`;
+    ${crewLine()}
+    <div class="rl"><span>Wallet</span><b class="money">$${profile.money}</b></div>
+    ${recordLine(run)}`;
 
   const hasNext = completed && run.missionIndex + 1 < MISSIONS.length;
   $("nextBtn").classList.toggle("hidden", !hasNext);
   $("overlayResults").classList.remove("hidden");
   renderMenu();
   (unlocked || []).forEach(queueToast);
+}
+
+/** Names the squadmates who flew as your wingmen this run. */
+function crewLine(){
+  const p = SF.game.world.player;
+  if(!p || !p.drones || !p.crew.length) return "";
+  const names = p.crew.slice(0, p.drones).map(c => esc(c.callsign)).join(" & ");
+  return names ? `<div class="rl"><span>Flew with you</span><b>${names}</b></div>` : "";
+}
+
+/** Did this run take the household record for the mission, or how close was it? */
+function recordLine(run){
+  const best = P.familyBest(run.mission.id);
+  const me = profile.callsign || profile.name;
+  if(!best || best.score <= run.score){
+    return `<div class="rl record"><span>Family record</span><b>🏆 ${esc(me)} — new best!</b></div>`;
+  }
+  if(best.name === me){
+    return `<div class="rl"><span>Family record</span><b>🏅 yours, ${best.score}</b></div>`;
+  }
+  return `<div class="rl"><span>${esc(best.name)} to beat</span><b>${best.score - run.score} more</b></div>`;
 }
 
 /* ---------------------------------------------------------

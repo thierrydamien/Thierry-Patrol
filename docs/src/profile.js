@@ -35,7 +35,7 @@ function addName(name){
 
 function blank(name){
   return {
-    name, callsign: name, shipColor: SHIP_COLORS[0],
+    name, callsign: name, shipColor: SHIP_COLORS[0], badge: null,
     money: 0, upgrades: {},
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
@@ -120,6 +120,9 @@ function nextRank(p){
   return RANKS.find(r => gear < r.at) || null;
 }
 
+/** The pilot's chosen badge, falling back to whatever their rank awards. */
+function badgeFor(p){ return p.badge || rankFor(p).badge; }
+
 /** Stars are the campaign currency of pride: best stars per mission, summed. */
 function starsForMission(p, missionId){
   const rec = p.missions[missionId];
@@ -144,6 +147,35 @@ function difficultyUnlocked(p, difficulty){
 }
 function campaignComplete(p){
   return MISSIONS.every(m => p.missions[m.id] && p.missions[m.id].cleared);
+}
+
+/* ---------------------------------------------------------
+   THE FAMILY
+   Two people share this game, so the other pilots aren't just
+   rows on a leaderboard - they fly with you, and they hold
+   records you can take off them.
+   --------------------------------------------------------- */
+
+/** Every other pilot's profile, most-decorated first. */
+function squadmates(name){
+  return listNames()
+    .filter(n => n !== name)
+    .map(load)
+    .sort((a,b) => totalStars(b) - totalStars(a));
+}
+
+/** Who in the household holds this mission, and with what. Null if nobody has flown it. */
+function familyBest(missionId){
+  let best = null;
+  listNames().map(load).forEach(p => {
+    const rec = p.missions[missionId];
+    if(!rec || !rec.best) return;
+    const score = Math.max.apply(null, [0].concat(Object.values(rec.best).map(Number)));
+    if(score > 0 && (!best || score > best.score)){
+      best = { name: p.callsign || p.name, score, stars: starsForMission(p, missionId) };
+    }
+  });
+  return best;
 }
 
 /** Snapshot the achievement checks read - keeps their conditions declarative. */
@@ -189,8 +221,9 @@ function recordMission(p, missionId, difficultyId, stars, score, cleared){
 
 SF.profile = {
   listNames, addName, load, save, blank, migrate,
-  upgradeLevel, gearLevel, nextCost, rankFor, nextRank,
+  upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, hardestCleared, difficultyUnlocked, campaignComplete,
+  squadmates, familyBest,
   checkAchievements, recordMission, achievementStats,
 };
 })();
