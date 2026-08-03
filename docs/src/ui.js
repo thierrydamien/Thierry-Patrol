@@ -1305,7 +1305,23 @@ function nextToast(){
 function renderCloud(){
   const cloud = SF.cloud;
   $("cloudCode").textContent = cloud.code() || "----\u00a0----";
+  $("cloudBlurb").textContent = cloud.isDefaultCode()
+    ? "Every device in the house shares this squad automatically. Nothing to type in, nothing to write down."
+    : "This device is on its own squad. Any device given this code shares its progress.";
+  const list = cloud.backups();
+  const btn = $("cloudRestoreBtn");
+  btn.classList.toggle("hidden", !list.length);
+  if(list.length) btn.textContent = "Restore backup (" + ago(list[0].at) + ")";
   paintCloudStatus(cloud.status);
+}
+
+/** "3 hours ago", for a backup list nobody wants to read timestamps in. */
+function ago(at){
+  const mins = Math.max(0, Math.round((Date.now() - at)/60000));
+  if(mins < 60) return mins <= 1 ? "just now" : mins + " min ago";
+  const hrs = Math.round(mins/60);
+  if(hrs < 48) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+  return Math.round(hrs/24) + " days ago";
 }
 function paintCloudStatus(st){
   const el = $("cloudStatus");
@@ -1341,6 +1357,17 @@ if(SF.cloud && SF.cloud.configured()){
     SF.cloud.join(entered)
       .then(() => { renderCloud(); renderProfiles(); })
       .catch(err => { paintCloudStatus({ state:"error", error: String(err.message || err) }); });
+  });
+  click($("cloudRestoreBtn"), () => {
+    const list = SF.cloud.backups();
+    if(!list.length) return;
+    const names = Object.keys(list[0].pilots).join(", ");
+    if(!window.confirm("Put every pilot back to how they were " + ago(list[0].at) +
+                       "?\n\n" + names + "\n\nWhat you have now is kept as a backup too.")) return;
+    const n = SF.cloud.restoreBackup(0);
+    renderCloud(); renderProfiles();
+    paintCloudStatus({ state:"ok", error:null });
+    if(n) queueToast({ icon:"💾", name: n + " pilot" + (n === 1 ? "" : "s") + " restored" });
   });
   SF.cloud.boot();
 }

@@ -740,6 +740,36 @@ was disabling attacks as it went. That is the feature working. The check now
 damages away from the weak points to measure phases, and fires every declared
 attack explicitly rather than waiting on a random picker.
 
+## 8s. Making sync safe rather than clever
+
+Two changes, both of which removed a failure mode rather than adding a feature.
+
+**The squad code is now baked in.** Minting a random code per device sounds
+right - it is what a real product would do - but it bought a failure mode with
+no benefit for a game exactly one family plays. A new iPad synced to nothing
+until somebody typed eight characters into it, and losing the code lost the
+cloud copy, because there is no account to recover it from. Every device now
+defaults to the household's code, so a browser that has never seen the game
+pulls their progress on first load. The trade is written next to the constant:
+this repo is public, so the key is public, and the protection is that nobody
+has a reason to care.
+
+**Local backups, because the cloud is also a thing that can go wrong.** A
+rolling four snapshots of every pilot, at most one per six hours - rate-limited
+on purpose, since taking one per save would fill the ring with four copies of
+this afternoon and lose yesterday. Taken at boot *before* the merge, because a
+snapshot of the post-sync state cannot undo a bad sync. Restoring re-stamps the
+records as of now, or the next sync would read the old timestamps, decide the
+cloud was fresher, and quietly undo the restore.
+
+The interesting bug came free with the first change. Sync now runs unprompted
+at boot, and jsdom has no `fetch` - so `fetchRemote` threw *synchronously*,
+which is the one thing a promise chain does not catch. That exception escaped
+into `ui.js` at load and took the whole script down: no menu, no game, over a
+failed background sync. Every request goes through one wrapper now that cannot
+throw at its caller, and the test asserts the menu still works after a sync
+fails. A browser blocking the request would have done exactly what jsdom did.
+
 ## 9. What I'd do next
 
 Roughly in value order:

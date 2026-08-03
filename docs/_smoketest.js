@@ -773,6 +773,48 @@ async function run(){
   const stamped = SF.profile.save(SF.profile.load("Marc"));
   check("every save is stamped for conflict resolution", stamped.savedAt > 0);
 
+  /* Every device defaults to the family's squad, so a new browser pulls their
+     progress with nothing typed in. */
+  check("a fresh device is already on the family squad",
+    C.isDefaultCode() && /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(C.DEFAULT_CODE));
+
+  /* Sync runs unprompted at boot now. jsdom has no fetch, which is exactly the
+     shape of a browser blocking the request - and when that threw synchronously
+     it took the whole ui.js script down with it, leaving a dead menu. Failure
+     has to stay a status line. */
+  check("a failed sync is reported, not thrown", (() => {
+    let threw = false;
+    try { C.sync(); } catch(e){ threw = true; }
+    return !threw;
+  })());
+  check("the menu still works after a failed sync",
+    !!id("playBtn") && typeof SF.ui.renderProfiles === "function");
+
+  /* Local backups: the safety net that does not need the network. */
+  {
+    const before = SF.profile.load("Marc");
+    before.money = 4242; SF.profile.save(before);
+    C.snapshotBackup(true);
+    check("a backup snapshot captures every pilot on the device",
+      C.backups().length > 0 && !!C.backups()[0].pilots.Marc);
+
+    const wrecked = SF.profile.load("Marc");
+    wrecked.money = 0; wrecked.missions = {}; SF.profile.save(wrecked);
+    check("progress can actually be wrecked", SF.profile.load("Marc").money === 0);
+
+    const n = C.restoreBackup(0);
+    check("restoring a backup puts the money back",
+      n > 0 && SF.profile.load("Marc").money === 4242);
+    // Restored records must out-stamp the cloud, or the next sync undoes them.
+    check("a restored record is the newest one anywhere",
+      SF.profile.load("Marc").savedAt >= wrecked.savedAt);
+    check("the wrecked state is itself kept as a backup", C.backups().length >= 2);
+    check("backups are capped, not unbounded", (() => {
+      for(let i=0;i<8;i++) C.snapshotBackup(true);
+      return C.backups().length <= 4;
+    })());
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

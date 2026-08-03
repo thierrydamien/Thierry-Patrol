@@ -276,20 +276,34 @@ it, **who holds what** — every mission with the name of whoever in the house
 owns the record and the score to beat, with your own rows highlighted. A total
 tells you who's ahead; this tells you which mission to go and take back.
 
-## Squad Sync (optional)
-Progress lives in the browser, which means it is tied to one device. Squad Sync
-lifts that: a **Cloudflare Worker** over KV, one entry per eight-character squad
-code, holding every pilot's save. Enter the same code on the iPad and the laptop
-and progress follows the pilots between them.
+## Squad Sync
+Progress lives in the browser, which would tie it to one device. Squad Sync
+lifts that: a **Cloudflare Worker** over KV, one entry per squad code, holding
+every pilot's save.
 
-It is off unless configured. `ENDPOINT` in `src/cloud.js` is empty by default and
-every sync function is a no-op, so the game stays fully offline until you deploy
-the Worker — see **[../worker/README.md](../worker/README.md)** for the five-minute
-setup. The free tier covers this many times over.
+There is nothing to set up and nothing to write down — every device defaults to
+the household's own squad, so a browser that has never seen the game before
+pulls the family's progress on first load. Devices pull on launch and push a few
+seconds after any change. **Join another squad** puts a device on a private code
+if you want one.
 
 Conflicts are resolved **per pilot** by save timestamp: Marc finishing a mission
 on the iPad never rolls back what Charles just did on the laptop, and every push
 pulls and merges first.
+
+It is off unless configured. With `ENDPOINT` empty in `src/cloud.js` every sync
+function is a no-op and the button does not render, so a fork gets the offline
+game and no dead controls — see **[../worker/README.md](../worker/README.md)**
+for the five-minute setup.
+
+### If something does go wrong
+The cloud protects against losing a device. **Restore backup**, in the same
+panel, protects against the cloud: the game keeps a rolling set of local
+snapshots of every pilot (at most one per six hours, four kept), so a bad merge
+or a mistaken reset is undoable from the machine you are sitting at with no
+network involved. Restoring re-stamps the records as of now, so the restored
+state is the newest one everywhere and the next sync propagates it rather than
+undoing it — and what you had before the restore is itself kept as a backup.
 
 ## Running the tests
 ```
