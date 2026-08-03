@@ -1,4 +1,4 @@
-# Novawing — Thierry Family Edition (Web)
+# Thierry Patrol — Thierry Family Edition (Web)
 
 An arcade shooter for the two pilots of this house: fly missions, rescue people,
 earn coins, spend them in the Armory, replay missions on harder tiers for

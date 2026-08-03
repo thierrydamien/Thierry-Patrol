@@ -1,4 +1,4 @@
-# Novawing — design & architecture notes
+# Thierry Patrol — design & architecture notes
 
 Written as a working document for whoever touches this next. It covers what
 the game is now, why it's built the way it is, and what I'd do next.
@@ -651,11 +651,18 @@ background - *was the actual Sky Force promotional artwork, logo included*. It
 is gone; the home screens now paint their own sky (`drawTitleArt`), with the
 pilot's real ship and a wing of three flying out of it.
 
-The name is now **Novawing**, which leaves one trap: saves are keyed by pilot
-name under a prefix, so renaming the keys silently orphans everyone's money,
-gear and records. `profile.js` copies the old `skyforce_profile_*` records to
-the new prefix once on load and leaves the originals in place. The mute flag
-does the same thing in one line. Nobody notices a rename, which is the point.
+The name is now **Thierry Patrol** - the family's own name, and *patrol* is
+already in the game's vocabulary: the ship sprite wears PATROL on its wings and
+mission 1 is First Patrol. (It went through *Novawing* on the way, which is why
+there are two legacy eras below.)
+
+A rename has one trap: saves are keyed by pilot name under a prefix, so changing
+the prefix silently orphans everyone's money, gear and records. `profile.js`
+keeps a `LEGACY` list of past `{index, prefix}` pairs and, on the first load
+under a new name, copies the newest surviving era across - leaving the originals
+in place, so an older build still finds its own save. The mute flag falls back
+the same way. The prefix is generic now (`patrol_`), so a third rename costs
+nothing. Nobody notices a rename, which is the point.
 
 ## 9. What I'd do next
 

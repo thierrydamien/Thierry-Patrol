@@ -541,7 +541,9 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 
 @media (max-width: 420px) {
   .profile-card { width: 120px; }
-  .game-title { font-size: 36px; }
+  /* THIERRY PATROL is thirteen characters - at 36px it touched both edges of a
+     phone. Small enough to breathe, still the biggest thing on the screen. */
+  .game-title { font-size: 30px; letter-spacing: 2px; }
 }
 
 /* ===================== ARMORY / HANGAR ===================== */

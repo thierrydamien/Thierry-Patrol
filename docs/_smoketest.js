@@ -230,9 +230,9 @@ async function run(){
       n + SF.config.UPGRADES.filter(u => u.cat === c.id).length, 0) === 14);
   clickEl(tabByName("GUNS"));
 
-  const rich = JSON.parse(window.localStorage.getItem("novawing_profile_Marc") || "{}");
+  const rich = JSON.parse(window.localStorage.getItem("patrol_profile_Marc") || "{}");
   rich.name = "Marc"; rich.money = 2000000;   // enough to buy the whole (much pricier) Armory rich.upgrades = {};
-  window.localStorage.setItem("novawing_profile_Marc", JSON.stringify(rich));
+  window.localStorage.setItem("patrol_profile_Marc", JSON.stringify(rich));
   clickEl(id("armoryBackBtn"));
   clickEl(id("switchBtn"));
   clickEl(qa("#profileGrid .profile-card")[0]);
@@ -246,7 +246,7 @@ async function run(){
   check("gear level tracks purchases", /Gear 1\/53/.test(id("pcGear").textContent));
   clickEl(tabByName("GUNS"));
   for(let n=0;n<8;n++) clickEl(buyBtn(0));
-  check("upgrade level caps at its max", JSON.parse(window.localStorage.getItem("novawing_profile_Marc")).upgrades.spread === 5);
+  check("upgrade level caps at its max", JSON.parse(window.localStorage.getItem("patrol_profile_Marc")).upgrades.spread === 5);
   check("maxed upgrade reads MAX", buyBtn(0).textContent.includes("MAX"));
 
   // Buy everything: exercises drones, piercing, seekers, bombs, overdrive in play.
@@ -259,7 +259,7 @@ async function run(){
   });
   clickEl(tabByName("PILOT"));
   check("every upgrade can be maxed", /Gear 53\/53/.test(id("pcGear").textContent));
-  const spent = 2000000 - JSON.parse(window.localStorage.getItem("novawing_profile_Marc")).money;
+  const spent = 2000000 - JSON.parse(window.localStorage.getItem("patrol_profile_Marc")).money;
   check("buying every level costs exactly the catalogue total", spent === SF.config.TOTAL_UPGRADE_COST);
   check("maxing the armory is a long-haul goal, not an afternoon",
     SF.config.TOTAL_UPGRADE_COST > 600000);
@@ -356,7 +356,7 @@ async function run(){
   check("a cleared mission offers the next one", !id("nextBtn").classList.contains("hidden"));
   check("wingmen fly under a squadmate's name",
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));
-  const marc = JSON.parse(window.localStorage.getItem("novawing_profile_Marc"));
+  const marc = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
   check("mission 1 recorded as cleared", !!(marc.missions && marc.missions[1] && marc.missions[1].cleared));
   check("earned at least one star", SF.profile.totalStars(marc) >= 1);
   check("money was banked", marc.money > 0);
@@ -372,7 +372,7 @@ async function run(){
   {
     const W = SF.game.world, diff = SF.config.DIFFICULTY_BY_ID.pilot;
     W.reset();
-    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("novawing_profile_Marc")), diff));
+    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("patrol_profile_Marc")), diff));
     const ctxb = { VW:SF.entityConst.VW, VH:SF.entityConst.VH, player:W.player, difficulty:diff,
                    smart:0, pickups:W.pickups, onEscape(){}, onEnemyKilled(e){ e.alive = false; } };
 
@@ -390,7 +390,7 @@ async function run(){
 
     // Thief: steals loose coins, and hands them back if you shoot it down.
     W.reset();
-    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("novawing_profile_Marc")), diff));
+    W.createPlayer(SF.game.buildLoadout(JSON.parse(window.localStorage.getItem("patrol_profile_Marc")), diff));
     ctxb.player = W.player; ctxb.pickups = W.pickups;
     W.dropCoins(300, 300, 40);
     const coinsBefore = W.pickups.items.filter(i => i.alive && i.kind === "coin").length;
@@ -540,9 +540,9 @@ async function run(){
     Object.keys(SF.enemyData.ENEMY_TYPES).length >= 18);
 
   /* ---------- boss mission ---------- */
-  const p2 = JSON.parse(window.localStorage.getItem("novawing_profile_Marc"));
+  const p2 = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
   [1,2,3,4].forEach(mid => { p2.missions[mid] = { cleared:true, stars:{ pilot:3 }, best:{} }; });
-  window.localStorage.setItem("novawing_profile_Marc", JSON.stringify(p2));
+  window.localStorage.setItem("patrol_profile_Marc", JSON.stringify(p2));
   clickEl(id("missionsBackBtn"));
   clickEl(id("switchBtn"));
   clickEl(qa("#profileGrid .profile-card")[0]);
@@ -617,7 +617,7 @@ async function run(){
               `enemyBullets:${SF.game.world.enemyBullets.items.length} particles:${SF.fx._pools.particles.items.length}`);
 
   /* ---------- old-save migration ---------- */
-  window.localStorage.setItem("novawing_profile_Legacy", JSON.stringify({
+  window.localStorage.setItem("patrol_profile_Legacy", JSON.stringify({
     name:"Legacy", callsign:"Legacy", money: 500,
     hasSpread:true, hasRapid:true, hasShield:true, extraLives:2,
     bestLevelByDiff:{ pilot: 7 }, totalKills: 40, achievements:["first_blood"],
@@ -630,9 +630,9 @@ async function run(){
     Object.keys(legacy.missions).length === 3);
   check("legacy money and kills survive", legacy.money === 500 && legacy.totalKills === 40);
 
-  /* ---------- rename: SkyForce saves adopted under the new keys ---------- */
-  window.localStorage.removeItem("novawing_profiles");
-  window.localStorage.removeItem("novawing_profile_Renamed");
+  /* ---------- renames: older saves adopted under the new keys ---------- */
+  window.localStorage.removeItem("patrol_profiles");
+  window.localStorage.removeItem("patrol_profile_Renamed");
   window.localStorage.setItem("skyforce_profiles", JSON.stringify(["Renamed"]));
   window.localStorage.setItem("skyforce_profile_Renamed",
     JSON.stringify({ name:"Renamed", callsign:"Renamed", money: 1234, totalKills: 9 }));
@@ -644,6 +644,15 @@ async function run(){
     SF.profile.listNames().indexOf("Renamed") >= 0);
   check("the original SkyForce save is left untouched",
     window.localStorage.getItem("skyforce_profile_Renamed") != null);
+
+  // Two renames deep: a Novawing-era save wins over the older SkyForce one.
+  window.localStorage.removeItem("patrol_profiles");
+  window.localStorage.removeItem("patrol_profile_Renamed");
+  window.localStorage.setItem("novawing_profiles", JSON.stringify(["Renamed"]));
+  window.localStorage.setItem("novawing_profile_Renamed",
+    JSON.stringify({ name:"Renamed", callsign:"Renamed", money: 5678, totalKills: 21 }));
+  SF.profile.adoptOldSaves();
+  check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
 
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");

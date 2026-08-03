@@ -1,7 +1,7 @@
 {
-  "name": "novawing-web",
+  "name": "thierry-patrol-web",
   "version": "1.0.0",
-  "description": "Novawing - Thierry family browser game smoke test",
+  "description": "Thierry Patrol - browser game smoke test",
   "private": true,
   "scripts": {
     "test": "node _smoketest.js"

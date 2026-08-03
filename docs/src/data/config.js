@@ -218,7 +218,7 @@ const ACHIEVEMENTS = [
   { id:"ace_pilot",    icon:"🥇", name:"Ace Pilot",       desc:"Complete a mission on ACE",           check:p=>p.hardestCleared>=2 },
   { id:"veteran_wings",icon:"🎗️", name:"Veteran Wings",   desc:"Complete a mission on VETERAN",       check:p=>p.hardestCleared>=3 },
   { id:"nightmare",    icon:"👑", name:"Nightmare Fuel",  desc:"Complete a mission on NIGHTMARE",     check:p=>p.hardestCleared>=4 },
-  { id:"campaign",     icon:"🏆", name:"Novawing",       desc:"Complete every mission",              check:p=>p.campaignComplete },
+  { id:"campaign",     icon:"🏆", name:"Thierry Patrol", desc:"Complete every mission",              check:p=>p.campaignComplete },
 ];
 
 SF.config = {

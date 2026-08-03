@@ -12,33 +12,41 @@ const { UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, RANKS, SHIP_COLORS,
         DIFFICULTY_BY_ID, DIFFICULTIES, ACHIEVEMENTS } = SF.config;
 const { MISSIONS } = SF.missions;
 
-const INDEX_KEY = "novawing_profiles";
-const PREFIX = "novawing_profile_";
+const INDEX_KEY = "patrol_profiles";
+const PREFIX = "patrol_profile_";
 
 /*
- * The game used to be called SkyForce, and saves are keyed by name. Renaming
- * the keys without this would strand every pilot's money, gear and records in
- * localStorage under a prefix nothing reads any more. So: on first load after
- * the rename, copy the old records across. The originals are left alone - a
- * player who somehow opens an old build still finds their save intact.
+ * The game has been renamed twice - SkyForce, then Novawing - and saves are
+ * keyed by pilot name under a prefix. Renaming the keys without this would
+ * strand every pilot's money, gear and records under a prefix nothing reads
+ * any more. So: on first load under a new name, copy the newest surviving set
+ * of old records across. The originals are left alone, so opening an older
+ * build still finds its save intact.
+ *
+ * The prefix is deliberately generic now, so a third rename costs nothing.
  */
-const OLD_INDEX_KEY = "skyforce_profiles";
-const OLD_PREFIX = "skyforce_profile_";
+const LEGACY = [
+  { index: "novawing_profiles", prefix: "novawing_profile_" },
+  { index: "skyforce_profiles", prefix: "skyforce_profile_" },
+];
 
 function adoptOldSaves(){
   try {
     if(localStorage.getItem(INDEX_KEY)) return;          // already on the new keys
-    const old = localStorage.getItem(OLD_INDEX_KEY);
-    if(!old) return;
-    const names = JSON.parse(old);
-    if(!Array.isArray(names) || !names.length) return;
-    names.forEach(n => {
-      const rec = localStorage.getItem(OLD_PREFIX + n);
-      if(rec != null && localStorage.getItem(PREFIX + n) == null){
-        localStorage.setItem(PREFIX + n, rec);
-      }
-    });
-    localStorage.setItem(INDEX_KEY, old);
+    for(const era of LEGACY){
+      const old = localStorage.getItem(era.index);
+      if(!old) continue;
+      const names = JSON.parse(old);
+      if(!Array.isArray(names) || !names.length) continue;
+      names.forEach(n => {
+        const rec = localStorage.getItem(era.prefix + n);
+        if(rec != null && localStorage.getItem(PREFIX + n) == null){
+          localStorage.setItem(PREFIX + n, rec);
+        }
+      });
+      localStorage.setItem(INDEX_KEY, old);
+      return;                                            // newest era wins
+    }
   } catch(e){ /* a corrupt or unavailable store just means a fresh start */ }
 }
 adoptOldSaves();
