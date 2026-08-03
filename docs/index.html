@@ -51,15 +51,38 @@
 
   <!-- ===================== BRIEFING (difficulty per mission) ============ -->
   <section id="screen-briefing" class="screen">
-    <h2 id="briefTitle" class="section-title">MISSION</h2>
-    <p id="briefSubtitle" class="brief-subtitle"></p>
-    <div class="panel">
-      <label class="panel-label">MISSION BRIEF</label>
-      <p id="briefText" class="brief-text"></p>
-      <div id="briefObjectives" class="brief-objectives"></div>
+    <!-- Hero: the mission's own sky, with the ship you're taking into it. -->
+    <div class="brief-hero">
+      <canvas id="briefHero" class="brief-hero-art" width="640" height="300"></canvas>
+      <div class="brief-hero-fade"></div>
+      <div class="brief-hero-text">
+        <div class="bh-row">
+          <span id="briefNum" class="bh-num"></span>
+          <span id="briefBoss" class="bh-boss hidden">☠ BOSS</span>
+        </div>
+        <h2 id="briefTitle" class="bh-title">MISSION</h2>
+        <p id="briefSubtitle" class="bh-sub"></p>
+      </div>
     </div>
-    <label class="panel-label">CHOOSE DIFFICULTY</label>
+
+    <p id="briefText" class="brief-text"></p>
+
+    <div class="brief-cols">
+      <div class="brief-block">
+        <label class="panel-label">STAR OBJECTIVES</label>
+        <div id="briefObjectives" class="brief-objectives"></div>
+      </div>
+      <div class="brief-block">
+        <label class="panel-label">WHAT'S OUT THERE</label>
+        <div id="briefRoster" class="brief-roster"></div>
+      </div>
+    </div>
+
+    <label class="panel-label brief-label">CHOOSE DIFFICULTY</label>
     <div id="briefDifficulties" class="difficulty-list"></div>
+    <div id="briefDiffDetail" class="diff-detail"></div>
+
+    <button id="launchBtn" class="main-btn launch-btn">▶ LAUNCH</button>
     <button id="briefBackBtn" class="ghost-btn">Back to Missions</button>
   </section>
 

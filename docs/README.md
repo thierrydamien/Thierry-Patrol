@@ -33,6 +33,14 @@ Pick your pilot, choose a mission, choose a difficulty, fly.
 - **Prison Haulers** (marked SOS) are carrying stranded pilots. Shoot one down
   before it escapes, then fly to the pod it drops.
 
+## The briefing
+Picking a mission opens a proper dossier, not a list of buttons: the mission's
+own sky as a hero image with your ship in it, the brief, the three star
+objectives (lit for the tier you've selected), **"what's out there"** — the
+actual enemy art for the archetypes this mission uses, biggest first — and a
+row of difficulty chips showing how many enemies, how much health and what it
+pays. You pick a tier, then hit **LAUNCH**, which is tinted to match.
+
 ## The campaign
 The mission select is a **route across a star map**, not a list: eight stops
 along a winding line from HOME PATROL out to ENEMY SPACE, with your own ship —

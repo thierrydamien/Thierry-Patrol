@@ -708,38 +708,123 @@ function drawStoryArt(ctx, art, levels, mate){
 /* ---------------------------------------------------------
    BRIEFING + DIFFICULTY
    --------------------------------------------------------- */
+let briefTier = "pilot";
+
 function openBriefing(index){
   selectedMissionIndex = index;
   const m = MISSIONS[index];
+  const stars = P.totalStars(profile);
+
+  $("briefNum").textContent = "MISSION " + m.id;
+  $("briefBoss").classList.toggle("hidden", !m.boss);
   $("briefTitle").textContent = m.name.toUpperCase();
   $("briefSubtitle").textContent = m.subtitle;
   $("briefText").textContent = m.brief;
-  $("briefObjectives").innerHTML = m.objectives.map(id => {
-    const o = OBJECTIVES[id];
-    return `<div class="bo-row"><span class="bo-icon">${o.icon}</span>${esc(o.label)}</div>`;
-  }).join("");
 
+  /*
+   * "What's out there": the actual enemy art for the archetypes this mission
+   * uses, biggest threats first. It answers the only question that matters
+   * before launching - what am I about to meet - and it reuses the sprites the
+   * fleet is already drawn from, so it can never drift out of date.
+   */
+  const roster = $("briefRoster");
+  roster.innerHTML = "";
+  const seen = [];
+  m.waves.forEach(w => { if(seen.indexOf(w.type) < 0) seen.push(w.type); });
+  seen.sort((a, b) => (SF.enemyData.ENEMY_TYPES[b].hp || 0) - (SF.enemyData.ENEMY_TYPES[a].hp || 0));
+  seen.slice(0, 6).forEach(typeId => {
+    const t = SF.enemyData.ENEMY_TYPES[typeId];
+    const chip = document.createElement("div");
+    chip.className = "roster-chip";
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 54;
+    chip.appendChild(cv);
+    const label = document.createElement("span");
+    label.textContent = t.name;
+    chip.appendChild(label);
+    roster.appendChild(chip);
+    const sprite = SF.enemyArt.spriteFor(typeId, t.tint || "#c0392b", false);
+    const c = cv.getContext("2d");
+    if(c && sprite) c.drawImage(sprite, 0, 0, 54, 54);
+    else if(c){ c.fillStyle = t.tint || "#c0392b"; c.beginPath(); c.arc(27,27,18,0,Math.PI*2); c.fill(); }
+  });
+
+  // Default to the hardest tier they've unlocked - that's the one they want.
+  const unlocked = DIFFICULTIES.filter(d => stars >= d.unlockStars);
+  briefTier = (unlocked[unlocked.length-1] || DIFFICULTIES[1]).id;
+  renderBriefTiers(index);
+  drawBriefHero(index);
+  show("screen-briefing");
+}
+
+function renderBriefTiers(index){
+  const m = MISSIONS[index];
   const stars = P.totalStars(profile);
   const list = $("briefDifficulties");
   list.innerHTML = "";
   DIFFICULTIES.forEach(d => {
     const locked = stars < d.unlockStars;
     const earned = (profile.missions[m.id] && profile.missions[m.id].stars[d.id]) || 0;
-    const card = document.createElement("div");
-    card.className = "diff-card" + (locked ? " locked" : "");
-    if(!locked) card.style.borderColor = d.color;
+    const on = !locked && d.id === briefTier;
+    const card = document.createElement("button");
+    card.className = "diff-card" + (locked ? " locked" : "") + (on ? " on" : "");
+    card.style.setProperty("--tier", d.color);
     card.innerHTML = `
-      <div class="diff-head">
-        <span class="diff-name" style="color:${locked ? "" : d.color}">${locked ? "🔒 " : ""}${d.name}</span>
-        <span class="diff-tag">${d.tag}</span>
-      </div>
-      <div class="diff-blurb">${esc(locked ? "Collect " + d.unlockStars + " ★ to unlock this tier" : d.blurb)}</div>
-      <div class="diff-best">${locked ? "" : (earned ? "Best: " + earned + " ★" : "Not flown yet") + " · pays " + d.pay + "x"}</div>
-    `;
-    if(!locked) click(card, () => launch(index, d.id));
+      <span class="diff-name">${locked ? "🔒" : d.name}</span>
+      <span class="diff-tag">${locked ? d.unlockStars + " ★" : d.tag}</span>
+      <span class="diff-stars">${locked ? "" :
+        [0,1,2].map(i => `<i class="${i < earned ? "on" : ""}">★</i>`).join("")}</span>`;
+    if(!locked) click(card, () => { briefTier = d.id; renderBriefTiers(index); });
     list.appendChild(card);
   });
-  show("screen-briefing");
+
+  /*
+   * Objectives light up for the tier you have selected, not "any tier ever".
+   * A star is stored as a count rather than a set, and objectives are scored
+   * in order, so the first N pips is the honest reading of it.
+   */
+  const earnedHere = (profile.missions[m.id] && profile.missions[m.id].stars[briefTier]) || 0;
+  $("briefObjectives").innerHTML = m.objectives.map((id, i) => {
+    const o = OBJECTIVES[id];
+    return `<div class="bo-row"><span class="bo-icon">${o.icon}</span>
+              <span class="bo-text">${esc(o.label)}</span>
+              <span class="bo-star${i < earnedHere ? " on" : ""}">★</span></div>`;
+  }).join("");
+
+  const d = DIFFICULTY_BY_ID[briefTier];
+  $("briefDiffDetail").innerHTML =
+    `<b style="color:${d.color}">${d.name}</b> — ${esc(d.blurb)}` +
+    `<span>${Math.round(d.density*100)}% as many enemies · ${d.hpMult}x health · pays ${d.pay}x</span>`;
+  $("launchBtn").style.background = `linear-gradient(135deg, ${d.color}, ${d.color}bb)`;
+}
+
+/** The mission's own sky behind its own ship - the level, before you fly it. */
+function drawBriefHero(index){
+  const cv = $("briefHero");
+  const ctx = cv && cv.getContext("2d");
+  if(!ctx) return;
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  const photo = SF.skygen.photoFor(index);
+  const art = photo && SF.render.isReady() ? SF.render.assets[photo] : null;
+  if(art){
+    const iw = art.naturalWidth || 400, ih = art.naturalHeight || 500;
+    const cover = Math.max(W/iw, H/ih);
+    ctx.drawImage(art, (W - iw*cover)/2, (H - ih*cover)/2, iw*cover, ih*cover);
+  } else {
+    const sky = SF.skygen.build(index, W, Math.round(W*1.25));
+    if(sky) ctx.drawImage(sky, 0, -(Math.round(W*1.25) - H)*0.45);
+  }
+  // The in-game skies are deliberately near-black so bullets read on them;
+  // as a still, at this size, that just looks like an unloaded image. A soft
+  // wash lifts it without touching the playfield version.
+  const lift = ctx.createRadialGradient(W*0.74, H*0.5, 0, W*0.74, H*0.5, W*0.6);
+  lift.addColorStop(0, "rgba(150,170,255,0.16)");
+  lift.addColorStop(1, "rgba(150,170,255,0)");
+  ctx.fillStyle = lift;
+  ctx.fillRect(0, 0, W, H);
+  SF.shipart.drawShip(ctx, W*0.75, H*0.56, 128, {
+    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0.7, idle:false });
 }
 
 function launch(index, difficultyId){
@@ -1009,6 +1094,7 @@ click($("achievementsBtn"), () => { renderAchievements(); show("screen-achieveme
 click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard"); });
 click($("missionsBackBtn"), () => show("screen-menu"));
 click($("briefBackBtn"), () => { renderMissions(); show("screen-missions"); });
+click($("launchBtn"), () => launch(selectedMissionIndex, briefTier));
 click($("armoryBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("achievementsBackBtn"), () => show("screen-menu"));
 click($("leaderboardBackBtn"), () => show("screen-menu"));

@@ -584,6 +584,34 @@ Star counts came down hard too - 520 specks per sky to 165, and the foreground
 parallax layer from 86 to 35. They were reading as noise over the gameplay
 rather than as depth behind it.
 
+## 8n. The briefing
+
+It was a text panel over a list of five identical rows, and tapping a row
+launched the game. Now it is a dossier:
+
+- **A hero image**: the mission's *own* backdrop (painting or generated) with
+  the pilot's current ship composited into it - the level, before you fly it.
+- **"What's out there"**: the real `enemyArt` sprites for the archetypes this
+  mission's wave script uses, heaviest first. It answers the only question
+  worth asking before launching, and because it reads the wave data it can
+  never drift out of date.
+- **Tier chips instead of rows**, with the selected one glowing in its own
+  colour and a detail line underneath quoting the numbers that actually matter
+  now that density exists: *"280% as many enemies - 4.4x health - pays 2.8x"*.
+- **A separate LAUNCH button**, tinted to the tier. Selecting a difficulty and
+  starting a game were the same tap before, which is an easy misfire for a
+  child, and it left no room to show what the choice meant.
+
+Two details worth keeping:
+
+- Objective stars light for the tier you have selected, not "any tier ever".
+  Stars are stored as a count rather than a set, and objectives are scored in
+  order, so lighting the first N pips is the honest reading of that.
+- The hero gets a soft radial lift. The in-game skies are deliberately
+  near-black so bullets read against them; as a static image at that size the
+  same art just looks like it failed to load. The lift is applied in the
+  briefing only - the playfield keeps its contrast.
+
 ## 9. What I'd do next
 
 Roughly in value order:

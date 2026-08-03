@@ -285,11 +285,18 @@ async function run(){
   clickEl(qa("#campaignNodes .map-node")[0]);
   check("briefing opens for mission 1", id("screen-briefing").classList.contains("active"));
   check("briefing lists 3 objectives", qa("#briefObjectives .bo-row").length === 3);
+  check("briefing shows what you'll be facing", qa("#briefRoster .roster-chip").length > 0);
   check("hard tiers are locked until stars are earned", qa("#briefDifficulties .diff-card.locked").length === 3);
+  check("a tier is preselected so LAUNCH always works",
+    qa("#briefDifficulties .diff-card.on").length === 1);
+  check("the briefing explains the tier you picked", /pays/.test(id("briefDiffDetail").textContent));
 
   /* ---------- play mission 1 to completion ---------- */
   SF.game.godMode = true;      // test-only: survive long enough to finish
-  clickEl(qa("#briefDifficulties .diff-card")[1]);   // PILOT
+  clickEl(qa("#briefDifficulties .diff-card")[1]);   // pick PILOT
+  check("picking a tier selects it rather than launching",
+    !id("screen-game").classList.contains("active"));
+  clickEl(id("launchBtn"));
   check("game screen active after launch", id("screen-game").classList.contains("active"));
   check("bomb button visible for a pilot who owns bombs", !id("bombBtn").classList.contains("hidden"));
   check("overdrive button visible too", !id("overdriveBtn").classList.contains("hidden"));
@@ -516,6 +523,7 @@ async function run(){
   clickEl(id("playBtn"));
   clickEl(qa("#campaignNodes .map-node")[3]);        // mission 4 - first boss
   clickEl(qa("#briefDifficulties .diff-card")[1]);
+  clickEl(id("launchBtn"));
   await runFrames(6000);   // mission 4 is ~3 minutes with its boss
   await sleep(1600);   // the boss death animation holds the results back ~1.2s
   await runFrames(30);
