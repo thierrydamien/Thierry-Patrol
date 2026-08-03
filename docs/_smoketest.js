@@ -790,6 +790,58 @@ async function run(){
   check("the menu still works after a failed sync",
     !!id("playBtn") && typeof SF.ui.renderProfiles === "function");
 
+  /* Adopting a squad is not a merge: timestamps answer "saved last", not
+     "the real one", so a freshly-played device would beat months of progress.
+     The moment a device changes squad, the squad's records win outright. */
+  {
+    const richSquad = { Marc: { name:"Marc", money: 999999, savedAt: 1000 } };
+    const thinDevice = { Marc: { name:"Marc", money: 3, savedAt: 9999999 } };
+    check("an ordinary sync lets the newer save win",
+      C.mergePilots(thinDevice, richSquad).Marc.money === 3);
+    check("adopting a squad lets the squad win, whatever the stamps say",
+      C.adoptSquad(thinDevice, richSquad).Marc.money === 999999);
+    check("pilots only this device knows survive an adoption",
+      C.adoptSquad({ Solo:{ name:"Solo", money: 7, savedAt: 5 } }, richSquad).Solo.money === 7);
+    check("adoption can force records past the timestamp guard", (() => {
+      SF.profile.saveRaw({ name:"Adopt", callsign:"Adopt", money: 3, savedAt: 9999999 });
+      C.applyPilots({ Adopt: { name:"Adopt", callsign:"Adopt", money: 999999, savedAt: 1000 } }, true);
+      return SF.profile.load("Adopt").money === 999999;
+    })());
+  }
+
+  /* An auto-minted code from the random-code era is let go of; one somebody
+     typed in deliberately is kept. */
+  {
+    window.localStorage.setItem("patrol_squad_code", "XXXX-YYYY");
+    window.localStorage.removeItem("patrol_squad_manual");
+    C.adoptFamilySquad();
+    check("a leftover auto-minted code is dropped for the family squad", C.isDefaultCode());
+    C.setCode("ABCD-EFGH", true);
+    C.adoptFamilySquad();
+    check("a deliberately joined squad is kept", C.code() === "ABCD-EFGH");
+    window.localStorage.removeItem("patrol_squad_code");
+    window.localStorage.removeItem("patrol_squad_manual");
+  }
+
+  /* A record stamped in the future would beat every honest save until the
+     wall clock caught up - one wrong device clock would pin the whole squad.
+     Anything claiming to be from the future is re-stamped on sight. */
+  {
+    const poisoned = { Marc: { name:"Marc", money: 12, savedAt: Date.now() + 3600000 } };
+    C.sanitizePilots(poisoned);
+    check("future-stamped records are re-stamped to now",
+      poisoned.Marc.savedAt <= Date.now() + 5*60000);
+    const honest = { Marc: { name:"Marc", money: 5, savedAt: Date.now() - 1000 } };
+    const before = honest.Marc.savedAt;
+    C.sanitizePilots(honest);
+    check("honest stamps pass through the sanitizer untouched", honest.Marc.savedAt === before);
+    // And the local compare clamps too, so a poisoned stored record can lose.
+    SF.profile.saveRaw({ name:"Clock", callsign:"Clock", money: 1, savedAt: Date.now() + 3600000 });
+    C.applyPilots({ Clock: { name:"Clock", callsign:"Clock", money: 50, savedAt: Date.now() + 1 } });
+    check("a poisoned local record no longer wins every sync",
+      SF.profile.load("Clock").money === 50);
+  }
+
   /* Local backups: the safety net that does not need the network. */
   {
     const before = SF.profile.load("Marc");

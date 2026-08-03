@@ -770,6 +770,43 @@ failed background sync. Every request goes through one wrapper now that cannot
 throw at its caller, and the test asserts the menu still works after a sync
 fails. A browser blocking the request would have done exactly what jsdom did.
 
+## 8t. One squad, and the bugs the phone found
+
+The shared-default squad shipped with a hole: `code()` preferred any *stored*
+code over the default, and the random-code era had stored one on every device
+that ever pressed SYNC NOW. Those devices kept syncing with a squad of one -
+which is how a phone opened onto a completely different save. Auto-minted
+codes are dropped now; only a code somebody deliberately typed into `join()`
+(tracked by a "manual" flag) is kept.
+
+Fixing that forced a better question: what should happen when a device
+*changes* squad? Not a merge. Timestamps answer "saved last", not "the real
+one" - a freshly-played device carries newer stamps than a squad holding
+months of progress, so an ordinary merge would let the thin recent save
+quietly delete the campaign you switched squads to get. On a squad change the
+squad's records win outright, pilots only the device knows are kept, and the
+pre-switch state goes into the local backups first.
+
+Two more sharp edges, found by the harness rather than by a player:
+
+- **A device must pull before it may push.** Sync runs at boot, but a save
+  made in the first seconds - picking a pilot is enough - carries a stamp
+  newer than everything in the cloud, and pushing it would hand the squad an
+  empty save that wins on timestamp.
+- **Future-stamped records are poison.** Conflicts resolve on `savedAt`, so
+  one device with a wrong clock would pin the entire squad to its stale state,
+  every fix reverting on the next sync. Both sides of every sync pass through
+  a sanitizer that re-stamps anything claiming to be from the future; for the
+  local compare the stored stamp is capped at now. The first version clamped
+  to now-plus-slack and the test caught it: a poisoned record still won for
+  exactly the slack window.
+
+The e2e rig deserves its own note: its first version loaded the page once
+just to plant localStorage, and that load synced - polluting the exact state
+the test was fabricating, and producing a failure that looked like the
+feature. `addInitScript` plants state before any game script runs. When a
+test of sync misbehaves, suspect the rig syncing first.
+
 ## 9. What I'd do next
 
 Roughly in value order:

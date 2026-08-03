@@ -32,22 +32,25 @@ const ALPHABET = "ABCDEFGHJKLMNPQRTUVWXYZ2346789";
 const PUSH_DELAY = 4000;   // batch a burst of purchases into one request
 
 /*
- * The household's own squad, baked in.
+ * The household's squad. There is one, and this is it.
  *
  * Sync originally minted a random code per device, which meant a new iPad
- * synced to nothing until somebody typed eight characters into it, and losing
- * the code lost the cloud copy - there is no account to recover it from. For a
- * game exactly one family plays, that is a failure mode bought with no
- * benefit. Every device now defaults to this code, so a browser that has never
- * seen the game before pulls the family's progress on first load, and there is
- * no longer anything to write down.
+ * synced to nothing until somebody typed eight characters into it, losing the
+ * code lost the cloud copy - there is no account to recover it from - and, in
+ * practice, every device ended up on a private squad of one holding a
+ * different save. For a game exactly one family plays that is a failure mode
+ * bought with no benefit.
+ *
+ * Every device now defaults here, so a browser that has never seen the game
+ * pulls the family's progress on first load and there is nothing to write
+ * down. From then on, progress made anywhere reaches everywhere.
  *
  * The trade, stated plainly: this repo is public, so the key to these saves is
  * public too. Anyone who found it could read or overwrite a callsign, a ship
  * colour and some scores. `join()` still exists, so setting a private code on
  * every device takes that away again.
  */
-const DEFAULT_CODE = "PAWD-QATD";
+const DEFAULT_CODE = "D6JJ-GEZQ";
 
 /* Local safety net, independent of the network: a rolling set of snapshots of
    every pilot on this device, so a bad sync or an accidental reset is
@@ -58,6 +61,7 @@ const BACKUP_KEEP = 4;
 
 let pushTimer = null;
 let inFlight = false;
+let pulledOnce = false;   // nothing is pushed before this device has pulled
 let status = { state: "off", at: 0, error: null };
 const listeners = [];
 
@@ -90,16 +94,44 @@ function newCode(){
   return formatCode(out);
 }
 
-/** This device's code, which is the family's unless somebody set another. */
+/*
+ * Codes minted before the shared default existed have to be let go of.
+ *
+ * Sync used to generate a random code per device and store it. `code()` then
+ * returned that stored value forever, so a device that had ever pressed SYNC
+ * NOW kept syncing to a squad of one - a phone showing a completely different
+ * save, with the default it was supposed to adopt sitting right there unused.
+ *
+ * A code is only kept now if somebody deliberately typed it in via `join()`,
+ * which sets MANUAL_KEY. Anything else was auto-minted and is discarded in
+ * favour of the family's.
+ */
+const MANUAL_KEY = "patrol_squad_manual";
+/* The squad this device last completed a sync with, so a change of squad can
+   be told apart from an ordinary sync. */
+const SEEN_KEY = "patrol_squad_seen";
+function adoptFamilySquad(){
+  try {
+    if(localStorage.getItem(CODE_KEY) && !localStorage.getItem(MANUAL_KEY)){
+      localStorage.removeItem(CODE_KEY);
+    }
+  } catch(e){ /* no storage means the default applies anyway */ }
+}
+adoptFamilySquad();
+
+/** This device's code, which is the family's unless somebody chose another. */
 function code(){
   try { return localStorage.getItem(CODE_KEY) || DEFAULT_CODE; } catch(e){ return DEFAULT_CODE; }
 }
 /** True when this device is on the shared family squad rather than its own. */
 function isDefaultCode(){ return code() === DEFAULT_CODE; }
-function setCode(raw){
+function setCode(raw, manual){
   const c = formatCode(raw);
   if(!c) return "";
-  try { localStorage.setItem(CODE_KEY, c); } catch(e){}
+  try {
+    localStorage.setItem(CODE_KEY, c);
+    if(manual) localStorage.setItem(MANUAL_KEY, "1");
+  } catch(e){}
   return c;
 }
 function clearCode(){
@@ -169,6 +201,56 @@ function restoreBackup(index){
    Pure, and exported, because this is the part that can lose
    somebody's afternoon if it is wrong.
    --------------------------------------------------------- */
+
+/** The squad this device last synced with, or "" the first time. */
+function lastSquad(){
+  try { return localStorage.getItem(SEEN_KEY) || ""; } catch(e){ return ""; }
+}
+function rememberSquad(c){
+  try { localStorage.setItem(SEEN_KEY, c); } catch(e){}
+}
+
+/*
+ * Records stamped in the future are poison, and get their stamps rewritten.
+ *
+ * Conflicts resolve on savedAt, so a record dated ahead of real time beats
+ * every honest save until the wall clock catches up to it - one device with a
+ * wrong clock (an iPad whose battery died, a deliberately changed date) would
+ * pin the entire squad to its stale state, and every fix anyone made would
+ * quietly revert. Both sides of a sync pass through here: anything claiming to
+ * be from the future is re-stamped to now, after which the ordinary rules are
+ * safe again. The slack absorbs honest clock skew between devices.
+ */
+const FUTURE_SLACK = 5*60000;
+function sanitizePilots(map){
+  const limit = Date.now() + FUTURE_SLACK;
+  Object.keys(map || {}).forEach(n => {
+    const rec = map[n];
+    if(rec && (rec.savedAt || 0) > limit) rec.savedAt = Date.now();
+  });
+  return map;
+}
+
+/*
+ * Joining a squad you were not on before is NOT a merge.
+ *
+ * Timestamps decide conflicts, and they answer "which was saved last", not
+ * "which is the real one". A device that has been played on recently carries
+ * newer stamps than a squad that holds months of progress, so an ordinary
+ * merge would let the thin, recent save win and quietly delete the campaign
+ * you switched squads to get. The moment a device changes squad, the squad is
+ * the truth: its records win outright.
+ *
+ * Pilots that exist only on this device are still kept and pushed up - they
+ * are not in conflict with anything, and losing them would be its own bug.
+ */
+function adoptSquad(mine, theirs){
+  const out = {};
+  Object.keys(mine || {}).forEach(n => { out[n] = mine[n]; });
+  Object.keys(theirs || {}).forEach(n => { if(theirs[n]) out[n] = theirs[n]; });
+  return out;
+}
+
 function mergePilots(mine, theirs){
   const out = {};
   Object.keys(mine || {}).forEach(n => { out[n] = mine[n]; });
@@ -180,15 +262,28 @@ function mergePilots(mine, theirs){
   return out;
 }
 
-/** Writes merged records to disk, skipping the ones already identical. */
-function applyPilots(map){
+/**
+ * Writes merged records to disk, skipping anything the device already has a
+ * newer copy of. `force` is for adopting a squad, where the incoming record
+ * wins even though it is older - the timestamp guard is exactly what has to be
+ * overridden there.
+ */
+function applyPilots(map, force){
   const P = SF.profile;
+  const now = Date.now();
   let changed = 0;
   Object.keys(map).forEach(n => {
     const rec = map[n];
     if(!rec || typeof rec !== "object" || !rec.name) return;
     const local = P.snapshot()[n];
-    if(local && (local.savedAt || 0) >= (rec.savedAt || 0)) return;
+    // The stored copy is read raw, so for the comparison its stamp is capped
+    // at *now* - otherwise a poisoned future-stamped local record could not
+    // lose to an honest incoming one until the wall clock caught up. (The
+    // sanitizer's slack is only about when to rewrite a stamp, not about who
+    // wins.)
+    const localStamp = local ? Math.min(local.savedAt || 0, now) : -1;
+    if(!force && local && localStamp >= (rec.savedAt || 0)) return;
+    if(force && local && JSON.stringify(local) === JSON.stringify(rec)) return;
     P.saveRaw(rec);
     changed++;
   });
@@ -247,23 +342,46 @@ function sync(opts){
   try { mine = SF.profile.snapshot(); }
   catch(e){ inFlight = false; emit("error", String(e.message || e)); return Promise.resolve(false); }
 
+  const switching = lastSquad() !== c;
+  if(switching) snapshotBackup(true);   // keep what this device had, before it changes
+
+  sanitizePilots(mine);
   return fetchRemote(c)
     .then(theirs => {
-      const merged = mergePilots(mine, theirs);
-      const pulled = applyPilots(merged);
+      sanitizePilots(theirs);
+      const hasRemote = Object.keys(theirs).length > 0;
+      // Adopting only makes sense if the squad has anything to adopt; against
+      // an empty squad this is a first upload, not a takeover.
+      const adopt = switching && hasRemote;
+      const merged = adopt ? adoptSquad(mine, theirs) : mergePilots(mine, theirs);
+      const pulled = applyPilots(merged, adopt);
       // Only write back when we actually hold something they don't.
       const needsPush = Object.keys(merged).some(n =>
         !theirs[n] || (merged[n].savedAt || 0) > (theirs[n].savedAt || 0));
       return (needsPush ? putRemote(c, merged) : Promise.resolve(true))
-        .then(() => { emit("ok"); return pulled > 0; });
+        .then(() => {
+          rememberSquad(c);
+          pulledOnce = true;
+          emit("ok");
+          return pulled > 0;
+        });
     })
     .catch(err => { emit("error", String(err.message || err)); return false; })
     .then(r => { inFlight = false; return r; });
 }
 
-/** Called by profile.save(). Batches a burst of writes into one round trip. */
+/*
+ * Called by profile.save(). Batches a burst of writes into one round trip.
+ *
+ * Nothing is pushed until this device has pulled at least once. A device that
+ * has never talked to the squad knows nothing about it, and a save made in
+ * those first seconds - picking a pilot is enough - carries a stamp newer than
+ * anything in the cloud. Pushing that would hand the squad an empty save that
+ * beats the real one on timestamp. Pull first, always.
+ */
 function touch(){
   if(!configured() || !code()) return;
+  if(!pulledOnce) return;
   if(pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => { pushTimer = null; sync(); }, PUSH_DELAY);
 }
@@ -275,7 +393,7 @@ function touch(){
 function join(raw){
   const c = formatCode(raw);
   if(!c) return Promise.reject(new Error("That code doesn't look right"));
-  setCode(c);
+  setCode(c, true);            // deliberate, so it survives the default
   return sync({ code: c }).then(() => c);
 }
 
@@ -293,9 +411,9 @@ function boot(){
 
 SF.cloud = {
   configured, code, ensureCode, setCode, clearCode, newCode, formatCode, validCode,
-  isDefaultCode, DEFAULT_CODE,
+  isDefaultCode, DEFAULT_CODE, adoptFamilySquad,
   sync, touch, join, boot, onStatus,
-  mergePilots, applyPilots,
+  mergePilots, applyPilots, adoptSquad, sanitizePilots,
   backups, snapshotBackup, restoreBackup,
   get status(){ return status; },
 };
