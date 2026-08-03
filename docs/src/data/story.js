@@ -40,11 +40,23 @@ const STORY = {
     button:"FLY ON",
   },
 
+  /* Act one down. Not a curtain - a door opening, so the map above mission 8
+     reads as the point rather than as leftovers. */
+  actTwo: {
+    title: "THEY'RE RUNNING",
+    panels: [
+      { art:"sky",  text:"The Sentinel is scrap. Home space is quiet for the first time in months - and the rest of their fleet is running for the lane they came in by." },
+      { art:"crew", text:"Command wants to know if you'll follow them, {you}. Nobody would think less of you for saying no." },
+      { art:"now",  text:"You already know the answer. Six more stops, all of them theirs, and one of them is the last one." },
+    ],
+    button:"GO AFTER THEM",
+  },
+
   /* Campaign cleared: a proper curtain, still not a full stop. */
   campaign: {
     title: "SKIES CLEAR",
     panels: [
-      { art:"sky",  text:"Their flagship is scrap and the lanes are quiet for the first time in months." },
+      { art:"sky",  text:"The Leviathan came apart over their own star, and the lanes from here to home are empty." },
       { art:"crew", text:"Every pilot you pulled out of the dark got home, {you}. They know your name down there." },
       { art:"now",  text:"There are harder skies than these - fly the missions again on the tiers that used to be impossible, and find out." },
     ],

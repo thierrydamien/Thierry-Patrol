@@ -123,6 +123,44 @@ const ATTACKS = {
       boss.beam = { x: boss.x, dir: fromLeft ? 1 : -1, timer: 1.7, width: 48 };
     },
   },
+  /*
+   * Two rotating arms of fire. Where ringBurst is one instant of "get out of
+   * every direction at once", this is a sustained pattern you read and walk
+   * through - the gap between the arms is always there, it just moves. The
+   * first genuinely new thing to dodge since the Sentinel.
+   */
+  spiralArms: {
+    telegraphKind: "charge",
+    fire(boss, world){
+      boss.burst = { attack:"spiralArms", left: boss.phase.enrage ? 22 : 15,
+                     timer: 0, gap: 0.085, angle: rand(0, TAU) };
+    },
+    burstShot(boss, world){
+      const arms = boss.phase.enrage ? 3 : 2;
+      for(let i=0;i<arms;i++){
+        const a = boss.burst.angle + (TAU/arms)*i;
+        world.spawnEnemyBullet(boss.x, boss.y, Math.cos(a)*215, Math.sin(a)*215, "orb", 6);
+      }
+      boss.burst.angle += 0.42;                  // how tightly the arms wind
+    },
+  },
+  /*
+   * Seeds the field with mines instead of shooting at you. They sit there, so
+   * the arena itself gets smaller as the fight goes on and the boss never has
+   * to touch you to make the fight harder.
+   */
+  mineField: {
+    telegraphKind: "hatch",
+    fire(boss, world, ctxObj){
+      const n = boss.phase.enrage ? 5 : 3;
+      for(let i=0;i<n;i++){
+        const m = world.spawnEnemy("mine",
+          clamp(boss.x + rand(-150, 150), 45, VW-45), boss.y + rand(0, 40),
+          { difficulty: ctxObj.difficulty, hoverY: rand(240, 460) });
+        m.fromBoss = true;                       // never counts toward the roster
+      }
+    },
+  },
   callMinions: {
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){

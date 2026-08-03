@@ -43,8 +43,8 @@ row of difficulty chips showing how many enemies, how much health and what it
 pays. You pick a tier, then hit **LAUNCH**, which is tinted to match.
 
 ## The campaign
-The mission select is a **route across a star map**, not a list: eight stops
-along a winding line from HOME PATROL out to ENEMY SPACE, with your own ship —
+The mission select is a **route across a star map**, not a list: fourteen stops
+along a winding line from HOME PATROL out to THEIR STAR, with your own ship —
 drawn from your actual upgrades — parked at the furthest one you've reached.
 The stretches you've flown are lit gold, the rest is a faint dashed plan ahead
 of you. Boss stops wear a **☠ BOSS** tag (red spikes alone only read as danger
@@ -53,10 +53,12 @@ rim, and the one you're up to pulses. The sky behind it is nebula clouds,
 three planets, a distant galaxy and drifting dust — painted once and reused,
 so it costs nothing to animate over.
 
-Eight missions of **2 to 3.5 minutes** each (about 20 minutes of flying in
+Fourteen missions of **2 to 4.5 minutes** each (about 40 minutes of flying in
 total), each with three star objectives shown in the briefing and tracked live
 in the HUD. Missions are built in acts with lulls between them, a halfway
-bonus, and a build to the finale:
+bonus, and a build to the finale.
+
+**Act one** teaches the game — one idea per mission, paid off by two bosses:
 
 | # | Mission | Teaches | Boss |
 |---|---|---|---|
@@ -68,6 +70,25 @@ bonus, and a build to the finale:
 | 6 | Prison Break | rescue under pressure | — |
 | 7 | The Gauntlet | elites | — |
 | 8 | Sky Sentinel | everything at once | **Sky Sentinel** |
+
+**Act two** assumes you know all of it, so it leads with combinations instead
+of introductions — and the map above mission 8 is the point, not leftovers:
+
+| # | Mission | The idea | Boss |
+|---|---|---|---|
+| 9 | The Wreck Line | a debris field that does not move | — |
+| 10 | The Hatchery | hives that spawn faster than you clear | — |
+| 11 | The Warden | mines shrink the arena as you fight | **The Warden** |
+| 12 | Cold Approach | telegraphed sniper lines, from behind shields | — |
+| 13 | All Hands | 23 pods to bring home, everything in the way | — |
+| 14 | The Leviathan | all of it | **The Leviathan** |
+
+The two new bosses bring the first new attack patterns since launch:
+**spiral arms** (two rotating streams you walk the gap in, rather than one
+instant ring) and **mine fields** (the boss seeds the arena instead of shooting
+at you, so taking your time costs you room). Both are disabled by shooting the
+weak point that powers them — the Warden runs out of mines if you blow its
+hatches off, and the Leviathan has four weak points to strip.
 
 Finish a mission to unlock the next one. Stars unlock the harder difficulty
 tiers, which pay far more — so the campaign and the Armory feed each other.

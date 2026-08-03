@@ -130,7 +130,7 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("8 campaign missions defined", SF.missions.MISSIONS.length === 8);
+  check("14 campaign missions defined", SF.missions.MISSIONS.length === 14);
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
   check("every wave references a real enemy type",
@@ -152,10 +152,30 @@ async function run(){
   check("every boss weak point disables a real attack",
     Object.values(SF.missions.BOSSES).every(b =>
       b.weakPoints.every(wp => !wp.disables || !!SF.bosses.ATTACKS[wp.disables])));
+  check("every boss a mission names actually exists",
+    SF.missions.MISSIONS.every(m => !m.boss || !!SF.missions.BOSSES[m.boss]));
+  check("every phase of every boss fires real attacks",
+    Object.values(SF.missions.BOSSES).every(b =>
+      b.phases.every(ph => ph.attacks.every(a => !!SF.bosses.ATTACKS[a]))));
+  // A boss whose every attack is disable-able could be reduced to silence.
+  check("no boss can be stripped of all its attacks",
+    Object.values(SF.missions.BOSSES).every(b => {
+      const gone = new Set(b.weakPoints.map(wp => wp.disables).filter(Boolean));
+      return b.phases.every(ph => ph.attacks.some(a => !gone.has(a)));
+    }));
+  // Backdrops are picked modulo the sky list, so a short list silently makes
+  // late missions reuse early ones - the exact complaint that produced them.
+  check("every mission gets its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
   // Copy is aimed at kids, so every shelf item and every mission has to actually
   // explain itself - a blank description reads as a bug to an 8-year-old.
   check("every upgrade explains itself in plain words",
     SF.config.UPGRADES.every(u => typeof u.desc === "string" && u.desc.length > 12));
+  check("both story acts exist and name real art",
+    ["firstPart","ace","actTwo","campaign"].every(k => {
+      const st = SF.storyData.STORY[k];
+      return st && st.panels.length > 0 &&
+        st.panels.every(pn => ["stock","now","crew","sky"].indexOf(pn.art) >= 0 && pn.text.length > 20);
+    }));
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
   check("badge picker offers a real set of insignia", SF.config.BADGES.length >= 12);
@@ -300,8 +320,10 @@ async function run(){
 
   /* ---------- mission select ---------- */
   clickEl(id("playBtn"));
-  check("the campaign map has a stop for every mission", qa("#campaignNodes .map-node").length === 8);
-  check("only mission 1 is unlocked at the start", qa("#campaignNodes .map-node.locked").length === 7);
+  check("the campaign map has a stop for every mission",
+    qa("#campaignNodes .map-node").length === SF.missions.MISSIONS.length);
+  check("only mission 1 is unlocked at the start",
+    qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
   check("the map says what you're flying next", /\w/.test(id("campaignHint").textContent));
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
@@ -420,8 +442,14 @@ async function run(){
     check("asteroids are not counted as enemies to destroy", rockDir.totalPlanned === 0);
     check("asteroids are flagged as hazards",
       W.spawnEnemy("asteroid", 100, 100, { difficulty: diff }).hazard === true);
-    check("boulders show up on some missions but not most",
-      SF.missions.MISSIONS.filter(m => m.waves.some(wv => wv.type === "boulder")).length === 3);
+    // The point of boulders is that they are an occasional event, not scenery.
+    // Pinning an exact count just breaks every time a mission is added, so
+    // assert the shape: present on several levels, absent from most.
+    {
+      const withBoulders = SF.missions.MISSIONS.filter(m => m.waves.some(wv => wv.type === "boulder")).length;
+      check("boulders show up on some missions but not most",
+        withBoulders >= 2 && withBoulders <= SF.missions.MISSIONS.length/2);
+    }
 
     // Ramming a rock costs a life and leaves the rock exactly where it was.
     {
@@ -591,6 +619,57 @@ async function run(){
     check("boss fight length is independent of gear",
       Math.abs((strong/300) - (weak/20)) < 0.5);
     W.boss = null;
+  }
+
+  /* Act 2's bosses introduce the first new attacks since launch (spiralArms,
+     mineField). Drive each boss through every phase to the death, forcing an
+     attack every frame it will accept one, so a typo in a new pattern shows up
+     here instead of in mission 11. */
+  {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const ctxc = { difficulty: diff, onBossHit(){}, onEnemyKilled(){}, onPlayerHit(){}, godMode:true };
+    ["warden","leviathan"].forEach(id => {
+      W.reset();
+      const prof = SF.profile.blank("Boss" + id);
+      W.createPlayer(SF.game.buildLoadout(prof, diff));
+      const boss = W.boss = SF.bosses.create(id, diff, 60);
+      boss.entering = false; boss.y = boss.def.entryY;
+      const phasesHit = new Set();
+      for(let f=0; f<4200; f++){
+        SF.bosses.update(boss, W, ctxc, 1/60);
+        if(!boss.alive) break;
+        phasesHit.add(boss.phaseIndex);
+        boss.attackTimer = Math.min(boss.attackTimer, 0.02);   // keep it firing
+        // Away from every weak point: hitting one would disable the attack it
+        // powers, which is correct behaviour but not what this is measuring.
+        SF.bosses.damage(boss, boss.maxHp/900, boss.x, boss.y - 90);
+      }
+      check(id + " reaches every one of its phases",
+        phasesHit.size === boss.def.phases.length);
+
+      // Every declared attack, fired for real - deterministic, rather than
+      // waiting for a random picker to happen to choose each one.
+      const declared = new Set();
+      boss.def.phases.forEach(ph => ph.attacks.forEach(a => declared.add(a)));
+      let fired = 0;
+      declared.forEach(attack => {
+        W.reset();
+        W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Atk"), diff));
+        const b2 = W.boss = SF.bosses.create(id, diff, 60);
+        b2.entering = false; b2.y = b2.def.entryY;
+        b2.phase = b2.def.phases[b2.def.phases.length-1];   // the enraged variant
+        SF.bosses.ATTACKS[attack].fire(b2, W, ctxc);
+        for(let f=0; f<180; f++) SF.bosses.update(b2, W, ctxc, 1/60);
+        fired++;
+      });
+      check(id + " fires all " + declared.size + " of its attacks cleanly",
+        fired === declared.size && errors.length === 0);
+    });
+    check("the new bosses fight without runtime errors", errors.length === 0);
+    check("spiral arms and mines are real attacks",
+      !!SF.bosses.ATTACKS.spiralArms && !!SF.bosses.ATTACKS.mineField);
+    W.reset(); W.boss = null;
   }
   if(SF.game.world.boss){
     const b = SF.game.world.boss;

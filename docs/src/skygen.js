@@ -68,6 +68,44 @@ const SKIES = [
     props:[ {k:"planet", x:0.66, y:0.52, r:0.322, lit:"#4b3a7a", dark:"#07040f", crescent:true},
             {k:"galaxy", x:0.18, y:0.20, r:0.26},
             {k:"planet", x:0.14, y:0.80, r:0.047, lit:"#a78bfa", dark:"#1b1436"} ] },
+
+  /* --- Act 2. Colder and emptier heading out, hotter as you close on their
+     home star, so the run has a direction you can see. --- */
+
+  { name:"The Wreck Line", clouds:["#475569","#64748b","#1e293b"], dust:"#05070c", star:"#e2e8f0",
+    density:0.8, stars:1.1, bright:2,
+    props:[ {k:"rocks",  x:0.50, y:0.42, r:0.30, n:34},
+            {k:"planet", x:0.16, y:0.76, r:0.104, lit:"#6b7c94", dark:"#0d131f", craters:true},
+            {k:"rocks",  x:0.80, y:0.14, r:0.14, n:14} ] },
+
+  { name:"Hatchery",     clouds:["#4d7c0f","#84cc16","#1a2e05"], dust:"#050b02", star:"#ecfccb",
+    density:1.2, stars:0.75, bright:2,
+    props:[ {k:"planet", x:0.78, y:0.34, r:0.208, lit:"#7fa83c", dark:"#16250a", bands:true},
+            {k:"planet", x:0.20, y:0.72, r:0.073, lit:"#b6dd6e", dark:"#2b3d13", craters:true},
+            {k:"galaxy", x:0.28, y:0.18, r:0.19} ] },
+
+  { name:"Warden's Watch", clouds:["#0e7490","#22d3ee","#083344"], dust:"#020a0e", star:"#cffafe",
+    density:1.0, stars:0.9, bright:3,
+    props:[ {k:"planet", x:0.24, y:0.28, r:0.234, lit:"#2f8ba3", dark:"#04202b", rings:true},
+            {k:"sun",    x:0.84, y:0.78, r:0.031, color:"#a5f3fc"},
+            {k:"rocks",  x:0.72, y:0.44, r:0.13, n:12} ] },
+
+  { name:"Cold Approach", clouds:["#1e3a8a","#3b82f6","#0c1836"], dust:"#020510", star:"#dbeafe",
+    density:0.75, stars:1.15, bright:4,
+    props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
+            {k:"planet", x:0.22, y:0.20, r:0.057, lit:"#93b8f5", dark:"#152540", craters:true} ] },
+
+  { name:"Last Harbour", clouds:["#7e22ce","#e879f9","#2e1065"], dust:"#0a0316", star:"#fae8ff",
+    density:1.15, stars:0.95, bright:3,
+    props:[ {k:"galaxy", x:0.30, y:0.30, r:0.28},
+            {k:"planet", x:0.78, y:0.62, r:0.182, lit:"#a855c9", dark:"#2a0a3c", bands:true, rings:true},
+            {k:"planet", x:0.14, y:0.84, r:0.042, lit:"#f0abfc", dark:"#3b1049"} ] },
+
+  { name:"Their Star",   clouds:["#9a3412","#fb923c","#450a0a"], dust:"#100301", star:"#ffedd5",
+    density:1.35, stars:0.7, bright:4,
+    props:[ {k:"sun",    x:0.70, y:0.26, r:0.125, color:"#ffb46b"},
+            {k:"planet", x:0.26, y:0.68, r:0.244, lit:"#b8501f", dark:"#280702", bands:true, crescent:true},
+            {k:"rocks",  x:0.68, y:0.82, r:0.14, n:16} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */

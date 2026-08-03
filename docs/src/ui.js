@@ -280,6 +280,25 @@ function buildSky(W, H){
 }
 
 /** Serpentine route from the bottom of the map to the top. */
+/*
+ * The map is sized from the mission count rather than fixed, because the route
+ * grew from 8 stops to 14. At the old 900px height those 14 sat 55px apart -
+ * closer than the 76px tap targets over them, so two neighbouring missions
+ * shared pixels and you could launch the wrong one. ROUTE_GAP is the spacing
+ * that actually matters; the canvas is whatever height delivers it.
+ */
+/* The mission that closes act one, found rather than numbered: a hard-coded 7
+   would quietly point at the wrong level the first time the campaign is
+   reordered, and the half-time story beat would fire in the wrong place. */
+const ACT_ONE_END = MISSIONS.findIndex(m => m.boss === "sentinel");
+
+const MAP_W = 640;
+const ROUTE_GAP = 108;          // vertical pixels between stops, canvas-space
+const ROUTE_SPAN = 0.80;        // fraction of the height the route occupies
+function mapHeight(){
+  return Math.round(ROUTE_GAP * (MISSIONS.length - 1) / ROUTE_SPAN);
+}
+
 function campaignLayout(){
   const n = MISSIONS.length;
   return MISSIONS.map((m, i) => {
@@ -289,22 +308,33 @@ function campaignLayout(){
       // Period chosen so no two neighbours land on the same side: at 1.15 the
       // last two stops sat almost on top of each other.
       x: 0.5 + Math.sin(i*0.85 + 0.6) * 0.30,
-      y: 0.90 - k*0.80,
+      y: 0.90 - k*ROUTE_SPAN,
     };
   });
 }
 
-/* Named stretches, so the route reads as a journey rather than eight dots. */
+/* Named stretches, so the route reads as a journey rather than fourteen dots. */
 const SECTORS = [
-  { at:0, name:"HOME PATROL" },
-  { at:2, name:"THE BELT" },
-  { at:4, name:"DEEP RUN" },
-  { at:6, name:"ENEMY SPACE" },
+  { at:0,  name:"HOME PATROL" },
+  { at:2,  name:"THE BELT" },
+  { at:4,  name:"DEEP RUN" },
+  { at:6,  name:"ENEMY SPACE" },
+  { at:8,  name:"THE CHASE" },
+  { at:10, name:"WARDEN SPACE" },
+  { at:12, name:"THEIR STAR" },
 ];
 
 function renderMissions(){
   const stars = P.totalStars(profile);
   $("missionStars").textContent = stars + " / " + (MISSIONS.length*3) + " ★ collected";
+
+  // Size the map to the campaign, not the other way round.
+  const cv = $("campaignCanvas");
+  const wantH = mapHeight();
+  if(cv && (cv.width !== MAP_W || cv.height !== wantH)){
+    cv.width = MAP_W; cv.height = wantH;
+    campaign.sky = null;                     // painted at the old size
+  }
 
   const nodes = campaignLayout();
   const holder = $("campaignNodes");
@@ -340,6 +370,25 @@ function renderMissions(){
       : "Nobody has flown this yet - claim it"}</span>`;
 
   startCampaignLoop();
+  scrollToNextStop(next);
+}
+
+/*
+ * A fourteen-stop map is taller than the screen, and the stop you want is the
+ * furthest one - so opening the campaign used to show you mission 14's empty
+ * sky while your actual next mission sat off-screen below. Centre it instead.
+ */
+function scrollToNextStop(index){
+  const screen = screens["screen-missions"];
+  const map = $("missionList");
+  if(!screen || !map) return;
+  const nodes = campaignLayout();
+  const node = nodes[index];
+  if(!node) return;
+  const y = map.offsetTop + node.y * map.offsetHeight;
+  const target = y - screen.clientHeight/2;
+  const max = screen.scrollHeight - screen.clientHeight;
+  screen.scrollTop = Math.max(0, Math.min(max, target));
 }
 
 function startCampaignLoop(){
@@ -1164,6 +1213,8 @@ function showResults(result){
   renderMenu();
   (unlocked || []).forEach(queueToast);
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
+  // Clearing the Sentinel used to be the end of the game; now it's half time.
+  else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
 }
 
 /**

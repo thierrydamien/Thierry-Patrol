@@ -78,6 +78,49 @@ const BOSSES = {
       { at:0.33, speed:165, telegraph:0.32, gap:[0.6,1.0], attacks:["ringBurst","sweepBeam","aimedBurst"], enrage:true },
     ],
   },
+  /*
+   * Act 2's mid-boss. Its whole idea is the arena shrinking: it seeds mines
+   * rather than shooting at you, so the longer you take the less room you have.
+   * Blow the two hatches off early and it can't do that any more - the fight
+   * you get is the one you earn.
+   */
+  warden: {
+    name: "THE WARDEN",
+    hp: 1150, fightSeconds: 50, size: 158, tint: "#22d3ee", entryY: 152,
+    weakPoints: [
+      { id:"leftHatch",  x:-56, y: 16, r:18, hp:130, disables:"mineField" },
+      { id:"rightHatch", x: 56, y: 16, r:18, hp:130, disables:"mineField" },
+      { id:"spine",      x:  0, y:-16, r:21, hp:180, disables:"spiralArms" },
+    ],
+    phases: [
+      { at:1.00, speed: 85, telegraph:0.55, gap:[1.3,1.8], attacks:["mineField","aimedBurst","spreadVolley"] },
+      { at:0.60, speed:125, telegraph:0.44, gap:[1.0,1.4], attacks:["spiralArms","mineField","sweepBeam"] },
+      { at:0.28, speed:170, telegraph:0.32, gap:[0.6,1.0], attacks:["spiralArms","ringBurst","aimedBurst"], enrage:true },
+    ],
+  },
+  /*
+   * The finale, and the only four-phase fight in the game. Each phase takes
+   * something else away from you: room, then cover, then time. Four weak
+   * points means a well-aimed run can strip it down to almost nothing, which
+   * is the reward for having learned every earlier boss.
+   */
+  leviathan: {
+    name: "THE LEVIATHAN",
+    hp: 1700, fightSeconds: 66, size: 176, tint: "#f97316", entryY: 164,
+    weakPoints: [
+      { id:"core",      x:  0, y:-18, r:22, hp:220, disables:"sweepBeam" },
+      { id:"leftPod",   x:-62, y: 14, r:18, hp:150, disables:"spiralArms" },
+      { id:"rightPod",  x: 62, y: 14, r:18, hp:150, disables:"ringBurst" },
+      { id:"hatch",     x:  0, y: 44, r:19, hp:165, disables:"callMinions" },
+    ],
+    phases: [
+      { at:1.00, speed: 88, telegraph:0.55, gap:[1.3,1.8], attacks:["spreadVolley","aimedBurst","sweepBeam"] },
+      { at:0.75, speed:120, telegraph:0.46, gap:[1.0,1.4], attacks:["spiralArms","callMinions","spreadVolley"] },
+      { at:0.45, speed:158, telegraph:0.36, gap:[0.8,1.1], attacks:["ringBurst","mineField","sweepBeam","aimedBurst"] },
+      { at:0.18, speed:200, telegraph:0.28, gap:[0.5,0.85],
+        attacks:["spiralArms","ringBurst","aimedBurst","sweepBeam"], enrage:true },
+    ],
+  },
 };
 
 /* ---------------------------------------------------------
@@ -278,8 +321,8 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:8, name:"Sky Sentinel", subtitle:"Final stand",
-    brief:"Everything they have left, plus their giant flagship. You have got this.",
+    id:8, name:"Sky Sentinel", subtitle:"Their flagship",
+    brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
     waves: [
       w(1,   "grunt",   10, "arc"),
       w(8,   "swooper",  6, "vee", { elite: 1 }),
@@ -309,6 +352,183 @@ const MISSIONS = [
       w(138, "kamikaze",11, "pincer"),
     ],
     boss: "sentinel",
+    objectives: ["complete","kill90","rescueAll"],
+  },
+
+  /* =========================================================
+     ACT TWO
+     The Sentinel falling doesn't end the war, it starts the
+     chase: 9-14 run the other way up the lane, into their
+     space. Every mission here assumes you own several upgrades
+     and knows every archetype by sight, so they lead with
+     combinations rather than introductions.
+     ========================================================= */
+  {
+    id:9, name:"The Wreck Line", subtitle:"Through the debris",
+    brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
+    waves: [
+      w(1,   "asteroid", 6, "scatter"),
+      w(7,   "grunt",   10, "arc"),
+      w(14,  "boulder",  2, "twinColumns"),
+      w(18,  "striker",  6, "sides"),
+      w(26,  "asteroid", 7, "scatter"),
+      w(30,  "weaver",  10, "tripleColumns"),
+      w(38,  "boulder",  2, "sides"),
+      w(42,  "swooper",  8, "pincer"),
+      w(50,  "carrier",  2, "twinColumns"),
+      w(55,  "asteroid", 8, "scatter"),
+      w(58,  "brute",    4, "wall", { elite: 1 }),
+      w(66,  "thief",    2, "sides"),
+      w(70,  "boulder",  3, "tripleColumns"),
+      w(75,  "striker",  7, "vee"),
+      w(83,  "kamikaze", 8, "arc"),
+      w(91,  "carrier",  2, "sides"),
+      w(96,  "asteroid", 9, "scatter"),
+      w(99,  "weaver",  11, "wall"),
+      w(107, "boulder",  3, "twinColumns"),
+      w(111, "grunt",   13, "pincer"),
+      w(119, "brute",    5, "line", { elite: 2 }),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:10, name:"The Hatchery", subtitle:"It keeps growing",
+    brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
+    waves: [
+      w(1,   "hive",     2, "twinColumns"),
+      w(8,   "grunt",   11, "wall"),
+      w(15,  "splitter", 5, "arc"),
+      w(23,  "hive",     2, "sides"),
+      w(28,  "swooper",  9, "vee"),
+      w(36,  "splitter", 6, "tripleColumns"),
+      w(44,  "hive",     3, "tripleColumns"),
+      w(49,  "carrier",  2, "twinColumns"),
+      w(54,  "mender",   2, "sides"),
+      w(56,  "brute",    5, "wall"),           // ...being patched up as you shoot
+      w(64,  "splitter", 6, "pincer"),
+      w(72,  "hive",     3, "arc"),
+      w(78,  "interceptor", 7, "line"),
+      w(86,  "weaver",  11, "scatter"),
+      w(94,  "carrier",  2, "sides"),
+      w(99,  "mender",   3, "tripleColumns"),
+      w(102, "splitter", 7, "wall"),
+      w(110, "hive",     3, "twinColumns"),
+      w(117, "swooper", 10, "arc", { elite: 2 }),
+      w(125, "grunt",   14, "wall"),
+      w(133, "splitter", 8, "sides"),
+    ],
+    objectives: ["complete","killAll","rescueAll"],
+  },
+  {
+    id:11, name:"The Warden", subtitle:"Their jailer",
+    brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
+    waves: [
+      w(1,   "striker",  7, "arc"),
+      w(8,   "bomber",   3, "twinColumns"),
+      w(16,  "shielder", 2, "sides"),
+      w(18,  "brute",    5, "wall"),
+      w(26,  "carrier",  3, "tripleColumns"),
+      w(33,  "sniper",   4, "sides"),
+      w(38,  "kamikaze", 9, "pincer"),
+      w(46,  "bomber",   3, "arc"),
+      w(50,  "turret",   4, "twinColumns", { elite: 1 }),
+      w(58,  "weaver",  11, "wall"),
+      w(64,  "shielder", 2, "twinColumns"),
+      w(66,  "striker",  8, "tripleColumns", { elite: 1 }),
+      w(74,  "carrier",  2, "sides"),
+      w(79,  "mine",     6, "scatter"),
+      w(82,  "swooper", 10, "vee"),
+      w(90,  "bomber",   4, "sides"),
+      w(95,  "brute",    5, "line", { elite: 2 }),
+      w(103, "grunt",   13, "wall"),
+    ],
+    boss: "warden",
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:12, name:"Cold Approach", subtitle:"Line up the shot",
+    brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
+    waves: [
+      w(1,   "sniper",   4, "sides"),
+      w(8,   "turret",   3, "tripleColumns"),
+      w(16,  "sniper",   5, "arc"),
+      w(23,  "interceptor", 7, "line"),
+      w(31,  "turret",   4, "twinColumns", { elite: 1 }),
+      w(39,  "sniper",   5, "twinColumns"),
+      w(46,  "carrier",  2, "sides"),
+      w(51,  "shielder", 3, "tripleColumns"),
+      w(53,  "sniper",   5, "sides"),         // ...shooting from behind bubbles
+      w(61,  "brute",    5, "wall", { elite: 1 }),
+      w(69,  "interceptor", 9, "pincer"),
+      w(77,  "turret",   5, "arc", { elite: 1 }),
+      w(85,  "sniper",   6, "tripleColumns"),
+      w(92,  "carrier",  3, "twinColumns"),
+      w(97,  "mender",   3, "sides"),
+      w(100, "striker",  9, "wall", { elite: 1 }),
+      w(108, "sniper",   6, "sides"),
+      w(116, "kamikaze",10, "scatter"),
+      w(124, "turret",   5, "twinColumns", { elite: 2 }),
+    ],
+    objectives: ["complete","kill90","noDamage"],
+  },
+  {
+    id:13, name:"All Hands", subtitle:"Everyone who is left",
+    brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
+    waves: [
+      w(1,   "carrier",  3, "tripleColumns"),
+      w(8,   "swooper",  9, "arc", { elite: 1 }),
+      w(16,  "carrier",  3, "twinColumns"),
+      w(23,  "hive",     3, "sides"),
+      w(30,  "brute",    5, "wall", { elite: 1 }),
+      w(38,  "carrier",  3, "sides"),
+      w(44,  "thief",    3, "tripleColumns"),  // they want the payday, not you
+      w(48,  "splitter", 7, "arc"),
+      w(56,  "carrier",  4, "tripleColumns"),
+      w(62,  "shielder", 3, "twinColumns"),
+      w(64,  "sniper",   6, "sides"),
+      w(72,  "boulder",  3, "twinColumns"),
+      w(77,  "kamikaze",11, "pincer"),
+      w(85,  "carrier",  3, "twinColumns"),
+      w(91,  "mender",   3, "arc"),
+      w(93,  "brute",    6, "line", { elite: 2 }),
+      w(101, "bomber",   4, "sides"),
+      w(106, "weaver",  12, "wall"),
+      w(114, "carrier",  4, "sides"),
+      w(120, "thief",    3, "twinColumns"),
+      w(124, "striker",  9, "tripleColumns", { elite: 2 }),
+      w(132, "grunt",   14, "scatter"),
+      w(140, "carrier",  3, "tripleColumns"),
+    ],
+    objectives: ["complete","rescueAll","killAll"],
+  },
+  {
+    id:14, name:"The Leviathan", subtitle:"The last one",
+    brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
+    waves: [
+      w(1,   "grunt",   12, "wall"),
+      w(8,   "striker",  8, "arc", { elite: 1 }),
+      w(16,  "hive",     3, "twinColumns"),
+      w(23,  "brute",    6, "tripleColumns", { elite: 1 }),
+      w(31,  "swooper", 10, "pincer", { elite: 1 }),
+      w(39,  "shielder", 3, "sides"),
+      w(41,  "turret",   5, "twinColumns", { elite: 1 }),
+      w(49,  "carrier",  3, "tripleColumns"),
+      w(55,  "sniper",   6, "sides"),
+      w(60,  "splitter", 8, "wall"),
+      w(68,  "boulder",  4, "tripleColumns"),
+      w(73,  "kamikaze",11, "scatter"),
+      w(81,  "mender",   3, "twinColumns"),
+      w(83,  "brute",    6, "wall", { elite: 2 }),
+      w(91,  "interceptor", 10, "sides"),
+      w(99,  "bomber",   4, "arc"),
+      w(104, "weaver",  12, "tripleColumns"),
+      w(112, "hive",     3, "sides"),
+      w(118, "carrier",  3, "twinColumns"),
+      w(123, "striker", 10, "wall", { elite: 2 }),
+      w(131, "swooper", 11, "vee", { elite: 2 }),
+      w(139, "grunt",   15, "wall"),
+    ],
+    boss: "leviathan",
     objectives: ["complete","kill90","rescueAll"],
   },
 ];

@@ -701,6 +701,45 @@ End-to-end, a throwaway harness runs the *real* `worker/src/index.js` against a
 `Map`-backed KV shim and drives two independent browser contexts through it:
 join, pull, per-pilot merge, and same-pilot last-write-wins.
 
+## 8r. Act two
+
+The campaign was eight missions and ended on the Sentinel. Doubling it to
+fourteen was mostly data - a mission is an entry in `MISSIONS`, not a branch in
+the game loop, which is what that design was for - but three things did not
+come free.
+
+**The map had to be sized by the campaign, not the other way round.** Stops are
+laid out as fractions of the canvas, so adding six of them moved fourteen stops
+into the space eight used to have: 55px apart, under 76px tap targets. Two
+neighbouring missions shared pixels and you could launch the wrong one. The fix
+is `ROUTE_GAP` - the spacing is the constant now and the canvas height is
+derived from it. The map is taller than the screen as a result, so opening the
+campaign scrolls your next stop to the middle rather than showing you mission
+14's empty sky.
+
+**Act two needed its own skies.** `skygen` picks a backdrop with
+`missionIndex % SKIES.length`, so with eight skies missions 9-14 would have
+silently replayed 1-6 - the exact complaint that produced generated skies in
+the first place. Six more, running colder heading out and hotter as you close
+on their home star, so the run has a direction you can see. There is a check
+for this now: the sky list must be at least as long as the campaign.
+
+**New bosses needed new verbs.** Two more remixes of spreadVolley and ringBurst
+would have made act two feel like act one at higher numbers. So: `spiralArms`,
+two rotating streams with a gap that moves rather than one instant ring, and
+`mineField`, which seeds the arena instead of shooting at you - the boss makes
+the fight harder without ever touching you, and taking your time costs you
+room. Both hang off weak points, so the Warden runs out of mines if you blow
+its hatches off. The Leviathan is the only four-phase fight in the game and has
+four weak points, which is the reward for having learned every earlier boss.
+
+Testing these was worth the detail. Driving a boss to death and asserting it
+used every attack it declares *failed* - correctly. The probe was damaging the
+hull at the boss's centre, which is inside the core weak point's radius, so it
+was disabling attacks as it went. That is the feature working. The check now
+damages away from the weak points to measure phases, and fires every declared
+attack explicitly rather than waiting on a random picker.
+
 ## 9. What I'd do next
 
 Roughly in value order:
