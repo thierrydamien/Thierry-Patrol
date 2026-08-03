@@ -148,6 +148,7 @@ const MISSIONS = [
       w(48,  "carrier", 1, "column"),
       w(50,  "asteroid",4, "scatter"),      // first rocks: dodge them or break them
       w(53,  "weaver",  8, "wall"),
+      w(58,  "sniper",  2, "sides"),        // telegraphed shots: move out of the line
       w(61,  "striker", 5, "tripleColumns"),
       w(69,  "grunt",  10, "pincer"),
       w(77,  "striker", 5, "arc"),
@@ -157,6 +158,7 @@ const MISSIONS = [
       w(96,  "asteroid",5, "scatter"),
       w(98,  "striker", 6, "sides"),
       w(106, "grunt",  12, "wall"),
+      w(110, "sniper",  3, "arc"),
       w(114, "striker", 6, "vee"),
     ],
     objectives: ["complete","kill90","rescueAll"],
@@ -175,6 +177,7 @@ const MISSIONS = [
       w(46,  "grunt",   8, "arc"),
       w(49,  "carrier", 1, "column"),
       w(54,  "striker", 5, "vee"),
+      w(60,  "mender",  1, "column"),       // it repairs what you shot
       w(62,  "brute",   4, "line"),
       w(70,  "grunt",  11, "pincer"),
       w(78,  "turret",  3, "tripleColumns"),
@@ -195,6 +198,7 @@ const MISSIONS = [
       w(8,   "swooper",  4, "line"),
       w(15,  "kamikaze", 5, "sides"),
       w(23,  "weaver",   8, "tripleColumns"),
+      w(28,  "interceptor", 4, "line"),     // this one keeps correcting
       w(31,  "swooper",  6, "vee"),
       w(39,  "kamikaze", 6, "pincer"),
       w(47,  "carrier",  1, "column"),
@@ -205,6 +209,7 @@ const MISSIONS = [
       w(76,  "swooper",  7, "twinColumns"),
       w(84,  "carrier",  1, "column"),
       w(89,  "kamikaze", 8, "sides"),
+      w(94,  "interceptor", 6, "sides"),
       w(97,  "weaver",  10, "line"),
       w(105, "swooper",  8, "pincer"),
       w(109, "splitter", 4, "arc"),
@@ -225,6 +230,7 @@ const MISSIONS = [
       w(39,  "brute",   3, "tripleColumns", { elite: 1 }),
       w(48,  "grunt",  11, "wall"),
       w(56,  "carrier", 2, "twinColumns"),
+      w(61,  "bomber",  2, "twinColumns"),  // mines across the rescue lane
       w(64,  "striker", 6, "vee"),
       w(72,  "swooper", 8, "pincer"),
       w(80,  "carrier", 3, "tripleColumns"),
@@ -254,6 +260,7 @@ const MISSIONS = [
       w(53,  "shielder", 2, "sides"),
       w(55,  "brute",    4, "wall"),        // ...under two Guardians
       w(57,  "swooper",  8, "scatter", { elite: 2 }),
+      w(62,  "hive",     2, "sides"),       // shoot it or the screen fills up
       w(65,  "striker",  7, "line"),
       w(73,  "kamikaze", 8, "sides"),
       w(81,  "brute",    4, "tripleColumns", { elite: 2 }),
@@ -262,6 +269,7 @@ const MISSIONS = [
       w(102, "splitter", 5, "tripleColumns"),
       w(105, "asteroid", 6, "scatter"),
       w(107, "carrier",  2, "sides"),
+      w(112, "mender",   2, "twinColumns"),
       w(115, "swooper",  9, "vee", { elite: 2 }),
       w(123, "grunt",   13, "wall"),
       w(131, "striker",  8, "tripleColumns", { elite: 2 }),
@@ -285,13 +293,18 @@ const MISSIONS = [
       w(62,  "splitter", 5, "wall"),
       w(70,  "boulder",  3, "tripleColumns"),
       w(65,  "swooper",  9, "pincer", { elite: 2 }),
+      w(70,  "hive",     2, "twinColumns"),
       w(73,  "striker",  7, "sides"),
       w(81,  "brute",    5, "line", { elite: 2 }),
       w(90,  "kamikaze", 9, "scatter"),
       w(98,  "weaver",  11, "tripleColumns"),
       w(106, "grunt",   13, "wall"),
       w(114, "striker",  8, "vee", { elite: 2 }),
+      w(118, "sniper",   4, "sides"),
+      w(120, "bomber",   3, "arc"),
       w(122, "turret",   4, "twinColumns", { elite: 1 }),
+      w(126, "mender",   2, "line"),
+      w(128, "interceptor", 8, "wall"),
       w(130, "swooper", 10, "arc", { elite: 2 }),
       w(138, "kamikaze",11, "pincer"),
     ],

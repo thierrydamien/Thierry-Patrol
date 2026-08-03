@@ -353,6 +353,56 @@ Each gets one explanatory radio line the first time it appears in a run. A new
 mechanic nobody explains reads as the game being broken ("why aren't my bullets
 working?"), and that is worth a line of dialogue.
 
+## 8g. The health curve, and why it is per-tier
+
+"Enemies are way too easy to kill with better weapons" was right, and my
+earlier framing - *becoming easy to sweep aside is the reward for upgrading* -
+was only half true. It is the right answer on the easy tiers and the wrong one
+on the hard tiers, where it turned NIGHTMARE into a victory lap.
+
+So health is now two terms. `hpMult` is flat per tier (ACE 2.6x, VETERAN 4.4x,
+NIGHTMARE 7.5x - up from 1.6/2.3/3.2). `hpTrack` is the share of the *player's*
+firepower the tier claws back: 0 on ROOKIE and PILOT, then 0.35 / 0.6 / 0.85.
+Below a reference DPS nothing scales at all, so a beginner never meets inflated
+enemies.
+
+Measured shots-to-kill for a maxed ship, before -> after:
+
+| | grunt | striker | brute | carrier |
+|---|---|---|---|---|
+| PILOT | 1 -> 1 | 1 -> 1 | 1 -> 1 | 2 -> 2 |
+| NIGHTMARE | 2 -> 8 | 3 -> 16 | 7 -> 48 | 9 -> 63 |
+
+PILOT is untouched - upgrades still feel enormous. Note that equal shots-to-kill
+between a stock and a maxed ship is not equal *time*-to-kill: six barrels firing
+twice as fast still clear a screen far quicker, so the payoff survives even
+where the tier claws the most back. In bot playtests the NIGHTMARE kill ratio
+fell from 77% to 50%, which is the "destroy 90% of enemies" star becoming a real
+ask on the hardest tier rather than a formality.
+
+## 8h. Nineteen archetypes, and how to tell them apart
+
+Six more enemies, each defined by the *response* it demands rather than a stat
+line: **Marksman** (telegraphed line - move), **Interceptor** (never commits -
+break the lock), **Minelayer** (area denial - go round), **Mine** (arms and
+self-destructs), **Hive** (grows if ignored - priority target), **Mender**
+(undoes damage - priority target).
+
+Two supporting changes made them possible:
+
+- `behaviourCtx` gained `world`, so a behaviour can spawn (Minelayer, Hive) or
+  reach across the field (Mender). Behaviours still receive no globals.
+- The three ad-hoc "does this count?" checks (`fromBoss`, `hazard`, and now
+  laid mines and hive drones) collapsed into one `counted` flag set at spawn.
+  Without it, spawned adds would inflate the objective total or make 90%
+  unreachable - a bug that would only surface as "this star is impossible".
+
+The readability problem is real and worth naming: all nineteen share one ship
+sprite recoloured at runtime, so telling a Mender from a Marksman was a colour
+memory test. The ones that need a different response now carry an **emblem**
+(◎ ⋔ $ ◈ » ☢ ▤ +) drawn over the hull. Distinct silhouettes would be better and
+need actual art - see the next section.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -362,8 +412,10 @@ Roughly in value order:
 2. **Ship classes** — a second hull with different stats (glass cannon vs
    tank), which doubles the reason to keep earning.
 3. **Wingman AI** — drones that drift and target rather than firing straight.
-4. **Sprite sheets** — the art is 3 PNGs recoloured at runtime; hand-drawn
-   frames for the enemy types would lift the visuals more than any code change.
+4. **Sprite sheets** — the art is 3 PNGs recoloured at runtime, which is now
+   the single biggest weakness: nineteen archetypes share one silhouette and
+   lean on tint plus an emblem to be told apart. Per-archetype art would lift
+   the game more than any code change left on this list.
 5. **Music** — a two-loop synth track (menu/combat) from the existing audio
    engine; no files needed.
 6. **Endless mode** — after mission 8, procedurally generated waves using the

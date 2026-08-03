@@ -60,6 +60,13 @@ const BULLET_TIERS = [
   { color:"#ff7ce5", w:12, h:31, glow:14 },
 ];
 
+const REFERENCE_DPS = 45;
+function hpPowerScale(diff, dps){
+  const track = diff ? (diff.hpTrack || 0) : 0;
+  if(track <= 0 || !dps) return 1;
+  return 1 + track * (Math.max(dps, REFERENCE_DPS)/REFERENCE_DPS - 1);
+}
+
 class World {
   constructor(){
     this.bullets      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:3,dmg:1,pierce:0,homing:0,tier:0,age:0,fromDrone:false }), 320);
@@ -248,6 +255,15 @@ class World {
   }
 
   /* ---------------- ENEMIES ---------------- */
+  /*
+   * How much enemy health follows the player's firepower, per tier.
+   *
+   * REFERENCE_DPS is roughly a modestly-upgraded ship; below it nothing
+   * scales, so a beginner never meets inflated enemies. Above it, `hpTrack`
+   * decides how much of that extra firepower the tier claws back: none on
+   * ROOKIE and PILOT (upgrades should feel enormous there), most of it on
+   * NIGHTMARE (which should stay a fight however good your guns are).
+   */
   spawnEnemy(typeId, x, y, opts){
     const type = ENEMY_TYPES[typeId];
     const o = opts || {};
@@ -267,7 +283,8 @@ class World {
     const dps = this.player ? this.player.dps : 0;
     e.hp = type.toughSeconds && dps > 0
       ? Math.max(type.hp, Math.round(type.toughSeconds * dps * 0.5 * (diff ? diff.hpMult : 1)))
-      : Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1) * (elite ? ELITE.hpMult : 1)));
+      : Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1)
+                               * hpPowerScale(diff, dps) * (elite ? ELITE.hpMult : 1)));
     e.maxHp = e.hp;
     e.r = type.r * (elite ? ELITE.sizeMult : 1);
     e.size = type.size * (elite ? ELITE.sizeMult : 1);
@@ -285,9 +302,16 @@ class World {
     e.escaped = false;
     e.fromBoss = false;   // set by the boss for summoned adds
     e.hazard = !!type.hazard;
+    // Whether this enemy is part of the mission's planned opposition. Rocks,
+    // boss adds, laid mines and hive drones are all real threats but none of
+    // them were "planned", so counting them would quietly break the kill
+    // objectives - either inflating the total or making 90% unreachable.
+    e.counted = !type.hazard && !o.uncounted;
     e.shielded = false;   // recomputed every frame from live Guardians
     e.loot = 0; e.stolen = 0; e.fleeing = false; e.patience = 0;
     e.spin = 0; e.spinRate = rand(-1.6, 1.6);
+    e.charge = 0; e.chargeTime = type.chargeTime || 2;
+    e.dropTimer = 0; e.fuse = 0; e.healTarget = null;
     if(o.vx != null) e.vx = o.vx;
     if(o.vy != null) e.vy = o.vy;
     e.life = 0;

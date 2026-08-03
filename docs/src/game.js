@@ -209,7 +209,7 @@ const callbacks = {
   onEnemyKilled(e, bullet, byRamming){
     const run = game.run;
     e.alive = false;
-    if(!e.fromBoss && !e.hazard){ run.stats.kills++; }
+    if(e.counted){ run.stats.kills++; }
 
     // A thief drops everything it lifted. Killing one mid-run is a real save,
     // so it pays back visibly rather than silently.
@@ -274,7 +274,7 @@ const callbacks = {
       fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH $" + e.loot, "#ff5d73", 19, true);
       SF.comms.say("thiefEscaped", { n: e.loot });
     }
-    if(e.hazard) return;
+    if(!e.counted) return;
     run.stats.escaped++;
     if(e.carriesRescue){
       fx.text(VW/2, VH*0.5, "HAULER ESCAPED", "#ff5d73", 19, true);
@@ -417,6 +417,7 @@ function useOverdrive(){
 const behaviourCtx = {
   VW, VH, player: null, difficulty: null, smart: 0,
   pickups: null,          // the Coin Thief hunts loose coins
+  world: null,            // minelayers, hives and menders reach into the field
   onEscape: null,
   onEnemyKilled: null, onBossHit: null, onPlayerHit: null, godMode: false,
 };
@@ -433,6 +434,7 @@ function update(dt, timeMs){
 
   behaviourCtx.player = game.world.player;
   behaviourCtx.pickups = game.world.pickups;
+  behaviourCtx.world = game.world;
   behaviourCtx.difficulty = run.difficulty;
   behaviourCtx.smart = run.difficulty.smart;
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
@@ -557,7 +559,9 @@ function update(dt, timeMs){
  * the game being broken ("why aren't my bullets working?").
  */
 const THREAT_LINES = { shielder:"guardian", thief:"thiefSpotted", splitter:"splitter",
-                       asteroid:"asteroids", boulder:"boulders" };
+                       asteroid:"asteroids", boulder:"boulders", sniper:"sniper",
+                       mender:"mender", hive:"hive", bomber:"bomber",
+                       interceptor:"interceptor" };
 function announceNewThreats(){
   const run = game.run;
   const items = game.world.enemies.items;

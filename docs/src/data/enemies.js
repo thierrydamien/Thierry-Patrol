@@ -130,6 +130,104 @@ const BEHAVIOURS = {
     if(e.patience > 11) e.fleeing = true;
   },
 
+  /**
+   * Parks near the top and takes deliberate, telegraphed shots. `charge`
+   * counts up while it aims - the renderer draws the line it is about to
+   * fire down, so you always get a moment to step out of it.
+   */
+  sniper(e, dt, c){
+    if(e.state === 0){
+      e.y += e.vy * dt;
+      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; }
+      return;
+    }
+    e.x += Math.sin(e.phase += dt*0.7) * 26 * dt;
+    e.charge = (e.charge || 0) + dt;
+    if(e.charge >= e.chargeTime){
+      e.charge = 0;
+      if(c.player && c.world){
+        const dx = c.player.x - e.x, dy = c.player.y - e.y;
+        const l = Math.max(1, Math.hypot(dx, dy));
+        c.world.spawnEnemyBullet(e.x, e.y + e.r, dx/l*430, dy/l*430, "aimed", 5.5);
+      }
+    }
+  },
+
+  /**
+   * Matches your column and comes down on top of you. Unlike a kamikaze it
+   * never commits - it keeps correcting, so you have to actually break the
+   * lock by moving rather than just sidestepping once.
+   */
+  intercept(e, dt, c){
+    const target = c.player ? c.player.x : c.VW/2;
+    e.x = lerp(e.x, target, Math.min(1, dt * (1.1 + c.smart*0.35)));
+    e.y += e.vy * (e.y > c.VH*0.5 ? 1.25 : 0.85) * dt;
+  },
+
+  /**
+   * Lays mines and lumbers on. The mines are the point: they turn a corner
+   * of the screen into somewhere you can't fly for a while.
+   */
+  bomber(e, dt, c){
+    e.y += e.vy * 0.75 * dt;
+    e.x += Math.sin(e.phase += dt*0.8) * 60 * dt;
+    e.dropTimer = (e.dropTimer || 1.2) - dt;
+    if(e.dropTimer <= 0 && c.world && e.y > 40 && e.y < c.VH*0.7){
+      e.dropTimer = 2.4;
+      const m = c.world.spawnEnemy("mine", e.x, e.y + 18, { difficulty: c.difficulty, uncounted: true });
+      m.vy = 34;
+    }
+  },
+
+  /** A dropped mine: drifts, arms, then goes off on its own if you leave it. */
+  mine(e, dt, c){
+    e.y += e.vy * dt;
+    e.fuse = (e.fuse || 0) + dt;
+    if(e.fuse > 9) e.hp = 0;      // resolved as a kill next collision pass
+  },
+
+  /**
+   * Hangs back and keeps making more of them. Left alone the screen fills up,
+   * so it is the thing you should be shooting even though it never shoots you.
+   */
+  hive(e, dt, c){
+    if(e.state === 0){
+      e.y += e.vy * dt;
+      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; }
+      return;
+    }
+    e.x += Math.sin(e.phase += dt*0.6) * 40 * dt;
+    e.dropTimer = (e.dropTimer || 2.2) - dt;
+    if(e.dropTimer <= 0 && c.world){
+      e.dropTimer = 2.8;
+      const d = c.world.spawnEnemy("shard", e.x, e.y + 14, { difficulty: c.difficulty, uncounted: true });
+      d.vy = 150;
+    }
+  },
+
+  /**
+   * Repairs whatever near it is hurt. Pairs with the Guardian as the other
+   * "shoot this one first" answer - except a Mender undoes work you have
+   * already done, which is more annoying and therefore more motivating.
+   */
+  mender(e, dt, c){
+    e.y += e.vy * (e.y < e.hoverY ? 1 : 0.15) * dt;
+    e.healTarget = null;
+    if(!c.world) return;
+    const items = c.world.enemies.items;
+    let best = null, bestD = 200*200;
+    for(let i=0;i<items.length;i++){
+      const o = items[i];
+      if(!o.alive || o === e || o.hp >= o.maxHp || o.type.heals) continue;
+      const d = (o.x-e.x)*(o.x-e.x) + (o.y-e.y)*(o.y-e.y);
+      if(d < bestD){ bestD = d; best = o; }
+    }
+    if(best){
+      e.healTarget = best;
+      best.hp = Math.min(best.maxHp, best.hp + best.maxHp * 0.22 * dt);
+    }
+  },
+
   /** A rock. Tumbles down on a fixed drift - no thinking, just mass. */
   tumble(e, dt){
     e.y += e.vy * dt;
@@ -227,12 +325,12 @@ const ENEMY_TYPES = {
   /* --- the ones that change how you play, not just what you shoot --- */
 
   shielder: {
-    name:"Guardian", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
+    name:"Guardian", glyph:"◎", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
     score:34, money:34, tint:"#22d3ee", fire:null,
     shieldRadius:135,          // everything inside this is untouchable
   },
   splitter: {
-    name:"Splitter", behaviour:"dive", hp:4, r:19, size:58, speed:118,
+    name:"Splitter", glyph:"⋔", behaviour:"dive", hp:4, r:19, size:58, speed:118,
     score:20, money:18, tint:"#4ade80",
     splitsInto:{ type:"shard", n:3 },
     fire:{ pattern:"straight", every:[2.6,4.0], speed:240 },
@@ -242,7 +340,7 @@ const ENEMY_TYPES = {
     score:6, money:5, tint:"#86efac", fire:null,
   },
   thief: {
-    name:"Coin Thief", behaviour:"thief", hp:3, r:15, size:46, speed:190,
+    name:"Coin Thief", glyph:"$", behaviour:"thief", hp:3, r:15, size:46, speed:190,
     score:18, money:16, tint:"#facc15", fire:null,
   },
   asteroid: {
@@ -256,6 +354,33 @@ const ENEMY_TYPES = {
    * target. Break it and you get three asteroids and a real payout; leave it
    * and you have to fly around a rock the size of your ship for ten seconds.
    */
+  sniper: {
+    name:"Marksman", glyph:"◈", behaviour:"sniper", hp:3, r:16, size:50, speed:130,
+    score:22, money:20, tint:"#f472b6", fire:null,
+    chargeTime:1.7,            // long enough to see the line and move
+  },
+  interceptor: {
+    name:"Interceptor", glyph:"»", behaviour:"intercept", hp:2, r:14, size:44, speed:150,
+    score:16, money:15, tint:"#fb923c",
+    fire:{ pattern:"straight", every:[2.2,3.4], speed:270 },
+  },
+  bomber: {
+    name:"Minelayer", glyph:"☢", behaviour:"bomber", hp:9, r:22, size:68, speed:96,
+    score:32, money:32, tint:"#a3e635", fire:null,
+  },
+  mine: {
+    name:"Mine", behaviour:"mine", hp:1, r:12, size:30, speed:34,
+    score:3, money:3, tint:"#ef4444", fire:null,
+  },
+  hive: {
+    name:"Hive", glyph:"▤", behaviour:"hive", hp:11, r:24, size:76, speed:104,
+    score:44, money:44, tint:"#c084fc", fire:null,
+  },
+  mender: {
+    name:"Mender", glyph:"+", behaviour:"mender", hp:6, r:19, size:56, speed:110,
+    score:30, money:30, tint:"#34d399", fire:null,
+    heals:true,
+  },
   boulder: {
     name:"Boulder", behaviour:"tumble", hp:52, r:50, size:142, speed:62,
     score:60, money:95, tint:"#94a3b8", fire:null,

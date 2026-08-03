@@ -71,6 +71,26 @@ const COMMS = {
     "It got away with ${n}! Get the next one.",
     "There goes ${n}. Faster next time, {you}.",
   ]},
+  sniper: { speaker:"control", cooldown:22, lines:[
+    "Marksman locking on - get out of that line!",
+    "See the pink line? Don't be standing in it.",
+  ]},
+  mender: { speaker:"mate", cooldown:22, lines:[
+    "The green one is fixing them! Shoot that first.",
+    "They're healing each other, {you}.",
+  ]},
+  hive: { speaker:"control", cooldown:22, lines:[
+    "That Hive keeps making more - kill it, {you}.",
+    "More of them every second. Take out the big purple one.",
+  ]},
+  bomber: { speaker:"mate", cooldown:22, lines:[
+    "Mines! Don't fly into those.",
+    "It's dropping mines, {you} - go round.",
+  ]},
+  interceptor: { speaker:"mate", cooldown:22, lines:[
+    "Those ones are following you!",
+    "It's matching you, {you} - swerve hard.",
+  ]},
   boulders: { speaker:"control", cooldown:40, lines:[
     "Those big ones take a beating, {you} - keep on them.",
     "Boulder field. Break them up and collect, or fly around.",

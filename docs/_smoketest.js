@@ -384,6 +384,83 @@ async function run(){
     }
   }
 
+  /* ---------- the health curve across tiers ---------- */
+  {
+    const W = SF.game.world;
+    const maxed = SF.profile.blank("Maxed");
+    maxed.upgrades = { spread:5, rapid:5, damage:5, wingman:2 };
+    const stock = SF.profile.blank("Stock");
+    const hpFor = (prof, tierId) => {
+      const tier = SF.config.DIFFICULTY_BY_ID[tierId];
+      W.reset(); W.createPlayer(SF.game.buildLoadout(prof, tier));
+      return W.spawnEnemy("grunt", 100, 100, { difficulty: tier }).hp;
+    };
+    check("easy tiers do not scale enemies to your guns",
+      hpFor(maxed, "pilot") === hpFor(stock, "pilot"));
+    check("hard tiers do scale enemies to your guns",
+      hpFor(maxed, "nightmare") > hpFor(stock, "nightmare") * 3);
+    check("each tier is meaningfully tougher than the last",
+      hpFor(stock,"pilot") < hpFor(stock,"ace") &&
+      hpFor(stock,"ace") < hpFor(stock,"veteran") &&
+      hpFor(stock,"veteran") < hpFor(stock,"nightmare"));
+    check("a maxed ship still meets a real wall on NIGHTMARE",
+      hpFor(maxed, "nightmare") >= 8 * hpFor(maxed, "pilot"));
+  }
+
+  /* ---------- the enemies that do something other than shoot ---------- */
+  {
+    const W = SF.game.world, diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    W.reset(); W.createPlayer(SF.game.buildLoadout(SF.profile.blank("B"), diff));
+    const B = SF.enemyData.BEHAVIOURS;
+    const ctxd = { VW:SF.entityConst.VW, VH:SF.entityConst.VH, player:W.player,
+                   difficulty:diff, smart:0, world:W, pickups:W.pickups, onEscape(){} };
+
+    // Mender repairs what you already shot.
+    const hurt = W.spawnEnemy("brute", 300, 260, { difficulty: diff });
+    hurt.hp = 1;
+    const doc2 = W.spawnEnemy("mender", 300, 240, { difficulty: diff });
+    doc2.y = doc2.hoverY + 10;
+    for(let i=0;i<60;i++) B.mender(doc2, 1/60, ctxd);
+    check("a Mender repairs a damaged enemy", hurt.hp > 1);
+    check("a Mender shows you what it is repairing", doc2.healTarget === hurt);
+
+    // Hive keeps producing, and its drones are not part of the mission count.
+    W.reset(); W.createPlayer(SF.game.buildLoadout(SF.profile.blank("B"), diff));
+    ctxd.player = W.player; ctxd.pickups = W.pickups;
+    const hive = W.spawnEnemy("hive", 300, 400, { difficulty: diff });
+    hive.state = 1;
+    const before = W.countEnemies();
+    for(let i=0;i<400;i++) B.hive(hive, 1/60, ctxd);
+    check("a Hive keeps making more of them", W.countEnemies() > before);
+    check("Hive drones do not count toward the mission's kill total",
+      W.enemies.items.filter(e => e.alive && e.typeId === "shard").every(e => e.counted === false));
+
+    // Minelayer leaves mines behind it.
+    const bomber = W.spawnEnemy("bomber", 200, 120, { difficulty: diff });
+    for(let i=0;i<300;i++) B.bomber(bomber, 1/60, ctxd);
+    const mines = W.enemies.items.filter(e => e.alive && e.typeId === "mine");
+    check("a Minelayer actually lays mines", mines.length > 0);
+    check("a mine goes off on its own if you leave it", (() => {
+      const m = mines[0];
+      for(let i=0;i<700;i++) B.mine(m, 1/60, ctxd);
+      return m.hp <= 0;
+    })());
+
+    // Marksman charges before it fires, so the shot is always telegraphed.
+    const shots0 = W.enemyBullets.items.filter(b => b.alive).length;
+    const snip = W.spawnEnemy("sniper", 300, 100, { difficulty: diff });
+    snip.state = 1; snip.charge = 0;
+    B.sniper(snip, 1/60, ctxd);
+    check("a Marksman aims before it shoots",
+      snip.charge > 0 && W.enemyBullets.items.filter(b => b.alive).length === shots0);
+    for(let i=0;i<200;i++) B.sniper(snip, 1/60, ctxd);
+    check("a Marksman does eventually fire",
+      W.enemyBullets.items.filter(b => b.alive).length > shots0);
+  }
+
+  check("the game has a wide roster of enemies",
+    Object.keys(SF.enemyData.ENEMY_TYPES).length >= 18);
+
   /* ---------- boss mission ---------- */
   const p2 = JSON.parse(window.localStorage.getItem("skyforce_profile_Marc"));
   [1,2,3,4].forEach(mid => { p2.missions[mid] = { cleared:true, stars:{ pilot:3 }, best:{} }; });

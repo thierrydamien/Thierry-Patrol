@@ -277,11 +277,41 @@ function drawEnemies(ctx, world, timeMs){
     ctx.setLineDash([]);
   }
 
+  // Telegraphs and beams go under the sprites, so nothing is ever hidden by
+  // the warning about it.
+  for(let i=0;i<items.length;i++){
+    const e = items[i];
+    if(!e.alive) continue;
+    // A Marksman draws the line it is about to fire down, filling as it aims.
+    if(e.type.chargeTime && e.state === 1 && world.player){
+      const k = clamp(e.charge/e.chargeTime, 0, 1);
+      const dx = world.player.x - e.x, dy = world.player.y - e.y;
+      const l = Math.max(1, Math.hypot(dx, dy));
+      ctx.strokeStyle = "rgba(244,114,182," + (0.15 + k*0.55) + ")";
+      ctx.lineWidth = 1 + k*2.5;
+      ctx.setLineDash([9, 7]);
+      ctx.beginPath();
+      ctx.moveTo(e.x, e.y);
+      ctx.lineTo(e.x + dx/l*VH, e.y + dy/l*VH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // A Mender's repair beam - the thing you want to cut.
+    if(e.healTarget && e.healTarget.alive){
+      ctx.strokeStyle = "rgba(52,211,153,0.75)";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.healTarget.x, e.healTarget.y); ctx.stroke();
+      ctx.fillStyle = "rgba(52,211,153,0.28)";
+      ctx.beginPath(); ctx.arc(e.healTarget.x, e.healTarget.y, e.healTarget.r + 5, 0, TAU); ctx.fill();
+    }
+  }
+
   for(let i=0;i<items.length;i++){
     const e = items[i];
     if(!e.alive) continue;
     const size = e.size * (0.4 + 0.6*easeOutCubic(e.spawnAnim));
     if(e.type.behaviour === "tumble"){ drawAsteroid(ctx, e, size); continue; }
+    if(e.type.behaviour === "mine"){ drawMine(ctx, e, size, t); continue; }
     ctx.save();
     ctx.translate(e.x, e.y);
     if(e.elite){
@@ -302,6 +332,30 @@ function drawEnemies(ctx, world, timeMs){
       ctx.globalCompositeOperation = "lighter";
       ctx.fillStyle = "#ffffff";
       ctx.beginPath(); ctx.arc(e.x, e.y, size*0.42, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    /*
+     * All nineteen archetypes share one ship silhouette (the art is a single
+     * PNG recoloured at runtime), so the ones that need a *different response*
+     * carry an emblem. Without it "which of these is the healer" is a colour
+     * memory test, and at eight years old it just reads as noise.
+     */
+    if(e.type.glyph){
+      const gy = e.y + size*0.06;
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(8,10,20,0.72)";
+      ctx.beginPath(); ctx.arc(e.x, gy, size*0.20, 0, TAU); ctx.fill();
+      ctx.strokeStyle = e.type.tint || "#fff";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(e.x, gy, size*0.20, 0, TAU); ctx.stroke();
+      ctx.fillStyle = e.type.tint || "#fff";
+      ctx.font = "bold " + Math.round(size*0.26) + "px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(e.type.glyph, e.x, gy + 1);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
       ctx.restore();
     }
     if(e.carriesRescue){                          // marker so you know what to shoot
@@ -338,6 +392,33 @@ function drawEnemies(ctx, world, timeMs){
       ctx.fillRect(e.x-w/2, e.y-size/2-7, w*pct, 3);
     }
   }
+}
+
+/* A mine reads as a thing to avoid, not a thing to shoot: spiked, blinking,
+   and blinking faster the closer it is to going off by itself. */
+function drawMine(ctx, e, size, t){
+  const R = size*0.42;
+  const urgency = clamp((e.fuse||0)/9, 0, 1);
+  const blink = Math.sin(t*(6 + urgency*22)) > 0;
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  ctx.rotate((e.fuse||0)*0.6);
+  ctx.strokeStyle = "rgba(120,20,20,0.9)";
+  ctx.lineWidth = Math.max(1.5, R*0.22);
+  for(let n=0;n<6;n++){
+    const a = n/6*TAU;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*R*0.6, Math.sin(a)*R*0.6);
+    ctx.lineTo(Math.cos(a)*R*1.35, Math.sin(a)*R*1.35);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#4b1d1d";
+  ctx.beginPath(); ctx.arc(0, 0, R*0.75, 0, TAU); ctx.fill();
+  ctx.fillStyle = blink ? "#ff4444" : "rgba(255,68,68,0.28)";
+  if(blink){ ctx.shadowColor = "#ff4444"; ctx.shadowBlur = R*0.9; }
+  ctx.beginPath(); ctx.arc(0, 0, R*0.34, 0, TAU); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
 /* Rocks are drawn, not sprited: the enemy art is a ship, and a tumbling

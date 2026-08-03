@@ -57,7 +57,7 @@ class WaveDirector {
         const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
         });
-        if(!spawned.hazard) this.spawnedCount++;
+        if(spawned.counted) this.spawnedCount++;
         this.pending.splice(i, 1);
       }
     }

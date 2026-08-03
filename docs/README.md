@@ -57,9 +57,15 @@ tiers, which pay far more — so the campaign and the Armory feed each other.
 |---|---|---|---|---|
 | ROOKIE | slow, fragile, +1 life | sparse, never aimed | 0.7x | — |
 | PILOT | standard | occasional | 1x | — |
-| ACE | +60% health, faster | 28% aimed, they strafe | 1.8x | 6 ★ |
-| VETERAN | +130% health | 45% aimed, smarter | 2.8x | 14 ★ |
-| NIGHTMARE | +220% health | 62% aimed, ruthless | 4.5x | 24 ★ |
+| ACE | 2.6x health, faster | 28% aimed, they strafe | 1.8x | 6 ★ |
+| VETERAN | 4.4x health | 45% aimed, smarter | 2.8x | 14 ★ |
+| NIGHTMARE | 7.5x health | 62% aimed, ruthless | 4.5x | 24 ★ |
+
+On ROOKIE and PILOT enemy health is exactly as written, so buying guns visibly
+makes things melt — that's the reward for upgrading. The three hard tiers also
+**scale enemy health to the firepower you actually bring**, more so the harder
+you go, so turning up to NIGHTMARE fully kitted out is still a fight rather
+than a victory lap.
 
 ## The Armory
 14 upgrades across 53 levels (~$70,000 to max everything) in four shelves:
@@ -78,17 +84,29 @@ Flight Leader → Star Ace → Wing Commander → Space Legend → Thierry Legen
 Your rank badge shows on the pilot picker, the menu and the Armory card.
 
 ## Enemies that change how you play
-Beyond the eight shooting archetypes, four kinds of trouble that need a
-different answer rather than more bullets:
+**Nineteen archetypes** in all. Beyond the eight that just shoot at you, these
+need a different answer rather than more bullets — and each one carries an
+emblem, because nineteen ships sharing one silhouette in different colours is a
+colour memory test otherwise:
 
-- **Guardian** — projects a shield dome over everything near it. Your shots
+- **Guardian (◎)** — projects a shield dome over everything near it. Your shots
   splash off until you kill the Guardian, which turns a wave into a priority
   problem.
-- **Splitter** — bursts into three homing shards when you kill it. The kill is
-  the start of the problem, not the end of it.
-- **Coin Thief** — hunts your dropped coins and runs for the top of the screen
-  with them. Shoot it down and it drops everything; let it go and that money is
-  gone for good.
+- **Splitter (⋔)** — bursts into three homing shards when you kill it. The kill
+  is the start of the problem, not the end of it.
+- **Coin Thief ($)** — hunts your dropped coins and runs for the top of the
+  screen with them. Shoot it down and it drops everything; let it go and that
+  money is gone for good.
+- **Mender (+)** — repairs damaged enemies with a visible green beam. It undoes
+  work you have already done, which makes it the most annoying thing to ignore.
+- **Hive (▤)** — never shoots you, just keeps producing drones. Leave it and the
+  screen fills up.
+- **Minelayer (☢)** — drops mines that sit, blink faster as they arm, and go off
+  on their own. Turns a corner of the screen into somewhere you can't fly.
+- **Marksman (◈)** — parks and takes deliberate shots, drawing the line it is
+  about to fire down so you always get a moment to move.
+- **Interceptor (»)** — matches your column and keeps correcting. Unlike a
+  kamikaze it never commits, so you have to actually break the lock.
 - **Asteroids** — drifting rocks. Dodge them or break them up for cash. They're
   scenery, not opposition, so they never count against your "destroy the
   enemies" star.
