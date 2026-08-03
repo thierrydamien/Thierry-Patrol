@@ -118,15 +118,15 @@ const DIFFICULTIES = [
     aimed:0.10, fireRate:1.15, smart:0, bonusLives:0, unlockStars:0 },
   { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
     blurb:"Armoured enemies that aim at you. Pays 1.8x.",
-    speed:1.26, spawn:0.80, hpMult:1.6, bossHp:1.5, pay:1.8,
+    speed:1.26, spawn:0.80, hpMult:1.6, bossHp:1.35, pay:1.8,
     aimed:0.28, fireRate:0.95, smart:1, bonusLives:0, unlockStars:6 },
   { id:"veteran", name:"VETERAN", tag:"Brutal", color:"#e74c3c",
     blurb:"Heavy armour, smarter attackers, lots of return fire. Pays 2.8x.",
-    speed:1.50, spawn:0.66, hpMult:2.3, bossHp:2.0, pay:2.8,
+    speed:1.50, spawn:0.66, hpMult:2.3, bossHp:1.7, pay:2.8,
     aimed:0.45, fireRate:0.82, smart:2, bonusLives:0, unlockStars:14 },
   { id:"nightmare", name:"NIGHTMARE", tag:"Insane", color:"#9b59b6",
     blurb:"Everything at once. Only worth trying fully kitted out. Pays 4.5x.",
-    speed:1.80, spawn:0.52, hpMult:3.2, bossHp:2.8, pay:4.5,
+    speed:1.80, spawn:0.52, hpMult:3.2, bossHp:2.2, pay:4.5,
     aimed:0.62, fireRate:0.7, smart:3, bonusLives:0, unlockStars:24 },
 ];
 const DIFFICULTY_BY_ID = {};

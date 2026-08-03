@@ -101,6 +101,7 @@ function startMission(missionIndex, difficultyId){
   game.world.createPlayer(loadout);
 
   const director = new SF.systems.WaveDirector(mission, difficulty, game.world);
+  const wavesEndT = mission.waves.reduce((t, wv) => Math.max(t, wv.t), 0) + 10;
   const stats = {
     spawned: 0, kills: 0, escaped: 0, killRatio: 0,
     rescues: 0, rescuesTotal: director.rescuesPlanned,
@@ -108,11 +109,12 @@ function startMission(missionIndex, difficultyId){
   };
 
   game.run = {
-    mission, missionIndex, difficulty, director, stats,
+    mission, missionIndex, difficulty, director, stats, wavesEndT,
+    halfwayShown: false,
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, progress: 0,
-    objectiveFlashUntil: 0, objectivesMet: 0,
+    objectiveFlashUntil: 0, objectivesMet: 0, finishTimer: 0,
     powerupTimer: rand(12, 20),
     bannerText: mission.name.toUpperCase(), bannerSub: mission.brief,
     bannerColor: "#ffd23f", bannerUntil: performance.now() + 2600,
@@ -293,7 +295,16 @@ function killBoss(boss){
   fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 30, true);
   game.world.boss = null;
   run.bossActive = false;
-  setTimeout(() => { if(!run.ended) endMission(true); }, 1200);
+  // Hold the results back for a beat so the death animation lands. This is a
+  // simulation timer, not a wall-clock setTimeout: a real-time timer would
+  // fire behind the pause overlay, and if it were ever dropped the mission
+  // could never finish at all.
+  run.finishTimer = 1.3;
+}
+
+function pilotName(){
+  const p = game.profile;
+  return ((p && (p.callsign || p.name)) || "PILOT").toUpperCase();
 }
 
 /* ---------------------------------------------------------
@@ -393,13 +404,34 @@ function update(dt, timeMs){
     if(run.phaseTimer <= 0 && !run.ended) endMission(true);
   }
 
+  // Boss defeated: run out the celebration, then hand over to the results.
+  if(run.finishTimer > 0){
+    run.finishTimer -= dt;
+    if(run.finishTimer <= 0 && !run.ended){ endMission(true); return; }
+  }
+
   // Progress readout: waves spawned, then boss health.
   if(run.bossActive && game.world.boss){
-    run.progress = 1 - 0.35*(game.world.boss.hp/game.world.boss.maxHp);
+    run.progress = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
   } else {
-    run.progress = run.director.totalPlanned
-      ? clamp(run.stats.kills / run.director.totalPlanned, 0, 0.65)
-      : 0;
+    const timeline = clamp(run.director.time / run.wavesEndT, 0, 1);
+    const cleared = run.director.totalPlanned
+      ? clamp(run.stats.kills / run.director.totalPlanned, 0, 1) : 0;
+    run.progress = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
+  }
+
+  // Long missions need a beat in the middle: a callout, and a bonus for
+  // getting there, so the second half feels like a new stretch rather than
+  // more of the same.
+  if(!run.halfwayShown && run.phase === "waves" && run.director.time >= run.wavesEndT*0.5){
+    run.halfwayShown = true;
+    const bonus = Math.round(60 * run.difficulty.pay * game.world.player.moneyMult);
+    run.money += bonus;
+    run.bannerText = "HALFWAY";
+    run.bannerSub = "+$" + bonus + " · keep going, " + pilotName() + "!";
+    run.bannerColor = "#4ade80";
+    run.bannerUntil = timeMs + 2000;
+    audio.play("waveClear");
   }
 
   game.world.updatePlayer(dt, timeMs);

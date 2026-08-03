@@ -139,6 +139,12 @@ fly a mission → collect coins + rescue pilots → earn stars for objectives
 ## 5. Mission design
 
 Eight hand-built missions, each a timeline of waves plus an optional boss.
+**Each runs 2-3.5 minutes** (the campaign is ~20 minutes of flying): missions
+are written as three or four acts with deliberate lulls between them, a
+halfway callout and cash bonus at the midpoint, and rising density toward a
+finale. The first pass at 30-45 seconds each was simply too short to build any
+tension - a mission ended before the loadout you'd bought had a chance to
+matter.
 Three star objectives each, drawn from a shared table (`complete`, `kill90`,
 `killAll`, `rescueAll`, `noDamage`, `keepLives`), tracked live in the HUD and
 scored on the results screen.
@@ -193,6 +199,23 @@ Two encounters, both built from the same declarative shape:
   switch can't teleport anything.
 - The next frame is queued *before* the work, so one bad frame can never
   freeze the game mid-run.
+
+## 8b. Two rules the systems enforce
+
+Both of these came out of instrumented playtests where missions failed to end:
+
+- **Nothing may park on the field forever.** A mission ends when the field is
+  clear, so an enemy that can't leave is a soft-lock. Gun Platforms now have a
+  tour of duty, and every enemy carries a 28-second leash after which it dives
+  away whatever its behaviour says.
+- **No gameplay timing on the wall clock.** The boss-defeat celebration used a
+  `setTimeout`, which meant a mission could sit in the boss phase with the boss
+  already dead. Delays that gate progress are simulation timers, ticked in
+  `update()`, so they respect pause and can't be dropped.
+
+Related geometry rule: the ship's ceiling (`PLAY_TOP`) must sit *below* where
+bosses park. When it didn't, bullets spawned above the boss and sailed past it
+- the fight was unwinnable from the top of the screen.
 
 ## 9. What I'd do next
 

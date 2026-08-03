@@ -34,8 +34,10 @@ Pick your pilot, choose a mission, choose a difficulty, fly.
   before it escapes, then fly to the pod it drops.
 
 ## The campaign
-Eight missions, each with three star objectives shown in the briefing and
-tracked live in the HUD:
+Eight missions of **2 to 3.5 minutes** each (about 20 minutes of flying in
+total), each with three star objectives shown in the briefing and tracked live
+in the HUD. Missions are built in acts with lulls between them, a halfway
+bonus, and a build to the finale:
 
 | # | Mission | Teaches | Boss |
 |---|---|---|---|

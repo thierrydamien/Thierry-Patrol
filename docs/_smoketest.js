@@ -72,7 +72,7 @@ function botInput(){
 async function runFrames(n){
   for(let i = 0; i < n; i++){
     frames++;
-    fakeNow += 16.7;
+    fakeNow += 33.4;   // 30fps steps: same simulated time, half the frames
     botInput();
     const batch = pendingFrames;
     pendingFrames = [];
@@ -209,11 +209,11 @@ async function run(){
   check("bomb button visible for a pilot who owns bombs", !id("bombBtn").classList.contains("hidden"));
   check("overdrive button visible too", !id("overdriveBtn").classList.contains("hidden"));
 
-  await runFrames(240);   // past the 2.2s briefing banner
+  await runFrames(120);   // past the 2.2s briefing banner
   check("mission spawns enemies", SF.game.world.enemies.countAlive() > 0);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
 
-  await runFrames(2400);
+  await runFrames(4200);   // mission 1 runs ~1m45 now
   console.log("Mission 1 sim ->", SF.game.run.phase, "spawned:", SF.game.run.stats.spawned,
     "kills:", SF.game.run.stats.kills, "enemies left:", SF.game.world.enemies.countAlive(),
     "state:", SF.game.state);
@@ -243,10 +243,14 @@ async function run(){
   clickEl(id("playBtn"));
   clickEl(qa("#missionList .mission-card")[3]);      // mission 4 - first boss
   clickEl(qa("#briefDifficulties .diff-card")[1]);
-  await runFrames(2800);
+  await runFrames(6000);   // mission 4 is ~3 minutes with its boss
   await sleep(1600);   // the boss death animation holds the results back ~1.2s
   await runFrames(30);
   check("boss mission spawned its boss", !!(SF.game.run && SF.game.run.bossSpawned));
+  check("beating the boss actually ends the mission (no wall-clock timer)",
+    !SF.game.world.boss ? (SF.game.run.ended || SF.game.run.finishTimer > 0) : true);
+  check("no enemy can linger on the field forever",
+    SF.game.world.enemies.items.every(e => !e.alive || e.life <= 40));
   check("boss fight resolved or is still running cleanly",
     !!(SF.game.world.boss || SF.game.run.stats.completed || SF.game.state === "ending" || SF.game.run.ended));
   check("no runtime errors during the boss mission", errors.length === 0);

@@ -103,8 +103,11 @@ const ATTACKS = {
       const n = boss.phase.enrage ? 4 : 3;
       for(let i=0;i<n;i++){
         const x = clamp(boss.x + (i - (n-1)/2)*72, 45, VW-45);
-        world.spawnEnemy(ctxObj.difficulty.smart >= 2 ? "swooper" : "grunt", x, boss.y + 10,
+        const minion = world.spawnEnemy(ctxObj.difficulty.smart >= 2 ? "swooper" : "grunt", x, boss.y + 10,
           { difficulty: ctxObj.difficulty, hoverY: rand(210, 330) });
+        // Summoned adds are not part of the mission roster: counting them would
+        // let a long boss fight inflate (or dilute) the kill objectives.
+        minion.fromBoss = true;
       }
     },
   },

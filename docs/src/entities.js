@@ -42,7 +42,12 @@ function pickFieldWidth(){
 
 const VH = 800;
 const VW = pickFieldWidth();
-const PLAY_TOP = 150;      // ceiling the ship stops at, clear of the HUD
+// The ship's ceiling has to sit *below* where bosses park (their entryY is
+// ~150 and they're ~130 across), otherwise bullets spawn above the boss and
+// sail past it without ever colliding - which made boss fights unwinnable from
+// the top of the screen. It also keeps the ship clear of the HUD strip, and
+// still leaves it two thirds of the field to fly in.
+const PLAY_TOP = 250;
 const PLAY_BOTTOM = VH - 34;
 
 /* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric. */
@@ -267,6 +272,8 @@ class World {
     e.flash = 0; e.hitTint = 0;
     e.carriesRescue = !!type.carriesRescue;
     e.escaped = false;
+    e.fromBoss = false;   // set by the boss for summoned adds
+    e.life = 0;
     e.fireTimer = type.fire ? rand(type.fire.every[0], type.fire.every[1]) * (diff ? diff.fireRate : 1) : Infinity;
     e.spawnAnim = 0;
     return e;
@@ -279,8 +286,16 @@ class World {
       if(!e.alive) continue;
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
+      e.life += dt;
 
-      (BEHAVIOURS[e.behaviour] || BEHAVIOURS.dive)(e, dt, ctxObj);
+      // Safety leash: whatever an archetype's behaviour is, after 28 seconds
+      // on the field it gives up and dives away. A mission only ends when the
+      // field is clear, so nothing is allowed to linger indefinitely.
+      if(e.life > 28){
+        e.y += Math.max(e.speed, 130) * 1.4 * dt;
+      } else {
+        (BEHAVIOURS[e.behaviour] || BEHAVIOURS.dive)(e, dt, ctxObj);
+      }
 
       // Shooting
       const fire = e.type.fire;

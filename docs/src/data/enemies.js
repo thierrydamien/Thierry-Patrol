@@ -73,14 +73,28 @@ const BEHAVIOURS = {
     e.y += e.vy * e.speedMul * dt;
   },
 
-  /** Slides in from a side, parks near the top edge and shells the playfield. */
+  /**
+   * Drops in, then patrols its line shelling the playfield. It has a tour of
+   * duty: once that expires it leaves under its own power. Nothing may park on
+   * the field forever - a permanent enemy the player can't reach would stall
+   * the mission, since a mission only ends when the field is clear.
+   */
   turret(e, dt, c){
     if(e.state === 0){
       e.y += e.vy * dt;
-      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; }
-    } else {
+      if(e.y >= e.hoverY){
+        e.y = e.hoverY;
+        e.state = 1;
+        e.stateTimer = 16 + Math.random()*8;
+        if(!e.vx) e.vx = (Math.random() < 0.5 ? -1 : 1) * (55 + Math.random()*45);
+      }
+    } else if(e.state === 1){
       e.x += e.vx * dt;
       if(e.x < 44 || e.x > c.VW - 44) e.vx *= -1;
+      e.stateTimer -= dt;
+      if(e.stateTimer <= 0) e.state = 2;
+    } else {
+      e.y += e.vy * 1.2 * dt;
     }
   },
 
