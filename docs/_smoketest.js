@@ -265,12 +265,15 @@ async function run(){
 
   /* ---------- mission select ---------- */
   clickEl(id("playBtn"));
-  check("mission list shows all 8 missions", qa("#missionList .mission-card").length === 8);
-  check("only mission 1 is unlocked at the start", qa("#missionList .mission-card.locked").length === 7);
-  clickEl(qa("#missionList .mission-card")[1]);
+  check("the campaign map has a stop for every mission", qa("#campaignNodes .map-node").length === 8);
+  check("only mission 1 is unlocked at the start", qa("#campaignNodes .map-node.locked").length === 7);
+  check("the map says what you're flying next", /\w/.test(id("campaignHint").textContent));
+  await runFrames(3);
+  check("the campaign map draws without errors", errors.length === 0);
+  clickEl(qa("#campaignNodes .map-node")[1]);
   check("locked missions can't be opened", !id("screen-briefing").classList.contains("active"));
 
-  clickEl(qa("#missionList .mission-card")[0]);
+  clickEl(qa("#campaignNodes .map-node")[0]);
   check("briefing opens for mission 1", id("screen-briefing").classList.contains("active"));
   check("briefing lists 3 objectives", qa("#briefObjectives .bo-row").length === 3);
   check("hard tiers are locked until stars are earned", qa("#briefDifficulties .diff-card.locked").length === 3);
@@ -321,7 +324,7 @@ async function run(){
   /* ---------- mission 2 unlocked by finishing 1 ---------- */
   clickEl(id("resultsMenuBtn"));
   check("mission 2 unlocked after clearing mission 1",
-    !qa("#missionList .mission-card")[1].classList.contains("locked"));
+    !qa("#campaignNodes .map-node")[1].classList.contains("locked"));
 
   /* ---------- the interactions that make a wave a puzzle ---------- */
   {
@@ -502,7 +505,7 @@ async function run(){
   clickEl(id("switchBtn"));
   clickEl(qa("#profileGrid .profile-card")[0]);
   clickEl(id("playBtn"));
-  clickEl(qa("#missionList .mission-card")[3]);      // mission 4 - first boss
+  clickEl(qa("#campaignNodes .map-node")[3]);        // mission 4 - first boss
   clickEl(qa("#briefDifficulties .diff-card")[1]);
   await runFrames(6000);   // mission 4 is ~3 minutes with its boss
   await sleep(1600);   // the boss death animation holds the results back ~1.2s

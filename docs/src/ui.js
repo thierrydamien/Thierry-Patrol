@@ -80,50 +80,228 @@ function renderMenu(){
 }
 
 /* ---------------------------------------------------------
-   MISSION SELECT
+   THE CAMPAIGN MAP
+   A list of cards told you the missions existed. A route
+   drawn across a starfield, with your own ship parked at the
+   furthest stop you've reached, tells you you're going
+   somewhere - which is the whole difference between a menu
+   and a campaign.
+
+   Layout is computed once in normalised [0,1] coordinates so
+   the canvas (which draws it) and the DOM buttons (which
+   catch the taps) can never disagree about where a stop is.
    --------------------------------------------------------- */
-function renderMissions(){
-  const stars = P.totalStars(profile);
-  $("missionStars").textContent = stars + " / " + (MISSIONS.length*3) + " ★ collected";
-  const list = $("missionList");
-  list.innerHTML = "";
-  MISSIONS.forEach((m, i) => {
-    const unlocked = isMissionUnlocked(profile, i);
-    const earned = P.starsForMission(profile, m.id);
-    const rec = profile.missions[m.id];
-    const card = document.createElement("div");
-    card.className = "mission-card" + (unlocked ? "" : " locked") + (earned === 3 ? " perfect" : "");
-    const starHtml = [0,1,2].map(s => `<span class="ms${s < earned ? " on" : ""}">★</span>`).join("");
-    card.innerHTML = `
-      <div class="mc-num">${unlocked ? m.id : "🔒"}</div>
-      <div class="mc-main">
-        <div class="mc-name">${esc(m.name)}</div>
-        <div class="mc-sub">${unlocked ? esc(m.subtitle) : "Finish mission " + (m.id-1) + " to unlock"}</div>
-        ${unlocked ? `<div class="mc-meta">${enemyCount(m)} enemies · ${rescueCount(m) ? rescueCount(m)+" to rescue" : "no rescues"}${m.boss ? " · BOSS" : ""}</div>` : ""}
-        ${unlocked ? familyBestLine(m.id) : ""}
-      </div>
-      <div class="mc-stars">${unlocked ? starHtml : ""}</div>
-    `;
-    if(unlocked) click(card, () => openBriefing(i));
-    list.appendChild(card);
+const campaign = { raf:0, t:0, ctx:null, stars:null };
+
+/** Serpentine route from the bottom of the map to the top. */
+function campaignLayout(){
+  const n = MISSIONS.length;
+  return MISSIONS.map((m, i) => {
+    const k = i/(n-1);
+    return {
+      mission: m, index: i,
+      // Period chosen so no two neighbours land on the same side: at 1.15 the
+      // last two stops sat almost on top of each other.
+      x: 0.5 + Math.sin(i*0.85 + 0.6) * 0.30,
+      y: 0.90 - k*0.80,
+    };
   });
 }
 
-/**
- * "Charlie holds this one" - the household record, shown on the mission card.
- * With two pilots sharing one game, the person to beat is at the kitchen
- * table, and that's a far better hook than an abstract high score.
- */
-function familyBestLine(missionId){
-  const best = P.familyBest(missionId);
-  if(!best) return `<div class="mc-record none">Nobody has flown this yet - claim it</div>`;
-  const mine = (best.name === (profile.callsign || profile.name));
-  return `<div class="mc-record${mine ? " mine" : ""}">${
-    mine ? "🏅 You hold this one · " + best.score
-         : "🏅 " + esc(best.name) + " holds this · " + best.score}</div>`;
+/* Named stretches, so the route reads as a journey rather than eight dots. */
+const SECTORS = [
+  { at:0, name:"HOME PATROL" },
+  { at:2, name:"THE BELT" },
+  { at:4, name:"DEEP RUN" },
+  { at:6, name:"ENEMY SPACE" },
+];
+
+function renderMissions(){
+  const stars = P.totalStars(profile);
+  $("missionStars").textContent = stars + " / " + (MISSIONS.length*3) + " ★ collected";
+
+  const nodes = campaignLayout();
+  const holder = $("campaignNodes");
+  holder.innerHTML = "";
+  nodes.forEach(node => {
+    const unlocked = isMissionUnlocked(profile, node.index);
+    const earned = P.starsForMission(profile, node.mission.id);
+    const btn = document.createElement("button");
+    btn.className = "map-node" + (unlocked ? "" : " locked") + (earned === 3 ? " perfect" : "");
+    btn.style.left = (node.x*100) + "%";
+    btn.style.top  = (node.y*100) + "%";
+    btn.setAttribute("aria-label",
+      unlocked ? node.mission.name + ", " + earned + " of 3 stars"
+               : node.mission.name + ", locked");
+    if(unlocked) click(btn, () => openBriefing(node.index));
+    holder.appendChild(btn);
+  });
+
+  // The hint line carries what the cards used to: what's next, and who holds it.
+  let next = 0;
+  for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) next = i;
+  const m = MISSIONS[next];
+  const best = P.familyBest(m.id);
+  const me = profile.callsign || profile.name;
+  $("campaignHint").innerHTML =
+    `<b>${esc(m.name)}</b>` +
+    `<span class="ch-sub">${esc(m.subtitle)}</span>` +
+    `<span>${enemyCount(m)} enemies${rescueCount(m) ? " · " + rescueCount(m) + " to rescue" : ""}` +
+    `${m.boss ? " · BOSS" : ""}</span>` +
+    `<span class="ch-record">${best
+      ? (best.name === me ? "🏅 You hold this one · " + best.score
+                          : "🏅 " + esc(best.name) + " holds this · " + best.score)
+      : "Nobody has flown this yet - claim it"}</span>`;
+
+  startCampaignLoop();
+}
+
+function startCampaignLoop(){
+  const cv = $("campaignCanvas");
+  if(!cv) return;
+  campaign.ctx = campaign.ctx || cv.getContext("2d");
+  if(!campaign.stars){
+    campaign.stars = Array.from({length:110}, (_,i) => ({
+      x: (Math.sin(i*12.9898)*43758.5453 % 1 + 1) % 1,
+      y: (Math.sin(i*78.233)*43758.5453 % 1 + 1) % 1,
+      r: 0.4 + ((Math.sin(i*3.7)*10000 % 1 + 1) % 1) * 1.6,
+      tw: i*0.7,
+    }));
+  }
+  if(campaign.raf) return;
+  const step = () => {
+    campaign.raf = 0;
+    if(!screens["screen-missions"].classList.contains("active")) return;
+    campaign.t += 1/60;
+    drawCampaign();
+    campaign.raf = requestAnimationFrame(step);
+  };
+  campaign.raf = requestAnimationFrame(step);
+}
+
+function drawCampaign(){
+  const ctx = campaign.ctx;
+  if(!ctx || !profile) return;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const t = campaign.t;
+  const nodes = campaignLayout();
+  const px = n => n.x*W, py = n => n.y*H;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#241f52");
+  bg.addColorStop(0.55, "#141235");
+  bg.addColorStop(1, "#0a0920");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  campaign.stars.forEach(s => {
+    ctx.globalAlpha = 0.35 + Math.sin(t*1.6 + s.tw)*0.3;
+    ctx.fillStyle = "#dbe6ff";
+    ctx.fillRect(s.x*W, s.y*H, s.r, s.r);
+  });
+  ctx.globalAlpha = 1;
+
+  // How far along the route the player has actually got.
+  let reached = 0;
+  for(let i=0;i<nodes.length;i++) if(isMissionUnlocked(profile, i)) reached = i;
+
+  // The route: travelled stretches are lit, the rest is a faint dashed plan.
+  for(let i=0;i<nodes.length-1;i++){
+    const a = nodes[i], b = nodes[i+1];
+    const done = i < reached;
+    ctx.save();
+    ctx.setLineDash(done ? [] : [10, 12]);
+    ctx.lineWidth = done ? 5 : 3;
+    ctx.strokeStyle = done ? "rgba(245,166,35,0.75)" : "rgba(255,255,255,0.16)";
+    if(done){ ctx.shadowColor = "rgba(245,166,35,0.7)"; ctx.shadowBlur = 12; }
+    ctx.beginPath();
+    ctx.moveTo(px(a), py(a));
+    ctx.quadraticCurveTo((px(a)+px(b))/2 + (i%2 ? 70 : -70), (py(a)+py(b))/2, px(b), py(b));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  SECTORS.forEach(sec => {
+    const n = nodes[sec.at];
+    if(!n) return;
+    ctx.save();
+    ctx.globalAlpha = isMissionUnlocked(profile, sec.at) ? 0.5 : 0.22;
+    ctx.fillStyle = "#cfd8ff";
+    ctx.font = "bold 15px Arial, sans-serif";
+    // Opposite side to the ship marker, and clear of the node itself.
+    const away = n.x > 0.5 ? -1 : 1;
+    ctx.textAlign = away < 0 ? "right" : "left";
+    ctx.letterSpacing = "3px";
+    ctx.fillText(sec.name, px(n) + away*74, py(n) - 2);
+    ctx.restore();
+  });
+
+  nodes.forEach((node, i) => {
+    const unlocked = isMissionUnlocked(profile, i);
+    const earned = P.starsForMission(profile, node.mission.id);
+    const boss = !!node.mission.boss;
+    const x = px(node), y = py(node);
+    const R = boss ? 40 : 32;
+    const isNext = i === reached;
+
+    if(boss && unlocked){
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,45,85,0.7)";
+      ctx.lineWidth = 3;
+      for(let k=0;k<12;k++){
+        const a = k/12*Math.PI*2 + t*0.35;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a)*(R+7), y + Math.sin(a)*(R+7));
+        ctx.lineTo(x + Math.cos(a)*(R+16), y + Math.sin(a)*(R+16));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if(isNext){                                   // the one you're here to fly
+      const pulse = 0.5 + Math.sin(t*3)*0.5;
+      ctx.strokeStyle = "rgba(255,210,63," + (0.25 + pulse*0.5) + ")";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, R + 12 + pulse*7, 0, Math.PI*2); ctx.stroke();
+    }
+
+    const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
+    if(unlocked){ g.addColorStop(0, boss ? "#ff7a90" : "#5b6bd8"); g.addColorStop(1, boss ? "#7a1226" : "#1d2050"); }
+    else { g.addColorStop(0, "#3a3f57"); g.addColorStop(1, "#191c2c"); }
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = earned === 3 ? "#ffd23f"
+                    : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.35)";
+    ctx.font = "bold " + (boss ? 26 : 22) + "px Arial, sans-serif";
+    ctx.fillText(unlocked ? String(node.mission.id) : "🔒", x, y + (boss ? 9 : 8));
+
+    if(unlocked){                                  // stars earned, on the rim
+      ctx.font = "13px Arial, sans-serif";
+      for(let sIdx=0; sIdx<3; sIdx++){
+        ctx.fillStyle = sIdx < earned ? "#ffd23f" : "rgba(255,255,255,0.22)";
+        ctx.fillText("★", x + (sIdx-1)*15, y - R - 6);
+      }
+    }
+    ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
+    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.fillText(node.mission.name.toUpperCase(), x, y + R + 20);
+  });
+
+  // Your actual ship, parked at the furthest stop you've reached - always on
+  // the outside of the route, so it never sits on top of the line.
+  const here = nodes[reached];
+  const side = here.x > 0.5 ? 1 : -1;
+  SF.shipart.drawShip(ctx, px(here) + side*62, py(here) - 4, 52, {
+    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t,
+  });
+  ctx.textAlign = "left";
 }
 
 /* ---------------------------------------------------------
+   THE ARMORY / HANGAR/* ---------------------------------------------------------
    THE ARMORY / HANGAR
    One screen, because buying a part and seeing it appear are
    the same moment. The ship bay is pinned at the top while

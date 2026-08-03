@@ -52,7 +52,6 @@ html, body {
   .shop-group { display:grid; grid-template-columns: 1fr 1fr; gap:9px; align-items:start; }
   .group-head { grid-column: 1 / -1; }
   .shop-item { margin-bottom:0; }
-  .mission-list { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
 }
 
 /* ---------------- shared bits ---------------- */
@@ -134,31 +133,35 @@ html, body {
 .mp-rank { font-size:10px; font-weight:800; letter-spacing:1.5px; }
 .mp-stats { font-size:11px; color: rgba(255,255,255,0.7); margin-top:2px; }
 
-/* ---------------- mission select ---------------- */
-.mission-list { width:100%; display:flex; flex-direction:column; gap:10px; }
-.mission-card {
-  display:flex; align-items:center; gap:12px;
-  background: var(--panel); border:2px solid var(--panel-border); border-radius:14px;
-  padding: 12px; cursor:pointer; transition: transform .12s ease;
+/* ---------------- campaign map ---------------- */
+.campaign-map {
+  position:relative; width:100%; max-width:520px;
+  border-radius:18px; overflow:hidden;
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 12px 30px -12px rgba(0,0,0,0.8);
 }
-.mission-card:active { transform: scale(0.985); }
-.mission-card.locked { opacity:0.45; cursor:default; }
-.mission-card.perfect { border-color: rgba(255,210,63,0.75); box-shadow: 0 0 16px -4px var(--accent); }
-.mc-num {
-  flex:0 0 auto; width:38px; height:38px; border-radius:11px;
-  background: rgba(0,0,0,0.4); border:1px solid var(--panel-border);
-  display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px;
+.campaign-map canvas { display:block; width:100%; height:auto; }
+.campaign-nodes { position:absolute; inset:0; }
+/* Transparent hit targets sitting exactly over the drawn stops: the canvas
+   does the looks, the DOM does the tapping, focus and keyboard access. */
+.map-node {
+  position:absolute; transform: translate(-50%, -50%);
+  width:76px; height:76px; border-radius:50%;
+  background:transparent; border:none; padding:0; cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.mc-main { flex:1; min-width:0; }
-.mc-name { font-weight:800; font-size:15px; }
-.mc-sub { font-size:11px; color: rgba(255,255,255,0.6); }
-.mc-meta { font-size:10px; color: rgba(255,255,255,0.4); margin-top:3px; }
-.mc-record { font-size:10px; color: rgba(255,255,255,0.5); margin-top:3px; }
-.mc-record.mine { color: var(--accent); }
-.mc-record.none { color: rgba(255,255,255,0.3); font-style:italic; }
-.mc-stars { flex:0 0 auto; font-size:15px; letter-spacing:1px; }
-.mc-stars .ms { color: rgba(255,255,255,0.18); }
-.mc-stars .ms.on { color: var(--accent); text-shadow: 0 0 8px rgba(245,166,35,0.7); }
+.map-node.locked { cursor:default; }
+.map-node:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.map-node:not(.locked):active { transform: translate(-50%, -50%) scale(0.92); }
+
+.campaign-hint {
+  display:flex; flex-direction:column; gap:2px; align-items:center;
+  text-align:center; margin-top:12px; max-width:420px;
+}
+.campaign-hint b { font-size:16px; }
+.campaign-hint span { font-size:11px; color: rgba(255,255,255,0.55); }
+.campaign-hint .ch-sub { font-size:12px; color: rgba(255,255,255,0.75); letter-spacing:0.5px; }
+.campaign-hint .ch-record { color: var(--accent); font-size:12px; margin-top:2px; }
 
 /* ---------------- briefing ---------------- */
 .brief-subtitle { color: var(--accent); font-size:13px; margin-bottom:12px; letter-spacing:1px; }

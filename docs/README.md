@@ -34,6 +34,13 @@ Pick your pilot, choose a mission, choose a difficulty, fly.
   before it escapes, then fly to the pod it drops.
 
 ## The campaign
+The mission select is a **route across a star map**, not a list: eight stops
+along a winding line from HOME PATROL out to ENEMY SPACE, with your own ship —
+drawn from your actual upgrades — parked at the furthest one you've reached.
+The stretches you've flown are lit gold, the rest is a faint dashed plan ahead
+of you. Boss stops are bigger and ringed in red, stars you've earned sit on
+each stop's rim, and the one you're up to pulses.
+
 Eight missions of **2 to 3.5 minutes** each (about 20 minutes of flying in
 total), each with three star objectives shown in the briefing and tracked live
 in the HUD. Missions are built in acts with lulls between them, a halfway

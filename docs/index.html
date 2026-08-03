@@ -37,11 +37,15 @@
 
   <!-- ===================== MISSION SELECT ===================== -->
   <section id="screen-missions" class="screen">
-    <h2 class="section-title">CHOOSE A MISSION</h2>
+    <h2 class="section-title">THE CAMPAIGN</h2>
     <p id="missionStars" class="power-line"></p>
-    <div id="missionList" class="mission-list"></div>
-    <p class="controls-hint">Fly with the arrow keys, WASD, or by dragging on the screen.<br>
-      Your guns fire by themselves &middot; 💣 smart bomb &middot; 🔥 overdrive</p>
+    <!-- The map is drawn on the canvas; one transparent button per stop sits
+         over it, so hit-testing, focus and keyboard access come for free. -->
+    <div id="missionList" class="campaign-map">
+      <canvas id="campaignCanvas" width="640" height="900"></canvas>
+      <div id="campaignNodes" class="campaign-nodes"></div>
+    </div>
+    <div id="campaignHint" class="campaign-hint"></div>
     <button id="missionsBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 

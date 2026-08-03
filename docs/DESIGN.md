@@ -500,6 +500,28 @@ still have something to want in six months.
 Prices now reach six figures, so the UI formats with separators
 (`$394,240`, not `$394240`) and the buy button lost a point of font size to fit.
 
+## 8l. The campaign map
+
+The mission select was eight cards in a column - it told you the missions
+existed, which is a menu, not a campaign. It is now a route drawn across a
+starfield: a serpentine line from bottom to top, travelled stretches lit gold
+and the rest a dashed plan, sector names (HOME PATROL -> ENEMY SPACE) over the
+groups, boss stops ringed in red spikes, stars earned on each stop's rim, the
+next stop pulsing, and the pilot's *own* ship - `shipart` again, so it carries
+every part they've bought - parked at the furthest stop reached.
+
+The structural decision worth keeping: **the canvas draws it, the DOM catches
+the taps.** Layout is computed once in normalised [0,1] coordinates; the canvas
+multiplies by its pixel size, and one transparent `<button>` per stop is
+positioned by percentage over the top. So hit-testing, focus rings, keyboard
+access and the existing `click()` sound wiring all come free, and the two
+layers can never disagree about where a stop is - which is exactly the bug you
+get from hand-rolled canvas hit-testing.
+
+The serpentine period needed care: at `sin(i*1.15)` the last two stops landed
+almost on top of each other. `sin(i*0.85 + 0.6)` keeps every neighbour on the
+opposite side.
+
 ## 9. What I'd do next
 
 Roughly in value order:
