@@ -36,6 +36,8 @@ src/
   data/config.js   upgrades, ranks, difficulty tiers, pick-ups, medals
   data/enemies.js  enemy archetypes, movement behaviours, formation shapes
   data/missions.js the campaign: waves, objectives, boss definitions
+  data/comms.js    radio chatter: what gets said about what
+  data/story.js    story beats: comic panels and the milestone ending
   profile.js       ProfileStore: save/load/migrate, stars, medals
   fx.js            ParticleManager + screen shake / hit-stop / flashes
   input.js         InputManager: keyboard + pointer → one state object
@@ -43,6 +45,8 @@ src/
   bosses.js        BossController: phases, telegraphed attacks, weak points
   systems.js       WaveDirector (spawning) + collision resolution
   render.js        Renderer: parallax layers, entities, boss damage, HUD
+  shipart.js       the ship drawn from its upgrade levels: 21 bolt-on parts
+  comms.js         which line plays when, and the pacing rules that stop noise
   game.js          GameStateManager: run lifecycle, objectives, main loop
   ui.js            every DOM screen + bootstrap
 ```
@@ -243,6 +247,38 @@ that the game knows there is more than one of them and that they are children:
 Deliberately *not* done, because it needs facts about the kids I don't have:
 real names/photos in the art, birthdays, favourite colours as defaults, or
 voice lines. Those belong to whoever knows them.
+
+## 8d. Making progress physical
+
+Two systems, one idea: the numbers should show up somewhere you can look at.
+
+**The hangar and `shipart.js`.** A single procedural pass draws a pilot's ship
+from a plain `{upgradeId: level}` object - hull sprite plus one bolted-on part
+per upgrade tier owned, 21 parts over the 14 tracks. It takes no gameplay
+state, which is what lets the *same function* draw the hangar, the comms
+portrait and the story panels. The declaration order of `PARTS` is the ladder,
+so `nextPart()` doubles as a suggested build path, and the hangar ghosts that
+part onto the hull at ~30% alpha: there is always something visibly missing.
+Compare mode draws stock and current at identical scale, because a
+transformation you can't A/B doesn't read as one.
+
+The hangar's idle loop queues its *next* frame last (the opposite of the game
+loop, which queues first so a bad frame can't freeze it) - an idle animation
+must stop dead when you leave the screen rather than keep a callback alive
+behind every other screen.
+
+**Comms.** `comms.js` holds one active line, never a queue: if something better
+happens mid-line it takes over. Pacing is three rules - a per-event cooldown, a
+minimum gap between any two lines, and one panel at a time - which is what
+keeps a system that fires on *pick-ups and near misses* from becoming noise.
+Near misses are detected by scanning the (bounded) enemy-bullet pool for a
+shot that got inside a 26px ring while level with the ship without touching
+it: cheap, and it's the moment kids actually feel.
+
+Worth noting: adding comms shifted the global RNG stream and broke a smoke-test
+assertion that checked enemies were alive *on one specific frame*. The check
+was wrong, not the code - it now asserts cumulative spawns. Any test that
+depends on the exact frame something happens is a test that will flap.
 
 ## 9. What I'd do next
 

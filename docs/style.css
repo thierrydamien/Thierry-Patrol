@@ -370,3 +370,65 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   .profile-card { width: 120px; }
   .game-title { font-size: 36px; }
 }
+
+/* ===================== HANGAR ===================== */
+.hangar-pilot { font-size:12px; color: rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.5px; }
+.hangar-stage {
+  position:relative; width:100%; max-width:420px;
+  border-radius:18px; border:1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(30,42,90,0.55), rgba(8,10,26,0.75));
+  overflow:hidden;
+}
+.hangar-canvas { display:block; width:100%; height:auto; }
+.hangar-labels {
+  position:absolute; left:0; right:0; bottom:8px;
+  display:flex; justify-content:space-around;
+  font-size:10px; letter-spacing:2px; color: rgba(255,255,255,0.55); font-weight:800;
+}
+.hangar-next {
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  margin:12px 0 6px; text-align:center; max-width:340px;
+}
+.hangar-next b { font-size:16px; }
+.hn-label { font-size:9px; letter-spacing:2px; color: var(--accent); font-weight:800; }
+.hn-blurb { font-size:12px; color: rgba(255,255,255,0.66); }
+.hn-how { font-size:11px; color: rgba(255,255,255,0.42); font-style:italic; }
+.hangar-compare { margin-bottom:14px; }
+.hangar-parts { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:7px; }
+.part-chip {
+  padding:7px 9px; border-radius:9px; font-size:11px; line-height:1.35;
+  background: rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.32);
+}
+.part-chip b { display:block; font-size:12px; }
+.part-chip span { font-size:10px; }
+.part-chip.owned { color: rgba(255,255,255,0.9); border-color: rgba(120,200,255,0.35); background: rgba(40,80,150,0.25); }
+.part-chip.next { border-color: var(--accent); color: rgba(255,255,255,0.75); }
+
+/* ===================== STORY PANELS ===================== */
+.story-overlay {
+  position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+  background: rgba(3,5,16,0.94); padding:20px; overflow-y:auto;
+}
+.story-inner { display:flex; flex-direction:column; align-items:center; max-width:640px; width:100%; }
+.story-title { font-size:22px; font-weight:900; letter-spacing:4px; color: var(--accent); margin-bottom:16px; }
+.story-panels { display:flex; flex-direction:column; gap:14px; width:100%; margin-bottom:22px; }
+.story-panel {
+  display:flex; gap:14px; align-items:center; text-align:left;
+  background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px; padding:12px;
+  opacity:0; animation: storyIn .5s ease forwards;
+}
+.story-panel canvas { width:150px; height:auto; border-radius:9px; flex:0 0 auto; }
+.story-panel p { font-size:14px; line-height:1.5; color: rgba(255,255,255,0.9); }
+@keyframes storyIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform:none; } }
+
+/* Spoken line on the results screen */
+.result-comms {
+  display:flex; align-items:center; gap:10px; text-align:left;
+  background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10);
+  border-radius:12px; padding:8px 12px; margin-bottom:8px; max-width:320px;
+}
+.result-comms canvas { width:52px; height:52px; flex:0 0 auto; }
+.rc-who { font-size:9px; font-weight:800; letter-spacing:1.5px; }
+.rc-text { font-size:13px; color: rgba(255,255,255,0.92); }

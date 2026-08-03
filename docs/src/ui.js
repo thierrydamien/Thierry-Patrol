@@ -122,6 +122,177 @@ function familyBestLine(missionId){
 }
 
 /* ---------------------------------------------------------
+   HANGAR
+   The Armory sells numbers; the hangar is where those numbers
+   turn into a machine you can look at. One animation loop
+   drives the whole screen - a slow bob, a flickering exhaust,
+   and the next unearned part ghosted on so there's always
+   something visibly missing.
+   --------------------------------------------------------- */
+const hangar = { raf:0, t:0, compare:false, ctx:null };
+
+function renderHangar(){
+  const A = SF.shipart;
+  const levels = A.levelsOf(profile);
+  const next = A.nextPart(levels);
+  const owned = A.ownedCount(levels);
+
+  $("hangarPilot").innerHTML =
+    `<b style="color:${profile.shipColor}">${esc(profile.callsign || profile.name)}'S SHIP</b> · ` +
+    `${owned}/${A.PARTS.length} parts fitted`;
+
+  $("hangarNext").innerHTML = next
+    ? `<span class="hn-label">NEXT PART</span>
+       <b>${esc(next.name)}</b>
+       <span class="hn-blurb">${esc(next.blurb)}</span>
+       <span class="hn-how">Buy ${esc(UPGRADE_BY_ID[next.up].name)} level ${next.at}</span>`
+    : `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>
+       <span class="hn-blurb">There is nothing left to bolt on. Go and use it.</span>`;
+
+  const parts = $("hangarParts");
+  parts.innerHTML = "";
+  A.partList(levels).forEach(({ part, owned:has }) => {
+    const chip = document.createElement("div");
+    chip.className = "part-chip" + (has ? " owned" : "") + (next && part.id === next.id ? " next" : "");
+    chip.innerHTML = `<b>${esc(part.name)}</b><span>${has ? esc(part.blurb)
+      : esc(UPGRADE_BY_ID[part.up].name) + " lv" + part.at}</span>`;
+    parts.appendChild(chip);
+  });
+
+  $("hangarCompareBtn").textContent = hangar.compare ? "BACK TO MY SHIP" : "COMPARE TO STOCK";
+  $("hangarCompareLabels").classList.toggle("hidden", !hangar.compare);
+  startHangarLoop();
+}
+
+function startHangarLoop(){
+  const cv = $("hangarCanvas");
+  if(!cv) return;
+  hangar.ctx = hangar.ctx || cv.getContext("2d");
+  if(hangar.raf) return;                      // already spinning
+  // Unlike the game loop, this one queues the *next* frame last and simply
+  // stops when you leave the screen - an idle animation must not keep a
+  // callback alive behind every other screen in the app.
+  const step = () => {
+    hangar.raf = 0;
+    if(!screens["screen-hangar"].classList.contains("active")) return;
+    hangar.t += 1/60;
+    drawHangar();
+    hangar.raf = requestAnimationFrame(step);
+  };
+  hangar.raf = requestAnimationFrame(step);
+}
+
+function drawHangar(){
+  const ctx = hangar.ctx;
+  if(!ctx || !profile) return;
+  const A = SF.shipart;
+  const cv = ctx.canvas;
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // A floor light so the ship reads as parked in a bay rather than floating.
+  const g = ctx.createRadialGradient(W/2, H*0.62, 8, W/2, H*0.62, W*0.55);
+  g.addColorStop(0, "rgba(120,160,255,0.20)");
+  g.addColorStop(1, "rgba(120,160,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  const levels = A.levelsOf(profile);
+  const next = A.nextPart(levels);
+
+  if(hangar.compare){
+    // Side by side, same scale: the whole point is that the difference is obvious.
+    A.drawShip(ctx, W*0.28, H*0.55, Math.min(W*0.34, H*0.62), {
+      color: profile.shipColor, levels: {}, t: hangar.t });
+    A.drawShip(ctx, W*0.72, H*0.55, Math.min(W*0.34, H*0.62), {
+      color: profile.shipColor, levels, t: hangar.t });
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W/2, H*0.12); ctx.lineTo(W/2, H*0.88); ctx.stroke();
+  } else {
+    // Sized so the widest parts - the aegis halo and the drone cradle - still
+    // sit inside the bay rather than being cropped by it.
+    A.drawShip(ctx, W/2, H*0.52, Math.min(W*0.46, H*0.66), {
+      color: profile.shipColor, levels, t: hangar.t,
+      ghost: next ? next.id : null,
+      mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
+    });
+  }
+}
+
+/* ---------------------------------------------------------
+   STORY BEATS
+   --------------------------------------------------------- */
+function storySeen(id){ return !!(profile.stories && profile.stories[id]); }
+function markStorySeen(id){
+  profile.stories = profile.stories || {};
+  profile.stories[id] = true;
+  P.save(profile);
+}
+
+/** Shows a beat if it hasn't been seen. Returns true if it opened. */
+function maybeStory(id){
+  const def = SF.storyData.STORY[id];
+  if(!def || !profile || storySeen(id)) return false;
+  markStorySeen(id);
+  showStory(def);
+  return true;
+}
+
+function showStory(def){
+  const A = SF.shipart;
+  const levels = A.levelsOf(profile);
+  const mate = P.squadmates(profile.name)[0] || null;
+  const you = profile.callsign || profile.name;
+
+  $("storyTitle").textContent = def.title;
+  $("storyBtn").textContent = def.button || "CONTINUE";
+  const box = $("storyPanels");
+  box.innerHTML = "";
+
+  def.panels.forEach((panel, i) => {
+    const el = document.createElement("div");
+    el.className = "story-panel";
+    el.style.animationDelay = (i*0.12) + "s";
+    const cv = document.createElement("canvas");
+    cv.width = 260; cv.height = 150; cv.className = "story-art";
+    const cap = document.createElement("p");
+    cap.textContent = SF.commsData.fill(panel.text, { you, mate: mate ? (mate.callsign || mate.name) : "" });
+    el.appendChild(cv); el.appendChild(cap);
+    box.appendChild(el);
+    drawStoryArt(cv.getContext("2d"), panel.art, levels, mate);
+  });
+
+  $("storyOverlay").classList.remove("hidden");
+}
+
+function drawStoryArt(ctx, art, levels, mate){
+  const A = SF.shipart;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#131a3a"); g.addColorStop(1, "#070a1c");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for(let i=0;i<26;i++){
+    ctx.fillStyle = "rgba(255,255,255," + (0.15 + (i%5)*0.11) + ")";
+    ctx.fillRect((i*61)%W, (i*37)%H, 1.4, 1.4);
+  }
+  const t = 0.6;   // a still frame, not an animation - these are comic panels
+  if(art === "stock"){
+    A.drawShip(ctx, W/2, H*0.56, 96, { color:"#8a94a8", levels:{}, t, idle:false });
+  } else if(art === "crew"){
+    A.drawShip(ctx, W*0.36, H*0.56, 84, { color: profile.shipColor, levels, t, idle:false });
+    A.drawShip(ctx, W*0.68, H*0.62, 58,
+      { color: mate ? mate.shipColor : "#7fc4ff", levels: mate ? A.levelsOf(mate) : {}, t, idle:false });
+  } else if(art === "sky"){
+    ctx.fillStyle = "rgba(90,140,255,0.18)";
+    ctx.beginPath(); ctx.arc(W*0.5, H*1.45, W*0.8, 0, Math.PI*2); ctx.fill();
+    A.drawShip(ctx, W/2, H*0.42, 52, { color: profile.shipColor, levels, t, idle:false });
+  } else {
+    A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
+  }
+}
+
+/* ---------------------------------------------------------
    BRIEFING + DIFFICULTY
    --------------------------------------------------------- */
 function openBriefing(index){
@@ -256,6 +427,7 @@ function buyUpgrade(id){
   const cost = P.nextCost(profile, u);
   if(cost === null || profile.money < cost) return;
   const rankBefore = P.rankFor(profile).name;
+  const partsBefore = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
   profile.money -= cost;
   profile.upgrades[id] = P.upgradeLevel(profile, id) + 1;
   P.save(profile);
@@ -264,6 +436,16 @@ function buyUpgrade(id){
   renderArmory();
   const rankNow = P.rankFor(profile);
   if(rankNow.name !== rankBefore) queueToast({ icon: rankNow.badge, name: "PROMOTED: " + rankNow.name });
+
+  // A purchase that changes the *shape* of the ship deserves to be seen, and
+  // the twentieth level is the story's chapter break.
+  const partsNow = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
+  if(partsNow > partsBefore){
+    const part = SF.shipart.PARTS.filter(pt => (P.upgradeLevel(profile, pt.up) >= pt.at))[partsNow-1];
+    queueToast({ icon:"🔧", name: "FITTED: " + (part ? part.name : "NEW PART") });
+  }
+  if(P.gearLevel(profile) >= 20) maybeStory("ace");
+  else if(partsNow > 0 && partsBefore === 0) maybeStory("firstPart");
 }
 
 /* ---------------------------------------------------------
@@ -370,11 +552,47 @@ function showResults(result){
     <div class="rl"><span>Wallet</span><b class="money">$${profile.money}</b></div>
     ${recordLine(run)}`;
 
+  renderResultComms(run, completed, stars);
+
   const hasNext = completed && run.missionIndex + 1 < MISSIONS.length;
   $("nextBtn").classList.toggle("hidden", !hasNext);
   $("overlayResults").classList.remove("hidden");
   renderMenu();
   (unlocked || []).forEach(queueToast);
+  if(completed && P.campaignComplete(profile)) maybeStory("campaign");
+}
+
+/**
+ * One spoken line on the results screen, with the speaker's real ship next to
+ * it. The comms panel can't be seen once the overlay is up, and taking your
+ * brother's record is exactly the moment that deserves a voice.
+ */
+function renderResultComms(run, completed, stars){
+  const box = $("resultComms");
+  const mate = P.squadmates(profile.name)[0] || null;
+  const best = P.familyBest(run.mission.id);
+  const me = profile.callsign || profile.name;
+
+  let event = null;
+  if(best && best.name === me && mate && run.score > 0 && run.score >= best.score) event = "recordTaken";
+  else if(completed && stars === 3) event = "flawless";
+  else if(completed) event = "personalBest";
+  if(!event){ box.classList.add("hidden"); return; }
+
+  const def = SF.commsData.COMMS[event];
+  const useMate = def.speaker === "mate" && !!mate;
+  const who = useMate ? mate : null;
+  const line = def.lines[Math.floor(Math.random()*def.lines.length)];
+  $("resultCommsWho").textContent = who ? (who.callsign || who.name).toUpperCase() : "CONTROL";
+  $("resultCommsWho").style.color = who ? who.shipColor : "#7fc4ff";
+  $("resultCommsText").textContent = SF.commsData.fill(line, { you: me, mate: mate ? (mate.callsign||mate.name) : "" });
+
+  const ctx = $("resultCommsArt").getContext("2d");
+  ctx.clearRect(0, 0, 72, 72);
+  SF.shipart.drawShip(ctx, 36, 38, 62, {
+    color: who ? who.shipColor : profile.shipColor,
+    levels: SF.shipart.levelsOf(who || profile), t: 0.6, idle: false });
+  box.classList.remove("hidden");
 }
 
 /** Names the squadmates who flew as your wingmen this run. */
@@ -431,6 +649,11 @@ click($("addProfileBtn"), () => {
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
 click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
+click($("hangarBtn"), () => { renderHangar(); show("screen-hangar"); });
+click($("hangarBackBtn"), () => { renderMenu(); show("screen-menu"); });
+click($("hangarShopBtn"), () => { renderArmory(); show("screen-armory"); });
+click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderHangar(); });
+click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });
 click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard"); });
 click($("missionsBackBtn"), () => show("screen-menu"));
@@ -494,6 +717,8 @@ SF.game.resize();
 SF.game.start();
 SF.render.loadAssets(() => document.body.classList.add("assets-ready"));
 
-SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles, queueToast,
+SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
+          renderHangar, queueToast, maybeStory,
+          showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile };
 })();

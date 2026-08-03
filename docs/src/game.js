@@ -69,8 +69,10 @@ function buildLoadout(profile, difficulty){
   // Wingman drones are flown by the *other* pilots in the household, in their
   // own ship colours and under their own callsigns. Buying a Wingman Drone
   // doesn't summon a nameless escort - it calls your brother in.
+  // `levels` rides along so the comms portrait draws their ship as *they*
+  // have built it, not a stock hull in their colour.
   const crew = P.squadmates(profile.name).slice(0, 2).map(m => ({
-    callsign: m.callsign || m.name, color: m.shipColor,
+    callsign: m.callsign || m.name, color: m.shipColor, levels: SF.shipart.levelsOf(m),
   }));
   return {
     crew,
@@ -130,6 +132,8 @@ function startMission(missionIndex, difficultyId){
     ended: false,
   };
   game.state = "playing";
+  SF.comms.begin(profile, loadout.crew);
+  SF.comms.say("missionStart");
   SF.input.clearMovement();
   audio.init();
   resize();
@@ -207,6 +211,7 @@ const callbacks = {
     if(run.combo > 0 && run.combo % 5 === 0){
       fx.text(e.x, e.y - 20, "x" + run.combo + "!", "#ffd23f", 19);
       audio.play("combo", run.combo);
+      if(run.combo >= 10) SF.comms.say("bigCombo", { n: run.combo });
     }
     if(e.elite){
       fx.text(e.x, e.y - 30, "ELITE DOWN", "#ffd23f", 17, true);
@@ -237,6 +242,7 @@ const callbacks = {
       run.score += Math.round(250 * run.difficulty.pay);
       fx.text(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy,
               "WEAK POINT DOWN", "#ffd23f", 14, true);
+      SF.comms.say("bossWeakPoint");
       game.world.dropCoins(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy,
                            Math.round(40 * run.difficulty.pay * game.world.player.moneyMult));
     }
@@ -273,6 +279,10 @@ const callbacks = {
     if(p.lives <= 0){
       p.alive = false;
       endMission(false);
+    } else if(p.lives === 1){
+      SF.comms.say("lowLives");
+    } else {
+      SF.comms.say("lifeLost");
     }
   },
 };
@@ -401,6 +411,7 @@ function update(dt, timeMs){
         run.bannerColor = "#ff5d73";
         run.bannerUntil = performance.now() + 2400;
         audio.play("alarm");
+        SF.comms.say("bossIncoming");
       } else {
         run.phase = "clearing";
         run.phaseTimer = 1.2;
@@ -439,6 +450,7 @@ function update(dt, timeMs){
     run.bannerColor = "#4ade80";
     run.bannerUntil = timeMs + 2000;
     audio.play("waveClear");
+    SF.comms.say("halfway");
   }
 
   game.world.updatePlayer(dt, timeMs);
@@ -461,8 +473,13 @@ function update(dt, timeMs){
 
   if(run.comboTimer > 0){
     run.comboTimer -= dt;
-    if(run.comboTimer <= 0) run.combo = 0;
+    if(run.comboTimer <= 0){
+      if(run.combo >= 5) SF.comms.say("comboBreak", { n: run.combo });
+      run.combo = 0;
+    }
   }
+  SF.comms.update(dt);
+  checkCloseCall();
 
   fx.update(dt, timeMs);
   SF.render.updateBackground(dt);
@@ -478,6 +495,32 @@ function update(dt, timeMs){
     audio.play("star", met);
   }
   run.objectivesMet = met;
+}
+
+/*
+ * A near miss is a bullet that gets inside a small ring around the ship
+ * without ever touching it. Cheap to spot (enemy bullets are a bounded pool)
+ * and it's the moment kids actually feel - so it gets a line.
+ */
+const CLOSE_R = 26;
+function checkCloseCall(){
+  const p = game.world.player;
+  if(!p || !p.alive || p.invuln > 0) return;
+  const items = game.world.enemyBullets.items;
+  for(let i=0;i<items.length;i++){
+    const b = items[i];
+    if(!b.alive || b.vy <= 0) continue;
+    // Only count it once it's level with or past the ship: still-approaching
+    // bullets aren't near misses yet, they're threats.
+    if(b.y < p.y) continue;
+    if(b.y > p.y + 24) continue;
+    const dx = b.x - p.x, dy = b.y - p.y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if(d < CLOSE_R + b.r && d > p.r + b.r){
+      SF.comms.say("closeCall");
+      return;
+    }
+  }
 }
 
 function onPickupCollected(item, lost){
@@ -498,6 +541,7 @@ function onPickupCollected(item, lost){
     audio.play("rescue");
     fx.ring(item.x, item.y, 40, "#ffd23f", 3, 0.4);
     fx.text(item.x, item.y-18, "PILOT RESCUED", "#ffd23f", 17, true);
+    SF.comms.say("rescue");
   } else {
     const def = item.data;
     const now = performance.now();
@@ -509,6 +553,8 @@ function onPickupCollected(item, lost){
     else if(def.id === "shield") p.shield = Math.min(p.shield+1, Math.max(1, p.shieldMax)+1);
     else if(def.id === "score2x") p.tempScoreUntil = now + 9000;
     else if(def.id === "homing") p.tempHomingUntil = now + 9000;
+    SF.comms.say(def.id === "shield" ? "pickupShield"
+               : def.id === "score2x" ? "pickupScore" : "pickupGun");
   }
 }
 
@@ -530,7 +576,7 @@ function draw(timeMs){
   SF.render.drawPlayer(ctx, world.player, timeMs);
   fx.drawParticles(ctx);
   fx.drawTexts(ctx);
-  if(game.run) SF.render.drawHud(ctx, game);
+  if(game.run){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   fx.drawFlash(ctx, VW, VH);
   ctx.restore();
 }

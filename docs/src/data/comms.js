@@ -1,0 +1,93 @@
+/*
+ * Radio chatter. The game already shouted about combat; this is everything
+ * else - the pick-up you grabbed, the shot that nearly had you, the last life,
+ * the record you just took off your brother.
+ *
+ * Every line is a template. {you} is the pilot flying, {mate} is a squadmate
+ * (their sibling), {n} is whatever number the event carries. Lines are picked
+ * at random from the bucket so the same event doesn't say the same thing.
+ *
+ * Speakers: "control" is mission control, "mate" is the other pilot in the
+ * house (only used when there actually is one).
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+
+const COMMS = {
+  missionStart: { speaker:"control", cooldown:999, lines:[
+    "You're clear for launch, {you}.",
+    "Skies are yours, {you}. Show them.",
+    "Good hunting, {you}.",
+  ]},
+  pickupShield: { speaker:"control", cooldown:9, lines:[
+    "Shield online!", "Shields back up, {you}.", "That's a fresh shield.",
+  ]},
+  pickupGun: { speaker:"control", cooldown:9, lines:[
+    "Guns hot!", "Weapons boosted!", "That's more firepower, {you}.",
+  ]},
+  pickupScore: { speaker:"control", cooldown:12, lines:[
+    "Double points - go get them!", "Score doubled, make it count.",
+  ]},
+  closeCall: { speaker:"mate", cooldown:11, lines:[
+    "That was close, {you}!",
+    "Whoa! Nearly had you.",
+    "Careful - that one had your name on it.",
+    "Nice dodge, {you}.",
+  ]},
+  lowLives: { speaker:"control", cooldown:25, lines:[
+    "Last ship, {you}. Make it count.",
+    "You're down to your last one - fly smart.",
+    "One left. Take your time out there.",
+  ]},
+  lifeLost: { speaker:"mate", cooldown:14, lines:[
+    "You okay? Keep going, {you}.",
+    "Shake it off, {you}.",
+    "Still with you. Get back in there.",
+  ]},
+  comboBreak: { speaker:"control", cooldown:16, lines:[
+    "Combo broken at x{n} - rebuild it.",
+    "Lost the chain at x{n}. Again!",
+  ]},
+  bigCombo: { speaker:"mate", cooldown:14, lines:[
+    "x{n}! How are you doing that?!",
+    "x{n} combo - that's a streak, {you}!",
+    "Don't stop, {you}, that's x{n}!",
+  ]},
+  rescue: { speaker:"control", cooldown:8, lines:[
+    "Pilot aboard. Good work, {you}.",
+    "That's one of ours home safe.",
+    "Rescue confirmed - thank you, {you}.",
+  ]},
+  bossIncoming: { speaker:"control", cooldown:999, lines:[
+    "Something big on the scope, {you}.",
+    "Heads up - that's their flagship.",
+  ]},
+  bossWeakPoint: { speaker:"mate", cooldown:10, lines:[
+    "You knocked a gun off it!",
+    "It's coming apart, {you}!",
+  ]},
+  halfway: { speaker:"control", cooldown:999, lines:[
+    "Halfway, {you}. Holding up well.",
+    "That's the midpoint - keep it together.",
+  ]},
+  personalBest: { speaker:"mate", cooldown:999, lines:[
+    "That's a new record, {you}!",
+    "You just beat it. Nice flying.",
+  ]},
+  recordTaken: { speaker:"mate", cooldown:999, lines:[
+    "You took my record, {you}. I want it back.",
+    "Okay, that's mine no more. Well flown.",
+  ]},
+  flawless: { speaker:"control", cooldown:999, lines:[
+    "Not a scratch on you, {you}.",
+  ]},
+};
+
+/** Fills {you} / {mate} / {n} in a line. */
+function fill(line, vars){
+  return line.replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] != null) ? vars[k] : "");
+}
+
+SF.commsData = { COMMS, fill };
+})();

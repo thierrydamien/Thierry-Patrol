@@ -28,11 +28,36 @@
     <div id="menuPilot" class="menu-pilot"></div>
     <div class="menu-buttons">
       <button id="playBtn" class="main-btn">▶ FLY A MISSION</button>
+      <button id="hangarBtn" class="main-btn">🚀 HANGAR</button>
       <button id="armoryBtn" class="main-btn">🛠 ARMORY</button>
       <button id="achievementsBtn" class="main-btn">🏅 MEDALS</button>
       <button id="leaderboardBtn" class="main-btn">🏆 CHAMPIONSHIP</button>
       <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
     </div>
+  </section>
+
+  <!-- ===================== HANGAR ===================== -->
+  <section id="screen-hangar" class="screen">
+    <h2 class="section-title">HANGAR</h2>
+    <p id="hangarPilot" class="hangar-pilot"></p>
+
+    <div class="hangar-stage">
+      <canvas id="hangarCanvas" class="hangar-canvas" width="620" height="440"></canvas>
+      <div id="hangarCompareLabels" class="hangar-labels hidden">
+        <span>STOCK</span><span>YOURS</span>
+      </div>
+    </div>
+
+    <div id="hangarNext" class="hangar-next"></div>
+    <button id="hangarCompareBtn" class="small-btn hangar-compare">COMPARE TO STOCK</button>
+
+    <div class="panel">
+      <label class="panel-label">YOUR SHIP, PART BY PART</label>
+      <div id="hangarParts" class="hangar-parts"></div>
+    </div>
+
+    <button id="hangarShopBtn" class="main-btn">🛠 TO THE ARMORY</button>
+    <button id="hangarBackBtn" class="ghost-btn">Back to Menu</button>
   </section>
 
   <!-- ===================== MISSION SELECT ===================== -->
@@ -143,6 +168,10 @@
       <div id="overlayResults" class="overlay hidden results">
         <h2 id="resultTitle">MISSION COMPLETE</h2>
         <p id="resultSubtitle" class="result-subtitle"></p>
+        <div id="resultComms" class="result-comms hidden">
+          <canvas id="resultCommsArt" width="72" height="72"></canvas>
+          <div><div id="resultCommsWho" class="rc-who"></div><div id="resultCommsText" class="rc-text"></div></div>
+        </div>
         <div id="resultStars" class="result-stars"></div>
         <div id="resultObjectives" class="result-objectives"></div>
         <div id="resultLines" class="result-lines"></div>
@@ -161,6 +190,15 @@
   <div class="loading-text">LOADING...</div>
 </div>
 
+<!-- Story beats: full-screen comic panels drawn with the pilot's real ship. -->
+<div id="storyOverlay" class="story-overlay hidden">
+  <div class="story-inner">
+    <div id="storyTitle" class="story-title"></div>
+    <div id="storyPanels" class="story-panels"></div>
+    <button id="storyBtn" class="main-btn">CONTINUE</button>
+  </div>
+</div>
+
 <div id="achievementToast" class="achievement-toast hidden">
   <div class="at-icon">🏆</div>
   <div>
@@ -174,6 +212,8 @@
 <script src="src/data/config.js"></script>
 <script src="src/data/enemies.js"></script>
 <script src="src/data/missions.js"></script>
+<script src="src/data/comms.js"></script>
+<script src="src/data/story.js"></script>
 <script src="src/profile.js"></script>
 <script src="src/fx.js"></script>
 <script src="src/input.js"></script>
@@ -181,6 +221,8 @@
 <script src="src/bosses.js"></script>
 <script src="src/systems.js"></script>
 <script src="src/render.js"></script>
+<script src="src/shipart.js"></script>
+<script src="src/comms.js"></script>
 <script src="src/game.js"></script>
 <script src="src/ui.js"></script>
 </body>

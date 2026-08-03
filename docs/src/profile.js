@@ -44,6 +44,8 @@ function blank(name){
     totalKills: 0, bossesDefeated: 0, maxCombo: 0, lifetimeMoney: 0,
     rescues: 0, missionsCompleted: 0, flawlessMissions: 0, powerupsCollected: 0,
     achievements: [],
+    // Story beats already seen, so a chapter close only lands once.
+    stories: {},
   };
 }
 

@@ -105,6 +105,40 @@ The other pilot in the house isn't a leaderboard row — they're in the game:
 - **The copy is written for kids** — "Little robot buddies fly next to you and
   shoot too", not "Escort drones that fire alongside you".
 
+## The Hangar
+Every upgrade track bolts a **physical part** onto the ship, so maxing things
+out visibly builds a different machine: Rapid Fire grows a second, then a
+fourth barrel, then a spinning gatling drum; Spread Shot adds wing pods, then
+outer pylons, then a full broadside; Energy Shield lights a containment ring
+around the hull; Ion Thrusters open the exhaust into afterburners. **21 parts**
+in all.
+
+- The ship **idles** in the bay — bobbing, exhaust flickering, rings turning.
+- The **next part you haven't earned** is ghosted onto the hull, named, with
+  exactly which upgrade level buys it.
+- **COMPARE TO STOCK** puts the factory ship beside yours at the same scale, so
+  the transformation actually registers.
+- A part list shows all 21, lit or grey.
+
+## Comms
+Someone talks to you about more than shooting: pick-ups ("Shield online!"), a
+near miss ("Whoa! Nearly had you."), your last life, a broken combo, a big
+streak, a rescue, the halfway mark, a record you just took. Lines come from
+mission control or from the other pilot in the house, one at a time, rate
+limited per event so it never turns into chatter. **The ship in the panel is
+the speaker's real ship** — when your brother says something, you see the ship
+he's been building.
+
+## Story
+Comic-style beats fire once each and are drawn with your *actual* ship:
+
+- **the first part you fit** — stock hull, then what you've made of it
+- **twenty upgrades in** — a proper ending. Command stops calling you a cadet,
+  and the last panel says out loud that this is the end of the beginning: the
+  game keeps going, and there are harder skies.
+- **campaign cleared** — a curtain, and a push toward the tiers that used to be
+  impossible.
+
 ## Medals, records and the family board
 22 medals to unlock, a best score and star count per pilot, and a
 Championship screen ranking everyone in the family by stars.

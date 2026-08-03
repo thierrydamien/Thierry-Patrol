@@ -529,6 +529,86 @@ function drawBeam(ctx, boss){
 /* ---------------------------------------------------------
    HUD
    --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   COMMS PANEL
+   Bottom-left, out of the way of the specials buttons on the
+   right. The portrait is the speaker's *actual* ship - so when
+   your brother says something, the ship in the panel is the
+   one he's been building.
+   --------------------------------------------------------- */
+function drawComms(ctx){
+  const msg = SF.comms && SF.comms.current();
+  if(!msg) return;
+
+  const PAD = Math.round(VW*0.03);
+  const W = Math.min(VW - PAD*2 - 76, 330), H = 62;
+  const inT = Math.min(1, msg.life/0.22);
+  const outT = Math.min(1, Math.max(0, (msg.max - msg.life)/0.28));
+  const slide = (1 - easeOutCubic(inT)) * -(W + PAD);
+  // High enough to clear the ship and its wingmen at the bottom of the field.
+  const x = PAD + slide, y = VH - 225;
+
+  ctx.save();
+  ctx.globalAlpha = outT;
+
+  ctx.fillStyle = "rgba(6,10,24,0.82)";
+  ctx.strokeStyle = msg.color;
+  ctx.lineWidth = 2;
+  roundRect(ctx, x, y, W, H, 12);
+  ctx.fill(); ctx.stroke();
+  // A speaker tab so it reads as someone talking, not a system message.
+  ctx.fillStyle = msg.color;
+  ctx.fillRect(x, y, 3, H);
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x + 30, y + H/2, 22, 0, TAU); ctx.clip();
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.fillRect(x + 8, y + 9, 44, 44);
+  SF.shipart.drawShip(ctx, x + 30, y + H/2 + 2, 42,
+    { color: msg.shipColor, levels: msg.levels, t: msg.life, idle: false });
+  ctx.restore();
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = msg.color;
+  ctx.font = "bold 10px Arial, sans-serif";
+  ctx.fillText(msg.speaker.toUpperCase(), x + 60, y + 11);
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  ctx.font = "13px Arial, sans-serif";
+  wrapText(ctx, msg.text, x + 60, y + 27, W - 72, 15, 2);
+  ctx.restore();
+}
+
+/** Draws at most `maxLines` lines of wrapped text, ellipsising the overflow. */
+function wrapText(ctx, text, x, y, maxW, lineH, maxLines){
+  const words = String(text).split(" ");
+  let line = "", n = 0;
+  for(let i=0;i<words.length;i++){
+    const test = line ? line + " " + words[i] : words[i];
+    if(ctx.measureText(test).width > maxW && line){
+      ctx.fillText(line, x, y + n*lineH);
+      n++; line = words[i];
+      if(n === maxLines - 1 && i < words.length - 1){
+        let rest = words.slice(i).join(" ");
+        while(rest.length > 3 && ctx.measureText(rest + "...").width > maxW) rest = rest.slice(0, -1);
+        ctx.fillText(rest + (rest.length < words.slice(i).join(" ").length ? "..." : ""), x, y + n*lineH);
+        return;
+      }
+    } else line = test;
+  }
+  if(line) ctx.fillText(line, x, y + n*lineH);
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
 function drawHud(ctx, game){
   const p = game.world.player;
   const run = game.run;
@@ -682,7 +762,7 @@ function drawHud(ctx, game){
 SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   initBackground, updateBackground, drawBackground,
-  drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud,
+  drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   tinted,
 };
 })();

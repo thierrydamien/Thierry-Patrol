@@ -45,6 +45,7 @@ let pendingFrames = [];
 const errors = [];
 window.performance.now = () => fakeNow;
 window.requestAnimationFrame = (cb) => { pendingFrames.push(cb); return pendingFrames.length; };
+window.cancelAnimationFrame = () => {};
 
 /**
  * A crude pilot: sweeps across the screen and drifts up and down. Events are
@@ -105,8 +106,9 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
+  "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
-  "src/render.js","src/game.js","src/ui.js",
+  "src/render.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
@@ -157,12 +159,43 @@ async function run(){
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
   check("badge picker offers a real set of badges", SF.config.BADGES.length >= 12);
+  check("every ship part hangs off a real upgrade",
+    SF.shipart.PARTS.every(pt => !!SF.config.UPGRADE_BY_ID[pt.up]));
+  check("no ship part asks for a level its upgrade can't reach",
+    SF.shipart.PARTS.every(pt => pt.at <= SF.config.UPGRADE_BY_ID[pt.up].max));
+  check("a stock ship has no parts and a maxed one has them all", (() => {
+    const maxed = {}; SF.config.UPGRADES.forEach(u => maxed[u.id] = u.max);
+    return SF.shipart.ownedCount({}) === 0 &&
+           SF.shipart.ownedCount(maxed) === SF.shipart.PARTS.length;
+  })());
+  check("a stock ship always has a next part to want", !!SF.shipart.nextPart({}));
+  check("every comms bucket has lines",
+    Object.values(SF.commsData.COMMS).every(c => c.lines.length > 0 && c.cooldown > 0));
+  check("every story beat has panels and art",
+    Object.values(SF.storyData.STORY).every(b =>
+      b.panels.length >= 2 && b.panels.every(pn => pn.text && pn.art)));
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
   clickEl(qa("#profileGrid .profile-card")[0]);
   check("menu active after picking a pilot", id("screen-menu").classList.contains("active"));
   check("menu shows the pilot's rank", /CADET|PILOT|LEADER|ACE|COMMANDER|LEGEND/.test(id("menuPilot").textContent));
+
+  /* ---------- hangar (stock ship) ---------- */
+  clickEl(id("hangarBtn"));
+  check("hangar opens from the menu", id("screen-hangar").classList.contains("active"));
+  check("a stock ship lists every part as unfitted",
+    qa("#hangarParts .part-chip").length === SF.shipart.PARTS.length &&
+    qa("#hangarParts .part-chip.owned").length === 0);
+  check("hangar names the next part to earn", /NEXT PART/.test(id("hangarNext").textContent));
+  check("hangar marks which part is next", qa("#hangarParts .part-chip.next").length === 1);
+  clickEl(id("hangarCompareBtn"));
+  check("compare mode labels stock vs yours", !id("hangarCompareLabels").classList.contains("hidden"));
+  clickEl(id("hangarCompareBtn"));
+  check("compare mode toggles back off", id("hangarCompareLabels").classList.contains("hidden"));
+  await runFrames(4);
+  check("hangar animates without errors", errors.length === 0);
+  clickEl(id("hangarBackBtn"));
 
   /* ---------- armory ---------- */
   clickEl(id("armoryBtn"));
@@ -195,7 +228,19 @@ async function run(){
   check("every upgrade can be maxed", /Gear 53\/53/.test(id("pcGear").textContent));
   const spent = 200000 - JSON.parse(window.localStorage.getItem("skyforce_profile_Marc")).money;
   check("maxing the armory costs about $70k", spent === SF.config.TOTAL_UPGRADE_COST);
+  check("passing 20 gear levels plays the ace story",
+    !id("storyOverlay").classList.contains("hidden") &&
+    /SQUADRON ACE/.test(id("storyTitle").textContent));
+  check("the ace story draws a panel per beat",
+    qa("#storyPanels .story-panel").length === SF.storyData.STORY.ace.panels.length);
+  clickEl(id("storyBtn"));
+  check("story closes on continue", id("storyOverlay").classList.contains("hidden"));
   clickEl(id("armoryBackBtn"));
+  clickEl(id("hangarBtn"));
+  check("a maxed ship has every part fitted",
+    qa("#hangarParts .part-chip.owned").length === SF.shipart.PARTS.length);
+  check("a maxed ship has nothing left to want", /COMPLETE/.test(id("hangarNext").textContent));
+  clickEl(id("hangarBackBtn"));
 
   /* ---------- mission select ---------- */
   clickEl(id("playBtn"));
@@ -217,7 +262,13 @@ async function run(){
   check("overdrive button visible too", !id("overdriveBtn").classList.contains("hidden"));
 
   await runFrames(120);   // past the 2.2s briefing banner
-  check("mission spawns enemies", SF.game.world.enemies.countAlive() > 0);
+  // Cumulative, not "alive right this frame": between two waves the field is
+  // legitimately empty, and asserting on one instant made this flap whenever
+  // anything else touched the RNG stream.
+  check("mission spawns enemies", SF.game.run.director.spawnedCount > 0);
+  check("comms greeted the pilot by name at launch",
+    !!SF.comms._state.lastAt.missionStart ||
+    SF.comms._state.lastAt.missionStart === 0);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
 
   await runFrames(4200);   // mission 1 runs ~1m45 now
@@ -225,10 +276,17 @@ async function run(){
     "kills:", SF.game.run.stats.kills, "enemies left:", SF.game.world.enemies.countAlive(),
     "state:", SF.game.state);
   check("no runtime errors during mission 1", errors.length === 0);
+  check("comms reacted to more than one kind of event",
+    Object.keys(SF.comms._state.lastAt).length >= 2);
+  check("comms never leaves a panel stuck on screen",
+    !SF.comms.current() || SF.comms.current().life <= SF.comms.current().max);
   const res1 = !id("overlayResults").classList.contains("hidden");
   check("mission 1 reached the results screen", res1);
   check("results show 3 star slots", qa("#resultStars .rs").length === 3);
   check("results name the family record", /record|to beat/i.test(id("resultLines").textContent));
+  check("a completed run gets a spoken line with a ship portrait",
+    !id("resultComms").classList.contains("hidden") &&
+    id("resultCommsText").textContent.length > 0);
   check("a cleared mission offers the next one", !id("nextBtn").classList.contains("hidden"));
   check("wingmen fly under a squadmate's name",
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));
