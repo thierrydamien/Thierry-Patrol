@@ -807,6 +807,46 @@ the test was fabricating, and producing a failure that looked like the
 feature. `addInitScript` plants state before any game script runs. When a
 test of sync misbehaves, suspect the rig syncing first.
 
+## 8u. The polish pass
+
+A deliberate commercial-quality pass, combat feel first. The findings worth
+keeping:
+
+**The player flew the wrong ship.** The hangar's whole promise is a
+physically-evolving ship - and in combat the player flew the stock PNG, every
+bought part invisible. The single highest-value change of the pass was one
+line of plumbing (loadout carries `levels`) plus swapping `drawPlayer` to
+`shipart.drawShip`. Wingmen too: they now fly their own builds.
+
+**Additive blending is most of "juice".** Sparks, muzzle stars, fireballs and
+embers are drawn in a second `lighter` pass, so overlapping light stacks
+toward white like real glare. Same particle counts as before - the change is
+compositing, not volume. Explosions gained a rolling fireball core (one
+pre-rendered radial sprite) and flickering embers with gravity.
+
+**Bake the glow, never blur per frame.** The old bullets set `shadowBlur`
+per bullet per frame - the most expensive call in the renderer once a maxed
+ship fills the screen - and still read as flat rects. Bolts, enemy orbs,
+coins (eight spin phases of a bevelled gold face) and elite auras are all
+pre-rendered sprites now; the per-frame cost is a blit. Faster AND better
+looking, which is the test a polish change has to pass.
+
+**Direction reads as causation.** Hit sparks spray *back along the shot*
+instead of a neutral radial puff - that one change makes hits read as "my
+shot did that".
+
+**Bosses borrow the fleet's art.** The tinted-PNG boss was the last
+prototype-grade visual: each boss now renders the drawn silhouette of the
+archetype it commands (Marauder→brute, Sentinel→carrier, Warden→bomber,
+Leviathan→hive), scaled up, through the same scorch-and-chunks damage
+compositing as before.
+
+Smaller, same philosophy: engine flame scaled by live velocity; overdrive
+speed streaks; energy-skin shield; glass HUD panel with labelled glowing
+readouts placed clear of the corner buttons; combo counter that pops on each
+step; cinematic full-width banners; a cached vignette; foreground dust for
+speed; the rescue emoji replaced by a drawn survivor pod.
+
 ## 9. What I'd do next
 
 Roughly in value order:

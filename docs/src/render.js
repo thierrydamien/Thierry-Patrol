@@ -885,14 +885,26 @@ function drawBoss(ctx, boss, timeMs){
     ctx.restore();
   }
 
-  if(assetsReady){
+  // Each boss borrows the drawn silhouette of the archetype it commands -
+  // the Marauder is a giant brute, the Sentinel a carrier, the Warden a
+  // bomber, the Leviathan a hive. Same damage compositing as before; the
+  // tinted PNG remains only as a fallback.
+  const bossId = Object.keys(SF.missions.BOSSES).find(k => SF.missions.BOSSES[k] === boss.def) || "";
+  const bossShape = { marauder:"brute", sentinel:"carrier", warden:"bomber", leviathan:"hive" }[bossId] || null;
+  const bossArt = bossShape ? SF.enemyArt.spriteFor(bossShape, boss.tint, false) : null;
+  if(bossArt || assetsReady){
     const B = bossBufCtx;
     B.setTransform(1,0,0,1,0,0);
     B.clearRect(0,0,220,220);
     B.save();
     B.translate(110,110);
-    B.rotate(Math.PI);
-    B.drawImage(tinted(assets.enemy, boss.tint), -size/2, -size/2, size, size);
+    if(bossArt){
+      const box = size*1.16;
+      B.drawImage(bossArt, -box/2, -box/2, box, box);
+    } else {
+      B.rotate(Math.PI);
+      B.drawImage(tinted(assets.enemy, boss.tint), -size/2, -size/2, size, size);
+    }
     B.restore();
 
     const scorched = Math.min(boss.wounds.length, Math.floor(damage*12));
@@ -1006,14 +1018,26 @@ function drawTelegraph(ctx, boss, timeMs){
 function drawBeam(ctx, boss){
   if(!boss.beam) return;
   const warmup = boss.beam.timer > 1.2;
+  const bw = boss.beam.width;
   ctx.save();
-  ctx.globalAlpha = warmup ? 0.35 : 0.9;
-  const g = ctx.createLinearGradient(boss.beam.x-boss.beam.width/2, 0, boss.beam.x+boss.beam.width/2, 0);
+  ctx.globalAlpha = warmup ? 0.35 : 0.95;
+  const g = ctx.createLinearGradient(boss.beam.x-bw/2, 0, boss.beam.x+bw/2, 0);
   g.addColorStop(0, "rgba(255,93,115,0)");
-  g.addColorStop(0.5, warmup ? "rgba(255,93,115,0.6)" : "rgba(255,255,255,0.95)");
+  g.addColorStop(0.5, warmup ? "rgba(255,93,115,0.6)" : "rgba(255,150,170,0.9)");
   g.addColorStop(1, "rgba(255,93,115,0)");
   ctx.fillStyle = g;
-  ctx.fillRect(boss.beam.x - boss.beam.width/2, boss.y, boss.beam.width, VH);
+  ctx.fillRect(boss.beam.x - bw/2, boss.y, bw, VH);
+  if(!warmup){
+    // White-hot core with a flicker, so a live beam reads as lethal.
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.75 + Math.random()*0.25;
+    const core = ctx.createLinearGradient(boss.beam.x-bw*0.16, 0, boss.beam.x+bw*0.16, 0);
+    core.addColorStop(0, "rgba(255,255,255,0)");
+    core.addColorStop(0.5, "rgba(255,255,255,0.95)");
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = core;
+    ctx.fillRect(boss.beam.x - bw*0.16, boss.y, bw*0.32, VH);
+  }
   ctx.restore();
 }
 
@@ -1194,7 +1218,7 @@ function drawHud(ctx, game){
   // Live objective tracker: spelled out at the start of a mission (and for a
   // moment whenever one is completed), then shrunk to a compact strip so it
   // stops eating the playfield.
-  const expanded = run.time < 7 || performance.now() < run.objectiveFlashUntil;
+  const expanded = !run.bossActive && (run.time < 7 || performance.now() < run.objectiveFlashUntil);
   if(expanded){
     ctx.font = "12px Arial, sans-serif";
     let oy = 92;
