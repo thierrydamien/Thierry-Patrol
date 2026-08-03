@@ -1126,6 +1126,7 @@ function roundRect(ctx, x, y, w, h, r){
 
 /* Combo pop: the multiplier physically bumps when it climbs. */
 let hudLastCombo = 0, hudComboPop = 0, hudLastMs = 0;
+let hudPanelGrad = null;   // identical every frame - built once
 
 function drawHud(ctx, game){
   const p = game.world.player;
@@ -1141,11 +1142,13 @@ function drawHud(ctx, game){
   const PAD = Math.round(VW*0.03), TOP_H = 84;
   // Glass panel: a gradient that fades out rather than a hard slab, with a
   // single cyan hairline - the game's HUD accent - underneath.
-  const panel = ctx.createLinearGradient(0, 0, 0, TOP_H + 26);
-  panel.addColorStop(0, "rgba(4,8,20,0.78)");
-  panel.addColorStop(0.72, "rgba(4,8,20,0.42)");
-  panel.addColorStop(1, "rgba(4,8,20,0)");
-  ctx.fillStyle = panel;
+  if(!hudPanelGrad){
+    hudPanelGrad = ctx.createLinearGradient(0, 0, 0, TOP_H + 26);
+    hudPanelGrad.addColorStop(0, "rgba(4,8,20,0.78)");
+    hudPanelGrad.addColorStop(0.72, "rgba(4,8,20,0.42)");
+    hudPanelGrad.addColorStop(1, "rgba(4,8,20,0)");
+  }
+  ctx.fillStyle = hudPanelGrad;
   ctx.fillRect(0, 0, VW, TOP_H + 26);
   ctx.fillStyle = "rgba(110,200,255,0.28)";
   ctx.fillRect(0, TOP_H-1, VW, 1);
