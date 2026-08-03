@@ -318,12 +318,20 @@ function drawEnemies(ctx, world, timeMs){
       ctx.shadowColor = "#ffd23f";
       ctx.shadowBlur = 14;
     }
-    ctx.rotate(Math.PI); // art faces up; enemies fly down
-    const img = assetsReady
-      ? (e.type.tint ? tinted(assets.enemy, e.type.tint) : assets.enemy)
-      : null;
-    if(img) ctx.drawImage(img, -size/2, -size/2, size, size);
-    else { ctx.fillStyle = e.type.tint || "#c0392b"; ctx.beginPath(); ctx.arc(0,0,size/2,0,TAU); ctx.fill(); }
+    // Drawn art where we have it (one silhouette per archetype), the old
+    // recoloured PNG only as a fallback.
+    const drawn = SF.enemyArt.spriteFor(e.typeId, e.type.tint || "#c0392b", e.elite);
+    if(drawn){
+      const box = size*1.16;                    // the sprite carries its own padding
+      ctx.drawImage(drawn, -box/2, -box/2, box, box);
+    } else {
+      ctx.rotate(Math.PI); // legacy art faces up; enemies fly down
+      const img = assetsReady
+        ? (e.type.tint ? tinted(assets.enemy, e.type.tint) : assets.enemy)
+        : null;
+      if(img) ctx.drawImage(img, -size/2, -size/2, size, size);
+      else { ctx.fillStyle = e.type.tint || "#c0392b"; ctx.beginPath(); ctx.arc(0,0,size/2,0,TAU); ctx.fill(); }
+    }
     ctx.restore();
 
     if(e.flash > 0){                              // white hit flash
@@ -332,30 +340,6 @@ function drawEnemies(ctx, world, timeMs){
       ctx.globalCompositeOperation = "lighter";
       ctx.fillStyle = "#ffffff";
       ctx.beginPath(); ctx.arc(e.x, e.y, size*0.42, 0, TAU); ctx.fill();
-      ctx.restore();
-    }
-    /*
-     * All nineteen archetypes share one ship silhouette (the art is a single
-     * PNG recoloured at runtime), so the ones that need a *different response*
-     * carry an emblem. Without it "which of these is the healer" is a colour
-     * memory test, and at eight years old it just reads as noise.
-     */
-    if(e.type.glyph){
-      const gy = e.y + size*0.06;
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = "rgba(8,10,20,0.72)";
-      ctx.beginPath(); ctx.arc(e.x, gy, size*0.20, 0, TAU); ctx.fill();
-      ctx.strokeStyle = e.type.tint || "#fff";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(e.x, gy, size*0.20, 0, TAU); ctx.stroke();
-      ctx.fillStyle = e.type.tint || "#fff";
-      ctx.font = "bold " + Math.round(size*0.26) + "px Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(e.type.glyph, e.x, gy + 1);
-      ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
       ctx.restore();
     }
     if(e.carriesRescue){                          // marker so you know what to shoot

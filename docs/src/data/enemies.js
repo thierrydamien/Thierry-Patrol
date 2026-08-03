@@ -325,12 +325,12 @@ const ENEMY_TYPES = {
   /* --- the ones that change how you play, not just what you shoot --- */
 
   shielder: {
-    name:"Guardian", glyph:"◎", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
+    name:"Guardian", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
     score:34, money:34, tint:"#22d3ee", fire:null,
     shieldRadius:135,          // everything inside this is untouchable
   },
   splitter: {
-    name:"Splitter", glyph:"⋔", behaviour:"dive", hp:4, r:19, size:58, speed:118,
+    name:"Splitter", behaviour:"dive", hp:4, r:19, size:58, speed:118,
     score:20, money:18, tint:"#4ade80",
     splitsInto:{ type:"shard", n:3 },
     fire:{ pattern:"straight", every:[2.6,4.0], speed:240 },
@@ -340,7 +340,7 @@ const ENEMY_TYPES = {
     score:6, money:5, tint:"#86efac", fire:null,
   },
   thief: {
-    name:"Coin Thief", glyph:"$", behaviour:"thief", hp:3, r:15, size:46, speed:190,
+    name:"Coin Thief", behaviour:"thief", hp:3, r:15, size:46, speed:190,
     score:18, money:16, tint:"#facc15", fire:null,
   },
   asteroid: {
@@ -355,17 +355,17 @@ const ENEMY_TYPES = {
    * and you have to fly around a rock the size of your ship for ten seconds.
    */
   sniper: {
-    name:"Marksman", glyph:"◈", behaviour:"sniper", hp:3, r:16, size:50, speed:130,
+    name:"Marksman", behaviour:"sniper", hp:3, r:16, size:50, speed:130,
     score:22, money:20, tint:"#f472b6", fire:null,
     chargeTime:1.7,            // long enough to see the line and move
   },
   interceptor: {
-    name:"Interceptor", glyph:"»", behaviour:"intercept", hp:2, r:14, size:44, speed:150,
+    name:"Interceptor", behaviour:"intercept", hp:2, r:14, size:44, speed:150,
     score:16, money:15, tint:"#fb923c",
     fire:{ pattern:"straight", every:[2.2,3.4], speed:270 },
   },
   bomber: {
-    name:"Minelayer", glyph:"☢", behaviour:"bomber", hp:9, r:22, size:68, speed:96,
+    name:"Minelayer", behaviour:"bomber", hp:9, r:22, size:68, speed:96,
     score:32, money:32, tint:"#a3e635", fire:null,
   },
   mine: {
@@ -373,11 +373,11 @@ const ENEMY_TYPES = {
     score:3, money:3, tint:"#ef4444", fire:null,
   },
   hive: {
-    name:"Hive", glyph:"▤", behaviour:"hive", hp:11, r:24, size:76, speed:104,
+    name:"Hive", behaviour:"hive", hp:11, r:24, size:76, speed:104,
     score:44, money:44, tint:"#c084fc", fire:null,
   },
   mender: {
-    name:"Mender", glyph:"+", behaviour:"mender", hp:6, r:19, size:56, speed:110,
+    name:"Mender", behaviour:"mender", hp:6, r:19, size:56, speed:110,
     score:30, money:30, tint:"#34d399", fire:null,
     heals:true,
   },

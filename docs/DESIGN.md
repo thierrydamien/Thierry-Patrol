@@ -397,11 +397,37 @@ Two supporting changes made them possible:
   Without it, spawned adds would inflate the objective total or make 90%
   unreachable - a bug that would only surface as "this star is impossible".
 
-The readability problem is real and worth naming: all nineteen share one ship
-sprite recoloured at runtime, so telling a Mender from a Marksman was a colour
-memory test. The ones that need a different response now carry an **emblem**
-(◎ ⋔ $ ◈ » ☢ ▤ +) drawn over the hull. Distinct silhouettes would be better and
-need actual art - see the next section.
+## 8i. Drawing the fleet
+
+Nineteen archetypes sharing one recoloured PNG made "which one is the healer"
+a colour memory test. Emblems over the hull were the stopgap; the fix was to
+draw the ships.
+
+`enemyart.js` builds each archetype from polygons - a dart, a swept crescent, a
+flat-topped gunship, a boxy hauler, a hex comb, a rifle with engines, a
+two-prong fork - over a shared vocabulary (`hull` for the lit-from-top-left
+gradient plus outline, `plate`, `cockpit`, `thruster`) so nineteen ships still
+look like one fleet. Palettes are derived from each archetype's existing tint,
+so the data didn't change.
+
+Two things make it practical:
+
+- **Rasterise once, blit forever.** Each (type, colour, elite) combination is
+  drawn into an offscreen canvas the first time it is needed and cached. The
+  per-frame cost is one `drawImage` - identical to the old shared sprite - so
+  the detail is free.
+- **Ships are drawn nose-down**, the way they fly, which lets the light source
+  stay fixed. The old art faced up and was rotated 180 degrees at draw time,
+  which rotated its highlights with it and is why everything looked flat.
+
+Worth recording: the first pass drew exhausts as bright triangles pointing off
+the tail, and the entire fleet looked like it had horns. An exhaust has to be
+diffuse at its edges or the eye reads it as hull. It is now a dark nozzle plus
+a soft radial bloom.
+
+Side effect worth having: enemies no longer go through the runtime tinting
+path, so they render correctly even on `file://` where pixel read-back is
+blocked.
 
 ## 9. What I'd do next
 

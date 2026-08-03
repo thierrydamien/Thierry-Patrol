@@ -84,28 +84,28 @@ Flight Leader → Star Ace → Wing Commander → Space Legend → Thierry Legen
 Your rank badge shows on the pilot picker, the menu and the Armory card.
 
 ## Enemies that change how you play
-**Nineteen archetypes** in all. Beyond the eight that just shoot at you, these
-need a different answer rather than more bullets — and each one carries an
-emblem, because nineteen ships sharing one silhouette in different colours is a
-colour memory test otherwise:
+**Nineteen archetypes**, each with its **own drawn ship** — a dart, a gunship,
+a hauler, a comb, a rifle, a fork — so you can tell what something is before it
+does anything. Beyond the eight that just shoot at you, these need a different
+answer rather than more bullets:
 
-- **Guardian (◎)** — projects a shield dome over everything near it. Your shots
+- **Guardian** — projects a shield dome over everything near it. Your shots
   splash off until you kill the Guardian, which turns a wave into a priority
   problem.
-- **Splitter (⋔)** — bursts into three homing shards when you kill it. The kill
+- **Splitter** — bursts into three homing shards when you kill it. The kill
   is the start of the problem, not the end of it.
-- **Coin Thief ($)** — hunts your dropped coins and runs for the top of the
+- **Coin Thief** — hunts your dropped coins and runs for the top of the
   screen with them. Shoot it down and it drops everything; let it go and that
   money is gone for good.
-- **Mender (+)** — repairs damaged enemies with a visible green beam. It undoes
+- **Mender** — repairs damaged enemies with a visible green beam. It undoes
   work you have already done, which makes it the most annoying thing to ignore.
-- **Hive (▤)** — never shoots you, just keeps producing drones. Leave it and the
+- **Hive** — never shoots you, just keeps producing drones. Leave it and the
   screen fills up.
-- **Minelayer (☢)** — drops mines that sit, blink faster as they arm, and go off
+- **Minelayer** — drops mines that sit, blink faster as they arm, and go off
   on their own. Turns a corner of the screen into somewhere you can't fly.
-- **Marksman (◈)** — parks and takes deliberate shots, drawing the line it is
+- **Marksman** — parks and takes deliberate shots, drawing the line it is
   about to fire down so you always get a moment to move.
-- **Interceptor (»)** — matches your column and keeps correcting. Unlike a
+- **Interceptor** — matches your column and keeps correcting. Unlike a
   kamikaze it never commits, so you have to actually break the lock.
 - **Asteroids** — drifting rocks. Dodge them or break them up for cash. They're
   scenery, not opposition, so they never count against your "destroy the
@@ -118,6 +118,13 @@ colour memory test otherwise:
 
 The first one of each in a run gets a radio line explaining what it wants —
 a new mechanic nobody explains just reads as the game being broken.
+
+## The art
+The enemy fleet is **drawn in code** (`src/enemyart.js`) — one silhouette per
+archetype, built from polygons with a fixed light source, then rasterised once
+into an offscreen canvas and blitted. So nineteen distinct ships cost exactly
+what one shared sprite cost, and they don't need any image files. The player's
+ship and the two bosses still use the original artwork.
 
 ## Bosses
 Two encounters, both with:

@@ -108,7 +108,7 @@ const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
-  "src/render.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
