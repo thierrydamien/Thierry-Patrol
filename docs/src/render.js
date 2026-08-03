@@ -20,7 +20,9 @@ const ASSET_PATHS = {
   ship: "assets/orange.png",
   enemy: "assets/red.png",
   bulletImg: "assets/bullet.png",
-  playfieldBg: "assets/BackNew.jpg",
+  // No playfield background here any more: each mission generates its own
+  // (src/skygen.js), which saves a 180KB download and means every level looks
+  // like a different part of space.
 };
 const assets = {};
 let assetsReady = false;
@@ -104,8 +106,18 @@ function tinted(img, hex){
    --------------------------------------------------------- */
 const BG_ZOOM = 1.16;
 let bgPhase = 0, stars = [], comets = [], cometTimer = 5, warp = 1;
+// The generated backdrop for this mission, and how far we've flown through it.
+let skyCanvas = null, skyScroll = 0, skyIndex = -1;
 
 function initBackground(missionIndex){
+  // One nebula per mission, generated once and cached: eight levels that used
+  // to share a single JPG now each look like a different part of space.
+  const idx = missionIndex || 0;
+  if(idx !== skyIndex || !skyCanvas){
+    skyCanvas = SF.skygen.build(idx, VW, VH);
+    skyIndex = idx;
+  }
+  skyScroll = 0;
   stars = [];
   // Star counts are per-area, not per-layer-constant: the playfield is 2.5x
   // the area it used to be, so a fixed count would read as empty space.
@@ -126,6 +138,9 @@ function initBackground(missionIndex){
 
 function updateBackground(dt){
   bgPhase += dt*0.08*warp;
+  // The backdrop is vertically tileable, so it can genuinely scroll rather
+  // than drift - you are flying through it, not past a photograph.
+  skyScroll = (skyScroll + dt*14*warp) % VH;
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
     s.y += s.speed*warp*dt;
@@ -147,20 +162,11 @@ function updateBackground(dt){
 }
 
 function drawBackground(ctx){
-  if(assetsReady){
-    // Cover-fit, not stretch: the nebula art is 4:5 and the field is 3:4, so
-    // scaling each axis independently would visibly squash it. Scale by
-    // whichever axis needs more, then drift inside the overflow.
-    const img = assets.playfieldBg;
-    const iw = img.naturalWidth || img.width || 400;
-    const ih = img.naturalHeight || img.height || 500;
-    const cover = Math.max(VW/iw, VH/ih) * BG_ZOOM;
-    const dw = iw*cover, dh = ih*cover;
-    const mx = (dw - VW)/2, my = (dh - VH)/2;
-    ctx.drawImage(img,
-      -mx + Math.sin(bgPhase)*mx*0.9,
-      -my + Math.sin(bgPhase*0.63)*my*0.9,
-      dw, dh);
+  if(skyCanvas){
+    // Drawn twice, offset by a screen height, so the wrap is seamless.
+    const y = skyScroll;
+    ctx.drawImage(skyCanvas, 0, y);
+    ctx.drawImage(skyCanvas, 0, y - VH);
   } else {
     ctx.fillStyle = "#05040f"; ctx.fillRect(0,0,VW,VH);
   }

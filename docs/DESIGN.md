@@ -536,6 +536,36 @@ Two notes from the first pass:
   you can see what is coming. Colour should reinforce a label, never replace
   one.
 
+## 8m. A sky per mission
+
+Eight levels shared one JPG, so mission 8 looked exactly like mission 1.
+`skygen.js` generates one nebula per mission from a palette and a seed. Two
+properties make it work in a scrolling shooter:
+
+- **Vertically tileable.** Every element is drawn three times - at y, y-H and
+  y+H - so the image wraps with no seam and the playfield can scroll through it
+  forever. The old art was pan-only precisely because it could not wrap.
+- **Built once.** Hundreds of gradients are rasterised into an offscreen canvas
+  at mission start; the frame cost is one `drawImage`. All eight generate in
+  ~170ms.
+
+The first attempt looked like wallpaper, and the reasons are worth keeping:
+
+1. **Space is mostly black.** Filling the canvas with colour reads as a
+   gradient, not a nebula. The base is now near-black, the gas clusters around
+   two bright cores rather than spreading evenly, blob alpha dropped from
+   ~0.12 to ~0.05, and a vignette pulls the corners down.
+2. **Dust lanes are what make it look photographed.** Dark blobs carved back
+   out of the glow give the silhouettes; without them a nebula is a smear.
+3. **A star is a hard point with a tight glow.** The first pass used a wide
+   pale halo and every star read as a grey bubble. Core radius under a pixel,
+   halo 4x that, and four-point diffraction spikes on the brightest few - those
+   spikes are what makes it read as astrophotography, and they cost four lines.
+
+Side benefit: the generated skies are darker than the photograph was, so
+bullets and coins read better against them, and dropping `BackNew.jpg` saves a
+180KB download.
+
 ## 9. What I'd do next
 
 Roughly in value order:

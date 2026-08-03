@@ -141,11 +141,21 @@ The first one of each in a run gets a radio line explaining what it wants —
 a new mechanic nobody explains just reads as the game being broken.
 
 ## The art
-The enemy fleet is **drawn in code** (`src/enemyart.js`) — one silhouette per
-archetype, built from polygons with a fixed light source, then rasterised once
-into an offscreen canvas and blitted. So nineteen distinct ships cost exactly
-what one shared sprite cost, and they don't need any image files. The player's
-ship and the two bosses still use the original artwork.
+Almost all of it is **drawn in code**, so it needs no image files at all.
+
+- **The enemy fleet** (`src/enemyart.js`) — one silhouette per archetype, built
+  from polygons with a fixed light source, rasterised once into an offscreen
+  canvas and blitted. Nineteen distinct ships cost exactly what one shared
+  sprite cost.
+- **The skies** (`src/skygen.js`) — **a different nebula for every mission**,
+  from Home Reach through the Rust Belt and Ice Fields to The Deep. Each is
+  built from a palette and a seed: clustered emission clouds, dark dust lanes
+  carved back out of them, filaments, and three grades of star up to suns with
+  diffraction spikes. All eight generate in about 170ms total, and they're
+  **vertically tileable**, so the playfield genuinely scrolls through them
+  instead of drifting past a photograph.
+
+The player's ship and the two bosses still use the original artwork.
 
 ## Bosses
 Two encounters, both with:

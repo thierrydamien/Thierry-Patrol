@@ -108,7 +108,7 @@ const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/skygen.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
@@ -159,6 +159,9 @@ async function run(){
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
   check("badge picker offers a real set of badges", SF.config.BADGES.length >= 12);
+  check("every mission has its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
+  check("no two missions share a sky palette",
+    new Set(SF.skygen.SKIES.map(k => k.clouds.join(""))).size === SF.skygen.SKIES.length);
   check("every ship part hangs off a real upgrade",
     SF.shipart.PARTS.every(pt => !!SF.config.UPGRADE_BY_ID[pt.up]));
   check("no ship part asks for a level its upgrade can't reach",
