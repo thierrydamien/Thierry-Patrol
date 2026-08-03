@@ -92,6 +92,9 @@ function buildLoadout(profile, difficulty){
     overdrives: lv("overdrive"),
     overdriveTime: 4 + lv("overdrive"),
     color: profile.shipColor,
+    // The same levels object the hangar draws from, so the ship you fly is
+    // the ship you built - every bought part visible in combat.
+    levels: SF.shipart.levelsOf(profile),
     dps: singleTargetDps(lv),
   };
 }
@@ -664,6 +667,7 @@ function draw(timeMs){
   SF.render.drawBullets(ctx, world);
   SF.render.drawPlayer(ctx, world.player, timeMs);
   fx.drawParticles(ctx);
+  SF.render.drawForeground(ctx);
   fx.drawTexts(ctx);
   if(game.run){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   fx.drawFlash(ctx, VW, VH);

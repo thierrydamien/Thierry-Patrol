@@ -140,7 +140,8 @@ function resolve(world, ctxObj, dt){
 
       e.hp -= b.dmg;
       e.flash = 1;
-      fx.sparks(b.x, b.y, 3, "#ffe9a8", 130);
+      // Sparks spray back along the shot - metal behaving like metal.
+      fx.impact(b.x, b.y, b.vx, b.vy, "#ffe9a8", 4);
       if(e.hp > 0){
         fx.damageNumber(e.x, e.y - e.r, b.dmg, false);
         audio.play("hitArmour");

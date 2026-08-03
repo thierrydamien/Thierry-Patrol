@@ -58,6 +58,8 @@ function hsbToRgb(h,s,v){
   return { r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255) };
 }
 
+function hexToRgbStr(hex){ const c = hexToRgb(hex); return c.r + "," + c.g + "," + c.b; }
+
 let pixelsReadable = null;
 function canReadPixels(){
   if(pixelsReadable !== null) return pixelsReadable;
@@ -105,6 +107,10 @@ function tinted(img, hex){
    --------------------------------------------------------- */
 const BG_ZOOM = 1.16;
 let bgPhase = 0, stars = [], comets = [], cometTimer = 5, warp = 1;
+// Foreground dust: tiny fast specks nearer than the ship. They do nothing but
+// stream past - which is exactly what sells altitude and speed.
+let dust = [];
+let vignette = null;
 // The generated backdrop for this mission, and how far we've flown through it.
 let skyCanvas = null, skyScroll = 0, skyIndex = -1, skyPhoto = null;
 
@@ -139,6 +145,12 @@ function initBackground(missionIndex){
   cometTimer = rand(3, 9);
   bgPhase = rand(0, TAU);
   warp = Math.min(1 + (missionIndex||0)*0.1, 2.0);
+  dust = [];
+  const dn = Math.round(26 * density);
+  for(let i=0;i<dn;i++){
+    dust.push({ x: rand(0,VW), y: rand(0,VH), speed: rand(320, 520),
+                len: rand(6, 16), a: rand(0.05, 0.16) });
+  }
 }
 
 function updateBackground(dt){
@@ -151,6 +163,11 @@ function updateBackground(dt){
     s.y += s.speed*warp*dt;
     s.twinkle += dt*2.5;
     if(s.y > VH){ s.y -= VH; s.x = rand(0, VW); }
+  }
+  for(let i=0;i<dust.length;i++){
+    const d = dust[i];
+    d.y += d.speed*warp*dt;
+    if(d.y > VH + 20){ d.y = -20; d.x = rand(0, VW); }
   }
   cometTimer -= dt;
   if(cometTimer <= 0){
@@ -192,7 +209,8 @@ function drawBackground(ctx){
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
     ctx.globalAlpha = s.alpha * (0.75 + Math.sin(s.twinkle)*0.25);
-    ctx.fillStyle = s.layer===2 ? "#cfe8ff" : "#ffffff";
+    // Real starfields aren't monochrome: a scatter of warm and blue-white.
+    ctx.fillStyle = s.layer===2 ? "#cfe8ff" : (s.twinkle % 1 < 0.18 ? "#ffe9c4" : "#ffffff");
     ctx.fillRect(s.x, s.y, s.size, s.size + (s.layer===2?2:0));
   }
   ctx.globalAlpha = 1;
@@ -208,6 +226,36 @@ function drawBackground(ctx){
   }
 }
 
+/*
+ * Foreground pass, drawn over the entities: streaming dust and a cinematic
+ * vignette. The vignette is one cached radial gradient - it pulls the eye to
+ * the centre of the field and grounds the bright HUD against deep space.
+ */
+function drawForeground(ctx){
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = "#dfeaff";
+  for(let i=0;i<dust.length;i++){
+    const d = dust[i];
+    ctx.globalAlpha = d.a;
+    ctx.fillRect(d.x, d.y, 1.5, d.len*warp);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  if(!vignette){
+    vignette = document.createElement("canvas");
+    vignette.width = VW; vignette.height = VH;
+    const v = vignette.getContext("2d");
+    if(v){
+      const g = v.createRadialGradient(VW/2, VH*0.46, VH*0.42, VW/2, VH*0.5, VH*0.86);
+      g.addColorStop(0, "rgba(2,4,12,0)");
+      g.addColorStop(1, "rgba(2,4,12,0.42)");
+      v.fillStyle = g; v.fillRect(0,0,VW,VH);
+    }
+  }
+  ctx.drawImage(vignette, 0, 0);
+}
+
 /* ---------------------------------------------------------
    ENTITIES
    --------------------------------------------------------- */
@@ -215,36 +263,58 @@ function drawPlayer(ctx, p, timeMs){
   if(!p || !p.alive) return;
   if(p.invuln > 0 && Math.floor(p.invuln*12)%2 === 0) return; // blink while recovering
 
-  const sprite = assetsReady ? tinted(assets.ship, p.color) : null;
   const size = 58;
   const y = p.y + p.recoil;
+  const overdrive = timeMs < p.overdriveUntil;
+  const speed = Math.hypot(p.vx || 0, p.vy || 0);
 
+  // Engine wake: an additive ribbon of light behind the ship, stretched by
+  // how fast it's actually moving.
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
   for(let i=0;i<p.trail.length;i++){
     const t = p.trail[i];
     const a = 1 - t.life/0.3;
-    ctx.globalAlpha = a*0.35;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(t.x-2.5, t.y, 5, 11*a);
+    ctx.globalAlpha = a*(overdrive ? 0.5 : 0.3);
+    ctx.fillStyle = overdrive ? "#ffb35c" : p.color;
+    const h = (11 + speed*0.02)*a;
+    ctx.fillRect(t.x-2.5, t.y, 5, h);
   }
+  ctx.restore();
   ctx.globalAlpha = 1;
 
-  // Wingmen are the household's other pilots: their ship, their colour, their
-  // name under it. Seeing "CHARLIE" flying off your wing is the whole point.
+  // Overdrive: the whole screen gains vertical speed streaks - four seconds
+  // of feeling twice as fast, not just shooting twice as fast.
+  if(overdrive){
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for(let i=0;i<9;i++){
+      const sx = ((i*173 + 37) % VW);
+      const sy = ((timeMs*(0.9 + (i%4)*0.28) + i*310) % (VH + 160)) - 80;
+      ctx.globalAlpha = 0.05 + (i%3)*0.02;
+      ctx.fillStyle = "#bfe0ff";
+      ctx.fillRect(sx, sy, 2, 90 + (i%3)*44);
+    }
+    ctx.restore();
+  }
+
+  // Wingmen are the household's other pilots: their real ship - their
+  // colour, their bought parts - with their name under it.
   for(let i=0;i<p.drones;i++){
     const mate = p.crew[i];
     const dx = i===0 ? -52 : 52, ds = size*0.58;
-    const droneSprite = assetsReady ? tinted(assets.ship, mate ? mate.color : p.color) : null;
     ctx.save();
     ctx.translate(p.x+dx, y+6);
     ctx.rotate(p.bank*0.5);
-    if(droneSprite) ctx.drawImage(droneSprite, -ds/2, -ds/2, ds, ds);
-    else { ctx.fillStyle = mate ? mate.color : p.color; ctx.beginPath(); ctx.arc(0,0,ds/2,0,TAU); ctx.fill(); }
+    SF.shipart.drawShip(ctx, 0, 0, ds, {
+      color: mate ? mate.color : p.color,
+      levels: mate ? mate.levels : {}, t: timeMs/1000 + i, idle: false,
+    });
     ctx.restore();
     if(mate){
       ctx.save();
       ctx.font = "bold 10px Arial, sans-serif";
       ctx.textAlign = "center";
-      // Outlined so the name stays readable against a busy background.
       ctx.lineWidth = 3;
       ctx.strokeStyle = "rgba(0,0,0,0.65)";
       ctx.strokeText(mate.callsign.toUpperCase(), p.x+dx, y+6+ds*0.95);
@@ -258,20 +328,62 @@ function drawPlayer(ctx, p, timeMs){
   ctx.save();
   ctx.translate(p.x, y);
   ctx.rotate(p.bank);
-  if(timeMs < p.overdriveUntil){                 // overdrive aura
-    ctx.globalAlpha = 0.5 + Math.sin(timeMs/60)*0.2;
-    ctx.fillStyle = "#ff8a3d";
-    ctx.beginPath(); ctx.arc(0, 0, size*0.62, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
+  // Live engine flame under the hull: flickers, and stretches with real
+  // velocity, so pushing the stick reads as thrust.
+  {
+    const thrust = 0.55 + speed/560 + (overdrive ? 0.5 : 0);
+    const flick = 0.85 + Math.sin(timeMs/24)*0.15;
+    const fl = size*(0.30 + 0.34*thrust)*flick;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const fg = ctx.createLinearGradient(0, size*0.3, 0, size*0.3 + fl);
+    fg.addColorStop(0, overdrive ? "rgba(255,220,160,0.95)" : "rgba(140,210,255,0.85)");
+    fg.addColorStop(0.5, overdrive ? "rgba(255,150,60,0.55)" : "rgba(90,150,255,0.4)");
+    fg.addColorStop(1, "rgba(60,110,255,0)");
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(-size*0.10, size*0.30);
+    ctx.lineTo(size*0.10, size*0.30);
+    ctx.lineTo(0, size*0.30 + fl);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
-  if(sprite) ctx.drawImage(sprite, -size/2, -size/2, size, size);
-  else { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(0,0,size/2,0,TAU); ctx.fill(); }
+  if(overdrive){                                 // afterburner corona
+    const pulse = 0.5 + Math.sin(timeMs/55)*0.25;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(0, 6, size*0.1, 0, 6, size*0.85);
+    g.addColorStop(0, "rgba(255,170,80," + (0.35*pulse+0.2) + ")");
+    g.addColorStop(1, "rgba(255,100,40,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 6, size*0.85, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // The ship they actually built: same drawing the hangar shows, every
+  // bought part bolted on and visible in combat.
+  SF.shipart.drawShip(ctx, 0, 0, size, {
+    color: p.color, levels: p.levels, t: timeMs/1000, idle: false,
+  });
   ctx.restore();
 
-  for(let i=0;i<p.shield;i++){
-    ctx.strokeStyle = "rgba(120,200,255," + (0.75 - i*0.14) + ")";
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(p.x, y, size*0.68 + i*4, 0, TAU); ctx.stroke();
+  // Shield: a live energy skin rather than plain circles.
+  if(p.shield > 0){
+    const wob = Math.sin(timeMs/300)*1.5;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for(let i=0;i<p.shield;i++){
+      const r = size*0.68 + i*4 + wob;
+      const g = ctx.createRadialGradient(p.x, y, r*0.82, p.x, y, r);
+      g.addColorStop(0, "rgba(120,200,255,0)");
+      g.addColorStop(0.85, "rgba(120,200,255," + (0.16 - i*0.03) + ")");
+      g.addColorStop(1, "rgba(160,225,255," + (0.4 - i*0.08) + ")");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, y, r, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = "rgba(150,215,255," + (0.5 + Math.sin(timeMs/240)*0.15) + ")";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(p.x, y, size*0.68 + (p.shield-1)*4 + wob, 0, TAU); ctx.stroke();
   }
 }
 
@@ -339,10 +451,7 @@ function drawEnemies(ctx, world, timeMs){
     if(e.type.behaviour === "mine"){ drawMine(ctx, e, size, t); continue; }
     ctx.save();
     ctx.translate(e.x, e.y);
-    if(e.elite){
-      ctx.shadowColor = "#ffd23f";
-      ctx.shadowBlur = 14;
-    }
+    // (Elite glow is baked into the cached sprite - no per-frame shadowBlur.)
     // Drawn art where we have it (one silhouette per archetype), the old
     // recoloured PNG only as a fallback.
     const drawn = SF.enemyArt.spriteFor(e.typeId, e.type.tint || "#c0392b", e.elite);
@@ -499,40 +608,158 @@ function drawAsteroid(ctx, e, size){
   }
 }
 
+/*
+ * Bullets are pre-rendered once per look and blitted. The old path set
+ * shadowBlur per bullet per frame - the single most expensive call in the
+ * renderer once a maxed ship fills the screen - and still read as flat
+ * rectangles. A baked bolt gets a white-hot core, a coloured body and a soft
+ * halo for free.
+ */
+const boltCache = {};
+function boltSprite(color, w, h){
+  const key = color + w + "x" + h;
+  if(boltCache[key]) return boltCache[key];
+  const m = 8;                                   // halo margin
+  const cv = document.createElement("canvas");
+  cv.width = w + m*2; cv.height = h + m*2;
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  const cx = cv.width/2, cy = cv.height/2;
+  // Halo - tight, or the additive pass turns every volley into fog.
+  const halo = c.createRadialGradient(cx, cy, 1, cx, cy, Math.max(w, h*0.6));
+  halo.addColorStop(0, color); halo.addColorStop(1, "rgba(0,0,0,0)");
+  c.globalAlpha = 0.34; c.fillStyle = halo;
+  c.fillRect(0, 0, cv.width, cv.height);
+  c.globalAlpha = 1;
+  // Body capsule
+  c.fillStyle = color;
+  c.beginPath();
+  c.arc(cx, cy - h/2 + w/2, w/2, Math.PI, 0);
+  c.lineTo(cx + w/2, cy + h/2 - w/2);
+  c.arc(cx, cy + h/2 - w/2, w/2, 0, Math.PI);
+  c.closePath(); c.fill();
+  // A narrow white-hot core up the spine, brightest at the tip.
+  const core = c.createLinearGradient(0, cy - h/2, 0, cy + h/2);
+  core.addColorStop(0, "rgba(255,255,255,0.95)");
+  core.addColorStop(0.6, "rgba(255,255,255,0.55)");
+  core.addColorStop(1, "rgba(255,255,255,0.12)");
+  c.fillStyle = core;
+  c.beginPath();
+  c.arc(cx, cy - h/2 + w/2, w*0.17, Math.PI, 0);
+  c.lineTo(cx + w*0.17, cy + h/2 - w*0.6);
+  c.arc(cx, cy + h/2 - w*0.6, w*0.17, 0, Math.PI);
+  c.closePath(); c.fill();
+  boltCache[key] = cv;
+  return cv;
+}
+/** Soft vertical light streak, stretched behind a moving bolt. */
+const streakSprite = (() => {
+  const cv = document.createElement("canvas"); cv.width = 16; cv.height = 64;
+  const c = cv.getContext("2d");
+  if(c){
+    const g = c.createLinearGradient(0, 0, 0, 64);
+    g.addColorStop(0, "rgba(255,255,255,0.55)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(8, 10, 5, 10, 0, 0, TAU); c.fill();
+    c.fillRect(3, 10, 10, 54);
+  }
+  return cv;
+})();
+
+const enemyBoltCache = {};
+function enemyBolt(kind, r){
+  const key = kind + "|" + Math.round(r);
+  if(enemyBoltCache[key]) return enemyBoltCache[key];
+  const R = Math.max(3, r), m = Math.ceil(R*2.4);
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = m*2;
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  const col = kind === "orb" ? "255,124,229" : "255,93,115";
+  const halo = c.createRadialGradient(m, m, 1, m, m, m);
+  halo.addColorStop(0, "rgba(" + col + ",0.85)");
+  halo.addColorStop(0.45, "rgba(" + col + ",0.28)");
+  halo.addColorStop(1, "rgba(" + col + ",0)");
+  c.fillStyle = halo; c.fillRect(0, 0, m*2, m*2);
+  c.fillStyle = "rgb(" + col + ")";
+  c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
+  c.fillStyle = "rgba(255,255,255,0.9)";
+  c.beginPath(); c.arc(m - R*0.15, m - R*0.2, R*0.45, 0, TAU); c.fill();
+  enemyBoltCache[key] = cv;
+  return cv;
+}
+
 function drawBullets(ctx, world){
   const items = world.bullets.items;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
   for(let i=0;i<items.length;i++){
     const b = items[i];
     if(!b.alive) continue;
     const t = BULLET_TIERS[b.tier] || BULLET_TIERS[0];
+    const k = b.fromDrone ? 0.7 : 1;
+    const spr = boltSprite(t.color, t.w*k, t.h*k);
+    if(!spr) continue;
+    // Motion streak first, angled along the bullet's actual velocity.
+    const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
     ctx.save();
-    if(t.glow){ ctx.shadowColor = t.color; ctx.shadowBlur = t.glow; }
-    ctx.fillStyle = t.color;
-    const w = t.w * (b.fromDrone ? 0.7 : 1), h = t.h * (b.fromDrone ? 0.7 : 1);
-    ctx.fillRect(b.x - w/2, b.y - h/2, w, h);
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
+    ctx.globalAlpha = 0.22;
+    ctx.drawImage(streakSprite, -2.5*k, -2, 5*k, (t.h + 18)*k);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(spr, -spr.width*0.5*k, -spr.height*0.5*k, spr.width*k, spr.height*k);
     ctx.restore();
   }
+  ctx.restore();
 
   const ebs = world.enemyBullets.items;
-  ctx.save();
   for(let i=0;i<ebs.length;i++){
     const b = ebs[i];
     if(!b.alive) continue;
-    if(b.kind === "orb"){
-      ctx.shadowColor = "#ff7ce5"; ctx.shadowBlur = 8;
-      ctx.fillStyle = "#ff7ce5";
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
-    } else if(b.kind === "aimed"){
-      ctx.shadowColor = "#ff5d73"; ctx.shadowBlur = 6;
-      ctx.fillStyle = "#ffd0d6";
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
-    } else {
-      ctx.shadowColor = "#ff5d73"; ctx.shadowBlur = 5;
-      ctx.fillStyle = "#ff5d73";
-      ctx.fillRect(b.x-b.r*0.6, b.y-b.r, b.r*1.2, b.r*2);
+    const spr = enemyBolt(b.kind === "orb" ? "orb" : "aimed", b.r);
+    if(spr) ctx.drawImage(spr, b.x - spr.width/2, b.y - spr.height/2);
+    else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(b.x-b.r*0.6, b.y-b.r, b.r*1.2, b.r*2); }
+  }
+}
+
+/*
+ * Coins are the most numerous object in the game, so they get real art:
+ * eight pre-rendered spin phases of a bevelled gold coin with a moving
+ * glint. Flat yellow ellipses were the single most prototype-looking thing
+ * still on screen.
+ */
+const coinPhases = [];
+function coinSprite(phase){
+  if(!coinPhases.length){
+    for(let ph=0;ph<8;ph++){
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 26;
+      const c = cv.getContext("2d");
+      if(!c) break;
+      const squash = Math.max(0.22, Math.abs(Math.cos(ph/8*Math.PI)));
+      c.translate(13, 13);
+      // Edge (visible when the face turns away)
+      c.fillStyle = "#8a5f08";
+      c.beginPath(); c.ellipse(0, 0, 9*squash + 1.2, 10.2, 0, 0, TAU); c.fill();
+      // Face
+      const g = c.createRadialGradient(-2.5, -3.5, 1, 0, 0, 10);
+      g.addColorStop(0, "#fff3b0");
+      g.addColorStop(0.45, "#ffd23f");
+      g.addColorStop(1, "#c98d12");
+      c.fillStyle = g;
+      c.beginPath(); c.ellipse(0, 0, 9*squash, 9.6, 0, 0, TAU); c.fill();
+      // Inner ring stamped into the face
+      c.strokeStyle = "rgba(140,95,10,0.55)"; c.lineWidth = 1.4;
+      c.beginPath(); c.ellipse(0, 0, 5.6*squash, 6.2, 0, 0, TAU); c.stroke();
+      // Glint that walks across with the spin
+      c.fillStyle = "rgba(255,255,255,0.85)";
+      c.beginPath(); c.ellipse(-3*squash + ph*0.5 - 2, -4, 1.7*squash + 0.4, 1.1, -0.5, 0, TAU); c.fill();
+      coinPhases.push(cv);
     }
   }
-  ctx.restore();
+  return coinPhases[phase % coinPhases.length];
 }
 
 function drawPickups(ctx, world, timeMs){
@@ -543,31 +770,74 @@ function drawPickups(ctx, world, timeMs){
     ctx.save();
     ctx.translate(it.x, it.y);
     if(it.kind === "coin"){
-      const squash = Math.abs(Math.cos(it.angle));
-      ctx.fillStyle = "#ffd23f";
-      ctx.strokeStyle = "#a8760a"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.ellipse(0, 0, 9*Math.max(0.25,squash), 9, 0, 0, TAU);
-      ctx.fill(); ctx.stroke();
+      const spr = coinSprite(Math.floor((it.angle/Math.PI)*8) & 7);
+      if(spr) ctx.drawImage(spr, -13, -13);
+      else {
+        ctx.fillStyle = "#ffd23f";
+        ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+      }
     } else if(it.kind === "rescue"){
+      // A drifting survivor: glass escape pod, suited figure inside, and a
+      // slow amber beacon - the one thing on screen you feel bad missing.
       const bob = Math.sin(timeMs/220)*2;
-      ctx.fillStyle = "rgba(255,210,63,0.25)";
-      ctx.beginPath(); ctx.arc(0, bob, 22, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#ffd23f";
-      ctx.beginPath(); ctx.arc(0, bob, 13, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#241a00";
-      ctx.font = "bold 11px Arial, sans-serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("🧑", 0, bob+1);
-      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      const blink = Math.sin(timeMs/380) > 0.2;
+      ctx.save();
+      ctx.translate(0, bob);
+      ctx.globalCompositeOperation = "lighter";
+      const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
+      halo.addColorStop(0, "rgba(255,210,63,0.5)");
+      halo.addColorStop(1, "rgba(255,210,63,0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.translate(0, bob);
+      // Pod shell
+      const shell = ctx.createLinearGradient(-13, -13, 10, 13);
+      shell.addColorStop(0, "#ffe27a"); shell.addColorStop(1, "#c98d12");
+      ctx.fillStyle = shell;
+      ctx.strokeStyle = "rgba(90,60,6,0.8)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill(); ctx.stroke();
+      // Window with the survivor: white helmet, dark visor
+      ctx.fillStyle = "#0c1428";
+      ctx.beginPath(); ctx.arc(0, -1, 8.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#e8ecf4";
+      ctx.beginPath(); ctx.arc(0, 0, 5.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#2b6ea8";
+      ctx.beginPath(); ctx.ellipse(0, -0.5, 3.8, 3, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.beginPath(); ctx.ellipse(-1.4, -1.6, 1.2, 0.8, -0.5, 0, TAU); ctx.fill();
+      // Beacon
+      ctx.fillStyle = blink ? "#ff5d43" : "rgba(255,93,67,0.25)";
+      ctx.beginPath(); ctx.arc(0, -13.5, 2.1, 0, TAU); ctx.fill();
+      ctx.restore();
     } else {
+      // Power-ups: a slow-spinning hex casing with a pulsing halo in the
+      // power's own colour - reads as hardware, not a poker chip.
       const def = it.data;
-      ctx.rotate(it.angle);
+      const pulse = 0.6 + Math.sin(timeMs/300 + it.angle)*0.4;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
+      halo.addColorStop(0, def.color);
+      halo.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.22 + pulse*0.16;
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.rotate(it.angle*0.6);
+      ctx.fillStyle = "rgba(8,12,26,0.92)";
+      ctx.strokeStyle = def.color; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for(let n=0;n<6;n++){
+        const a = n/6*TAU - Math.PI/2;
+        const px2 = Math.cos(a)*14, py2 = Math.sin(a)*14;
+        if(n===0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.rotate(-it.angle*0.6);
       ctx.fillStyle = def.color;
-      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(0,0,15,0,TAU); ctx.fill(); ctx.stroke();
-      ctx.rotate(-it.angle);
-      ctx.fillStyle = "#0a0920";
-      ctx.font = "bold 11px Arial, sans-serif";
+      ctx.font = "bold 12px Arial, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(def.glyph, 0, 1);
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -597,6 +867,23 @@ function drawBoss(ctx, boss, timeMs){
   // Telegraphs first, underneath the boss, so they never obscure it.
   drawTelegraph(ctx, boss, timeMs);
   drawBeam(ctx, boss);
+
+  // A slow-breathing aura in the boss's own tint. It grows angrier-looking as
+  // the fight goes on, and reads as "under power" rather than "pasted on".
+  {
+    const enraged = boss.phase && boss.phase.enrage;
+    const pulse = 0.5 + Math.sin(timeMs/(enraged ? 130 : 420))*0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const ar = size*(0.62 + damage*0.1 + pulse*0.05);
+    const g = ctx.createRadialGradient(bx, by, ar*0.3, bx, by, ar);
+    const base = enraged ? "255,60,60" : hexToRgbStr(boss.tint);
+    g.addColorStop(0, "rgba(" + base + "," + (0.10 + pulse*0.08 + damage*0.06) + ")");
+    g.addColorStop(1, "rgba(" + base + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(bx, by, ar, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
 
   if(assetsReady){
     const B = bossBufCtx;
@@ -813,9 +1100,14 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.closePath();
 }
 
+/* Combo pop: the multiplier physically bumps when it climbs. */
+let hudLastCombo = 0, hudComboPop = 0, hudLastMs = 0;
+
 function drawHud(ctx, game){
   const p = game.world.player;
   const run = game.run;
+  const nowM = performance.now();
+  const hdt = Math.min(0.05, (nowM - hudLastMs)/1000); hudLastMs = nowM;
   ctx.save();
   ctx.textBaseline = "top";
 
@@ -823,14 +1115,31 @@ function drawHud(ctx, game){
      centre, wallet right, with lives and the mission bar on a second row -
      rather than everything crammed into one phone-width strip. */
   const PAD = Math.round(VW*0.03), TOP_H = 84;
-  ctx.fillStyle = "rgba(0,0,0,0.34)";
-  ctx.fillRect(0, 0, VW, TOP_H);
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  // Glass panel: a gradient that fades out rather than a hard slab, with a
+  // single cyan hairline - the game's HUD accent - underneath.
+  const panel = ctx.createLinearGradient(0, 0, 0, TOP_H + 26);
+  panel.addColorStop(0, "rgba(4,8,20,0.78)");
+  panel.addColorStop(0.72, "rgba(4,8,20,0.42)");
+  panel.addColorStop(1, "rgba(4,8,20,0)");
+  ctx.fillStyle = panel;
+  ctx.fillRect(0, 0, VW, TOP_H + 26);
+  ctx.fillStyle = "rgba(110,200,255,0.28)";
   ctx.fillRect(0, TOP_H-1, VW, 1);
+  ctx.fillStyle = "rgba(110,200,255,0.75)";
+  ctx.fillRect(PAD, TOP_H-1, 34, 1);
+  ctx.fillRect(VW-PAD-34, TOP_H-1, 34, 1);
 
+  // The pause / mute buttons are DOM circles pinned to the top corners, so
+  // the score and wallet start inboard of them.
+  const CLEAR = 52;
+  ctx.fillStyle = "rgba(140,200,255,0.55)";
+  ctx.font = "bold 9px Arial, sans-serif";
+  ctx.fillText("SCORE", PAD + CLEAR, 8);
   ctx.fillStyle = "white";
-  ctx.font = "bold 21px Arial, sans-serif";
-  ctx.fillText(String(run.score).padStart(6, "0"), PAD, 10);
+  ctx.shadowColor = "rgba(120,200,255,0.55)"; ctx.shadowBlur = 8;
+  ctx.font = "bold 22px 'Courier New', monospace";
+  ctx.fillText(String(run.score).padStart(6, "0"), PAD + CLEAR, 19);
+  ctx.shadowBlur = 0;
 
   ctx.textAlign = "center";
   ctx.fillStyle = run.difficulty.color;
@@ -841,16 +1150,21 @@ function drawHud(ctx, game){
   ctx.fillText(run.difficulty.name, VW/2, 28);
 
   ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(255,210,63,0.55)";
+  ctx.font = "bold 9px Arial, sans-serif";
+  ctx.fillText("CREDITS", VW-PAD-CLEAR, 8);
   ctx.fillStyle = "#ffd23f";
-  ctx.font = "bold 19px Arial, sans-serif";
-  ctx.fillText("$" + run.money, VW-PAD, 10);
+  ctx.shadowColor = "rgba(255,180,40,0.5)"; ctx.shadowBlur = 8;
+  ctx.font = "bold 20px 'Courier New', monospace";
+  ctx.fillText("$" + run.money, VW-PAD-CLEAR, 19);
+  ctx.shadowBlur = 0;
   ctx.textAlign = "left";
 
   // Lives and shield charges, second row left
   if(p){
     for(let i=0;i<p.lives;i++){
       ctx.save();
-      ctx.translate(PAD + 7 + i*20, 50);
+      ctx.translate(PAD + CLEAR + 7 + i*20, 50);
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.moveTo(0,-8); ctx.lineTo(7,8); ctx.lineTo(0,4); ctx.lineTo(-7,8);
@@ -860,7 +1174,7 @@ function drawHud(ctx, game){
     for(let i=0;i<p.shield;i++){
       ctx.strokeStyle = "rgba(120,200,255,0.9)";
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(PAD + 7 + p.lives*20 + 10 + i*17, 50, 6.5, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(PAD + CLEAR + 7 + p.lives*20 + 10 + i*17, 50, 6.5, 0, TAU); ctx.stroke();
     }
   }
 
@@ -901,34 +1215,64 @@ function drawHud(ctx, game){
     ctx.fillText(strip + "  " + run.objectiveDefs[1].progress(run.stats), PAD, 92);
   }
 
-  // Combo
+  // Combo - bumps up in scale for a beat every time it climbs.
   if(run.combo >= 3){
+    if(run.combo !== hudLastCombo){
+      if(run.combo > hudLastCombo) hudComboPop = 1;
+      hudLastCombo = run.combo;
+    }
+    hudComboPop = Math.max(0, hudComboPop - hdt*5);
+    const pop = 1 + easeOutCubic(hudComboPop)*0.35;
+    ctx.save();
+    ctx.translate(VW/2, 106);
+    ctx.scale(pop, pop);
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ffd23f";
-    ctx.font = "bold 21px Arial, sans-serif";
-    ctx.fillText("x" + run.combo + " COMBO", VW/2, 96);
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(6,8,18,0.7)";
+    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.strokeText("x" + run.combo + " COMBO", 0, -10);
+    ctx.fillStyle = run.combo >= 10 ? "#ff8a3d" : "#ffd23f";
+    ctx.fillText("x" + run.combo + " COMBO", 0, -10);
+    ctx.restore();
     ctx.textAlign = "left";
-  }
+  } else hudLastCombo = run.combo || 0;
 
-  // Boss bar
+  // Boss bar: a glass capsule with the boss's own tint, phase ticks, and a
+  // fill that goes from tint to warning amber to red.
   const boss = game.world.boss;
   if(boss && boss.alive){
-    const w = VW - Math.round(VW*0.2), barY = 122;
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect((VW-w)/2, barY, w, 13);
+    const w = VW - Math.round(VW*0.2), barY = 122, bh = 14, bx0 = (VW-w)/2;
     const pct = clamp(boss.hp/boss.maxHp, 0, 1);
-    ctx.fillStyle = pct > 0.5 ? boss.tint : (pct > 0.25 ? "#ffa726" : "#ff3b30");
-    ctx.fillRect((VW-w)/2, barY, w*pct, 13);
-    // Phase ticks so you can see the next phase coming
+    ctx.save();
+    roundRect(ctx, bx0-2, barY-2, w+4, bh+4, 7);
+    ctx.fillStyle = "rgba(4,8,18,0.72)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1;
+    ctx.stroke();
+    if(pct > 0){
+      const col = pct > 0.5 ? boss.tint : (pct > 0.25 ? "#ffa726" : "#ff3b30");
+      roundRect(ctx, bx0, barY, Math.max(bh, w*pct), bh, 5);
+      ctx.clip();
+      const fg = ctx.createLinearGradient(0, barY, 0, barY+bh);
+      fg.addColorStop(0, "#ffffff");
+      fg.addColorStop(0.18, col);
+      fg.addColorStop(1, col);
+      ctx.fillStyle = fg;
+      ctx.fillRect(bx0, barY, w*pct, bh);
+    }
+    ctx.restore();
     boss.def.phases.forEach(ph => {
       if(ph.at >= 1) return;
-      ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect((VW-w)/2 + w*ph.at, barY, 2, 13);
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(bx0 + w*ph.at, barY, 2, bh);
     });
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.font = "bold 11px Arial, sans-serif";
     ctx.textAlign = "center";
+    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(6,8,18,0.8)";
+    ctx.strokeText(boss.name, VW/2, barY-14);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = boss.tint; ctx.shadowBlur = 6;
     ctx.fillText(boss.name, VW/2, barY-14);
+    ctx.shadowBlur = 0;
     ctx.textAlign = "left";
   }
 
@@ -942,20 +1286,37 @@ function drawHud(ctx, game){
     ctx.fillRect(0,0,VW,VH);
   }
 
-  // Centre banner
+  // Centre banner: full-width cinematic band with accent rules, not a grey box.
   if(run.bannerText && performance.now() < run.bannerUntil){
     const remain = (run.bannerUntil - performance.now())/1000;
-    ctx.globalAlpha = clamp(remain*2, 0, 1);
+    const a = clamp(remain*2, 0, 1);
+    ctx.globalAlpha = a;
+    const cy = VH*0.36, bandH = 92;
+    const band = ctx.createLinearGradient(0, cy, 0, cy+bandH);
+    band.addColorStop(0, "rgba(3,6,16,0)");
+    band.addColorStop(0.28, "rgba(3,6,16,0.78)");
+    band.addColorStop(0.72, "rgba(3,6,16,0.78)");
+    band.addColorStop(1, "rgba(3,6,16,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(0, cy, VW, bandH);
+    const accent = run.bannerColor || "#fff";
+    const rule = ctx.createLinearGradient(0, 0, VW, 0);
+    rule.addColorStop(0, "rgba(255,255,255,0)");
+    rule.addColorStop(0.5, accent);
+    rule.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = rule;
+    ctx.fillRect(VW*0.1, cy+16, VW*0.8, 1);
+    ctx.fillRect(VW*0.1, cy+bandH-16, VW*0.8, 1);
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(VW*0.08, VH*0.36, VW*0.84, 84);
-    ctx.fillStyle = run.bannerColor || "#fff";
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent; ctx.shadowBlur = 14;
     ctx.font = "bold 27px Arial, sans-serif";
-    ctx.fillText(run.bannerText, VW/2, VH*0.36 + 18);
+    ctx.fillText(run.bannerText, VW/2, cy + 24);
+    ctx.shadowBlur = 0;
     if(run.bannerSub){
       ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.font = "15px Arial, sans-serif";
-      ctx.fillText(run.bannerSub, VW/2, VH*0.36 + 54);
+      ctx.font = "14px Arial, sans-serif";
+      ctx.fillText(run.bannerSub, VW/2, cy + 58);
     }
     ctx.textAlign = "left";
     ctx.globalAlpha = 1;
@@ -965,7 +1326,7 @@ function drawHud(ctx, game){
 
 SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
-  initBackground, updateBackground, drawBackground,
+  initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   tinted,
 };
