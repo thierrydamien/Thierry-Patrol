@@ -865,9 +865,20 @@ async function run(){
 
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
-    try { SF.audio.setMusic("menu"); SF.audio.setMusic("combat"); SF.audio.setMusic("boss"); SF.audio.setMusic(null); return true; }
-    catch(e){ return false; }
+    try {
+      ["title","menu","combat","boss","defeat",null]
+        .forEach(t => SF.audio.setMusic(t));
+      return true;
+    } catch(e){ return false; }
   })());
+  check("every music slot points at a real recording",
+    Object.values(SF.audio.MUSIC).every(def =>
+      def.files.length > 0 && def.files.every(f =>
+        fs.existsSync(path.join(__dirname, "assets/music", f + ".mp3")))));
+  check("combat owns several songs so flights don't repeat",
+    SF.audio.MUSIC.combat.files.length >= 3);
+  check("defeat plays once and hands back to the menu",
+    SF.audio.MUSIC.defeat.once === true && SF.audio.MUSIC.defeat.then === "menu");
   check("every boss carries an epithet for its entrance card",
     Object.values(SF.missions.BOSSES).every(b => typeof b.epithet === "string" && b.epithet.length > 4));
   {

@@ -984,6 +984,20 @@ button: two confirms, then a fresh blank saved immediately - which stamps it
 newest, so the wipe wins the per-pilot merge on every synced device instead
 of being quietly "repaired" by it.
 
+## 8aa. Real music
+
+The family supplied seven copyright-free recordings, which retired the
+synthesized score (it lives in git history). The lesson that mattered was
+codecs, twice over: the source OGGs would have been silent on the iPads
+(Safari has never played OGG Vorbis), and the obvious fix - AAC - would have
+been silent in codec-free Chromium builds. MP3 is the one format that plays
+everywhere, so MP3 it is. The player keeps the game's logical vocabulary
+(`setMusic("combat")`) and adds two ideas on top: combat owns three songs
+and rotates one per mission so back-to-back flights don't repeat, and
+"defeat" is a one-shot sting that hands over to the menu theme when it ends.
+Autoplay refusals self-heal - every tap already calls `init()` for the
+WebAudio unlock, and now that also retries the paused music element.
+
 ## 9. What I'd do next
 
 Roughly in value order:

@@ -1,10 +1,10 @@
 /*
  * AudioManager.
  *
- * Every sound is synthesised at runtime (no audio files to download, nothing
- * to license) and every gameplay system talks to it through named hooks -
- * `SF.audio.play("enemyExplode")` - so adding or retuning a sound never means
- * touching gameplay code.
+ * Effects are synthesised at runtime; music is real recordings (see the MUSIC
+ * section). Every gameplay system talks to it through named hooks -
+ * `SF.audio.play("enemyExplode")`, `SF.audio.setMusic("combat")` - so adding
+ * or retuning a sound never means touching gameplay code.
  *
  * Two rules learned the hard way:
  *  - Automatic guns fire several times a second, so shot sounds are quiet,
@@ -41,21 +41,21 @@ function init(){
     } catch(e){ ctx = null; }
   }
   if(ctx && ctx.state === "suspended" && ctx.resume) ctx.resume();
+  // Music blocked by autoplay rules gets another chance on every gesture.
+  tryPlay();
 }
 
 function isMuted(){ return muted; }
 function setMuted(v){
   muted = !!v;
   localStorage.setItem("patrol_muted", muted ? "1" : "0");
+  applyMusicState();
 }
 function musicEnabled(){ return musicOn; }
 function setMusicEnabled(v){
   musicOn = !!v;
   localStorage.setItem("patrol_music_off", musicOn ? "0" : "1");
-  // The sequencer keeps ticking either way; silencing the gain (rather than
-  // killing the timer) means toggling back on rejoins the song mid-flight.
-  if(musicGain && ctx)
-    musicGain.gain.linearRampToValueAtTime(musicOn && musicTrack ? 0.9 : 0, ctx.currentTime + 0.3);
+  applyMusicState();
 }
 function sfxEnabled(){ return sfxOn; }
 function setSfxEnabled(v){
@@ -173,161 +173,106 @@ function play(name, arg){
 
 /* ---------------------------------------------------------
    MUSIC
-   Two loops sequenced from the same oscillators as the SFX -
-   no files, nothing to download, and the mute button already
-   gates it because everything routes through `master`.
+   Real recordings now (assets/music/*.mp3 - MP3, because the
+   iPads run Safari and Safari won't play OGG). The customer
+   supplied the tracks copyright-free; the synthesized score
+   this replaced lives in git history.
 
-   A lookahead scheduler (the standard WebAudio pattern): a
-   coarse timer wakes every 120ms and schedules every step
-   that falls inside the next quarter second at sample-exact
-   times, so the groove never wobbles with the main thread.
+   The game keeps talking in logical names - setMusic("menu"),
+   "combat", "boss" - and this layer picks a file: combat owns
+   several songs and rotates one per mission so back-to-back
+   flights don't repeat, and "defeat" plays once then hands
+   over to the menu theme.
    --------------------------------------------------------- */
-let musicGain = null, musicTimer = null, musicTrack = null;
-let musicStep = 0, musicNext = 0, noiseBuf = null;
-
-/* Minor pentatonic on A - everything in it sounds fine together, which is
-   what lets a tiny pattern loop for minutes without grating. */
-const PENT = [0, 3, 5, 7, 10, 12, 15, 17];
-const hz = (root, semi) => root * Math.pow(2, semi/12);
-
-const TRACKS = {
-  /*
-   * Repetition was the first review note, so every track is a SONG now, not a
-   * bar: a chord progression (roots in semitones over A), patterns that
-   * alternate by section, scheduled rests, and a touch of velocity jitter so
-   * no two passes sound machine-identical.
-   */
-
-  /* Menus: slow i-VI-iv-III drift, arp contour changes with each chord,
-     every fourth cycle sits out a bar to let the drone breathe. */
-  menu: {
-    bpm: 72, div: 2,
-    step(i, t){
-      const CH = [0, 8, 5, 3];                       // A F D C
-      const root = CH[Math.floor(i/16) % CH.length];
-      const cycle = Math.floor(i/64) % 4;
-      const restBar = cycle === 3 && (i % 64) < 8;   // a held breath
-      if(i % 16 === 0) note(hz(55, root), "sine", 0.050, 3.6, t, 400);
-      if(i % 16 === 8) note(hz(55, root + 7), "sine", 0.032, 3.0, t, 400);
-      if(restBar) return;
-      const CONTOURS = [[0,2,4,6,4,2],[4,2,0,2,6,4],[0,4,2,6,4,7],[6,4,2,0,2,4]];
-      const arp = CONTOURS[Math.floor(i/16) % 4][(i>>1) % 6];
-      if(i % 2 === 0) note(hz(220, root + PENT[arp % 8]), "triangle", vel(0.030), 0.55, t, 2400);
-      if(i % 32 === 24) note(hz(880, root + PENT[(i>>4) % 5]), "sine", 0.016, 1.2, t, 5000);
-    },
-  },
-
-  /* Combat: i-VI-III-VII progression, two alternating bass riffs, a fill at
-     every section turn, and every eighth chord a breakdown - hats and pad
-     only - before the bass slams back in. */
-  combat: {
-    bpm: 128, div: 4,
-    step(i, t){
-      const CH = [0, 8, 3, 10];                      // A F C G
-      const chordIx = Math.floor(i/32);
-      const root = CH[chordIx % CH.length];
-      const section = Math.floor(i/128) % 2;
-      const breakdown = chordIx % 8 === 7;
-      const RIFFS = [
-        [0,0,7,0, 5,0,3,0, 0,0,7,0, 10,0,7,3],
-        [0,0,0,7, 0,3,0,5, 0,0,10,0, 7,5,3,0],
-      ];
-      if(!breakdown){
-        const b = RIFFS[section][i % 16];
-        if(i % 2 === 0) note(hz(55, root + b), "square", vel(0.042), 0.16, t, 700);
-      } else if(i % 32 >= 24 && i % 2 === 0){
-        // the fill that announces the bass is coming back
-        note(hz(110, root + PENT[(i>>1) % 5]), "sawtooth", vel(0.026), 0.10, t, 1200);
-      }
-      if(i % 4 === 2) hat(t, 0.020);
-      if(breakdown && i % 8 === 0) note(hz(220, root + 12), "sine", 0.022, 0.8, t, 1800);
-      const runUp = [0,2,3,4, 2,3,4,5, 3,4,5,6, 4,5,6,7][i % 16];
-      if(!breakdown && i % 4 === 0)
-        note(hz(440, root + PENT[runUp % 8]), "triangle", vel(0.020), 0.14, t, 3200);
-      if(i % 128 === 124) note(hz(110, root + 12), "sawtooth", 0.026, 0.5, t, 900);
-    },
-  },
-
-  /* Boss: faster, and built on a minor-second shove - the ugliest interval
-     there is, at low volume, which reads as dread rather than noise. Tom
-     thumps on the floor, sixteenth hats, a two-note tremolo stab per bar. */
-  boss: {
-    bpm: 140, div: 4,
-    step(i, t){
-      const root = (Math.floor(i/64) % 2) ? 1 : 0;   // the whole bed lurches up a semitone
-      const b = [0,1,0,1, 0,1,3,1, 0,1,0,1, 5,3,1,0][i % 16];
-      if(i % 2 === 0) note(hz(55, root + b), "square", vel(0.046), 0.13, t, 650);
-      if(i % 8 === 0) note(hz(41, root), "sine", 0.060, 0.30, t, 300);     // tom thump
-      if(i % 2 === 1) hat(t, 0.012);
-      if(i % 16 === 12 || i % 16 === 14)
-        note(hz(880, root + 10), "sawtooth", vel(0.016), 0.09, t, 2600);   // stab pair
-      if(i % 64 === 56) note(hz(220, root + 6), "sawtooth", 0.028, 0.7, t, 1000); // tritone turn
-    },
-  },
+const MUSIC = {
+  title:  { files: ["title"],  vol: 0.55 },   // the pilot picker fanfare
+  menu:   { files: ["menu"],   vol: 0.50 },
+  combat: { files: ["combat-1", "combat-2", "combat-3"], vol: 0.60 },
+  boss:   { files: ["boss"],   vol: 0.68 },
+  defeat: { files: ["defeat"], vol: 0.60, once: true, then: "menu" },
 };
+let musicTrack = null;        // logical name currently asked for
+let musicEl = null;           // the <audio> actually sounding
+let musicVol = 0;             // its target volume
+const musicEls = {};          // file key -> HTMLAudio, made once, reused
+const rotation = {};          // logical name -> which file plays next
+let fadeTimer = null;
 
-/** ±15% velocity so no two passes are machine-identical. */
-function vel(g){ return g * (0.85 + Math.random()*0.3); }
-
-/** One scheduled note through its own envelope and lowpass, into master. */
-function note(freq, type, gain, dur, when, cutoff){
-  if(!ctx || muted || !musicOn) return;
-  const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  o.type = type; o.frequency.value = freq;
-  f.type = "lowpass"; f.frequency.value = cutoff || 3000;
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.linearRampToValueAtTime(gain, when + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
-  o.connect(f); f.connect(g); g.connect(musicGain);
-  o.start(when); o.stop(when + dur + 0.05);
-}
-/** A tiny noise tick - the hi-hat. The buffer is built once. */
-function hat(when, gain){
-  if(!ctx || muted || !musicOn) return;
-  if(!noiseBuf){
-    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
-    const d = noiseBuf.getChannelData(0);
-    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+function elFor(key){
+  let el = musicEls[key];
+  if(!el){
+    try {
+      el = new Audio("assets/music/" + key + ".mp3");
+      el.preload = "auto";
+    } catch(e){ return null; }
+    musicEls[key] = el;
   }
-  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-  src.buffer = noiseBuf;
-  f.type = "highpass"; f.frequency.value = 6000;
-  g.gain.value = gain;
-  src.connect(f); f.connect(g); g.connect(musicGain);
-  src.start(when);
+  return el;
 }
 
-/** Switches the loop: "menu", "combat", or null for silence. Fades both ways. */
+/** Try to sound the current element. Autoplay rules may refuse before the
+    first tap - init() retries on every gesture, so it recovers by itself. */
+function tryPlay(){
+  if(!musicEl || muted || !musicOn) return;
+  try {
+    const pr = musicEl.play();
+    if(pr && pr.catch) pr.catch(() => {});
+  } catch(e){ /* jsdom, or autoplay refusal - a later gesture retries */ }
+}
+
+/** Pause/resume to match the mute + music switches, without losing place. */
+function applyMusicState(){
+  if(!musicEl) return;
+  if(muted || !musicOn){
+    try { musicEl.pause(); } catch(e){}
+  } else {
+    musicEl.volume = musicVol;
+    tryPlay();
+  }
+}
+
+/** Switches the soundtrack: a logical name, or null for silence. The old
+    song fades down while the new one fades up. */
 function setMusic(name){
   if(name === musicTrack) return;
-  init();
-  if(!ctx){ musicTrack = name; return; }
-  if(!musicGain){
-    musicGain = ctx.createGain();
-    musicGain.gain.value = 0;
-    musicGain.connect(master);
-  }
   musicTrack = name;
-  if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
-  musicGain.gain.cancelScheduledValues(ctx.currentTime);
-  if(!name){
-    musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
-    return;
-  }
-  musicGain.gain.linearRampToValueAtTime(musicOn ? 0.9 : 0, ctx.currentTime + 0.6);
-  const track = TRACKS[name];
-  musicStep = 0;
-  musicNext = ctx.currentTime + 0.1;
-  const stepDur = 60 / track.bpm / track.div;
-  musicTimer = setInterval(() => {
-    if(!ctx || muted) return;               // muted: skip scheduling, keep time
-    while(musicNext < ctx.currentTime + 0.25){
-      track.step(musicStep++, musicNext);
-      musicNext += stepDur;
+  const old = musicEl;
+  musicEl = null;
+  const def = name && MUSIC[name];
+  if(def){
+    const ix = (rotation[name] || 0) % def.files.length;
+    rotation[name] = ix + 1;
+    const el = elFor(def.files[ix]);
+    if(el){
+      el.loop = !def.once;
+      el.onended = def.once ? () => {
+        if(musicTrack === name){ musicTrack = null; setMusic(def.then || null); }
+      } : null;
+      try { el.currentTime = 0; } catch(e){}
+      el.volume = 0;
+      musicEl = el;
+      musicVol = def.vol;
+      tryPlay();
     }
-  }, 120);
+  }
+  if(fadeTimer) clearInterval(fadeTimer);
+  fadeTimer = setInterval(() => {
+    let busy = false;
+    if(old && old !== musicEl){
+      old.volume = Math.max(0, old.volume - 0.10);
+      if(old.volume > 0) busy = true;
+      else try { old.pause(); } catch(e){}
+    }
+    if(musicEl && !muted && musicOn && musicEl.volume < musicVol){
+      musicEl.volume = Math.min(musicVol, musicEl.volume + 0.07);
+      busy = true;
+    }
+    if(!busy){ clearInterval(fadeTimer); fadeTimer = null; }
+  }, 70);
 }
 
+
 SF.audio = { init, play, isMuted, setMuted, setMusic,
-             musicEnabled, setMusicEnabled, sfxEnabled, setSfxEnabled };
+             musicEnabled, setMusicEnabled, sfxEnabled, setSfxEnabled,
+             MUSIC };   // the table is exported so the smoke test can verify every file exists
 })();

@@ -27,8 +27,10 @@ function show(id){
   screens[id].classList.add("active");
   if(id === "screen-game") SF.game.resize();
   if(id === "screen-profiles" || id === "screen-menu") startTitleLoop();
-  // Every screen that isn't combat gets the menu loop; launch swaps it.
-  if(id !== "screen-game") audio.setMusic("menu");
+  // Every screen that isn't combat gets menu music - except the pilot picker,
+  // which owns the title fanfare. Launch swaps in the combat track.
+  if(id !== "screen-game")
+    audio.setMusic(id === "screen-profiles" ? "title" : "menu");
 }
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
@@ -1440,7 +1442,9 @@ function showResults(result){
     sub.textContent = "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
   }
 
-  audio.setMusic("menu");                 // combat's over, breathe
+  // Combat's over: a win keeps the calm menu theme the victory lap started;
+  // a loss gets the ten-second defeat sting, which hands back to the menu.
+  audio.setMusic(completed ? "menu" : "defeat");
 
   // Three stars rains confetti. Pride deserves paper.
   const oldConf = $("overlayResults").querySelector(".confetti");
