@@ -121,6 +121,11 @@ const COMMS = {
     "Halfway, {you}. Holding up well.",
     "That's the midpoint - keep it together.",
   ]},
+  silentStart: { speaker:"control", cooldown:999, lines:[
+    "Guns are dead, {you}. Don't fight - FLY.",
+    "No cannons this run, {you}. Slip through quiet and don't get touched.",
+    "The crew's working on the guns. Until then: dodge everything.",
+  ]},
   headHome: { speaker:"control", cooldown:999, lines:[
     "Sky's clear, {you}. Come on home.",
     "That's all of them. Bring it back, {you}.",

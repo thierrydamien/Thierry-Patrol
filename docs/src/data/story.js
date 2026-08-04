@@ -52,6 +52,18 @@ const STORY = {
     button:"GO AFTER THEM",
   },
 
+  /* Why the guns don't work on Silent Running - shown the first time the
+     briefing for a no-guns mission opens, so nobody launches confused. */
+  silent: {
+    title: "GUNS DOWN",
+    panels: [
+      { art:"now",  text:"That last blast from the Sentinel fried every cannon on your ship, {you}. The crew can fix them - but not out here." },
+      { art:"sky",  text:"The repair yard is on the far side of their blockade. Fly dark, stay quiet, and dodge EVERYTHING - nothing will shoot at a ship they can't see, but nothing will move out of your way either." },
+      { art:"crew", text:"No guns means no mistakes, {you}. Catch the coins, catch our drifting pilots, and bring the ship home in one piece." },
+    ],
+    button:"FLY DARK",
+  },
+
   /* Campaign cleared: a proper curtain, still not a full stop. */
   campaign: {
     title: "SKIES CLEAR",

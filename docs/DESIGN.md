@@ -1088,6 +1088,24 @@ And when any mission ends, the victory lap now fires fireworks - spherical
 glitter bursts with gravity, a pop sound quiet enough to salvo - every half
 second or so until the results land. A cleared sky deserves applause.
 
+## 8af. Silent Running, second pass: fair, and explained
+
+The playtest verdict was blunt: dodging traffic with no gun is fair; dodging
+AIMED FIRE on top of it often wasn't dodgeable at all - unavoidable damage,
+the one thing a skill mission must never contain. Two fixes, one structural:
+`world.silent` gates `spawnEnemyBullet` itself, so every firing path -
+generic cadence, sniper charge shots, all of it - is silenced on a no-guns
+run with one line; and the wave list dropped its snipers and minelayers for
+more traffic (swoopers, weavers, rocks). The mission's difficulty now lives
+entirely in hulls, walls, chasers and greed.
+
+And the fiction finally answers "why can't I shoot?" the way the customer
+suggested: the Sentinel's last blast broke the guns. It's told three times,
+in three sizes - a GUNS DOWN story card the first time the briefing opens
+("the crew can fix them - but not out here"), the brief itself, and a radio
+line at launch ("Guns are dead, {you}. Don't fight - FLY."). The mission
+sits directly after the Sentinel fight, so the story writes itself.
+
 ## 9. What I'd do next
 
 Roughly in value order:

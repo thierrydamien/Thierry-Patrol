@@ -359,20 +359,25 @@ const MISSIONS = [
   },
 
   /*
-   * The blockade run: the one mission where the guns are cold. Sky Force has
-   * these courier levels and they are the change of texture a long campaign
-   * needs - two minutes where the skill is entirely in your thumb. Coins rain
-   * in marked lanes so greed pulls you into traffic, and nothing here needs
-   * shooting: kamikazes and interceptors chase, snipers draw their lines,
-   * minelayers seed the road, walls have one gap. Hold nothing but your nerve.
+   * The blockade run: the one mission where the guns are cold - the
+   * Sentinel's last blast fried them, and the repair yard is on the far side
+   * of the blockade. Sky Force has these courier levels and they are the
+   * change of texture a long campaign needs - two minutes where the skill is
+   * entirely in your thumb. Coins rain in marked lanes so greed pulls you
+   * into traffic.
+   *
+   * Playtest rule that shaped the roster: with no gun, dodging TRAFFIC is
+   * fair and dodging AIMED FIRE on top of it is not - so nothing here
+   * shoots. world.silent enforces it globally, and the wave list carries no
+   * snipers or minelayers: hulls, rocks, chasers and walls only.
    *
    * `podDrops` pilots drift down through the traffic on their own - escapees
    * from the blockade, no carrier to shoot open - so freeing people stays an
    * objective even on the mission where you can't fire a shot.
    */
   {
-    id:9, name:"Silent Running", subtitle:"Guns cold. Just fly.",
-    brief:"Sneaking into THEIR space, so no shooting - they'd see the flashes! Dodge everything, grab the coins, and catch our drifting pilots.",
+    id:9, name:"Silent Running", subtitle:"Guns down. Just fly.",
+    brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
     noGuns:true, coinRain:true, podDrops:5,
     waves: [
       w(1,   "grunt",    7, "wall"),
@@ -381,17 +386,17 @@ const MISSIONS = [
       w(20,  "swooper",  7, "arc"),
       w(27,  "interceptor", 5, "line"),
       w(34,  "grunt",    9, "wall"),
-      w(40,  "sniper",   3, "sides"),
+      w(40,  "swooper",  6, "sides"),
       w(46,  "kamikaze", 6, "pincer"),
-      w(52,  "bomber",   3, "twinColumns"),
+      w(52,  "asteroid", 5, "scatter"),
       w(58,  "asteroid", 6, "scatter"),
       w(63,  "boulder",  2, "twinColumns"),
       w(68,  "swooper",  9, "vee"),
       w(75,  "interceptor", 7, "sides"),
       w(82,  "grunt",   10, "wall"),
-      w(88,  "sniper",   4, "arc"),
+      w(88,  "weaver",   8, "arc"),
       w(93,  "kamikaze", 8, "scatter"),
-      w(100, "bomber",   3, "arc"),
+      w(100, "boulder",  2, "sides"),
       w(106, "swooper", 10, "pincer"),
       w(113, "grunt",   11, "wall"),
       w(118, "kamikaze", 9, "sides"),

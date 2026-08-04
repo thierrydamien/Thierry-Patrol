@@ -84,6 +84,7 @@ class World {
     this.enemies.killAll();
     this.pickups.killAll();
     this.boss = null;
+    this.silent = false;   // set per mission by startMission (noGuns runs)
   }
 
   /* ---------------- PLAYER ---------------- */
@@ -292,6 +293,11 @@ class World {
   }
 
   spawnEnemyBullet(x, y, vx, vy, kind, r){
+    // Silent running: with the player's guns dead, NOBODY shoots. The whole
+    // mission is traffic - dodging hulls and rocks is fair with no gun,
+    // dodging aimed fire on top of it was not (playtest verdict). One gate
+    // here silences every firing path: generic fire, snipers, everything.
+    if(this.silent) return null;
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
     return b;

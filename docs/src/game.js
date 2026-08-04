@@ -165,6 +165,7 @@ function startMission(missionIndex, difficultyId){
 
   game.world.reset();
   fx.reset();
+  game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
@@ -239,7 +240,7 @@ function startMission(missionIndex, difficultyId){
   game.state = "playing";
   audio.setMusic("combat");
   SF.comms.begin(profile, loadout.crew);
-  SF.comms.say("missionStart");
+  SF.comms.say(mission.noGuns ? "silentStart" : "missionStart");
   SF.input.clearMovement();
   audio.init();
   resize();

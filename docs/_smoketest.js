@@ -777,6 +777,21 @@ async function run(){
     check("the coin objective tracks pickups",
       SF.game.run.objectiveIds.includes("coinRush"));
 
+    /* Playtest rule: with no gun, dodging traffic is fair - dodging aimed
+       fire on top of it is not. Nothing may shoot on a silent run. */
+    check("the world is silent - no firing path can spawn a bullet",
+      SF.game.world.silent === true &&
+      SF.game.world.spawnEnemyBullet(100, 100, 0, 100, "bolt", 4) === null &&
+      SF.game.world.enemyBullets.items.every(b => !b.alive));
+    check("the silent roster carries no shooters",
+      SF.missions.MISSIONS.find(m => m.noGuns).waves.every(wv =>
+        wv.type !== "sniper" && wv.type !== "bomber"));
+    check("the broken guns are explained before launch",
+      /guns/i.test(SF.missions.MISSIONS.find(m => m.noGuns).brief) &&
+      !!SF.storyData.STORY.silent && SF.storyData.STORY.silent.panels.length >= 2 &&
+      /maybeStory\("silent"\)/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")) &&
+      !!SF.commsData.COMMS.silentStart);
+
     /* Freeing people stays an objective even with the guns cold: pilots
        drift down on their own, no carrier to shoot open. */
     check("the dodge mission asks you to rescue drifting pilots",

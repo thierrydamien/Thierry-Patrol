@@ -1064,6 +1064,10 @@ function openBriefing(index){
   const m = MISSIONS[index];
   const stars = P.totalStars(profile);
 
+  // First look at a no-guns mission: the GUNS DOWN card explains WHY the
+  // ship can't shoot before anyone launches confused.
+  if(m.noGuns) maybeStory("silent");
+
   $("briefNum").textContent = "MISSION " + m.id;
   $("briefBoss").classList.toggle("hidden", !m.boss);
   $("briefTitle").textContent = m.name.toUpperCase();
