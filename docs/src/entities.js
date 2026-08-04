@@ -102,9 +102,17 @@ class World {
    * sky is clear (`release`).
    */
   spawnHauler(x, hp){
-    const h = { x, y: VH + 90, stationY: VH*0.30, r: 38,
-                hp, maxHp: hp, sway: rand(0, 6.28), alive: true, hitFlash: 0,
-                released: false, safe: false, warned: 0 };
+    /*
+     * Station height is the whole feel of the level, and the first attempt
+     * got it wrong twice over. VH*0.30 is 240 - ABOVE the player's own
+     * ceiling at PLAY_TOP (250) - so you could never fly alongside the ship
+     * you were escorting: you hit an invisible wall just underneath it. It
+     * has to sit well inside the band the player can actually reach, so you
+     * can get above it, beside it, and between it and whatever is coming.
+     */
+    const h = { x, y: VH + 90, stationY: PLAY_TOP + 110, r: 38,
+                laneX: x, hp, maxHp: hp, sway: rand(0, 6.28),
+                alive: true, hitFlash: 0, released: false, safe: false, warned: 0 };
     this.haulers.push(h);
     return h;
   }
@@ -125,11 +133,22 @@ class World {
       if(h.released){
         h.fly = (h.fly || 0) + dt;
         h.y -= (120 + h.fly*260)*dt;                  // throttle open, climbing
-      } else if(h.y > h.stationY){
-        h.y -= Math.min(90, (h.y - h.stationY)*1.4 + 20)*dt;   // easing to station
       } else {
-        h.y = h.stationY + Math.sin(h.sway*0.6)*7;    // holding, breathing
-        h.x += Math.sin(h.sway*0.4)*10*dt;
+        /*
+         * Arrive briskly and never stop moving. The first cut decelerated to
+         * a 20px/s crawl over the last stretch and then froze exactly on its
+         * mark, which read as the ship hitting something. Now it eases in on
+         * a spring with a floor under its speed, and once on station it keeps
+         * a slow weave across its lane - a ship under way, not a parked prop.
+         */
+        // Periods deliberately short (~5s vertical, ~9s lateral): a slow sine
+        // spends most of its time near the extremes, where it is flat, and a
+        // ship that holds still for two seconds looks parked again.
+        const targetY = h.stationY + Math.sin(h.sway*1.26)*12;
+        const dy = targetY - h.y;
+        h.y += Math.sign(dy) * Math.min(Math.abs(dy), Math.max(34, Math.abs(dy)*2.2) * dt);
+        const targetX = h.laneX + Math.sin(h.sway*0.70)*72;
+        h.x += (targetX - h.x) * Math.min(1, dt*1.6);
       }
       if(h.hp <= 0){
         h.alive = false;

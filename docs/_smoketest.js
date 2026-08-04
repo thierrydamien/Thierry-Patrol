@@ -981,6 +981,29 @@ async function run(){
     const h0 = W2.haulers.find(h => h.alive);
     check("the hauler holds station on screen, not passing through",
       h0.y > 0 && h0.y < SF.entityConst.VH && !h0.released);
+    /*
+     * It once parked at VH*0.30 = 240, above the player's own ceiling at
+     * PLAY_TOP - so you could never fly alongside the ship you were escorting
+     * and ran into an invisible wall underneath it. Its station must sit in
+     * the band the player can actually reach, with room to get above it.
+     */
+    check("the hauler flies where the player can reach it",
+      h0.stationY > SF.entityConst.PLAY_TOP + 60 &&
+      h0.stationY < SF.entityConst.PLAY_BOTTOM - 200);
+    // Not "moves at all" - a sub-pixel twitch reads as parked. It must
+    // visibly travel in both axes across any four-second window.
+    check("the hauler never stops moving on station", (() => {
+      const before = { x: h0.x, y: h0.y, sway: h0.sway };
+      for(let i = 0; i < 300; i++) W2.updateHaulers(1/60, {});   // settle first
+      let minX = h0.x, maxX = h0.x, minY = h0.y, maxY = h0.y;
+      for(let i = 0; i < 240; i++){
+        W2.updateHaulers(1/60, {});
+        minX = Math.min(minX, h0.x); maxX = Math.max(maxX, h0.x);
+        minY = Math.min(minY, h0.y); maxY = Math.max(maxY, h0.y);
+      }
+      h0.x = before.x; h0.y = before.y; h0.sway = before.sway;
+      return (maxX - minX) > 20 && (maxY - minY) > 6;
+    })());
     check("the hauler can take a real beating", h0.maxHp >= 150);
     // The whole complaint: the enemies weren't actually going for it.
     check("most of the wing hunts the convoy, but not all of it", (() => {

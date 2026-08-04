@@ -1671,6 +1671,34 @@ Verified by probe rather than assertion: mid-fight the hauler was at
 193/260 with 6 of 14 live enemies actively hunting it. Before this change
 that number was zero, by construction.
 
+### The invisible wall was real
+
+"It goes too high up and then acts like it's kind of stuck by an invisible
+wall." Both halves were literally true, and the first half caused the
+second.
+
+The hauler stationed itself at `VH*0.30` = 240. The player's own ceiling is
+`PLAY_TOP` = **250**. So the ship you were escorting parked ten pixels
+ABOVE the highest point you could fly: you could never get alongside it,
+and flying up to defend it ran you into a wall just underneath it. A
+station height is not a decoration - it has to sit inside the band the
+player can actually reach. It is `PLAY_TOP + 110` now, with room to fly
+above, beside and below, so you can put yourself between the hauler and
+whatever is coming.
+
+The "stuck" feeling had a second cause worth writing down: the approach
+decelerated proportionally to the remaining distance, so the last stretch
+crawled at 20px/s and then stopped *exactly* on its mark. Anything that
+slows to nothing and freezes reads as a collision. It now eases in on a
+spring with a floor under its speed, and on station it never holds still -
+a ~5s vertical bob and a ~9s lateral weave across its lane. The periods are
+deliberately short: a slow sine spends most of its life near the extremes,
+where it is flat, and two seconds of stillness looks parked all over again.
+
+Probe numbers after the fix: arrives 447 -> 351 smoothly, then travels
+x 328 -> 239 while bobbing, and the player sits at y=332 above a hauler at
+372 with the clamp untouched.
+
 ## 9. What I'd do next
 
 Roughly in value order:
