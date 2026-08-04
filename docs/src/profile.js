@@ -245,7 +245,8 @@ function familyBest(missionId){
     if(!rec || !rec.best) return;
     const score = Math.max.apply(null, [0].concat(Object.values(rec.best).map(Number)));
     if(score > 0 && (!best || score > best.score)){
-      best = { name: p.callsign || p.name, score, stars: starsForMission(p, missionId) };
+      best = { name: p.callsign || p.name, score, stars: starsForMission(p, missionId),
+               color: p.shipColor, owner: p.name };
     }
   });
   return best;

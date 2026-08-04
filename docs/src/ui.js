@@ -473,17 +473,21 @@ function drawCampaign(){
     ctx.restore();
   });
 
+  const me = profile.callsign || profile.name;
   nodes.forEach((node, i) => {
     const unlocked = isMissionUnlocked(profile, i);
     const earned = P.starsForMission(profile, node.mission.id);
     const boss = !!node.mission.boss;
     const x = px(node), y = py(node);
-    const R = boss ? 40 : 32;
+    // Locked stops shrink and hush: the past and present are the story, the
+    // future is a sketch. Six full-weight padlock discs made the top half of
+    // the map read heavier than the part you can actually fly.
+    const R = (boss ? 40 : 32) * (unlocked ? 1 : 0.72);
     const isNext = i === reached;
 
     if(boss){
       ctx.save();
-      ctx.globalAlpha = unlocked ? 1 : 0.35;
+      ctx.globalAlpha = unlocked ? 1 : 0.22;
       ctx.strokeStyle = "rgba(255,45,85,0.7)";
       ctx.lineWidth = 3;
       for(let k=0;k<12;k++){
@@ -495,11 +499,22 @@ function drawCampaign(){
       }
       ctx.restore();
     }
-    if(isNext){                                   // the one you're here to fly
+    if(isNext){
+      // The stop you're here to fly announces itself even in a still frame:
+      // a slow gold reticle (four corner arcs) plus the pulse.
       const pulse = 0.5 + Math.sin(t*3)*0.5;
       ctx.strokeStyle = "rgba(255,210,63," + (0.25 + pulse*0.5) + ")";
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(x, y, R + 12 + pulse*7, 0, Math.PI*2); ctx.stroke();
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,210,63,0.9)";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      for(let q=0;q<4;q++){
+        const a0 = t*0.6 + q*Math.PI/2;
+        ctx.beginPath(); ctx.arc(x, y, R + 9, a0, a0 + 0.6); ctx.stroke();
+      }
+      ctx.restore();
     }
 
     const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
@@ -513,9 +528,9 @@ function drawCampaign(){
     ctx.stroke();
 
     ctx.textAlign = "center";
-    ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.35)";
-    ctx.font = "bold " + (boss ? 26 : 22) + "px Rajdhani, Arial, sans-serif";
-    ctx.fillText(unlocked ? String(node.mission.id) : "🔒", x, y + (boss ? 9 : 8));
+    ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.4)";
+    ctx.font = "bold " + Math.round((boss ? 26 : 22) * (unlocked ? 1 : 0.8)) + "px Rajdhani, Arial, sans-serif";
+    ctx.fillText(String(node.mission.id), x, y + (boss ? 9 : 8) * (unlocked ? 1 : 0.8));
 
     const starY = y - R - (boss ? 22 : 6);
     if(unlocked){                                  // stars earned, on the rim
@@ -530,9 +545,8 @@ function drawCampaign(){
      * know the convention, and an eight-year-old doesn't - a label costs
      * nothing and removes the guess entirely.
      */
-    if(boss){
+    if(boss && unlocked){
       ctx.save();
-      ctx.globalAlpha = unlocked ? 1 : 0.45;
       const label = "☠ BOSS", padX = 9, h = 19;
       ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       const w = ctx.measureText(label).width + padX*2;
@@ -556,15 +570,34 @@ function drawCampaign(){
       ctx.restore();
     }
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
-    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.font = "bold " + (unlocked ? 13 : 11) + "px Rajdhani, Arial, sans-serif";
     ctx.fillText(node.mission.name.toUpperCase(), x, y + R + 20);
+
+    // Whose flag flies here: the record holder's initial in their own ship
+    // colour, pinned to the stop's rim. A brother's chip on YOUR mission is
+    // the whole replay engine of a family game, and it belongs on the map,
+    // not buried in a hint card.
+    if(unlocked){
+      const best = P.familyBest(node.mission.id);
+      if(best && best.owner !== profile.name){
+        const chipX = x + R*0.78, chipY = y + R*0.78;
+        ctx.fillStyle = best.color || "#e74c3c";
+        ctx.strokeStyle = "rgba(10,12,24,0.85)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(chipX, chipY, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+        ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
+      }
+    }
   });
 
   // Your actual ship, parked at the furthest stop you've reached - always on
   // the outside of the route, so it never sits on top of the line.
   const here = nodes[reached];
   const side = here.x > 0.5 ? 1 : -1;
-  SF.shipart.drawShip(ctx, px(here) + side*62, py(here) - 4, 52, {
+  const bob = Math.sin(t*1.4)*3;
+  SF.shipart.drawShip(ctx, px(here) + side*84, py(here) + 30 + bob, 52, {
     color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t,
   });
   ctx.textAlign = "left";
