@@ -733,27 +733,12 @@ async function run(){
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
 
-  /* ---------- pilot portraits ---------- */
-  check("an avatar normalises from nothing", (() => {
-    const av = SF.pilotart.normalize(null);
-    return av.hairStyle && av.glasses && typeof av.skin === "number";
-  })());
-  check("a hand-edited avatar can't pick parts that don't exist", (() => {
-    const av = SF.pilotart.normalize({ skin: 99, hairStyle: "mohawk", glasses: "monocle" });
-    return av.skin !== 99 && av.hairStyle !== "mohawk" && av.glasses !== "monocle";
-  })());
-  check("the portrait painter exists for comms and podium",
-    typeof SF.pilotart.paint === "function" && typeof SF.pilotart.mount === "function");
-  check("the MY PILOT editor renders its option rows", (() => {
-    SF.ui.getProfile && SF.ui.renderArmory ? true : true;
-    // open the armory pilot tab through the real UI
-    clickEl(id("armoryBtn"));
-    const tabs = qa("#armoryTabs .armory-tab");
-    const pilotTab = tabs.find(el => /pilot/i.test(el.textContent));
-    if(pilotTab) clickEl(pilotTab);
-    return qa("#avatarEditor .ae-row").length >= 4 &&
-           qa("#avatarEditor .ae-dot").length >= 6;
-  })());
+  /* ---------- pilot portraits (image-only) ---------- */
+  check("no portrait file means no face is painted",
+    SF.pilotart.has("Marc") === false &&
+    SF.pilotart.paint(id("game").getContext("2d") || {}, 0, 0, 40, SF.profile.load("Marc")) === false);
+  check("the portrait mount reports the fallback is needed",
+    SF.pilotart.mount(window.document.createElement("div"), SF.profile.load("Marc"), 40) === false);
 
   /* ---------- medal bounties ---------- */
   {

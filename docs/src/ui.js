@@ -112,9 +112,9 @@ function renderProfiles(){
     // picker should show who you are, not a coloured circle.
     const ctx = card.querySelector("canvas").getContext("2d");
     if(ctx){
-      SF.shipart.drawShip(ctx, 66, 74, 100,
+      SF.shipart.drawShip(ctx, 66, 68, 108,
         { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
-      // The pilot themselves, flying it - the card shows WHO, not just what.
+      // With an installed portrait, the pilot rides their card's corner.
       SF.pilotart.paint(ctx, 24, 24, 44, p);
     }
     SF.insignia.mount(card.querySelector(".pc-patch"), P.badgeFor(p), p.shipColor, 34);
@@ -145,7 +145,9 @@ function renderMenu(){
       <div class="mp-stats">${stars} ★ · ${money(profile.money)}${
         next ? " · " + (next.at - gear) + " more gear to " + next.name : " · fully kitted out"}</div>
     </div>`;
-  SF.pilotart.mount($("menuPilot").querySelector(".mp-patch"), profile, 52);
+  if(!SF.pilotart.mount($("menuPilot").querySelector(".mp-patch"), profile, 52)){
+    SF.insignia.mount($("menuPilot").querySelector(".mp-patch"), P.badgeFor(profile), profile.shipColor, 52);
+  }
 
   // Each button says what it is *for* right now, not just where it goes.
   let nextMission = 0;
@@ -718,7 +720,7 @@ function renderPartsTab(panel, levels, next){
 /** Everything about the pilot rather than the ship. */
 function renderPilotTab(panel){
   panel.appendChild($("pilotTabTpl").content.cloneNode(true));
-  renderAvatarEditor();
+  renderPortraitPanel();
   $("callsignInput").value = profile.callsign;
   click($("saveCallsignBtn"), () => {
     const v = $("callsignInput").value.trim();
@@ -803,76 +805,25 @@ function drawHangar(){
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
     });
-    // The pilot at the controls: a small them in the canopy, so the bay
-    // reads as "my ship, and me in it" rather than a museum piece.
+    // With an installed portrait, the pilot is visible at the controls.
     const bob = Math.sin(hangar.t*1.6)*S*0.018;
     SF.pilotart.paint(ctx, W/2, H*0.50 + bob - S*0.055, S*0.15, profile);
   }
 }
 
 /*
- * MY PILOT: the face editor. All tap-chips, no dropdowns - a seven-year-old
- * assembles themselves in six rows. Every change saves instantly and repaints
- * the live preview, because "it changed the moment I touched it" IS the fun.
- * If an illustrated portrait is installed for this pilot it takes over
- * everywhere; the editor then shows a note instead of pretending to matter.
+ * MY PILOT: shows the installed portrait when there is one, and otherwise
+ * says nothing at all. (Two generations of code-drawn faces were rejected on
+ * sight - the slot stays empty until real art exists.)
  */
-function renderAvatarEditor(){
+function renderPortraitPanel(){
   const host = $("avatarEditor");
   if(!host) return;
-  const PA = SF.pilotart;
-  const av = PA.normalize(profile.avatar);
-
-  const photo = PA.photoFor(profile.name);
-  if(photo && photo.ok){
-    host.innerHTML = `<label class="panel-label">MY PILOT</label>
-      <div class="ae-preview"><span class="ae-face"></span></div>
-      <div class="ae-note">Using your portrait picture. The drawn pilot below appears anywhere it can't.</div>`;
-    PA.mount(host.querySelector(".ae-face"), profile, 96);
-    return;
-  }
-
-  const set = (k, v) => {
-    profile.avatar = Object.assign({}, av, profile.avatar || {}, { [k]: v });
-    P.save(profile);
-    renderAvatarEditor();
-    renderMenu();
-  };
-  const chipRow = (label, opts) => {
-    const row = document.createElement("div");
-    row.className = "ae-row";
-    row.innerHTML = `<span class="ae-label">${label}</span><div class="ae-opts"></div>`;
-    const box = row.querySelector(".ae-opts");
-    opts.forEach(o => box.appendChild(o));
-    return row;
-  };
-  const dot = (color, on, fn) => {
-    const d = document.createElement("button");
-    d.className = "ae-dot" + (on ? " on" : "");
-    d.style.background = color;
-    click(d, fn);
-    return d;
-  };
-  const chip = (text, on, fn) => {
-    const c = document.createElement("button");
-    c.className = "ae-chip" + (on ? " on" : "");
-    c.textContent = text;
-    click(c, fn);
-    return c;
-  };
-
+  if(!SF.pilotart.has(profile.name)){ host.classList.add("hidden"); return; }
+  host.classList.remove("hidden");
   host.innerHTML = `<label class="panel-label">MY PILOT</label>
     <div class="ae-preview"><span class="ae-face"></span></div>`;
-  PA.mount(host.querySelector(".ae-face"), profile, 96);
-
-  host.appendChild(chipRow("SKIN", PA.SKINS.map((c,i) => dot(c, av.skin === i, () => set("skin", i)))));
-  host.appendChild(chipRow("HAIR", PA.HAIR_STYLES.map(h => chip(h, av.hairStyle === h, () => set("hairStyle", h)))));
-  host.appendChild(chipRow("HAIR COLOUR", PA.HAIR_COLORS.map((c,i) => dot(c, av.hairColor === i, () => set("hairColor", i)))));
-  host.appendChild(chipRow("GLASSES", PA.GLASSES.map(g => chip(g, av.glasses === g, () => set("glasses", g)))));
-  if(av.glasses !== "none"){
-    host.appendChild(chipRow("FRAMES", PA.GLASS_COLORS.map((c,i) => dot(c, av.glassColor === i, () => set("glassColor", i)))));
-  }
-  host.appendChild(chipRow("SMILE", PA.SMILES.map(m => chip(m, av.smile === m, () => set("smile", m)))));
+  SF.pilotart.mount(host.querySelector(".ae-face"), profile, 96);
 }
 
 /*
@@ -1267,10 +1218,14 @@ function renderLeaderboard(){
     podium.appendChild(step);
     const c = step.querySelector("canvas").getContext("2d");
     if(c){
-      SF.shipart.drawShip(c, 48, 56, 74,
-        { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
-      // The pilot stands on their own podium - it's their face on the box.
-      SF.pilotart.paint(c, 48, 18, 34, p);
+      if(SF.pilotart.has(p.name)){
+        SF.shipart.drawShip(c, 48, 56, 74,
+          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+        SF.pilotart.paint(c, 48, 18, 34, p);
+      } else {
+        SF.shipart.drawShip(c, 48, 50, 84,
+          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+      }
     }
     SF.insignia.mount(step.querySelector(".ps-badge"), P.badgeFor(p), p.shipColor, 26);
   });
@@ -1418,8 +1373,11 @@ function renderResultComms(run, completed, stars){
 
   const ctx = $("resultCommsArt").getContext("2d");
   ctx.clearRect(0, 0, 72, 72);
-  const speakerProfile = who || profile;
-  SF.pilotart.paint(ctx, 36, 36, 64, speakerProfile);
+  if(!SF.pilotart.paint(ctx, 36, 36, 64, who || profile)){
+    SF.shipart.drawShip(ctx, 36, 38, 62, {
+      color: who ? who.shipColor : profile.shipColor,
+      levels: SF.shipart.levelsOf(who || profile), t: 0.6, idle: false });
+  }
   box.classList.remove("hidden");
 }
 
