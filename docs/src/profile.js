@@ -72,6 +72,8 @@ function addName(name){
 function blank(name){
   return {
     name, callsign: name, shipColor: SHIP_COLORS[0], badge: null,
+    // Their face, assembled in the Armory's MY PILOT editor.
+    avatar: null,
     money: 0, upgrades: {},
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},

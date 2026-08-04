@@ -1075,12 +1075,18 @@ function drawComms(ctx){
   ctx.fillStyle = msg.color;
   ctx.fillRect(x, y, 3, H);
 
+  // The speaker's face - radio chatter comes from a person, not a hull.
+  // Ships remain the fallback for speakers with no pilot (mission control).
   ctx.save();
   ctx.beginPath(); ctx.arc(x + 30, y + H/2, 22, 0, TAU); ctx.clip();
   ctx.fillStyle = "rgba(255,255,255,0.06)";
   ctx.fillRect(x + 8, y + 9, 44, 44);
-  SF.shipart.drawShip(ctx, x + 30, y + H/2 + 2, 42,
-    { color: msg.shipColor, levels: msg.levels, t: msg.life, idle: false });
+  if(msg.pilot){
+    SF.pilotart.paint(ctx, x + 30, y + H/2, 42, msg.pilot);
+  } else {
+    SF.shipart.drawShip(ctx, x + 30, y + H/2 + 2, 42,
+      { color: msg.shipColor, levels: msg.levels, t: msg.life, idle: false });
+  }
   ctx.restore();
 
   ctx.textAlign = "left";

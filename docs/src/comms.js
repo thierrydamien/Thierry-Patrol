@@ -35,9 +35,11 @@ function begin(profile, crew){
   state.lastAt = {};
   state.active = null;
   state.self = { name: profile.callsign || profile.name, color: profile.shipColor,
-                 levels: art.levelsOf(profile) };
+                 levels: art.levelsOf(profile),
+                 pilot: { name: profile.name, avatar: profile.avatar, shipColor: profile.shipColor, badge: profile.badge } };
   const mate = (crew && crew[0]) || null;
-  state.mate = mate ? { name: mate.callsign, color: mate.color, levels: mate.levels || {} } : null;
+  state.mate = mate ? { name: mate.callsign, color: mate.color, levels: mate.levels || {},
+                        pilot: mate.pilot || null } : null;
   state.vars = { you: state.self.name, mate: state.mate ? state.mate.name : "" };
 }
 
@@ -64,6 +66,7 @@ function say(event, vars){
     color: who ? who.color : "#7fc4ff",
     levels: who ? who.levels : state.self.levels,
     shipColor: who ? who.color : state.self.color,
+    pilot: who ? (who.pilot || null) : state.self.pilot,
     isControl: !who,
     life: 0, max: SHOW_TIME,
   };

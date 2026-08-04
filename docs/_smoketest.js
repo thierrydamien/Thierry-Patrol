@@ -108,7 +108,7 @@ const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
@@ -732,6 +732,28 @@ async function run(){
     JSON.stringify({ name:"Renamed", callsign:"Renamed", money: 5678, totalKills: 21 }));
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
+
+  /* ---------- pilot portraits ---------- */
+  check("an avatar normalises from nothing", (() => {
+    const av = SF.pilotart.normalize(null);
+    return av.hairStyle && av.glasses && typeof av.skin === "number";
+  })());
+  check("a hand-edited avatar can't pick parts that don't exist", (() => {
+    const av = SF.pilotart.normalize({ skin: 99, hairStyle: "mohawk", glasses: "monocle" });
+    return av.skin !== 99 && av.hairStyle !== "mohawk" && av.glasses !== "monocle";
+  })());
+  check("the portrait painter exists for comms and podium",
+    typeof SF.pilotart.paint === "function" && typeof SF.pilotart.mount === "function");
+  check("the MY PILOT editor renders its option rows", (() => {
+    SF.ui.getProfile && SF.ui.renderArmory ? true : true;
+    // open the armory pilot tab through the real UI
+    clickEl(id("armoryBtn"));
+    const tabs = qa("#armoryTabs .armory-tab");
+    const pilotTab = tabs.find(el => /pilot/i.test(el.textContent));
+    if(pilotTab) clickEl(pilotTab);
+    return qa("#avatarEditor .ae-row").length >= 4 &&
+           qa("#avatarEditor .ae-dot").length >= 6;
+  })());
 
   /* ---------- medal bounties ---------- */
   {

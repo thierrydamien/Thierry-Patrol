@@ -73,6 +73,7 @@ function buildLoadout(profile, difficulty){
   // have built it, not a stock hull in their colour.
   const crew = P.squadmates(profile.name).slice(0, 2).map(m => ({
     callsign: m.callsign || m.name, color: m.shipColor, levels: SF.shipart.levelsOf(m),
+    pilot: { name: m.name, avatar: m.avatar, shipColor: m.shipColor, badge: m.badge },
   }));
   return {
     crew,
