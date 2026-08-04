@@ -1440,6 +1440,41 @@ re-measured with the bot rather than guessed. Final: Sentinel 33s against 33,
 Leviathan 50 against 50, Devourer killed at 51s having cost a life. Bosses
 are hard again, and now they're hard for the reason they're supposed to be.
 
+## 8as. The map draws the monsters
+
+"Any ideas to make the campaign look cooler?" The map already had a painted
+sky, a serpentine route and your own ship parked at the frontier. What it
+didn't show was the thing the campaign is actually about: seven monsters.
+A boss stop was a red disc with a number on it - which tells you the game
+THINKS something scary is there, without showing you.
+
+So the map now borrows the fights' own hull painters:
+
+- **A boss stop IS the boss.** The same hand-drawn hull the battle uses,
+  hovering at its stop. Ahead of you it looms as a dark silhouette with a
+  "?" and no name - kids see that SOMETHING big is waiting without seeing
+  what. Beaten, it stays behind as a cracked, dimmed wreck under a green
+  DEFEATED strap: the route becomes a trophy shelf of everything you've
+  killed. The mission number moves into a small chip so it never fights
+  the artwork.
+- **The Devourer dwarfs everything** - drawn at 150 to the other hulls' 92,
+  a shadow the size of a small planet at the very top of the map. The
+  destination is visible from mission one, which is what makes it a
+  journey.
+- **Their star.** A baleful red giant painted over the far end of the
+  route, with a red wash bleeding down the top of the sky - you climb out
+  of friendly blue space into somebody else's red.
+- **Life.** A three-spark supply convoy runs the lit stretch of route (the
+  road you opened is in use), and a shooting star crosses the map every
+  few seconds. Both are nearly free.
+
+One layout lesson: hulls are twice a disc's height, so the BOSS strap that
+sat above a disc landed exactly on the name of the stop above. Straps hang
+BELOW hulls now. Caught by screenshot, like every other layout bug - the
+smoke test's jsdom has no canvas, so it can only assert that the map's
+dependencies exist (every campaign boss has a painter) and that drawing
+doesn't throw.
+
 ## 9. What I'd do next
 
 Roughly in value order:

@@ -338,6 +338,12 @@ async function run(){
   check("only mission 1 is unlocked at the start",
     qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
   check("the map says what you're flying next", /\w/.test(id("campaignHint").textContent));
+  // The map draws every boss's battle hull at its stop, so every boss the
+  // campaign names must have a painter the map can borrow.
+  check("the map can borrow a hull painter for every campaign boss",
+    SF.missions.MISSIONS.filter(m => m.boss).every(m =>
+      m.boss === "devourer" ? typeof SF.render.drawDevourerHull === "function"
+                            : SF.bossart.has(m.boss)));
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
   clickEl(qa("#campaignNodes .map-node")[1]);

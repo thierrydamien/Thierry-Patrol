@@ -2036,6 +2036,9 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro,
+  // The campaign map borrows this to draw the Devourer looming at the final
+  // stop - the same hull the fight uses, so the destination IS the monster.
+  drawDevourerHull,
   tinted,
 };
 })();

@@ -446,6 +446,36 @@ function buildSky(W, H){
       c.beginPath(); c.arc(cx, cy, rr, -2.5, -0.9); c.stroke();
     });
 
+  // THEIR STAR: a baleful red giant over the far end of the route. The top of
+  // the map should read as enemy space long before you can fly there - the
+  // journey climbs out of friendly blue and into somebody else's red.
+  (function redGiant(cx, cy, rr){
+    const halo = c.createRadialGradient(cx, cy, rr*0.4, cx, cy, rr*3.4);
+    halo.addColorStop(0, "rgba(255,70,60,0.30)");
+    halo.addColorStop(0.5, "rgba(210,30,60,0.10)");
+    halo.addColorStop(1, "rgba(160,20,60,0)");
+    c.fillStyle = halo;
+    c.fillRect(cx - rr*3.4, cy - rr*3.4, rr*6.8, rr*6.8);
+    const g = c.createRadialGradient(cx - rr*0.3, cy - rr*0.3, rr*0.1, cx, cy, rr);
+    g.addColorStop(0, "#ffd9a0");
+    g.addColorStop(0.35, "#ff8a4a");
+    g.addColorStop(1, "#a11224");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+    // solar flares licking off the rim
+    c.strokeStyle = "rgba(255,130,80,0.55)"; c.lineWidth = 2.5;
+    for(let i=0;i<5;i++){
+      const a0 = skyRand(i+500)*Math.PI*2;
+      c.beginPath();
+      c.arc(cx, cy, rr*(1.10 + skyRand(i+520)*0.22), a0, a0 + 0.5 + skyRand(i+540)*0.8);
+      c.stroke();
+    }
+  })(W*0.12, H*0.035, W*0.085);
+  const war = c.createLinearGradient(0, 0, 0, H*0.16);
+  war.addColorStop(0, "rgba(210,30,60,0.15)");
+  war.addColorStop(1, "rgba(210,30,60,0)");
+  c.fillStyle = war; c.fillRect(0, 0, W, H*0.16);
+
   // Far dust, so the empty corners aren't empty.
   for(let i=0;i<70;i++){
     c.globalAlpha = 0.10 + skyRand(i+300)*0.16;
@@ -455,6 +485,53 @@ function buildSky(W, H){
   }
   c.globalAlpha = 1;
   return cv;
+}
+
+/*
+ * The map draws the monsters. A boss stop used to be a red disc with a number
+ * on it, which tells you the game THINKS something scary is there. Drawing the
+ * boss's actual battle hull - the same painter the fight uses - shows you.
+ * Ahead of you they loom as dark silhouettes; beaten, they stay behind as
+ * cracked wrecks. Only enough of a boss is faked here for the painters to run.
+ */
+const mapBoss = { fake:{}, shadow:{} };
+function mapBossFor(id){
+  if(!mapBoss.fake[id]){
+    const wounds = [];
+    for(let i=0;i<10;i++) wounds.push({
+      x: skyRand(i*3+1)*120 - 60, y: skyRand(i*3+2)*120 - 60,
+      r: 10 + skyRand(i*3+3)*12,
+    });
+    mapBoss.fake[id] = { defId:id, flash:0, charge:0, phaseIndex:0, phase:null, wounds };
+  }
+  return mapBoss.fake[id];
+}
+function mapHullReady(id){
+  return id === "devourer"
+    ? !!(SF.render && SF.render.drawDevourerHull)
+    : !!(SF.bossart && SF.bossart.has(id));
+}
+function drawMapHull(ctx, id, S, damage, timeMs){
+  const fake = mapBossFor(id);
+  if(id === "devourer") SF.render.drawDevourerHull(ctx, fake, 0, 0, S, damage, timeMs);
+  else SF.bossart.draw(ctx, fake, S, damage, timeMs);
+}
+/* A locked boss is a shape, not a ship: the hull rendered once, then flooded
+   dark, so kids see that SOMETHING big is waiting without seeing what. */
+function hullShadow(id, S){
+  const key = id + "@" + S;
+  if(mapBoss.shadow[key] !== undefined) return mapBoss.shadow[key];
+  const pad = Math.ceil(S*1.05);
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = pad*2;
+  const c = cv.getContext("2d");
+  if(!c) return (mapBoss.shadow[key] = null);
+  c.translate(pad, pad);
+  drawMapHull(c, id, S, 0, 0);
+  c.globalCompositeOperation = "source-in";
+  c.fillStyle = "#161a3a";
+  c.fillRect(-pad, -pad, pad*2, pad*2);
+  return (mapBoss.shadow[key] = cv);
 }
 
 /** Serpentine route from the bottom of the map to the top. */
@@ -616,6 +693,26 @@ function drawCampaign(){
   });
   ctx.globalAlpha = 1;
 
+  // A shooting star every few seconds. Pure theatre, and nearly free.
+  {
+    const period = 5.5, k = Math.floor(t/period), f = (t - k*period)/1.1;
+    if(f < 1){
+      const sx = (0.1 + skyRand(k*5+1)*0.8)*W, sy = skyRand(k*5+2)*H;
+      const ang = 2.2 + skyRand(k*5+3)*0.7;
+      const d = f*260, LEN = 70;
+      const ex = sx + Math.cos(ang)*d, ey = sy + Math.sin(ang)*d;
+      const a = Math.sin(f*Math.PI);
+      const g = ctx.createLinearGradient(ex - Math.cos(ang)*LEN, ey - Math.sin(ang)*LEN, ex, ey);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(1, "rgba(255,255,255," + (0.75*a).toFixed(2) + ")");
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ex - Math.cos(ang)*LEN, ey - Math.sin(ang)*LEN);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+  }
+
   // How far along the route the player has actually got.
   let reached = 0;
   for(let i=0;i<nodes.length;i++) if(isMissionUnlocked(profile, i)) reached = i;
@@ -633,6 +730,31 @@ function drawCampaign(){
     ctx.moveTo(px(a), py(a));
     ctx.quadraticCurveTo((px(a)+px(b))/2 + (i%2 ? 70 : -70), (py(a)+py(b))/2, px(b), py(b));
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // A little supply convoy runs the lit stretch: the road you opened is in
+  // use. Three gold sparks chasing each other up the route, nothing more.
+  if(reached > 0){
+    const quad = (a, b, i, u) => {
+      const cx = (px(a)+px(b))/2 + (i%2 ? 70 : -70), cy = (py(a)+py(b))/2;
+      const q = 1-u;
+      return [q*q*px(a) + 2*q*u*cx + u*u*px(b), q*q*py(a) + 2*q*u*cy + u*u*py(b)];
+    };
+    ctx.save();
+    ctx.lineCap = "round";
+    for(let j=0;j<3;j++){
+      const u = ((t*0.16 + j*0.37) % 1) * reached;
+      const seg = Math.min(reached-1, Math.floor(u));
+      const f = u - seg;
+      const [hx, hy] = quad(nodes[seg], nodes[seg+1], seg, f);
+      const [tx2, ty2] = quad(nodes[seg], nodes[seg+1], seg, Math.max(0, f-0.05));
+      ctx.strokeStyle = "rgba(255,214,90,0.45)";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -656,16 +778,21 @@ function drawCampaign(){
     const unlocked = isMissionUnlocked(profile, i);
     const earned = P.starsForMission(profile, node.mission.id);
     const boss = !!node.mission.boss;
+    const bossId = node.mission.boss || null;
+    const hull = boss && mapHullReady(bossId);
+    const finale = bossId === "devourer";
+    const hullS = finale ? 150 : 92;   // the last one dwarfs the rest
     const x = px(node), y = py(node);
     // Locked stops shrink and hush: the past and present are the story, the
-    // future is a sketch. Six full-weight padlock discs made the top half of
-    // the map read heavier than the part you can actually fly.
-    const R = (boss ? 40 : 32) * (unlocked ? 1 : 0.72);
+    // future is a sketch. Bosses are the exception - a monster ahead should
+    // LOOM, so a locked hull keeps its size and loses its colour instead.
+    const R = hull ? hullS*0.5 : (boss ? 40 : 32) * (unlocked ? 1 : 0.72);
     const isNext = i === reached;
+    const beaten = earned > 0;
 
-    if(boss){
+    if(boss && !beaten){               // a wreck doesn't buzz with danger
       ctx.save();
-      ctx.globalAlpha = unlocked ? 1 : 0.22;
+      ctx.globalAlpha = unlocked ? 1 : 0.18;
       ctx.strokeStyle = "rgba(255,45,85,0.7)";
       ctx.lineWidth = 3;
       for(let k=0;k<12;k++){
@@ -695,22 +822,53 @@ function drawCampaign(){
       ctx.restore();
     }
 
-    const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
-    if(unlocked){ g.addColorStop(0, boss ? "#ff7a90" : "#5b6bd8"); g.addColorStop(1, boss ? "#7a1226" : "#1d2050"); }
-    else { g.addColorStop(0, "#3a3f57"); g.addColorStop(1, "#191c2c"); }
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = earned === 3 ? "#ffd23f"
-                    : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
-    ctx.stroke();
+    if(hull){
+      // The stop IS the monster: the fight's own hull painter, hovering.
+      if(!unlocked){
+        const sh = hullShadow(bossId, hullS);
+        if(sh) ctx.drawImage(sh, x - sh.width/2, y - sh.height/2);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(200,210,255,0.5)";
+        ctx.font = "bold 30px Rajdhani, Arial, sans-serif";
+        ctx.fillText("?", x, y + 10);
+      } else {
+        ctx.save();
+        ctx.translate(x, y + Math.sin(t*1.1 + i)*3);   // a slow hover
+        if(beaten) ctx.globalAlpha = 0.75;             // a wreck, not a threat
+        drawMapHull(ctx, bossId, hullS, beaten ? 0.85 : 0, t*1000);
+        ctx.restore();
+      }
+      if(earned === 3){
+        ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(x, y, R + 6, 0, Math.PI*2); ctx.stroke();
+      }
+      // The mission number rides in a chip so it never fights the artwork.
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(10,12,28,0.85)";
+      ctx.strokeStyle = unlocked ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x - R*0.85, y + R*0.6, 13, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.45)";
+      ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+      ctx.fillText(String(node.mission.id), x - R*0.85, y + R*0.6 + 5);
+    } else {
+      const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
+      if(unlocked){ g.addColorStop(0, boss ? "#ff7a90" : "#5b6bd8"); g.addColorStop(1, boss ? "#7a1226" : "#1d2050"); }
+      else { g.addColorStop(0, "#3a3f57"); g.addColorStop(1, "#191c2c"); }
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = earned === 3 ? "#ffd23f"
+                      : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
+      ctx.stroke();
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.4)";
-    ctx.font = "bold " + Math.round((boss ? 26 : 22) * (unlocked ? 1 : 0.8)) + "px Rajdhani, Arial, sans-serif";
-    ctx.fillText(String(node.mission.id), x, y + (boss ? 9 : 8) * (unlocked ? 1 : 0.8));
+      ctx.textAlign = "center";
+      ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.4)";
+      ctx.font = "bold " + Math.round((boss ? 26 : 22) * (unlocked ? 1 : 0.8)) + "px Rajdhani, Arial, sans-serif";
+      ctx.fillText(String(node.mission.id), x, y + (boss ? 9 : 8) * (unlocked ? 1 : 0.8));
+    }
 
-    const starY = y - R - (boss ? 22 : 6);
+    const starY = y - R - (hull ? 10 : boss ? 22 : 6);
     if(unlocked){                                  // stars earned, on the rim
       ctx.font = "13px Rajdhani, Arial, sans-serif";
       for(let sIdx=0; sIdx<3; sIdx++){
@@ -725,11 +883,13 @@ function drawCampaign(){
      */
     if(boss && unlocked){
       ctx.save();
-      const label = "☠ BOSS", padX = 9, h = 19;
+      const label = beaten ? "✓ DEFEATED" : "☠ BOSS", padX = 9, h = 19;
       ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       const w = ctx.measureText(label).width + padX*2;
-      const bx = x - w/2, by = y - R - 20;
-      ctx.fillStyle = "#c2123a";
+      // Discs wear the strap as a hat; hulls are tall enough that a hat
+      // lands on the name of the stop above, so theirs hangs below instead.
+      const bx = x - w/2, by = hull ? y + R + 4 : y - R - 20;
+      ctx.fillStyle = beaten ? "#166a45" : "#c2123a";
       ctx.beginPath();
       ctx.moveTo(bx + h/2, by);
       ctx.lineTo(bx + w - h/2, by);
@@ -740,7 +900,8 @@ function drawCampaign(){
       ctx.quadraticCurveTo(bx, by, bx + h/2, by);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = "rgba(255,180,190,0.85)"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = beaten ? "rgba(150,255,205,0.8)" : "rgba(255,180,190,0.85)";
+      ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = "#fff";
       ctx.textBaseline = "middle";
       ctx.fillText(label, x, by + h/2 + 1);
@@ -749,7 +910,9 @@ function drawCampaign(){
     }
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
     ctx.font = "bold " + (unlocked ? 13 : 11) + "px Rajdhani, Arial, sans-serif";
-    ctx.fillText(node.mission.name.toUpperCase(), x, y + R + 20);
+    // A locked boss keeps its name to itself - the silhouette is the tease.
+    ctx.fillText(boss && !unlocked ? "? ? ? ? ?" : node.mission.name.toUpperCase(),
+                 x, y + R + (hull && unlocked ? 44 : 20));
 
     // Whose flag flies here: the record holder's initial in their own ship
     // colour, pinned to the stop's rim. A brother's chip on YOUR mission is
