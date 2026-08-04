@@ -1468,6 +1468,17 @@ So the map now borrows the fights' own hull painters:
   road you opened is in use), and a shooting star crosses the map every
   few seconds. Both are nearly free.
 
+The badge took two goes. A hull has no middle to put a number in, so the
+first attempt parked it in a small dark pill in the corner - and the
+customer caught it immediately: "there are no numbers for bosses so it's
+not consistent". They were right, and the diagnosis was sharper than
+"it's too small": a dim chip is a DIFFERENT KIND OF OBJECT from the bold
+numeral on a mission disc, so the map stopped counting in one currency.
+The badge is now a miniature mission disc - same radial gradient, same
+stroke rules (gold at three stars, white when unlocked, faint when not),
+same bold numeral, just smaller. Red for a boss, grey when locked, exactly
+like the discs. Every stop reads as the same thing again.
+
 One layout lesson: hulls are twice a disc's height, so the BOSS strap that
 sat above a disc landed exactly on the name of the stop above. Straps hang
 BELOW hulls now. Caught by screenshot, like every other layout bug - the

@@ -842,15 +842,27 @@ function drawCampaign(){
         ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.arc(x, y, R + 6, 0, Math.PI*2); ctx.stroke();
       }
-      // The mission number rides in a chip so it never fights the artwork.
+      /*
+       * The mission number can't ride in the middle of a hull, so it gets a
+       * badge - but the badge is a MINIATURE MISSION DISC, not a chip of its
+       * own invention: same radial gradient, same stroke rules, same bold
+       * numeral. Every stop on the map then counts in the same currency, which
+       * a dim little pill in the corner did not.
+       */
+      const bR = 19, bx2 = x - R*0.82, by2 = y + R*0.62;
+      const bg = ctx.createRadialGradient(bx2-bR*0.3, by2-bR*0.4, bR*0.15, bx2, by2, bR);
+      if(unlocked){ bg.addColorStop(0, "#ff7a90"); bg.addColorStop(1, "#7a1226"); }
+      else { bg.addColorStop(0, "#3a3f57"); bg.addColorStop(1, "#191c2c"); }
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(bx2, by2, bR, 0, Math.PI*2); ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = earned === 3 ? "#ffd23f"
+                      : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
+      ctx.stroke();
       ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(10,12,28,0.85)";
-      ctx.strokeStyle = unlocked ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(x - R*0.85, y + R*0.6, 13, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.45)";
-      ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
-      ctx.fillText(String(node.mission.id), x - R*0.85, y + R*0.6 + 5);
+      ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.4)";
+      ctx.font = "bold 21px Rajdhani, Arial, sans-serif";
+      ctx.fillText(String(node.mission.id), bx2, by2 + 8);
     } else {
       const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
       if(unlocked){ g.addColorStop(0, boss ? "#ff7a90" : "#5b6bd8"); g.addColorStop(1, boss ? "#7a1226" : "#1d2050"); }
@@ -888,7 +900,7 @@ function drawCampaign(){
       const w = ctx.measureText(label).width + padX*2;
       // Discs wear the strap as a hat; hulls are tall enough that a hat
       // lands on the name of the stop above, so theirs hangs below instead.
-      const bx = x - w/2, by = hull ? y + R + 4 : y - R - 20;
+      const bx = x - w/2, by = hull ? y + R + 8 : y - R - 20;
       ctx.fillStyle = beaten ? "#166a45" : "#c2123a";
       ctx.beginPath();
       ctx.moveTo(bx + h/2, by);
