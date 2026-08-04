@@ -1486,6 +1486,38 @@ smoke test's jsdom has no canvas, so it can only assert that the map's
 dependencies exist (every campaign boss has a painter) and that drawing
 doesn't throw.
 
+## 8at. Every stop wears its mission
+
+Bosses got hulls, and the customer immediately saw the remaining flatness:
+"apart from the boss, every level looks the same". Eleven identical blue
+discs on a route that is supposed to be a journey through different places.
+
+Each ordinary stop now wears its own mission, and both halves are DERIVED
+so a new level gets a face for free:
+
+- **A silhouette of the level's signature enemy** inside the disc. Full-
+  colour sprites at 50px turn into grey smudges, so the sprite is flooded
+  to one dark shape - at that size you read "the pointy one" or "the fat
+  one" instantly, which is all a face needs to do.
+- **A colour taken from what the mission asks of you**: purple for guns-
+  down, gold for a coin run, dust-brown for a debris field, green for a
+  big rescue, blue for a straight fight. The test order matters - nearly
+  every level carries pods, so the rescue test is greedy and would paint
+  half the route green; the narrower identities get asked first.
+
+Picking the signature enemy took three tries, all measured with a dry run
+over the real wave scripts rather than eyeballed: most-bodies picks the
+grunt everywhere (they are the filler in 17 of 18 levels); rarest-first
+picks whatever cameos once, so Weaving Through came out as a THIEF level.
+Bodies-divided-by-spread lands on the enemy a level is built around. And
+where a brief states the identity outright ("kill the hive first", "the
+gold glowing ones are elites") the mission now names its own `face` in the
+data - five do - rather than hoping a heuristic agrees. The Gauntlet's
+disc glows elite-gold behind its brute, the same tell elites wear in play.
+
+The smoke test asserts no two ordinary stops share a face, because the
+face is picked by a heuristic that a new level could quietly collide with.
+
 ## 9. What I'd do next
 
 Roughly in value order:

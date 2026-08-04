@@ -387,6 +387,7 @@ const MISSIONS = [
   {
     id:7, name:"The Gauntlet", subtitle:"Elites inbound",
     brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
+    face:"brute", faceElite:true,     // the gold glowing ones ARE the level
     waves: [
       w(1,   "weaver",   8, "arc"),
       w(8,   "striker",  5, "sides", { elite: 1 }),
@@ -472,6 +473,7 @@ const MISSIONS = [
   {
     id:9, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
+    face:"swooper",                   // the thing you spend the level dodging
     noGuns:true, coinRain:true, podDrops:5,
     waves: [
       w(1,   "grunt",    7, "wall"),
@@ -509,6 +511,7 @@ const MISSIONS = [
   {
     id:10, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
+    face:"asteroid",                  // the debris is the level, not its escorts
     waves: [
       w(1,   "asteroid", 6, "scatter"),
       w(7,   "grunt",   10, "arc"),
@@ -537,6 +540,7 @@ const MISSIONS = [
   {
     id:11, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
+    face:"hive",                      // kill the hive first - so show the hive
     waves: [
       w(1,   "hive",     2, "twinColumns"),
       w(8,   "grunt",   11, "wall"),
@@ -724,6 +728,7 @@ const MISSIONS = [
   {
     id:17, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
+    face:"sniper",                    // what is watching you out of the dark
     waves: [
       // Deliberately sparse to start. Empty sky is the scariest thing here.
       w(1,   "grunt",    6, "line"),

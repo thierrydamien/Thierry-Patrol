@@ -344,6 +344,20 @@ async function run(){
     SF.missions.MISSIONS.filter(m => m.boss).every(m =>
       m.boss === "devourer" ? typeof SF.render.drawDevourerHull === "function"
                             : SF.bossart.has(m.boss)));
+  /*
+   * Ordinary stops are told apart by the enemy drawn inside them, so any two
+   * sharing a face are two stops that look the same - which is the whole thing
+   * this was built to fix. Asserted rather than eyeballed, because the face is
+   * picked by a heuristic that a new level could quietly collide with.
+   */
+  {
+    const faces = SF.missions.MISSIONS.filter(m => !m.boss).map(m => SF.ui.missionFace(m).enemy);
+    check("every ordinary stop draws an enemy", faces.every(Boolean));
+    check("no two ordinary stops wear the same face",
+      new Set(faces).size === faces.length);
+    check("a named face is the one that gets drawn",
+      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 11)).enemy === "hive");
+  }
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
   clickEl(qa("#campaignNodes .map-node")[1]);

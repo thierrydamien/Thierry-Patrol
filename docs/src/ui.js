@@ -534,6 +534,124 @@ function hullShadow(id, S){
   return (mapBoss.shadow[key] = cv);
 }
 
+/*
+ * WHAT LIVES HERE. Bosses got hulls, and next to them every ordinary stop was
+ * the same blue disc with a number - eleven identical dots on a route that is
+ * supposed to be a journey through different places. So a stop now wears its
+ * own mission: the enemy you will mostly be fighting, drawn inside the disc,
+ * and a colour taken from what the mission actually ASKS of you.
+ *
+ * All of it is derived from the mission's own wave script and objectives, so a
+ * new level gets a face for free and nobody has to maintain a lookup table.
+ */
+const FACE_KINDS = {
+  // objective/flag driven, checked in this order - most distinctive first
+  noGuns:  { c0:"#b07be8", c1:"#3a1d5c" },   // Silent Running: guns down
+  coins:   { c0:"#ffc451", c1:"#6b4a09" },   // a coin run
+  rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
+  rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
+  fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
+};
+const faceCache = {};
+/*
+ * A full-colour enemy sprite shrunk to 50px on top of a coloured disc turns
+ * into a grey smudge - too much internal detail, too little contrast. Flooding
+ * it to one dark colour turns it back into a SHAPE, which is all it needs to
+ * be at this size: you read "the pointy one" or "the fat one" instantly.
+ */
+const silCache = {};
+function enemySil(type){
+  if(silCache[type] !== undefined) return silCache[type];
+  const cv = document.createElement("canvas");
+  const c = () => cv.getContext("2d");
+  // Rocks have no enemy art - they are drawn by the particle layer in play -
+  // but "through the debris" is a whole level's identity, so the map draws one.
+  if(type === "asteroid"){
+    cv.width = cv.height = 96;
+    const k = c();
+    if(!k) return (silCache[type] = null);
+    k.translate(48, 48);
+    k.fillStyle = "#080b1c";
+    k.beginPath();
+    for(let i = 0; i < 9; i++){
+      const a = i/9*Math.PI*2;
+      const r = 30 + ((i*7)%5 - 2)*3.5;
+      const px2 = Math.cos(a)*r, py2 = Math.sin(a)*r;
+      i ? k.lineTo(px2, py2) : k.moveTo(px2, py2);
+    }
+    k.closePath(); k.fill();
+    return (silCache[type] = cv);
+  }
+  const src = SF.enemyArt.spriteFor(type, "#ffffff", false);
+  if(!src) return (silCache[type] = null);
+  cv.width = src.width; cv.height = src.height;
+  const k = c();
+  if(!k) return (silCache[type] = null);
+  k.drawImage(src, 0, 0);
+  k.globalCompositeOperation = "source-in";
+  k.fillStyle = "#080b1c";
+  k.fillRect(0, 0, cv.width, cv.height);
+  return (silCache[type] = cv);
+}
+/*
+ * How many missions each enemy turns up in. A mission's SIGNATURE enemy is its
+ * rarest one, not its most numerous: grunts are the filler in almost every
+ * level, so "most bodies" picked the grunt for missions 1, 2, 3, 5 and 7 alike
+ * and the map went straight back to identical dots. The rare one is the one
+ * the level is actually about - weavers in Weaving Through, kamikazes in
+ * Kamikaze Run, thieves in Their Treasury.
+ */
+let spreadCache = null;
+function enemySpread(){
+  if(spreadCache) return spreadCache;
+  spreadCache = {};
+  MISSIONS.forEach(mm => {
+    const seen = {};
+    mm.waves.forEach(wv => { seen[wv.type] = true; });
+    Object.keys(seen).forEach(tp => { spreadCache[tp] = (spreadCache[tp] || 0) + 1; });
+  });
+  return spreadCache;
+}
+function missionFace(m){
+  if(faceCache[m.id]) return faceCache[m.id];
+
+  const tally = {};
+  m.waves.forEach(wv => { tally[wv.type] = (tally[wv.type] || 0) + wv.n; });
+  const spread = enemySpread();
+  /*
+   * Bodies weighted DOWN by how many missions the type appears in. Raw counts
+   * pick the grunt every time; raw rarity picks whatever cameos once, so
+   * "Weaving Through" came out as a thief level. Bodies over spread lands on
+   * the enemy a level is actually built around.
+   *
+   * A mission may still name its own face, and five do: where the brief states
+   * the identity outright ("kill the hive first", "the gold glowing ones are
+   * elites") the data should say so rather than hope a heuristic agrees. Rocks
+   * and mines have no art of their own, so they can colour a stop but only
+   * become its face by being asked for by name.
+   */
+  let enemy = null, best = -1, rockN = 0, totalN = 0;
+  Object.keys(tally).forEach(type => {
+    totalN += tally[type];
+    if(!SF.enemyArt.has(type)){ rockN += tally[type]; return; }
+    const score = tally[type] / (spread[type] || 1);
+    if(score > best){ best = score; enemy = type; }
+  });
+  if(m.face) enemy = m.face;
+
+  const obj = m.objectives || [];
+  // Order matters: nearly every level has pods to collect, so the rescue test
+  // is greedy and would paint half the route the same green. The narrower
+  // identities - guns down, a coin run, a rock field - get asked first.
+  const kind = m.noGuns ? "noGuns"
+             : (obj.includes("coinRush") || m.coinRain) ? "coins"
+             : (totalN > 0 && rockN/totalN >= 0.3) ? "rocks"
+             : (obj.includes("rescueAll") && rescueCount(m) >= 4) ? "rescue"
+             : "fight";
+  return (faceCache[m.id] = Object.assign({ enemy, kind, elite: !!m.faceElite },
+                                          FACE_KINDS[kind]));
+}
+
 /** Serpentine route from the bottom of the map to the top. */
 /*
  * The map is sized from the mission count rather than fixed, because the route
@@ -864,20 +982,55 @@ function drawCampaign(){
       ctx.font = "bold 21px Rajdhani, Arial, sans-serif";
       ctx.fillText(String(node.mission.id), bx2, by2 + 8);
     } else {
+      const face = missionFace(node.mission);
       const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
-      if(unlocked){ g.addColorStop(0, boss ? "#ff7a90" : "#5b6bd8"); g.addColorStop(1, boss ? "#7a1226" : "#1d2050"); }
+      if(unlocked){
+        g.addColorStop(0, boss ? "#ff7a90" : face.c0);
+        g.addColorStop(1, boss ? "#7a1226" : face.c1);
+      }
       else { g.addColorStop(0, "#3a3f57"); g.addColorStop(1, "#191c2c"); }
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+
+      // The mission's own enemy, riding inside the disc. Clipped to the rim so
+      // eighteen stops stay eighteen tidy circles, and kept faint so it reads
+      // as the stop's character rather than competing with its number.
+      const sprite = face.enemy && enemySil(face.enemy);
+      if(sprite){
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x, y, R-2, 0, Math.PI*2); ctx.clip();
+        // An elite level glows gold behind its silhouette - the same tell the
+        // elites themselves wear in play, so the map speaks the game's language.
+        if(face.elite && unlocked){
+          const eg = ctx.createRadialGradient(x, y, 0, x, y, R);
+          eg.addColorStop(0, "rgba(255,210,63,0.85)");
+          eg.addColorStop(1, "rgba(255,170,20,0.15)");
+          ctx.fillStyle = eg;
+          ctx.fillRect(x-R, y-R, R*2, R*2);
+        }
+        ctx.globalAlpha = unlocked ? 0.62 : 0.2;
+        // Wide ships lose their wingtips to the rim at full width, and the
+        // wingtips are exactly what tells a weaver from a grunt.
+        const box = R*1.72;
+        ctx.drawImage(sprite, x - box/2, y - box/2, box, box);
+        ctx.restore();
+      }
+
       ctx.lineWidth = 3;
       ctx.strokeStyle = earned === 3 ? "#ffd23f"
                       : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
       ctx.stroke();
 
       ctx.textAlign = "center";
+      // A number over artwork needs its own backing or it dissolves into the
+      // silhouette behind it - the shadow is what keeps the map countable.
+      ctx.save();
+      ctx.shadowColor = "rgba(4,6,16,0.95)";
+      ctx.shadowBlur = 6;
       ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.4)";
       ctx.font = "bold " + Math.round((boss ? 26 : 22) * (unlocked ? 1 : 0.8)) + "px Rajdhani, Arial, sans-serif";
       ctx.fillText(String(node.mission.id), x, y + (boss ? 9 : 8) * (unlocked ? 1 : 0.8));
+      ctx.restore();
     }
 
     const starY = y - R - (hull ? 10 : boss ? 22 : 6);
@@ -2299,7 +2452,7 @@ if("serviceWorker" in navigator){
 }
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
-          queueToast, maybeStory,
+          queueToast, maybeStory, missionFace,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile };
 })();
