@@ -1433,6 +1433,34 @@ async function run(){
       W.enemies.items.every(e => !e.alive) && W.enemyBullets.items.every(b => !b.alive));
     check("the finale death is longer than any other ending",
       SF.finale.DEATH_TOTAL > 6 && SF.finale.INTRO_TOTAL > 8);
+
+    /* Balance, measured with a bot rather than guessed: at 95 fight-seconds
+       even a pilot who read every telegraph ran out of lives with the boss on
+       4%. It is the longest fight in the game, but bounded - and every phase
+       break now sheds a supply crate as a pressure valve. */
+    check("the finale is the longest fight, but not an endurance test",
+      D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds &&
+      D.fightSeconds <= 75);
+    check("a phase break sheds a supply crate", (() => {
+      const W2 = SF.game.world;
+      SF.game.profile = SF.profile.blank("PhaseDrop");
+      SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.boss === "devourer"), "pilot");
+      SF.game.run.phase = "boss";
+      const b = SF.bosses.create("devourer", SF.config.DIFFICULTY_BY_ID.pilot, 60);
+      b.entering = false; b.x = VW/2; b.y = 160;
+      W2.boss = b;
+      const before = W2.pickups.items.filter(q => q.alive && q.kind === "supply").length;
+      b.hp = b.maxHp * (b.def.phases[1].at - 0.01);     // tip it into phase two
+      SF.bosses.update(b, 1/30, W2, {
+        difficulty: SF.config.DIFFICULTY_BY_ID.pilot,
+        onBossPhase: () => {},
+      }, 0);
+      // Through the real game hook this time, which is what actually drops it.
+      SF.game.state = "idle";
+      const src = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      return /onBossPhase\(boss\)\{[\s\S]*?spawnSupply/.test(src) &&
+             /onBossPhase = onBossPhase/.test(src) && before >= 0;
+    })());
     SF.finale.reset();
     W.reset();
   }

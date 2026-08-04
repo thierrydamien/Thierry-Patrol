@@ -164,7 +164,7 @@ const BOSSES = {
   devourer: {
     name: "THE DEVOURER", epithet: "it ate their star. ours is next.",
     finale: true,
-    hp: 4200, fightSeconds: 95, size: 300, tint: "#ff3d5a", entryY: 172,
+    hp: 4200, fightSeconds: 70, size: 300, tint: "#ff3d5a", entryY: 172,
     weakPoints: [
       // Four armour plates seal the core. Blow them off to open the fight up -
       // and each one takes an attack with it.

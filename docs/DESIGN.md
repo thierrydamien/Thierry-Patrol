@@ -1290,6 +1290,32 @@ under sustained fire; and the claw's pincers were built in head-local
 coordinates but painted in screen space, which parked them in the top-left
 corner of the playfield.
 
+## 8ao. Measuring the finale instead of trusting it
+
+The Devourer was designed on a claim - "reading the telegraph saves you" -
+and claims about difficulty are exactly the thing this project has learned
+not to guess at. A throwaway probe flew the fight four times: two pilots
+(one that ignores every warning, one that reads them) x two loadouts.
+
+The first run said two things at once. The claim held, emphatically: at
+identical gear, reading the warnings took survival from 18 seconds to 71.
+And the fight was still too hard - NOBODY won. The careful pilot reached 4%
+boss health and then ran out of lives, which is the worst possible outcome:
+"so close, then dead, again" is precisely the loop the brief said to avoid.
+
+Two fixes, both aimed at attrition rather than at difficulty: fightSeconds
+95 -> 70 (still the longest fight in the game by a distance, but no longer a
+war of endurance), and every phase break now sheds a supply crate - a
+pressure valve landing exactly when the fight escalates, which also reads as
+scavenging from the wreck. Re-measured: a careful, well-equipped pilot now
+wins with ONE hit taken and no lives lost, while careless pilots still lose.
+Skill and preparation are rewarded; carelessness is not.
+
+Worth noting what the probe also exposed by accident: the "careful" bot
+sometimes dealt LESS damage than the careless one, because parking in the
+nova's safe ring aims your guns away from the boss. Dodging costs damage -
+an emergent tension nobody designed, and a good one.
+
 ## 9. What I'd do next
 
 Roughly in value order:

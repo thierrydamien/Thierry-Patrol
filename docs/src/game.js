@@ -635,6 +635,17 @@ function killBoss(boss){
   fx.hitStop(110);
 }
 
+/*
+ * A boss escalating a phase sheds a supply crate on the finale only. Measured:
+ * a careful pilot was reaching 4% health on the Devourer and STILL running out
+ * of lives, which is the "so close, then dead, again" loop the fight must not
+ * have. The crates land exactly at the moments the pressure steps up.
+ */
+function onBossPhase(boss){
+  if(!boss.def.finale) return;
+  spawnSupply(clamp(boss.x + rand(-90, 90), 60, VW - 60), boss.y + 60);
+}
+
 function finalBossBlast(boss){
   const run = game.run;
   const bx = boss.x, by = boss.y;
@@ -768,6 +779,7 @@ function update(dt, timeMs){
   behaviourCtx.onEnemyKilled = callbacks.onEnemyKilled;
   behaviourCtx.onBossHit = callbacks.onBossHit;
   behaviourCtx.onBossDead = finalBossBlast;
+  behaviourCtx.onBossPhase = onBossPhase;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
   behaviourCtx.godMode = game.godMode;
 

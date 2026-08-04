@@ -383,6 +383,7 @@ function update(boss, dt, world, ctxObj, timeMs){
     fx.ring(boss.x, boss.y, 210, "#ffffff", 4, 0.6);
     fx.shake(14);
     fx.text(boss.x, boss.y - 54, next.enrage ? "ENRAGED!" : "PHASE " + (boss.phaseIndex+1), "#ff5d73", 18, true);
+    if(ctxObj && ctxObj.onBossPhase) ctxObj.onBossPhase(boss);
   }
 
   // Patrol
