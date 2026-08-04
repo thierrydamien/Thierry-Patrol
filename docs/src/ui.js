@@ -194,6 +194,19 @@ function renderMenu(){
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
+  // The Daily Patrol opens once the basics are learned (mission 3 cleared).
+  // Its sub is the score to beat - yours, or the leading brother's.
+  {
+    const open = dailyUnlocked(profile);
+    $("dailyBtn").classList.toggle("locked", !open);
+    const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
+      .sort((a,b) => b.endlessBest - a.endlessBest);
+    setSub("dailySub", !open ? "opens after Mission 3"
+      : rivals.length
+        ? "beat " + (rivals[0].callsign || rivals[0].name) + "'s " +
+          rivals[0].endlessBest.toLocaleString("en-US") + " pts"
+        : "today's sky - same for everyone");
+  }
   setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
   {
     const owed = P.unclaimedMedals(profile);
@@ -1163,6 +1176,11 @@ function drawBriefHero(index){
     color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0.7, idle:false });
 }
 
+function dailyUnlocked(p){
+  const rec = p && p.missions && p.missions[3];
+  return !!(rec && rec.cleared);
+}
+
 function launch(index, difficultyId){
   audio.init();
   show("screen-game");
@@ -1378,7 +1396,17 @@ function renderLeaderboard(){
   // tail collapses into one quiet line.
   const flown = MISSIONS.filter(m => P.familyBest(m.id));
   const unflown = MISSIONS.length - flown.length;
-  $("recordBoard").innerHTML = flown.map(m => {
+  // The Daily Patrol crown sits on top of the record board - it's the one
+  // record that resets its battleground every morning.
+  const daily = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
+    .sort((a,b) => b.endlessBest - a.endlessBest);
+  const dailyRow = daily.length ? `<div class="rb-row rb-daily${daily[0].name === profile.name ? " mine" : ""}">
+      <span class="rb-num">🌅</span>
+      <span class="rb-name">Daily Patrol</span>
+      <span class="rb-holder">👑 ${esc(daily[0].callsign || daily[0].name)}</span>
+      <span class="rb-score">${daily[0].endlessBest.toLocaleString()}</span>
+    </div>` : "";
+  $("recordBoard").innerHTML = dailyRow + flown.map(m => {
     const best = P.familyBest(m.id);
     const mine = best.owner === profile.name;
     return `<div class="rb-row${mine ? " mine" : ""}">
@@ -1428,14 +1456,24 @@ function syncAbilityButtons(force){
 function hideResults(){ $("overlayResults").classList.add("hidden"); }
 
 function showResults(result){
-  const { completed, stars, run, objectives, unlocked, prevFamilyBest, prevSelfBest } = result;
-  $("resultTitle").textContent = completed ? "MISSION COMPLETE" : "SHIP DOWN";
-  $("resultTitle").style.color = completed ? "#4ade80" : "#ff9d5c";
+  const { completed, stars, run, objectives, unlocked, prevFamilyBest, prevSelfBest,
+          endless, endlessNewBest, durationSec } = result;
+  $("resultTitle").textContent = endless ? "PATROL OVER"
+    : completed ? "MISSION COMPLETE" : "SHIP DOWN";
+  $("resultTitle").style.color = endless ? "#ffd23f"
+    : completed ? "#4ade80" : "#ff9d5c";
 
   // Losing should read as "you nearly had it", not as a telling-off - and you
   // always keep the money you collected, so a failed run is never wasted.
   const sub = $("resultSubtitle");
-  if(completed){
+  if(endless){
+    // A Daily Patrol run never fails - it just has a length and a score.
+    const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
+    sub.textContent = endlessNewBest
+      ? "NEW RECORD! " + run.score.toLocaleString("en-US") + " pts in " + m + ":" + s
+      : run.score.toLocaleString("en-US") + " pts in " + m + ":" + s +
+        " — your best is " + (profile.endlessBest || 0).toLocaleString("en-US");
+  } else if(completed){
     failStreak = null;
     sub.textContent = stars === 3
       ? "Perfect flying, " + (profile.callsign || profile.name) + "!"
@@ -1454,12 +1492,13 @@ function showResults(result){
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
   // a loss gets the ten-second defeat sting, which hands back to the menu.
-  audio.setMusic(completed ? "menu" : "defeat");
+  // A Daily Patrol ending is never a defeat, so it never gets the sting.
+  audio.setMusic(completed || endless ? "menu" : "defeat");
 
   // Three stars rains confetti. Pride deserves paper.
   const oldConf = $("overlayResults").querySelector(".confetti");
   if(oldConf) oldConf.remove();
-  if(completed && stars === 3){
+  if((completed && stars === 3) || (endless && endlessNewBest)){
     const conf = document.createElement("div");
     conf.className = "confetti";
     const colors = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ffffff"];
@@ -1476,9 +1515,10 @@ function showResults(result){
     setTimeout(() => conf.remove(), 6000);
   }
 
-  // Stars pop in one at a time - the small ceremony that makes replaying worth it.
+  // Stars pop in one at a time - the small ceremony that makes replaying
+  // worth it. The Daily Patrol has no stars: the score is the whole story.
   const starBox = $("resultStars");
-  starBox.innerHTML = [0,1,2].map(i => `<span class="rs" data-i="${i}">★</span>`).join("");
+  starBox.innerHTML = endless ? "" : [0,1,2].map(i => `<span class="rs" data-i="${i}">★</span>`).join("");
   Array.from(starBox.children).forEach((el, i) => {
     if(i < stars){
       setTimeout(() => { el.classList.add("on"); audio.play("star", i); }, 380 + i*420);
@@ -1497,16 +1537,19 @@ function showResults(result){
     <div class="rl"><span>Score</span><b>${run.score}</b></div>
     <div class="rl"><span>Money collected</span><b class="money">+$${run.money}</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
-    <div class="rl"><span>Enemies destroyed</span><b>${s.kills}/${Math.max(s.spawned, run.director.totalPlanned)}</b></div>
-    <div class="rl"><span>Pilots rescued</span><b>${s.rescues}/${s.rescuesTotal}</b></div>
+    <div class="rl"><span>Enemies destroyed</span><b>${endless ? s.kills
+      : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
+    <div class="rl"><span>Pilots rescued</span><b>${endless ? s.rescues
+      : s.rescues + "/" + s.rescuesTotal}</b></div>
     <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
     ${(unlocked || []).map(a =>
       `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect $${(a.pay||0).toLocaleString()} in MEDALS</b></div>`).join("")}
-    ${recordLine(run, prevFamilyBest)}`;
+    ${endless ? dailyRecordLine() : recordLine(run, prevFamilyBest)}`;
 
-  renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest);
+  renderResultComms(run, completed || (endless && endlessNewBest), stars, prevFamilyBest,
+                    endless ? result.prevEndlessBest : prevSelfBest);
 
   const hasNext = completed && run.missionIndex + 1 < MISSIONS.length;
   $("nextBtn").classList.toggle("hidden", !hasNext);
@@ -1516,6 +1559,17 @@ function showResults(result){
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
+}
+
+/** Who holds the Daily Patrol crown right now - shown after every daily run. */
+function dailyRecordLine(){
+  const rows = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
+    .sort((a,b) => b.endlessBest - a.endlessBest);
+  if(!rows.length) return "";
+  const top = rows[0];
+  const mine = top.name === profile.name;
+  return `<div class="rl record"><span>Daily crown</span><b>${mine ? "👑 YOURS" :
+    "👑 " + esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString("en-US")} pts</b></div>`;
 }
 
 /**
@@ -1752,6 +1806,15 @@ click($("addProfileBtn"), () => {
 });
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
 click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
+// The Daily Patrol launches straight in - no briefing, no tier choice. Same
+// sky, same rules, PILOT difficulty for everyone: a fair fight over a score.
+click($("dailyBtn"), () => {
+  if(!dailyUnlocked(profile)){
+    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Daily Patrol" });
+    return;
+  }
+  launch("daily", "pilot");
+});
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
 click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderArmory(); });
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));

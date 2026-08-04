@@ -105,7 +105,7 @@ window.getComputedStyle = el => {
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 const SRC = [
-  "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js",
+  "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
@@ -907,6 +907,67 @@ async function run(){
     check("one loss after a win stays encouraging",
       !/ARMORY/.test(id("resultSubtitle").textContent));
     SF.game.state = "idle";
+  }
+
+  /* ---------- the daily patrol (seeded endless mode) ---------- */
+  {
+    const a = SF.daily.build("Mon Aug 03 2026");
+    const b = SF.daily.build("Mon Aug 03 2026");
+    const c = SF.daily.build("Tue Aug 04 2026");
+    check("the same day builds the same sky for everyone",
+      JSON.stringify(a.waves) === JSON.stringify(b.waves));
+    check("a new day builds a new sky",
+      JSON.stringify(a.waves) !== JSON.stringify(c.waves));
+    check("every generated wave names a real enemy and formation",
+      a.waves.every(wv => SF.enemyData.ENEMY_TYPES[wv.type] && wv.n >= 1 && wv.t >= 1));
+    check("the daily script escalates and runs long",
+      a.waves.length > 150 && a.waves[a.waves.length-1].t > 1200);
+    check("rescues stay on the daily menu",
+      a.waves.filter(wv => wv.type === "carrier").length >= 15);
+
+    // A run: launch, score, die - the score books as the endless best, the
+    // campaign records stay untouched, and the results read as a patrol.
+    const prof = SF.profile.blank("Daily"); prof.callsign = "Daily";
+    [1,2,3].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    SF.game.startMission("daily", "pilot");
+    check("a daily run flies the generated mission",
+      SF.game.run.mission.endless === true && SF.game.run.mission.id === "daily");
+    await runFrames(120);
+    SF.game.run.score = 4321;
+    const missionsBefore = JSON.stringify(prof.missions);
+    SF.game.endMission(false);
+    check("the score books as the endless best",
+      prof.endlessBest === 4321 && prof.endlessLongest >= 1);
+    check("a daily run never touches the campaign records",
+      JSON.stringify(prof.missions) === missionsBefore && prof.lastMission !== "daily");
+    check("the results read as a patrol, not a defeat",
+      id("resultTitle").textContent === "PATROL OVER" &&
+      /NEW RECORD/.test(id("resultSubtitle").textContent) &&
+      id("nextBtn").classList.contains("hidden"));
+    check("a worse run does not overwrite the best", (() => {
+      SF.game.startMission("daily", "pilot");
+      SF.game.run.score = 100;
+      SF.game.endMission(false);
+      return prof.endlessBest === 4321 && !/NEW RECORD/.test(id("resultSubtitle").textContent);
+    })());
+    SF.game.state = "idle";
+
+    // Menu gating: locked before mission 3, and it says so.
+    const rook = SF.profile.blank("Rook"); SF.profile.save(rook);
+    SF.game.profile = rook;
+    clickEl(qa("#profileGrid .profile-card")[0]); // any click path re-renders below
+    SF.ui.renderProfiles();
+    check("daily medals exist and pay",
+      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_ace" && x.pay > 0) &&
+      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_iron" && x.pay > 0));
+    check("the daily unlock rule is mission 3",
+      (() => { const t = SF.profile.blank("T");
+               const no = !(t.missions[3] && t.missions[3].cleared);
+               t.missions[3] = { cleared:true, stars:{}, best:{} };
+               return no && !!(t.missions[3].cleared); })());
   }
 
   /* ---------- the director's-pass moments ---------- */

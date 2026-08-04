@@ -180,7 +180,8 @@ function migrate(p){
     else if(lvl > u.max) p.upgrades[u.id] = u.max;
   });
   ["totalKills","bossesDefeated","maxCombo","lifetimeMoney","rescues",
-   "missionsCompleted","flawlessMissions","powerupsCollected","money","highscore"].forEach(k => {
+   "missionsCompleted","flawlessMissions","powerupsCollected","money","highscore",
+   "endlessBest","endlessLongest"].forEach(k => {
     if(typeof p[k] !== "number" || Number.isNaN(p[k])) p[k] = 0;
   });
   return p;
@@ -282,6 +283,8 @@ function achievementStats(p){
     anyUpgradeMaxed: UPGRADES.some(u => upgradeLevel(p,u.id) >= u.max),
     allUpgradesMaxed: UPGRADES.every(u => upgradeLevel(p,u.id) >= u.max),
     campaignComplete: campaignComplete(p),
+    endlessBest: p.endlessBest || 0,
+    endlessLongest: p.endlessLongest || 0,
   };
 }
 

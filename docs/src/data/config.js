@@ -225,6 +225,8 @@ const ACHIEVEMENTS = [
   { id:"veteran_wings",icon:"🎗️", name:"Veteran Wings",   desc:"Complete a mission on VETERAN",       check:p=>p.hardestCleared>=3 },
   { id:"nightmare",    icon:"👑", name:"Nightmare Fuel",  desc:"Complete a mission on NIGHTMARE",     check:p=>p.hardestCleared>=4 },
   { id:"campaign",     icon:"🏆", name:"Thierry Patrol", desc:"Complete every mission",              check:p=>p.campaignComplete },
+  { id:"daily_ace",    icon:"🌅", name:"Dawn Patrol",     desc:"Score 3,000 on a Daily Patrol",       check:p=>p.endlessBest>=3000 },
+  { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes on a Daily Patrol",    check:p=>p.endlessLongest>=240 },
 ];
 
 /*

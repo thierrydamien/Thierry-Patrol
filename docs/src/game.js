@@ -122,12 +122,16 @@ function singleTargetDps(lv){
    --------------------------------------------------------- */
 function startMission(missionIndex, difficultyId){
   const profile = game.profile;
-  const mission = MISSIONS[clamp(missionIndex, 0, MISSIONS.length-1)];
+  // "daily" is the endless Daily Patrol - a generated mission, not a campaign
+  // slot. Same day = same seed = same waves on every device.
+  const daily = missionIndex === "daily";
+  const mission = daily ? SF.daily.build()
+                        : MISSIONS[clamp(missionIndex, 0, MISSIONS.length-1)];
   const difficulty = DIFFICULTY_BY_ID[difficultyId] || DIFFICULTY_BY_ID.pilot;
 
   game.world.reset();
   fx.reset();
-  SF.render.initBackground(missionIndex);
+  SF.render.initBackground(daily ? SF.daily.skyIndex() : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
 
@@ -257,21 +261,40 @@ function endMission(completed){
     profile.missionsCompleted++;
     if(run.stats.damageTaken === 0) profile.flawlessMissions++;
   }
-  profile.lastMission = run.mission.id;
-  profile.lastDifficulty = run.difficulty.id;
-  // Captured BEFORE the save: once recordMission runs, this run's score IS
-  // the record and "did I beat anything?" can no longer be answered.
-  const prevFamilyBest = P.familyBest(run.mission.id);
-  const prevRec = profile.missions[run.mission.id];
-  const prevSelfBest = prevRec && prevRec.best
-    ? Math.max.apply(null, [0].concat(Object.values(prevRec.best).map(Number))) : 0;
-  P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0, run.score, completed);
+  // The Daily Patrol keeps its own book: one all-time best score and one
+  // longest run, no campaign record, no lastMission (the campaign hint must
+  // keep pointing at a real map stop).
+  let prevFamilyBest = null, prevSelfBest = 0;
+  let endlessNewBest = false, prevEndlessBest = 0;
+  if(run.mission.endless){
+    prevEndlessBest = profile.endlessBest || 0;
+    endlessNewBest = run.score > prevEndlessBest;
+    if(endlessNewBest) profile.endlessBest = run.score;
+    const sec = Math.round(run.time);
+    if(sec > (profile.endlessLongest || 0)) profile.endlessLongest = sec;
+    P.save(profile);
+  } else {
+    profile.lastMission = run.mission.id;
+    profile.lastDifficulty = run.difficulty.id;
+    // Captured BEFORE the save: once recordMission runs, this run's score IS
+    // the record and "did I beat anything?" can no longer be answered.
+    prevFamilyBest = P.familyBest(run.mission.id);
+    const prevRec = profile.missions[run.mission.id];
+    prevSelfBest = prevRec && prevRec.best
+      ? Math.max.apply(null, [0].concat(Object.values(prevRec.best).map(Number))) : 0;
+    P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0, run.score, completed);
+  }
   const unlocked = P.checkAchievements(profile);
 
-  audio.play(completed ? "missionWin" : "missionFail");
+  // A Daily Patrol never "fails" - the run simply ends, so its sound is a
+  // fanfare on a new best and a neutral chime otherwise.
+  audio.play(run.mission.endless ? (endlessNewBest ? "missionWin" : "waveClear")
+                                 : (completed ? "missionWin" : "missionFail"));
   if(game.onMissionEnd){
     game.onMissionEnd({
       completed, stars, run, unlocked,
+      endless: !!run.mission.endless, endlessNewBest, prevEndlessBest,
+      durationSec: Math.round(run.time),
       prevFamilyBest, prevSelfBest,
       objectives: run.objectiveDefs.map(def => ({
         label: def.label, icon: def.icon, met: def.test(run.stats),

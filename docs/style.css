@@ -185,6 +185,9 @@ html, body {
 .menu-btn b { font-size:15px; font-weight:900; letter-spacing:1.5px; }
 .menu-btn span { font-size:11px; color: rgba(255,255,255,0.6); }
 .menu-btn:active { transform: scale(0.985); }
+.menu-btn.locked { opacity: 0.45; }
+.menu-btn.locked b::after { content: " 🔒"; font-size: 12px; }
+.rb-row.rb-daily { border-bottom: 1px solid rgba(255,210,63,0.25); }
 .menu-btn.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   border-color: rgba(255,255,255,0.3); color:#241a00;

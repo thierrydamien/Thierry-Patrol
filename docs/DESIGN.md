@@ -1020,17 +1020,38 @@ around it:
   buy an upgrade in the ARMORY" - a seven-year-old doesn't think of either
   on his own. Any win resets the streak.
 
+## 8ac. The Daily Patrol
+
+Roadmap items 1 and 4 turned out to be one feature. An endless mode alone is
+solo score-chasing; a daily seed alone is a gimmick; together they're a
+sibling rivalry: one seed per calendar day (hashed `toDateString`, the same
+key the daily-double bonus flips on) drives `mulberry32`, so both brothers -
+and every device - fly an IDENTICAL sky, at a fixed PILOT tier. The only
+variable left is who flies it better.
+
+The generator (`daily.js`) escalates in one-minute bands - wider enemy pool,
+tighter gaps, bigger formations, elites from minute four - with a carrier
+forced in every ~45s so rescues stay on the menu, and a wall surge every
+minute to spike the pulse. The script cuts at 25 minutes; outliving it
+completes the mission outright. The existing WaveDirector runs it untouched:
+it was always just a `waves` array consumer.
+
+Endless runs keep their own book (`endlessBest`, `endlessLongest`) and never
+touch campaign records or `lastMission` - the campaign hint must keep
+pointing at a real map stop. Death isn't failure here: the results say
+PATROL OVER in gold, the defeat sting never plays, kills are shown without
+the demoralizing /5966 denominator, and the "Daily crown" line names the
+current holder. The menu button's subtitle is the taunt: "beat Charles's
+5,250 pts".
+
 ## 9. What I'd do next
 
 Roughly in value order:
 
-1. **Daily challenge** — the seeded RNG is already in `core.js`; one fixed
-   seed per day, fixed loadout, leaderboard per family member.
-2. **Ship classes** — a second hull with different stats (glass cannon vs
+1. **Ship classes** — a second hull with different stats (glass cannon vs
    tank), which doubles the reason to keep earning.
-3. **Wingman AI** — drones that drift and target rather than firing straight.
-4. **Endless mode** — after mission 8, procedurally generated waves using the
-   same director, for score chasing.
+2. **Wingman AI** — drones that drift and target rather than firing straight.
+3. **Boss rush** — the four bosses back to back, once the campaign is done.
 
 ## 10. Testing
 
