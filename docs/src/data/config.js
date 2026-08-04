@@ -24,7 +24,7 @@ const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff
    UPGRADES
    Four colour-coded shelves. Every upgrade has several levels
    and each level costs more than the last, so maxing the
-   Armory out (~$70k) is a long-haul goal rather than an
+   Armory out (~£70k) is a long-haul goal rather than an
    afternoon's shopping.
    --------------------------------------------------------- */
 const CATEGORIES = [
@@ -215,8 +215,8 @@ const ACHIEVEMENTS = [
   { id:"untouchable",  icon:"🧿", name:"Untouchable",     desc:"Finish a mission without a scratch",  check:p=>p.flawlessMissions>=1 },
   { id:"century",      icon:"💯", name:"Century Club",    desc:"Destroy 100 enemies (lifetime)",      check:p=>p.totalKills>=100 },
   { id:"thousand",     icon:"☄️", name:"Sky Sweeper",     desc:"Destroy 1000 enemies (lifetime)",     check:p=>p.totalKills>=1000 },
-  { id:"high_roller",  icon:"🤑", name:"High Roller",     desc:"Earn $1,000 (lifetime)",              check:p=>p.lifetimeMoney>=1000 },
-  { id:"warchest",     icon:"🏦", name:"War Chest",       desc:"Earn $25,000 (lifetime)",             check:p=>p.lifetimeMoney>=25000 },
+  { id:"high_roller",  icon:"🤑", name:"High Roller",     desc:"Earn £1,000 (lifetime)",              check:p=>p.lifetimeMoney>=1000 },
+  { id:"warchest",     icon:"🏦", name:"War Chest",       desc:"Earn £25,000 (lifetime)",             check:p=>p.lifetimeMoney>=25000 },
   { id:"first_upgrade",icon:"🔧", name:"Kitted Out",      desc:"Buy your first Armory upgrade",       check:p=>p.gearLevel>=1 },
   { id:"maxed_one",    icon:"🌟", name:"Specialist",      desc:"Max out any single upgrade",          check:p=>p.anyUpgradeMaxed },
   { id:"quartermaster",icon:"📦", name:"Quartermaster",   desc:"Buy 20 upgrade levels in total",      check:p=>p.gearLevel>=20 },

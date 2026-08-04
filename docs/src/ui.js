@@ -36,7 +36,7 @@ function show(id){
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
 /** Prices run to six figures now, so they need separators to stay readable. */
-function money(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
+function money(n){ return "£" + Math.round(n).toLocaleString("en-GB"); }
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -220,7 +220,7 @@ function renderMenu(){
   {
     const owed = P.unclaimedMedals(profile);
     setSub("medalsSub", owed.length
-      ? "Collect $" + owed.reduce((n,a)=>n+a.pay,0).toLocaleString() + "!"
+      ? "Collect £" + owed.reduce((n,a)=>n+a.pay,0).toLocaleString("en-GB") + "!"
       : profile.achievements.length + " of " + ACHIEVEMENTS.length + " earned");
   }
   const rows = P.listNames().map(P.load)
@@ -1416,14 +1416,14 @@ function renderAchievements(){
   $("achievementsCount").innerHTML =
     `<b>${owned.length}</b> of ${ACHIEVEMENTS.length} medals` +
     (unclaimed.length
-      ? ` · <b class="mh-owed">$${unclaimed.reduce((n,a)=>n+a.pay,0).toLocaleString()}</b> to collect`
+      ? ` · <b class="mh-owed">£${unclaimed.reduce((n,a)=>n+a.pay,0).toLocaleString("en-GB")}</b> to collect`
       : "");
 
   // Name the nearest thing still to win, so the screen is a to-do list rather
   // than a scoreboard of things that already happened.
   const next = ACHIEVEMENTS.find(a => !owned.includes(a.id));
   $("medalNext").innerHTML = next
-    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)} · <b>$${next.pay.toLocaleString()}</b>`
+    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)} · <b>£${next.pay.toLocaleString("en-GB")}</b>`
     : `<span>COMPLETE</span>Every medal earned. Nothing left to win.`;
 
   drawMedalRing(owned.length / ACHIEVEMENTS.length);
@@ -1439,9 +1439,9 @@ function renderAchievements(){
       <div class="medal-desc">${esc(a.desc)}</div>
       ${has
         ? (claimed
-            ? `<div class="medal-pay done">$${a.pay.toLocaleString()} collected</div>`
-            : `<button class="medal-claim" data-medal="${a.id}">COLLECT $${a.pay.toLocaleString()}</button>`)
-        : `<div class="medal-pay">worth $${a.pay.toLocaleString()}</div>`}
+            ? `<div class="medal-pay done">£${a.pay.toLocaleString("en-GB")} collected</div>`
+            : `<button class="medal-claim" data-medal="${a.id}">COLLECT £${a.pay.toLocaleString("en-GB")}</button>`)
+        : `<div class="medal-pay">worth £${a.pay.toLocaleString("en-GB")}</div>`}
     </div>`;
   }).join("");
 
@@ -1450,7 +1450,7 @@ function renderAchievements(){
       const paid = P.claimMedal(profile, btn.dataset.medal);
       if(paid > 0){
         audio.play("buy");
-        queueToast({ icon:"💰", name: "+$" + paid.toLocaleString() + " collected" });
+        queueToast({ name: "+£" + paid.toLocaleString("en-GB") + " collected", label:"MEDAL PAID" });
         renderAchievements();
         renderMenu();
       }
@@ -1702,7 +1702,7 @@ function showResults(result){
   const s = run.stats;
   $("resultLines").innerHTML = `
     <div class="rl"><span>Score</span><b>${run.score}</b></div>
-    <div class="rl"><span>Money collected</span><b class="money">+$${run.money}</b></div>
+    <div class="rl"><span>Money collected</span><b class="money">+£${run.money}</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
@@ -1712,7 +1712,7 @@ function showResults(result){
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
     ${(unlocked || []).map(a =>
-      `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect $${(a.pay||0).toLocaleString()} in MEDALS</b></div>`).join("")}
+      `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect £${(a.pay||0).toLocaleString("en-GB")} in MEDALS</b></div>`).join("")}
     ${endless ? dailyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
   renderResultComms(run, completed || (endless && endlessNewBest), stars, prevFamilyBest,

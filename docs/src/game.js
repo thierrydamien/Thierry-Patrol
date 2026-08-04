@@ -267,7 +267,7 @@ function startMission(missionIndex, difficultyId){
     /*
      * Per-kill payout, damped by the tier's density. A hard tier now sends
      * three times as many enemies, so paying `pay` per head would have made
-     * one NIGHTMARE run worth $30k against a $70k Armory - the tier would buy
+     * one NIGHTMARE run worth £30k against a £70k Armory - the tier would buy
      * the game out in two flights. The square root keeps hard tiers clearly
      * more lucrative without letting headcount run the economy. Completion and
      * rescue bonuses are per-mission, not per-head, so they keep the full rate.
@@ -443,7 +443,7 @@ const callbacks = {
     // so it pays back visibly rather than silently.
     if(e.loot > 0){
       game.world.dropCoins(e.x, e.y, e.loot);
-      fx.text(e.x, e.y - 26, "+$" + e.loot + " BACK!", "#ffd23f", 18, true);
+      fx.text(e.x, e.y - 26, "+£" + e.loot + " BACK!", "#ffd23f", 18, true);
       SF.comms.say("thiefDown");
     }
 
@@ -499,7 +499,7 @@ const callbacks = {
     const run = game.run;
     if(e.fromBoss) return;
     if(e.loot > 0){
-      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH $" + e.loot, "#ff5d73", 19, true);
+      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH £" + e.loot, "#ff5d73", 19, true);
       SF.comms.say("thiefEscaped", { n: e.loot });
     }
     if(!e.counted) return;
@@ -864,7 +864,7 @@ function update(dt, timeMs){
     const bonus = Math.round(60 * run.difficulty.pay * game.world.player.moneyMult);
     run.money += bonus;
     run.bannerText = "HALFWAY";
-    run.bannerSub = "+$" + bonus + " · keep going, " + pilotName() + "!";
+    run.bannerSub = "+£" + bonus + " · keep going, " + pilotName() + "!";
     run.bannerColor = "#4ade80";
     run.bannerUntil = timeMs + 2000;
     audio.play("waveClear");

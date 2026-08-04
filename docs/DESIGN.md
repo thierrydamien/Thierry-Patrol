@@ -129,7 +129,7 @@ fly a mission → collect coins + rescue pilots → earn stars for objectives
   stars unlock harder tiers  ←  gear makes hard tiers survivable
 ```
 
-- **14 upgrades, 53 levels, ~$944k** to max out. Four colour-coded shelves:
+- **14 upgrades, 53 levels, ~£944k** to max out. Four colour-coded shelves:
   Guns, Staying Alive, Ship, Specials.
 - **Abilities**: Smart Bomb and Overdrive are levelled upgrades with per-mission
   charges and their own buttons.
@@ -460,7 +460,7 @@ Two supporting details:
   apart rather than spawned as one enormous formation, so a "wall" of thirty
   stays a readable shape instead of a solid bar.
 - Per-kill payout is divided by `sqrt(density)`. Tripling the headcount had
-  tripled income - one NIGHTMARE run paid $30k against the Armory total, enough
+  tripled income - one NIGHTMARE run paid £30k against the Armory total, enough
   to buy the game out in two flights. The square root keeps hard tiers clearly
   more lucrative without letting headcount run the economy. Completion and
   rescue bonuses are per-mission rather than per-head, so they keep the full
@@ -498,7 +498,7 @@ slowly, which is the right way round - a child should feel powerful early and
 still have something to want in six months.
 
 Prices now reach six figures, so the UI formats with separators
-(`$394,240`, not `$394240`) and the buy button lost a point of font size to fit.
+(`£394,240`, not `£394240`) and the buy button lost a point of font size to fit.
 
 ## 8l. The campaign map
 

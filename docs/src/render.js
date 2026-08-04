@@ -499,7 +499,7 @@ function drawEnemies(ctx, world, timeMs){
       ctx.fillStyle = "#ffd23f";
       ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("$" + e.loot, e.x, e.y - e.r - 8);
+      ctx.fillText("£" + e.loot, e.x, e.y - e.r - 8);
       ctx.textAlign = "left";
     }
     if(e.maxHp > 1 && e.hp < e.maxHp){            // health pip for armoured enemies
@@ -1313,7 +1313,7 @@ function drawHud(ctx, game){
   ctx.fillStyle = "#ffd23f";
   ctx.shadowColor = "rgba(255,180,40,0.5)"; ctx.shadowBlur = 8;
   ctx.font = "bold 20px 'Courier New', monospace";
-  ctx.fillText("$" + run.money, VW-PAD-CLEAR, 19);
+  ctx.fillText("£" + run.money, VW-PAD-CLEAR, 19);
   ctx.shadowBlur = 0;
   ctx.textAlign = "left";
 

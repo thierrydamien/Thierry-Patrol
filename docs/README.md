@@ -122,7 +122,7 @@ than a victory lap.
 
 **Each level costs 4.6x the one before it**, so the first level of anything is
 pocket money and the last level of a track is a trophy. Maxing everything is
-~$944,000 — a simulated career (fly the hardest tier you've unlocked, bank,
+~£944,000 — a simulated career (fly the hardest tier you've unlocked, bank,
 buy) reaches half a ship in 16 runs and a *complete* one in **118 runs, about
 6.5 hours of flying**. You get strong quickly; you get finished slowly.
 

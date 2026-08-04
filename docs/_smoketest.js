@@ -1258,6 +1258,27 @@ async function run(){
     })());
   }
 
+  /* ---------- the money is pounds ---------- */
+  check("prices and payouts read in pounds", (() => {
+    // Read it where a kid reads it: the shop's price buttons and the wallet.
+    SF.game.profile = SF.profile.load("Marc");
+    SF.ui.renderArmory();
+    SF.ui.show("screen-armory");
+    // MY SHIP is the tuning bay and sells nothing - price tags live on a shelf.
+    const gunsTab = qa("#armoryTabs button").find(b => /GUNS/.test(b.textContent));
+    clickEl(gunsTab);
+    const prices = qa("#armoryPanel .shop-item button").map(b => b.textContent);
+    const wallet = id("armoryMoney").textContent;
+    if(prices.length === 0) return false;              // selector must really match
+    const all = prices.join(" ") + " " + wallet;
+    return /£[\d,]/.test(all) && !/\$/.test(all);
+  })());
+  check("no screen shows a dollar sign", (() => {
+    const seen = ["screen-menu","screen-armory","screen-achievements","screen-leaderboard"]
+      .map(s => id(s).textContent).join(" ");
+    return !/\$/.test(seen);
+  })());
+
   /* ---------- the menu speaks the game's art ---------- */
   check("menu buttons carry drawn icons, not emoji",
     qa("#screen-menu .menu-btn").every(b => b.querySelector(".mb-icon")) &&
