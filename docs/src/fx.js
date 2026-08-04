@@ -327,7 +327,7 @@ function drawTexts(ctx){
     if(!t.alive) continue;
     const k = 1 - t.life/t.max;
     ctx.globalAlpha = Math.min(1, k*1.7);
-    ctx.font = "bold " + t.size + "px Arial, sans-serif";
+    ctx.font = "bold " + t.size + "px Rajdhani, Arial, sans-serif";
     // Outlined, because floating numbers live over explosions.
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(6,8,18,0.7)";

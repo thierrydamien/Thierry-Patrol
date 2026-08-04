@@ -458,7 +458,7 @@ function drawCampaign(){
     ctx.save();
     ctx.globalAlpha = isMissionUnlocked(profile, sec.at) ? 0.5 : 0.22;
     ctx.fillStyle = "#cfd8ff";
-    ctx.font = "bold 15px Arial, sans-serif";
+    ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
     // Opposite side to the ship marker, and clear of the node itself.
     const away = n.x > 0.5 ? -1 : 1;
     ctx.textAlign = away < 0 ? "right" : "left";
@@ -508,12 +508,12 @@ function drawCampaign(){
 
     ctx.textAlign = "center";
     ctx.fillStyle = unlocked ? "#fff" : "rgba(255,255,255,0.35)";
-    ctx.font = "bold " + (boss ? 26 : 22) + "px Arial, sans-serif";
+    ctx.font = "bold " + (boss ? 26 : 22) + "px Rajdhani, Arial, sans-serif";
     ctx.fillText(unlocked ? String(node.mission.id) : "🔒", x, y + (boss ? 9 : 8));
 
     const starY = y - R - (boss ? 22 : 6);
     if(unlocked){                                  // stars earned, on the rim
-      ctx.font = "13px Arial, sans-serif";
+      ctx.font = "13px Rajdhani, Arial, sans-serif";
       for(let sIdx=0; sIdx<3; sIdx++){
         ctx.fillStyle = sIdx < earned ? "#ffd23f" : "rgba(255,255,255,0.22)";
         ctx.fillText("★", x + (sIdx-1)*15, starY);
@@ -528,7 +528,7 @@ function drawCampaign(){
       ctx.save();
       ctx.globalAlpha = unlocked ? 1 : 0.45;
       const label = "☠ BOSS", padX = 9, h = 19;
-      ctx.font = "bold 12px Arial, sans-serif";
+      ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       const w = ctx.measureText(label).width + padX*2;
       const bx = x - w/2, by = y - R - 20;
       ctx.fillStyle = "#c2123a";
@@ -550,7 +550,7 @@ function drawCampaign(){
       ctx.restore();
     }
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
-    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
     ctx.fillText(node.mission.name.toUpperCase(), x, y + R + 20);
   });
 
@@ -1065,7 +1065,7 @@ function drawMedalRing(frac){
     ctx.shadowBlur = 0;
   }
   ctx.fillStyle = "#fff";
-  ctx.font = "bold " + Math.round(W*0.26) + "px Arial, sans-serif";
+  ctx.font = "bold " + Math.round(W*0.26) + "px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(Math.round(frac*100) + "%", cx, cy + 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -1434,6 +1434,15 @@ $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
 renderProfiles();
 SF.game.resize();
 SF.game.start();
+// The display font arrives async; one-shot canvases (title art, briefing
+// hero) may have painted with the fallback before it landed. Repaint once.
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => {
+    drawTitleArt("titleArt", null);
+    if(profile) drawTitleArt("menuArt", profile);
+  });
+}
+
 SF.render.loadAssets(() => {
   document.body.classList.add("assets-ready");
   // The title art composites the ship sprite, which is not loaded on the very

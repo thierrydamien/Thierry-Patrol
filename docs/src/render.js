@@ -313,7 +313,7 @@ function drawPlayer(ctx, p, timeMs){
     ctx.restore();
     if(mate){
       ctx.save();
-      ctx.font = "bold 10px Arial, sans-serif";
+      ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
       ctx.textAlign = "center";
       ctx.lineWidth = 3;
       ctx.strokeStyle = "rgba(0,0,0,0.65)";
@@ -478,7 +478,7 @@ function drawEnemies(ctx, world, timeMs){
     }
     if(e.carriesRescue){                          // marker so you know what to shoot
       ctx.fillStyle = "#ffd23f";
-      ctx.font = "bold 13px Arial, sans-serif";
+      ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("SOS", e.x, e.y - e.r - 8);
       ctx.textAlign = "left";
@@ -497,7 +497,7 @@ function drawEnemies(ctx, world, timeMs){
     }
     if(e.loot > 0){                               // what this thief is carrying
       ctx.fillStyle = "#ffd23f";
-      ctx.font = "bold 12px Arial, sans-serif";
+      ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("$" + e.loot, e.x, e.y - e.r - 8);
       ctx.textAlign = "left";
@@ -837,7 +837,7 @@ function drawPickups(ctx, world, timeMs){
       ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.rotate(-it.angle*0.6);
       ctx.fillStyle = def.color;
-      ctx.font = "bold 12px Arial, sans-serif";
+      ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(def.glyph, 0, 1);
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -1086,10 +1086,10 @@ function drawComms(ctx){
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillStyle = msg.color;
-  ctx.font = "bold 10px Arial, sans-serif";
+  ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
   ctx.fillText(msg.speaker.toUpperCase(), x + 60, y + 11);
   ctx.fillStyle = "rgba(255,255,255,0.94)";
-  ctx.font = "13px Arial, sans-serif";
+  ctx.font = "13px Rajdhani, Arial, sans-serif";
   wrapText(ctx, msg.text, x + 60, y + 27, W - 72, 15, 2);
   ctx.restore();
 }
@@ -1160,7 +1160,7 @@ function drawHud(ctx, game){
   // the score and wallet start inboard of them.
   const CLEAR = 52;
   ctx.fillStyle = "rgba(140,200,255,0.55)";
-  ctx.font = "bold 9px Arial, sans-serif";
+  ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText("SCORE", PAD + CLEAR, 8);
   ctx.fillStyle = "white";
   ctx.shadowColor = "rgba(120,200,255,0.55)"; ctx.shadowBlur = 8;
@@ -1170,15 +1170,15 @@ function drawHud(ctx, game){
 
   ctx.textAlign = "center";
   ctx.fillStyle = run.difficulty.color;
-  ctx.font = "bold 14px Arial, sans-serif";
+  ctx.font = "bold 14px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.mission.name.toUpperCase(), VW/2, 10);
   ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = "bold 10px Arial, sans-serif";
+  ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.difficulty.name, VW/2, 28);
 
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,210,63,0.55)";
-  ctx.font = "bold 9px Arial, sans-serif";
+  ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText("CREDITS", VW-PAD-CLEAR, 8);
   ctx.fillStyle = "#ffd23f";
   ctx.shadowColor = "rgba(255,180,40,0.5)"; ctx.shadowBlur = 8;
@@ -1213,7 +1213,7 @@ function drawHud(ctx, game){
   ctx.fillStyle = run.bossActive ? "#ff5d73" : "#4ade80";
   ctx.fillRect(VW-PAD-barW, 44, barW*prog, 8);
   ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.font = "10px Arial, sans-serif";
+  ctx.font = "10px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "right";
   ctx.fillText(run.bossActive ? "BOSS FIGHT" : "MISSION " + Math.round(prog*100) + "%", VW-PAD, 58);
   ctx.textAlign = "left";
@@ -1223,7 +1223,7 @@ function drawHud(ctx, game){
   // stops eating the playfield.
   const expanded = !run.bossActive && (run.time < 7 || performance.now() < run.objectiveFlashUntil);
   if(expanded){
-    ctx.font = "12px Arial, sans-serif";
+    ctx.font = "12px Rajdhani, Arial, sans-serif";
     let oy = 92;
     for(let i=0;i<run.objectiveDefs.length;i++){
       const def = run.objectiveDefs[i];
@@ -1233,7 +1233,7 @@ function drawHud(ctx, game){
       oy += 15;
     }
   } else {
-    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
     let strip = "";
     for(let i=0;i<run.objectiveDefs.length;i++){
       strip += run.objectiveDefs[i].test(run.stats) ? "★" : "☆";
@@ -1255,7 +1255,7 @@ function drawHud(ctx, game){
     ctx.scale(pop, pop);
     ctx.textAlign = "center";
     ctx.lineWidth = 4; ctx.strokeStyle = "rgba(6,8,18,0.7)";
-    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.font = "bold 22px Rajdhani, Arial, sans-serif";
     ctx.strokeText("x" + run.combo + " COMBO", 0, -10);
     ctx.fillStyle = run.combo >= 10 ? "#ff8a3d" : "#ffd23f";
     ctx.fillText("x" + run.combo + " COMBO", 0, -10);
@@ -1293,7 +1293,7 @@ function drawHud(ctx, game){
       ctx.fillRect(bx0 + w*ph.at, barY, 2, bh);
     });
     ctx.textAlign = "center";
-    ctx.font = "bold 11px Arial, sans-serif";
+    ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
     ctx.lineWidth = 3; ctx.strokeStyle = "rgba(6,8,18,0.8)";
     ctx.strokeText(boss.name, VW/2, barY-14);
     ctx.fillStyle = "#ffffff";
@@ -1337,12 +1337,12 @@ function drawHud(ctx, game){
     ctx.textAlign = "center";
     ctx.fillStyle = accent;
     ctx.shadowColor = accent; ctx.shadowBlur = 14;
-    ctx.font = "bold 27px Arial, sans-serif";
+    ctx.font = "bold 27px Rajdhani, Arial, sans-serif";
     ctx.fillText(run.bannerText, VW/2, cy + 24);
     ctx.shadowBlur = 0;
     if(run.bannerSub){
       ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.font = "14px Arial, sans-serif";
+      ctx.font = "14px Rajdhani, Arial, sans-serif";
       ctx.fillText(run.bannerSub, VW/2, cy + 58);
     }
     ctx.textAlign = "left";
