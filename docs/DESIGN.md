@@ -967,12 +967,14 @@ about dodging.
 
 **Missions exit, they don't stop.** A won mission used to hard-cut to the
 results the moment the last enemy died. Now the fight ends into a victory
-lap - "AREA CLEAR!", the calm menu track fades in, a few seconds of free
+lap - "AREA CLEAR!", the calm menu track fades in, five seconds of free
 flight to sweep up the last coins under a long invulnerability window - and
 then the autopilot takes the stick: the same block that flies the launch
 runs in reverse, throttle pinned, double engine trail, off the top of the
-screen. Only when the ship has actually left does `endMission` run. The
-launch and the fly-off bookend every mission with the same move.
+screen. Then the one detail the first cut got wrong, per the customer: the
+sky holds EMPTY for a beat after the ship is gone, and only then do the
+results land (~7.3s clear-to-results, measured). The launch and the fly-off
+bookend every mission with the same move.
 
 **Settings is a place, not a scatter.** One overlay, reachable from the
 pilot picker and the menu: master sound, music and effects as separate

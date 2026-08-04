@@ -143,7 +143,7 @@ class World {
     // takes the stick - throttle pinned, climbing off the top of the screen -
     // so a won mission EXITS instead of cutting to a menu. No clamps here:
     // leaving the screen is the whole point.
-    if(run && run.phase === "outro"){
+    if(run && (run.phase === "outro" || run.phase === "gone")){
       p.vy = Math.max(p.vy - 2400*dt, -1150);
       p.vx = damp(p.vx, 0, 6, dt);
       p.x += p.vx*dt; p.y += p.vy*dt;

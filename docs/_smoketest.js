@@ -593,7 +593,8 @@ async function run(){
   check("boss mission spawned its boss", !!(SF.game.run && SF.game.run.bossSpawned));
   check("beating the boss actually ends the mission (no wall-clock timer)",
     !SF.game.world.boss ? (SF.game.run.ended || SF.game.run.finishTimer > 0 ||
-                           SF.game.run.phase === "lap" || SF.game.run.phase === "outro") : true);
+                           SF.game.run.phase === "lap" || SF.game.run.phase === "outro" ||
+                           SF.game.run.phase === "gone") : true);
   check("no enemy can linger on the field forever",
     SF.game.world.enemies.items.every(e => !e.alive || e.life <= 40));
   check("boss fight resolved or is still running cleanly",
@@ -783,9 +784,16 @@ async function run(){
       SF.game.run.phase === "lap" && !SF.game.run.ended);
     check("nothing can cheap-shot the victory lap",
       SF.game.world.player.invuln > 5);
-    await runFrames(165);
+    await runFrames(110);   // 30fps steps: ~3.7s in - still lapping
+    check("the lap is long enough to actually fly around in",
+      SF.game.run.phase === "lap" && !SF.game.run.ended);
+    await runFrames(80);
     check("the lap ends with the autopilot taking the ship",
-      SF.game.run.phase === "outro" || SF.game.run.ended);
+      SF.game.run.phase === "outro" || SF.game.run.phase === "gone" || SF.game.run.ended);
+    await runFrames(50);
+    check("the sky sits empty for a beat after the ship leaves",
+      (SF.game.run.phase === "gone" && !SF.game.run.ended && SF.game.world.player.y < -60) ||
+      SF.game.run.ended);
     await runFrames(120);
     check("the ship flies off the top before the results land",
       SF.game.run.ended && SF.game.run.stats.completed &&

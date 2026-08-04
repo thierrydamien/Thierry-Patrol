@@ -220,7 +220,7 @@ function beginVictoryLap(){
   if(!run || run.ended || run.lapStarted) return;
   run.lapStarted = true;
   run.phase = "lap";
-  run.phaseTimer = 2.6;
+  run.phaseTimer = 5.0;   // a real stretch of open sky, not a blink
   const p = game.world.player;
   if(p) p.invuln = Math.max(p.invuln, 30);   // no stray bullet ruins the ending
   run.bannerText = "AREA CLEAR!";
@@ -590,10 +590,18 @@ function update(dt, timeMs){
     }
   } else if(run.phase === "outro"){
     // Autopilot has the ship now (see updatePlayer): throttle pinned, climbing
-    // hard. The results wait until it has actually left the sky.
+    // hard. Once it has actually left the sky, hold on the empty screen.
     run.outroFly -= dt;
     const pl = game.world.player;
-    if(!run.ended && ((pl && pl.y < -70) || run.outroFly <= 0)) endMission(true);
+    if((pl && pl.y < -70) || run.outroFly <= 0){
+      run.phase = "gone";
+      run.phaseTimer = 1.2;
+    }
+  } else if(run.phase === "gone"){
+    // The beat after the exit: stars drifting, engine noise fading in your
+    // head, ship long gone - THEN the results.
+    run.phaseTimer -= dt;
+    if(run.phaseTimer <= 0 && !run.ended) endMission(true);
   }
 
   // Boss defeated: run out the celebration, then the same lap home.
