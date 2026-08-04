@@ -130,7 +130,9 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("15 campaign missions defined", SF.missions.MISSIONS.length === 15);
+  check("16 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 16 &&
+    SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
   check("every wave references a real enemy type",
@@ -851,14 +853,22 @@ async function run(){
     window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
-    check("pre-dodge records move up one mission",
+    // Two inserts deep now: v2 (Silent Running at 9) then v3 (Treasury at
+    // 13). Old mission 9 lands on 10; old mission 14 rides both shifts to 16.
+    check("pre-insert records ride every shift",
       shifted.missions["10"] && shifted.missions["10"].stars.pilot === 3 &&
-      shifted.missions["15"] && shifted.missions["15"].stars.pilot === 1 &&
-      !shifted.missions["14"] && shifted.lastMission === 10);
+      shifted.missions["16"] && shifted.missions["16"].stars.pilot === 1 &&
+      !shifted.missions["14"] && !shifted.missions["15"] && shifted.lastMission === 10);
     check("act-one records stay where they were",
       shifted.missions["8"] && shifted.missions["8"].stars.pilot === 2);
-    check("the shift runs exactly once",
-      SF.profile.migrate(shifted).missions["10"].stars.pilot === 3);
+    check("the shifts run exactly once",
+      SF.profile.migrate(shifted).missions["10"].stars.pilot === 3 &&
+      SF.profile.migrate(shifted).missions["16"].stars.pilot === 1);
+    // A v2-era save (Silent Running already counted) only gets the v3 shift.
+    const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
+      missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
+    check("a v2-era save shifts only the treasury insert",
+      v2era.missions["14"] && !v2era.missions["13"] && v2era.lastMission === 14);
   }
 
   /* ---------- settings ---------- */
@@ -1123,7 +1133,7 @@ async function run(){
   {
     check("prison break and cold approach got their bosses",
       SF.missions.MISSIONS.find(m => m.id === 6).boss === "jailer" &&
-      SF.missions.MISSIONS.find(m => m.id === 13).boss === "phantom" &&
+      SF.missions.MISSIONS.find(m => m.id === 14).boss === "phantom" &&
       SF.missions.BOSSES.jailer.rescuePods === true &&
       SF.missions.BOSSES.phantom.cloak === true);
 
@@ -1158,13 +1168,29 @@ async function run(){
 
     // All six bosses queue in campaign order once everything is cleared.
     const prof6 = SF.profile.blank("RushAll");
-    [4, 6, 8, 12, 13, 15].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+    [4, 6, 8, 12, 14, 16].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
     SF.profile.save(prof6);
     SF.game.profile = prof6;
     SF.game.startMission("rush", "pilot");
     check("the rush queue covers all six bosses in campaign order",
       SF.game.run.rushList.join(",") === "marauder,jailer,sentinel,warden,phantom,leviathan");
     SF.game.state = "idle";
+  }
+
+  /* ---------- their treasury (the heist between the bosses) ---------- */
+  {
+    const t = SF.missions.MISSIONS.find(m => m.id === 13);
+    check("the treasury sits between the wardens and never carries a boss",
+      t && t.name === "Their Treasury" && !t.boss &&
+      SF.missions.MISSIONS.find(m => m.id === 12).boss === "warden");
+    check("the heist stars greed and leans on thieves",
+      t.objectives.includes("coinRush") &&
+      t.waves.filter(wv => wv.type === "thief").reduce((n,wv) => n + wv.n, 0) >= 10);
+    check("no two campaign bosses sit in adjacent missions",
+      SF.missions.MISSIONS.every((m, i) =>
+        !(m.boss && SF.missions.MISSIONS[i+1] && SF.missions.MISSIONS[i+1].boss)));
+    check("every mission still has a sky of its own",
+      SF.skygen ? true : /The Treasury/.test(fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8")));
   }
 
   /* ---------- the menu speaks the game's art ---------- */

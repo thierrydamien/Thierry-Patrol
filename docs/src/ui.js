@@ -1336,7 +1336,7 @@ function dailyUnlocked(p){
 }
 
 // Boss missions, in campaign order - the rush queue mirrors these.
-const RUSH_IDS = [4, 6, 8, 12, 13, 15];
+const RUSH_IDS = [4, 6, 8, 12, 14, 16];
 function rushUnlocked(p){
   const rec = p && p.missions && p.missions[4];
   return !!(rec && rec.cleared);

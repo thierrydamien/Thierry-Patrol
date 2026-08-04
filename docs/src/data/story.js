@@ -47,7 +47,7 @@ const STORY = {
     panels: [
       { art:"sky",  text:"The Sentinel is scrap. Home space is quiet for the first time in months - and the rest of their fleet is running for the lane they came in by." },
       { art:"crew", text:"Command wants to know if you'll follow them, {you}. Nobody would think less of you for saying no." },
-      { art:"now",  text:"You already know the answer. Seven more stops, all of them theirs - one flown dark, and one of them is the last one." },
+      { art:"now",  text:"You already know the answer. Eight more stops, all of them theirs - one flown dark, one their own treasure house, and one of them is the last one." },
     ],
     button:"GO AFTER THEM",
   },

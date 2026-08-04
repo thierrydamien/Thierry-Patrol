@@ -95,6 +95,12 @@ const SKIES = [
             {k:"sun",    x:0.84, y:0.78, r:0.031, color:"#a5f3fc"},
             {k:"rocks",  x:0.72, y:0.44, r:0.13, n:12} ] },
 
+  { name:"The Treasury", clouds:["#92400e","#eab308","#451a03"], dust:"#0f0902", star:"#fde68a",
+    density:1.1, stars:0.85, bright:3,
+    props:[ {k:"planet", x:0.76, y:0.30, r:0.21, lit:"#d9a441", dark:"#33200a", rings:true},
+            {k:"rocks",  x:0.24, y:0.60, r:0.17, n:18},
+            {k:"sun",    x:0.14, y:0.16, r:0.03, color:"#ffe9a8"} ] },
+
   { name:"Cold Approach", clouds:["#1e3a8a","#3b82f6","#0c1836"], dust:"#020510", star:"#dbeafe",
     density:0.75, stars:1.15, bright:4,
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},

@@ -1170,6 +1170,23 @@ on the first update instead of initializing-then-lerping - invisible in play
 (it converges in frames), caught only because the unit test called update
 exactly once.
 
+## 8aj. Their Treasury, and the no-adjacent-bosses rule
+
+The customer set a pacing rule worth keeping: never two boss missions in a
+row. The Warden (12) and the new Phantom (13) sat adjacent, and the fix was
+content, not shuffling - Their Treasury, the heist level, now sits between
+them. Its identity is greed: thieves who steal your coins and pay them back
+double when caught, turret-and-guardian vaults, boulders full of pay, and
+coinRush as its third star. Sixteen missions now; bosses land on 4, 6, 8,
+12, 14, 16 - a clean every-other-ish drumbeat through act two - and the
+smoke test enforces the rule itself: no mission with a boss may be followed
+by another.
+
+Second id-shift, same machinery: migrate() v3 moves records 13-15 up to
+14-16 (descending, one-shot, synced), chained after v2 - and the test now
+covers the compound case (a pre-v2 save rides both shifts, a v2-era save
+rides only the new one).
+
 ## 9. What I'd do next
 
 Roughly in value order:

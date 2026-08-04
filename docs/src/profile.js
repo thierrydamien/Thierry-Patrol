@@ -153,6 +153,19 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 9) p.lastMission += 1;
     p.missionsVer = 2;
   }
+  /*
+   * v3: Their Treasury was inserted as mission 13 (the customer's rule:
+   * never two boss missions in a row - the Warden at 12 and the Phantom sat
+   * adjacent), pushing the old 13-15 up to 14-16. Same shape as v2:
+   * descending so nothing overwrites, one-shot, synced like any record.
+   */
+  if((p.missionsVer || 1) < 3){
+    for(let id = 15; id >= 13; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 13) p.lastMission += 1;
+    p.missionsVer = 3;
+  }
   if(!Array.isArray(p.achievements)) p.achievements = [];
   if(!p.medalsClaimed || typeof p.medalsClaimed !== "object") p.medalsClaimed = {};
 

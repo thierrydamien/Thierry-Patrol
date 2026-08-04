@@ -539,8 +539,44 @@ const MISSIONS = [
     boss: "warden",
     objectives: ["complete","kill90","rescueAll"],
   },
+  /*
+   * The breather between the two hardest bosses - the customer's rule is a
+   * good one: never two boss missions in a row. It's the heist level: the
+   * roster leans on thieves (who steal your coins and pay them back double
+   * when caught), turret-and-guardian vaults, and boulders full of pay. The
+   * one mission whose third star is greed itself.
+   */
   {
-    id:13, name:"Cold Approach", subtitle:"Line up the shot",
+    id:13, name:"Their Treasury", subtitle:"Rob the robbers",
+    brief:"This is where they keep everything they stole! Crack the vaults, grab EVERY coin - and watch the thieves who want them back.",
+    waves: [
+      w(1,   "grunt",   10, "arc"),
+      w(8,   "thief",    2, "sides"),
+      w(12,  "striker",  7, "vee"),
+      w(20,  "turret",   3, "tripleColumns"),
+      w(28,  "boulder",  3, "twinColumns"),     // the vaults
+      w(33,  "weaver",  10, "wall"),
+      w(41,  "thief",    3, "tripleColumns"),
+      w(45,  "shielder", 2, "sides"),
+      w(47,  "brute",    4, "wall", { elite: 1 }),
+      w(55,  "swooper",  9, "pincer"),
+      w(63,  "turret",   4, "twinColumns", { elite: 1 }),
+      w(71,  "boulder",  3, "tripleColumns"),
+      w(76,  "thief",    3, "sides"),
+      w(80,  "mender",   2, "twinColumns"),
+      w(82,  "striker",  8, "wall"),
+      w(90,  "kamikaze", 9, "scatter"),
+      w(98,  "grunt",   12, "wall"),
+      w(104, "thief",    4, "tripleColumns"),
+      w(108, "brute",    5, "line", { elite: 2 }),
+      w(116, "splitter", 6, "arc"),
+      w(122, "interceptor", 8, "sides"),
+      w(128, "striker",  9, "tripleColumns", { elite: 2 }),
+    ],
+    objectives: ["complete","kill90","coinRush"],
+  },
+  {
+    id:14, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     waves: [
       w(1,   "sniper",   4, "sides"),
@@ -569,7 +605,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:14, name:"All Hands", subtitle:"Everyone who is left",
+    id:15, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     waves: [
       w(1,   "carrier",  3, "tripleColumns"),
@@ -599,7 +635,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:15, name:"The Leviathan", subtitle:"The last one",
+    id:16, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     waves: [
       w(1,   "grunt",   12, "wall"),

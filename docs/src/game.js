@@ -166,8 +166,8 @@ const RUSH_ORDER = [
   { missionId: 6,  boss: "jailer"    },
   { missionId: 8,  boss: "sentinel"  },
   { missionId: 12, boss: "warden"    },
-  { missionId: 13, boss: "phantom"   },
-  { missionId: 15, boss: "leviathan" },
+  { missionId: 14, boss: "phantom"   },
+  { missionId: 16, boss: "leviathan" },
 ];
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
