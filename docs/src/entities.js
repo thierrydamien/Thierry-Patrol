@@ -478,7 +478,8 @@ class World {
   spawnPickup(kind, x, y, data){
     const p = this.pickups.spawn();
     p.kind = kind; p.x = x; p.y = y; p.life = 0; p.angle = rand(0, TAU);
-    p.vx = rand(-30, 30); p.vy = kind === "rescue" ? 42 : rand(40, 80);
+    p.vx = rand(-30, 30);
+    p.vy = kind === "rescue" ? 42 : kind === "supply" ? 44 : rand(40, 80);
     p.value = (data && data.value) || 0;
     p.data = data || null;
     return p;
@@ -505,7 +506,7 @@ class World {
       it.life += dt;
       it.angle += dt*2.4;
       it.vy += 95*dt;                        // fall, gently - coins are worth chasing
-      it.vy = Math.min(it.vy, it.kind === "rescue" ? 55 : 86);
+      it.vy = Math.min(it.vy, it.kind === "rescue" ? 55 : it.kind === "supply" ? 58 : 86);
       it.vx *= Math.pow(0.96, dt*60);
 
       if(p && p.alive){

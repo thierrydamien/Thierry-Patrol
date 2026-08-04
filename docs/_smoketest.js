@@ -1193,6 +1193,65 @@ async function run(){
       SF.skygen ? true : /The Treasury/.test(fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8")));
   }
 
+  /* ---------- supply drops (the rare tier) ---------- */
+  {
+    const prof = SF.profile.blank("Crate"); prof.callsign = "Crate";
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "pilot");
+    const run = SF.game.run;
+    check("a mission schedules one or two supply drops mid-run",
+      run.supplyTimes.length >= 1 && run.supplyTimes.length <= 2 &&
+      run.supplyTimes.every(t => t > run.wavesEndT*0.2 && t < run.wavesEndT*0.85));
+
+    // Through the real loop: drop each crate onto the ship and step a frame.
+    SF.game.startMission(0, "pilot");
+    SF.game.run.introFly = 0;
+    await runFrames(5);
+    const pl = SF.game.world.player;
+    const feed = async (id) => {
+      const s = SF.game.world.spawnPickup("supply", pl.x, pl.y, { supply: SF.config.SUPPLIES.find(q => q.id === id) });
+      s.vx = 0; s.vy = 0;
+      await runFrames(3);
+    };
+    pl.bombs = 0; pl.bombsMax = 0;
+    await feed("bomb");
+    check("a bomb crate grants a charge and a button", pl.bombs === 1 && pl.bombsMax >= 1);
+    pl.overdrives = 0; pl.overdrivesMax = 0;
+    await feed("overdrive");
+    check("an overdrive crate grants a charge", pl.overdrives === 1);
+    const livesWas = pl.lives;
+    await feed("life");
+    check("a life crate grants a life", pl.lives === livesWas + 1);
+    pl.shieldMax = 2; pl.shield = 0;
+    await feed("shieldFull");
+    check("a shield crate refills every pip", pl.shield === 2);
+    SF.game.state = "idle";
+
+    // On a silent run only calm prizes drop - a bomb you can't fire is no
+    // prize. Behavioural: force many scheduled drops through the real spawner
+    // and read what actually entered the sky.
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.noGuns), "pilot");
+    SF.game.run.introFly = 0;
+    SF.game.run.phase = "waves";
+    SF.game.run.supplyTimes = Array.from({length: 12}, () => 0);
+    await runFrames(30);
+    const dropped = SF.game.world.pickups.items
+      .filter(q => q.alive && q.kind === "supply")
+      .map(q => q.data.supply.id);
+    check("silent runs only draw the calm prizes",
+      dropped.length >= 6 &&
+      dropped.every(id => SF.config.SUPPLIES.find(q => q.id === id).calm));
+    SF.game.state = "idle";
+    check("the test range schedules no supply drops", (() => {
+      SF.game.startMission("test", "pilot");
+      const none = SF.game.run.supplyTimes.length === 0;
+      SF.game.state = "idle";
+      return none;
+    })());
+  }
+
   /* ---------- the menu speaks the game's art ---------- */
   check("menu buttons carry drawn icons, not emoji",
     qa("#screen-menu .menu-btn").every(b => b.querySelector(".mb-icon")) &&

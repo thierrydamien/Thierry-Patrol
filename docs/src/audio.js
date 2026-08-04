@@ -151,6 +151,19 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.supplyDrop = { minGap: 1500, fn: () => {
+  // The "look up!" ping: two bright descending chimes, like something
+  // valuable falling into the level.
+  [1318, 880].forEach((f,i) => tone(f, 0.22, "sine", 0.07, f*0.7, i*0.16));
+} };
+
+SOUNDS.supplyGet = { minGap: 400, fn: () => {
+  // Bigger than any powerup: a rising major fanfare with a shimmer on top.
+  [392, 523, 659, 784].forEach((f,i) => tone(f, 0.16, "triangle", 0.08, null, i*0.07));
+  tone(2093, 0.12, "sine", 0.045, null, 0.3);
+  noise(0.12, 0.06, 5000, 900, 0.28);
+} };
+
 SOUNDS.tractor = { minGap: 900, fn: () => {
   // The Jailer's beam: a low warbling drone, more grip than gun.
   [82, 110, 82].forEach((f,i) => tone(f, 0.42, "sawtooth", 0.07, f*1.4, i*0.3));

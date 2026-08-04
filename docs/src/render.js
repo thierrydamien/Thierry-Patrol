@@ -776,6 +776,51 @@ function drawPickups(ctx, world, timeMs){
         ctx.fillStyle = "#ffd23f";
         ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
       }
+    } else if(it.kind === "supply"){
+      // The rare crate: a glowing hex canister in its prize's colour with the
+      // prize drawn on the lid - big pulsing halo so it reads from anywhere.
+      const def = (it.data && it.data.supply) || { color:"#ffd23f", id:"bomb" };
+      const pulse = 0.6 + Math.sin(timeMs/160)*0.4;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const halo = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
+      halo.addColorStop(0, def.color + "");
+      halo.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.32 + pulse*0.2;
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill();
+      ctx.restore();
+      // hex shell
+      ctx.save();
+      ctx.rotate(Math.sin(timeMs/700)*0.15);
+      ctx.fillStyle = "#101528";
+      ctx.strokeStyle = def.color; ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for(let k=0;k<6;k++){
+        const a = -Math.PI/2 + (k/6)*TAU;
+        ctx[k === 0 ? "moveTo" : "lineTo"](Math.cos(a)*13, Math.sin(a)*13);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // the prize on the lid
+      if(def.id === "life"){
+        drawHeart(ctx, 0, 0, 6, def.color);
+      } else if(def.id === "shieldFull"){
+        drawShieldPip(ctx, 0, 0, 6, true);
+      } else if(def.id === "overdrive"){
+        ctx.fillStyle = def.color;
+        ctx.beginPath();
+        ctx.moveTo(2, -8); ctx.lineTo(-4, 1); ctx.lineTo(-0.5, 1);
+        ctx.lineTo(-2, 8); ctx.lineTo(4, -1); ctx.lineTo(0.5, -1);
+        ctx.closePath(); ctx.fill();
+      } else {   // bomb: a ball with a lit fuse
+        ctx.fillStyle = def.color;
+        ctx.beginPath(); ctx.arc(0, 1.5, 5.5, 0, TAU); ctx.fill();
+        ctx.strokeStyle = def.color; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(2, -3); ctx.quadraticCurveTo(5, -7, 7, -6); ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(7, -6, 1.6 + pulse, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
     } else if(it.kind === "rescue"){
       // A drifting survivor: glass escape pod, suited figure inside, and a
       // slow amber beacon - the one thing on screen you feel bad missing.

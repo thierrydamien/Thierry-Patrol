@@ -247,6 +247,21 @@ const MEDAL_PAY = {
 ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });
 
 /* ---------------------------------------------------------
+   SUPPLY DROPS
+   The rare tier above powerups: one or two per mission,
+   announced when they enter, worth flying into traffic for.
+   Weights are relative; silent (no-gun) missions only draw
+   from the entries marked `calm`, because a bomb you cannot
+   fire is a prize that insults the winner.
+   --------------------------------------------------------- */
+const SUPPLIES = [
+  { id:"bomb",       label:"SMART BOMB +1",  color:"#ff8a3d", weight:30 },
+  { id:"overdrive",  label:"OVERDRIVE +1",   color:"#ffd23f", weight:30 },
+  { id:"shieldFull", label:"SHIELDS FULL",   color:"#7cc4ff", weight:25, calm:true },
+  { id:"life",       label:"EXTRA LIFE",     color:"#ff5d73", weight:15, calm:true },
+];
+
+/* ---------------------------------------------------------
    FLIGHT TUNING
    Three tunes of the same hull, chosen in MY SHIP. Stats
    only - the art stays the one good ship (code-drawn hull
@@ -271,7 +286,7 @@ TUNES.forEach(t => TUNE_BY_ID[t.id] = t);
 
 SF.config = {
   SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
-  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID,
+  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
   spreadPattern, fireRateMult,
 };
 })();

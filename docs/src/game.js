@@ -13,7 +13,7 @@ const SF = window.SF;
 const { clamp, rand, randInt, chance, pick } = SF.core;
 const { VW, VH } = SF.entityConst;
 const { MISSIONS, BOSSES, OBJECTIVES } = SF.missions;
-const { DIFFICULTY_BY_ID, POWERUPS } = SF.config;
+const { DIFFICULTY_BY_ID, POWERUPS, SUPPLIES } = SF.config;
 const fx = SF.fx;
 const audio = SF.audio;
 const P = SF.profile;
@@ -250,6 +250,17 @@ function startMission(missionIndex, difficultyId){
   for(let i = 0; i < (mission.podDrops || 0); i++)
     podTimes.push(wavesEndT * (0.12 + 0.66 * i / Math.max(1, mission.podDrops - 1)));
 
+  // Supply drops: the rare tier. One, sometimes two, somewhere in the middle
+  // stretch of a real mission - never on the test range (profile-neutral by
+  // contract) and never scheduled in a rush (each boss kill drops one there).
+  const supplyTimes = [];
+  if(!mission.testFlight && !mission.bossRush){
+    const n = 1 + (rand(0, 1) < 0.35 ? 1 : 0);
+    for(let i = 0; i < n; i++)
+      supplyTimes.push(wavesEndT * rand(0.25, 0.8));
+    supplyTimes.sort((a, b) => a - b);
+  }
+
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
     halfwayShown: false, boulderShown: false,
@@ -276,6 +287,7 @@ function startMission(missionIndex, difficultyId){
     introFly: 1.1,
     coinTimer: 2.0,
     podTimes,
+    supplyTimes,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -555,6 +567,31 @@ const callbacks = {
   },
 };
 
+/*
+ * The rare tier above powerups: a glowing crate carrying an ability charge,
+ * a full shield recharge, or - rarest - an extra life. On a silent (no-gun)
+ * run only the `calm` entries drop; a bomb you can't fire is no prize.
+ */
+function pickSupply(){
+  const run = game.run;
+  const pool = SUPPLIES.filter(s => !(run && run.mission.noGuns) || s.calm);
+  let roll = rand(0, pool.reduce((n, s) => n + s.weight, 0));
+  for(let i = 0; i < pool.length; i++){
+    roll -= pool[i].weight;
+    if(roll <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+function spawnSupply(x, y){
+  const def = pickSupply();
+  const s = game.world.spawnPickup("supply", x, y === undefined ? -26 : y, { supply: def });
+  s.vx = 0;
+  fx.text(VW/2, VH*0.22, "SUPPLY DROP!", def.color, 18, true);
+  audio.play("supplyDrop");
+  return s;
+}
+
 function spawnPowerup(x, y){
   const def = pick(POWERUPS);
   game.world.spawnPickup("power", x, y, def);
@@ -613,6 +650,9 @@ function finalBossBlast(boss){
   game.world.enemyBullets.killAll();
 
   game.world.dropCoins(bx, by, Math.round(220 * run.difficulty.pay * game.world.player.moneyMult));
+  // In a rush with more bosses queued, the wreck yields a supply crate - the
+  // mercy that makes a deep run survivable.
+  if(run.mission.bossRush && run.rushIndex < run.rushList.length) spawnSupply(bx, by);
   fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 34, true);
   game.world.boss = null;
   run.bossActive = false;
@@ -845,6 +885,13 @@ function update(dt, timeMs){
     }
   }
 
+  // Supply drops enter at their scheduled times, announced - rare enough
+  // that the callout means something.
+  if(run.supplyTimes.length && run.phase !== "intro" && run.time >= run.supplyTimes[0]){
+    run.supplyTimes.shift();
+    spawnSupply(rand(60, VW - 60));
+  }
+
   // Free-drifting pilots: they enter at their scripted times and sink slowly
   // through whatever the mission is throwing at you. Catching one is flying,
   // not shooting, which is what lets the no-guns mission keep rescues.
@@ -968,6 +1015,25 @@ function onPickupCollected(item, lost){
     run.stats.coins++;
     audio.play("coin");
     fx.sparks(item.x, item.y, 3, "#ffd23f", 90);
+  } else if(item.kind === "supply"){
+    const def = item.data.supply;
+    if(def.id === "bomb"){
+      p.bombsMax = Math.max(p.bombsMax, 1);      // the button must exist to shine
+      p.bombs = Math.min(p.bombs + 1, 9);
+    } else if(def.id === "overdrive"){
+      p.overdrivesMax = Math.max(p.overdrivesMax, 1);
+      p.overdrives = Math.min(p.overdrives + 1, 9);
+    } else if(def.id === "life"){
+      p.lives = Math.min(p.lives + 1, 8);
+    } else if(def.id === "shieldFull"){
+      p.shield = Math.max(p.shield, Math.max(1, p.shieldMax));
+    }
+    if(SF.ui && SF.ui.syncAbilityButtons) SF.ui.syncAbilityButtons(true);
+    audio.play("supplyGet");
+    fx.ring(item.x, item.y, 70, def.color, 4, 0.5);
+    fx.sparks(item.x, item.y, 20, def.color, 240);
+    fx.text(p.x, p.y - 40, def.label + "!", def.color, 21, true);
+    fx.flash(0.35, "255,255,255");
   } else if(item.kind === "rescue"){
     run.stats.rescues++;
     run.score += Math.round(150 * run.difficulty.pay);

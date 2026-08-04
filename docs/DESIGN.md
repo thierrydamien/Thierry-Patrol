@@ -1187,6 +1187,25 @@ Second id-shift, same machinery: migrate() v3 moves records 13-15 up to
 covers the compound case (a pre-v2 save rides both shifts, a v2-era save
 rides only the new one).
 
+## 8ak. Supply drops
+
+The customer wanted bombs, overdrive, health and shields as pickups -
+"something special that doesn't happen too often". Rarity IS the feature, so
+supply drops are a tier above powerups in every register: one or two per
+mission (scheduled up front in the middle stretch, like the rescue pods),
+announced with a chime and a SUPPLY DROP! callout, drawn as glowing hex
+canisters with the prize on the lid, and collected with a fanfare bigger
+than any powerup's. The prizes: +1 Smart Bomb, +1 Overdrive, full shield
+recharge, and - rarest, 15 weight - an extra life.
+
+Three rules keep them honest: a silent run only draws the calm prizes (a
+bomb you cannot fire is a prize that insults the winner); the test range
+schedules none (profile-neutral by contract); and in a Boss Rush each dead
+boss yields one while the queue still has bosses in it - the mercy that
+makes a deep run survivable. A bomb crate on a pilot who never bought the
+upgrade also CREATES the button (bombsMax bumps to 1) - a free taste of the
+Armory's best argument.
+
 ## 9. What I'd do next
 
 Roughly in value order:
