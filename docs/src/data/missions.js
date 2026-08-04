@@ -365,11 +365,15 @@ const MISSIONS = [
    * in marked lanes so greed pulls you into traffic, and nothing here needs
    * shooting: kamikazes and interceptors chase, snipers draw their lines,
    * minelayers seed the road, walls have one gap. Hold nothing but your nerve.
+   *
+   * `podDrops` pilots drift down through the traffic on their own - escapees
+   * from the blockade, no carrier to shoot open - so freeing people stays an
+   * objective even on the mission where you can't fire a shot.
    */
   {
     id:9, name:"Silent Running", subtitle:"Guns cold. Just fly.",
-    brief:"Sneaking into THEIR space, so no shooting - they'd see the flashes! Dodge everything and grab the coins.",
-    noGuns:true, coinRain:true,
+    brief:"Sneaking into THEIR space, so no shooting - they'd see the flashes! Dodge everything, grab the coins, and catch our drifting pilots.",
+    noGuns:true, coinRain:true, podDrops:5,
     waves: [
       w(1,   "grunt",    7, "wall"),
       w(8,   "kamikaze", 4, "sides"),
@@ -392,7 +396,7 @@ const MISSIONS = [
       w(113, "grunt",   11, "wall"),
       w(118, "kamikaze", 9, "sides"),
     ],
-    objectives: ["complete","coinRush","keepLives"],
+    objectives: ["complete","coinRush","rescueAll"],
   },
 
   /* =========================================================
@@ -509,7 +513,9 @@ const MISSIONS = [
       w(116, "kamikaze",10, "scatter"),
       w(124, "turret",   5, "twinColumns", { elite: 2 }),
     ],
-    objectives: ["complete","kill90","noDamage"],
+    // Five carriers fly this route - a mission with people to free always
+    // makes freeing them one of its stars.
+    objectives: ["complete","rescueAll","noDamage"],
   },
   {
     id:14, name:"All Hands", subtitle:"Everyone who is left",
@@ -581,10 +587,11 @@ function isMissionUnlocked(profile, index){
   return !!(record && record.cleared);
 }
 
-/** Total rescue pods a mission can yield (one per hauler). */
+/** Total rescue pods a mission can yield: one per hauler, plus free drifters. */
 function rescueCount(mission){
   return mission.waves.reduce((n, wv) =>
-    n + (SF.enemyData.ENEMY_TYPES[wv.type].carriesRescue ? wv.n : 0), 0);
+    n + (SF.enemyData.ENEMY_TYPES[wv.type].carriesRescue ? wv.n : 0),
+    mission.podDrops || 0);
 }
 
 /** Every enemy the mission will spawn, boss minions excluded. */

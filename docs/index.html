@@ -24,7 +24,7 @@
     <div id="profileGrid" class="profile-grid"></div>
     <div class="picker-actions">
       <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
-      <button id="cloudBtn" class="ghost-btn hidden">☁ Squad Sync</button>
+      <button id="settingsBtnPicker" class="ghost-btn">⚙ Settings</button>
     </div>
   </section>
 
@@ -44,6 +44,7 @@
       <button id="leaderboardBtn" class="menu-btn">
         <b>CHAMPIONSHIP</b><span id="champSub"></span></button>
       <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
+      <button id="settingsBtnMenu" class="ghost-btn">⚙ Settings</button>
     </div>
   </section>
 
@@ -235,6 +236,30 @@
     <div id="storyTitle" class="story-title"></div>
     <div id="storyPanels" class="story-panels"></div>
     <button id="storyBtn" class="main-btn">CONTINUE</button>
+  </div>
+</div>
+
+<div id="settingsOverlay" class="story-overlay hidden">
+  <div class="story-inner settings-inner">
+    <div class="story-title">SETTINGS</div>
+    <div class="settings-rows">
+      <button id="setSound" class="settings-row">
+        <span>🔊 All sound</span><span class="set-pill">ON</span></button>
+      <button id="setMusicRow" class="settings-row">
+        <span>🎵 Music</span><span class="set-pill">ON</span></button>
+      <button id="setSfx" class="settings-row">
+        <span>💥 Sound effects</span><span class="set-pill">ON</span></button>
+      <button id="setShake" class="settings-row">
+        <span>📳 Screen shake</span><span class="set-pill">ON</span></button>
+    </div>
+    <div class="settings-rows">
+      <button id="setCloud" class="settings-row hidden">
+        <span>☁ Squad Sync</span><span class="set-chev">›</span></button>
+      <button id="setReset" class="settings-row danger hidden">
+        <span>🗑 Reset this pilot</span><span class="set-chev">›</span></button>
+    </div>
+    <p class="settings-credits">Made with ❤ for Marc &amp; Charles</p>
+    <button id="settingsCloseBtn" class="ghost-btn">Close</button>
   </div>
 </div>
 

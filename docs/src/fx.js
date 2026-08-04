@@ -145,7 +145,17 @@ function damageNumber(x, y, amount, crit){
 /* ---------------------------------------------------------
    SCREEN EFFECTS
    --------------------------------------------------------- */
-function shake(mag){ shakeMag = Math.max(shakeMag, mag); }
+// Screen shake is a feel multiplier for most players and motion sickness for
+// a few, so the settings screen can turn it off at the source.
+let shakeOn = localStorage.getItem("patrol_shake_off") !== "1";
+function shakeEnabled(){ return shakeOn; }
+function setShakeEnabled(v){
+  shakeOn = !!v;
+  localStorage.setItem("patrol_shake_off", shakeOn ? "0" : "1");
+  if(!shakeOn) shakeMag = 0;
+}
+
+function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag); }
 function flash(alpha, rgb){ flashAlpha = Math.max(flashAlpha, alpha); if(rgb) flashColor = rgb; }
 /** Freeze the world for a few ms so a heavy hit registers physically. */
 function hitStop(ms){ hitStopUntil = Math.max(hitStopUntil, nowMs + ms); }
@@ -347,7 +357,7 @@ function drawFlash(ctx, w, h){
 
 SF.fx = {
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
-  shake, flash, hitStop, isHitStopped, reset,
+  shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },
 };

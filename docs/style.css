@@ -745,6 +745,39 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .cloud-actions { display:flex; flex-direction:column; gap:9px; width:100%; align-items:center; }
 .cloud-actions .main-btn { width:100%; max-width:280px; }
 
+/* ===================== SETTINGS ===================== */
+.settings-inner {
+  max-width: 380px;
+  background: #16143c;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.settings-rows { width:100%; display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.settings-row {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; padding:12px 14px; border-radius:12px; cursor:pointer;
+  font-family:inherit; font-weight:600; font-size:15px; letter-spacing:0.4px;
+  color:#fff; text-align:left;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.15s ease;
+}
+.settings-row:active { background: rgba(255,255,255,0.12); }
+.settings-row.danger { color:#ff8a80; border-color: rgba(255,90,90,0.35); }
+.set-pill {
+  font-size:11px; font-weight:700; letter-spacing:1.5px;
+  padding:4px 12px; border-radius:999px;
+  color:#0f2b18; background:#4ade80;
+}
+.set-pill.off { color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.12); }
+.set-chev { font-size:20px; line-height:1; color: rgba(255,255,255,0.45); }
+.settings-credits {
+  font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.45);
+  margin: 2px 0 14px;
+}
+
 /* ===================== MEDAL BOUNTIES ===================== */
 .mh-owed { color: var(--accent); }
 .medal.owed { border-color: rgba(255,210,63,0.7); box-shadow: 0 0 16px -4px rgba(255,210,63,0.5); }

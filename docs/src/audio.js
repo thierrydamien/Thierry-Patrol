@@ -24,6 +24,11 @@ let master = null;
 let muted = (localStorage.getItem("patrol_muted") ||
              localStorage.getItem("novawing_muted") ||
              localStorage.getItem("skyforce_muted")) === "1";
+// Finer switches than the master mute, for the settings screen: music and
+// effects each have their own persisted toggle. Stored inverted ("_off") so a
+// missing key - every existing device - means ON.
+let musicOn = localStorage.getItem("patrol_music_off") !== "1";
+let sfxOn   = localStorage.getItem("patrol_sfx_off") !== "1";
 const lastPlayed = Object.create(null); // per-sound rate limiting
 
 function init(){
@@ -42,6 +47,20 @@ function isMuted(){ return muted; }
 function setMuted(v){
   muted = !!v;
   localStorage.setItem("patrol_muted", muted ? "1" : "0");
+}
+function musicEnabled(){ return musicOn; }
+function setMusicEnabled(v){
+  musicOn = !!v;
+  localStorage.setItem("patrol_music_off", musicOn ? "0" : "1");
+  // The sequencer keeps ticking either way; silencing the gain (rather than
+  // killing the timer) means toggling back on rejoins the song mid-flight.
+  if(musicGain && ctx)
+    musicGain.gain.linearRampToValueAtTime(musicOn && musicTrack ? 0.9 : 0, ctx.currentTime + 0.3);
+}
+function sfxEnabled(){ return sfxOn; }
+function setSfxEnabled(v){
+  sfxOn = !!v;
+  localStorage.setItem("patrol_sfx_off", sfxOn ? "0" : "1");
 }
 
 /** One oscillator blip. `glide` bends the pitch over the note's life. */
@@ -132,8 +151,14 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.flyoff = { minGap: 2000, fn: () => {
+  // Engines opening up for the ride home: a long rising sweep over a rush of air.
+  tone(140, 0.9, "sawtooth", 0.07, 560);
+  noise(0.8, 0.16, 600, 5200);
+} };
+
 function play(name, arg){
-  if(!ctx || muted) return;
+  if(!ctx || muted || !sfxOn) return;
   const s = SOUNDS[name];
   if(!s) return;
   const now = ctx.currentTime * 1000;
@@ -246,7 +271,7 @@ function vel(g){ return g * (0.85 + Math.random()*0.3); }
 
 /** One scheduled note through its own envelope and lowpass, into master. */
 function note(freq, type, gain, dur, when, cutoff){
-  if(!ctx || muted) return;
+  if(!ctx || muted || !musicOn) return;
   const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
   o.type = type; o.frequency.value = freq;
   f.type = "lowpass"; f.frequency.value = cutoff || 3000;
@@ -258,7 +283,7 @@ function note(freq, type, gain, dur, when, cutoff){
 }
 /** A tiny noise tick - the hi-hat. The buffer is built once. */
 function hat(when, gain){
-  if(!ctx || muted) return;
+  if(!ctx || muted || !musicOn) return;
   if(!noiseBuf){
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -289,7 +314,7 @@ function setMusic(name){
     musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
     return;
   }
-  musicGain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 0.6);
+  musicGain.gain.linearRampToValueAtTime(musicOn ? 0.9 : 0, ctx.currentTime + 0.6);
   const track = TRACKS[name];
   musicStep = 0;
   musicNext = ctx.currentTime + 0.1;
@@ -303,5 +328,6 @@ function setMusic(name){
   }, 120);
 }
 
-SF.audio = { init, play, isMuted, setMuted, setMusic };
+SF.audio = { init, play, isMuted, setMuted, setMusic,
+             musicEnabled, setMusicEnabled, sfxEnabled, setSfxEnabled };
 })();

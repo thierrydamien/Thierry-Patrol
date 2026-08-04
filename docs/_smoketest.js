@@ -592,7 +592,8 @@ async function run(){
   await runFrames(30);
   check("boss mission spawned its boss", !!(SF.game.run && SF.game.run.bossSpawned));
   check("beating the boss actually ends the mission (no wall-clock timer)",
-    !SF.game.world.boss ? (SF.game.run.ended || SF.game.run.finishTimer > 0) : true);
+    !SF.game.world.boss ? (SF.game.run.ended || SF.game.run.finishTimer > 0 ||
+                           SF.game.run.phase === "lap" || SF.game.run.phase === "outro") : true);
   check("no enemy can linger on the field forever",
     SF.game.world.enemies.items.every(e => !e.alive || e.life <= 40));
   check("boss fight resolved or is still running cleanly",
@@ -762,8 +763,43 @@ async function run(){
       SF.game.world.pickups.items.some(pk => pk.alive && pk.kind === "coin"));
     check("the coin objective tracks pickups",
       SF.game.run.objectiveIds.includes("coinRush"));
+
+    /* Freeing people stays an objective even with the guns cold: pilots
+       drift down on their own, no carrier to shoot open. */
+    check("the dodge mission asks you to rescue drifting pilots",
+      SF.game.run.objectiveIds.includes("rescueAll") &&
+      SF.game.run.stats.rescuesTotal === SF.missions.MISSIONS[dodgeIx].podDrops &&
+      SF.game.run.podTimes.length === SF.missions.MISSIONS[dodgeIx].podDrops);
+    SF.game.run.podTimes[0] = 0;           // pull the next drop forward
+    await runFrames(3);
+    check("a drifting pilot enters without anything being shot",
+      SF.game.world.pickups.items.some(pk => pk.alive && pk.kind === "rescue"));
+
+    /* The ending: clear sky -> a few seconds of free flight -> the autopilot
+       opens the throttle and leaves the screen -> only then, results. */
+    SF.game.run.phase = "clearing"; SF.game.run.phaseTimer = 0.01;
+    await runFrames(5);
+    check("a cleared mission opens a victory lap instead of ending",
+      SF.game.run.phase === "lap" && !SF.game.run.ended);
+    check("nothing can cheap-shot the victory lap",
+      SF.game.world.player.invuln > 5);
+    await runFrames(165);
+    check("the lap ends with the autopilot taking the ship",
+      SF.game.run.phase === "outro" || SF.game.run.ended);
+    await runFrames(120);
+    check("the ship flies off the top before the results land",
+      SF.game.run.ended && SF.game.run.stats.completed &&
+      SF.game.world.player.y < -60);
     SF.game.state = "idle";
   }
+
+  /* ---------- rescues are an objective wherever there are people to free ---------- */
+  check("every mission with pilots to free stars their rescue",
+    SF.missions.MISSIONS.every(m =>
+      SF.missions.rescueCount(m) === 0 || m.objectives.includes("rescueAll")));
+  check("free-drifting pilots count toward the mission's rescue total",
+    SF.missions.rescueCount(SF.missions.MISSIONS.find(m => m.noGuns)) ===
+      SF.missions.MISSIONS.find(m => m.noGuns).podDrops);
 
   /* ---------- act-two records shift around the new mission ---------- */
   {
@@ -783,6 +819,48 @@ async function run(){
       shifted.missions["8"] && shifted.missions["8"].stars.pilot === 2);
     check("the shift runs exactly once",
       SF.profile.migrate(shifted).missions["10"].stars.pilot === 3);
+  }
+
+  /* ---------- settings ---------- */
+  {
+    clickEl(id("settingsBtnMenu"));
+    check("the settings overlay opens",
+      !id("settingsOverlay").classList.contains("hidden"));
+    const musicWas = SF.audio.musicEnabled();
+    clickEl(id("setMusicRow"));
+    check("the music switch flips and persists",
+      SF.audio.musicEnabled() === !musicWas &&
+      window.localStorage.getItem("patrol_music_off") === (musicWas ? "1" : "0"));
+    clickEl(id("setMusicRow"));
+    clickEl(id("setSfx"));
+    check("effects can be silenced without touching music",
+      SF.audio.sfxEnabled() === false && SF.audio.musicEnabled() === musicWas &&
+      (SF.audio.play("coin"), true));
+    clickEl(id("setSfx"));
+    clickEl(id("setShake"));
+    SF.fx.shake(50);
+    const off = { x: 9, y: 9 };
+    SF.fx.shakeOffset(off);
+    check("screen shake off means the camera holds still",
+      !SF.fx.shakeEnabled() && off.x === 0 && off.y === 0);
+    clickEl(id("setShake"));
+    check("squad sync lives inside settings",
+      !id("setCloud").classList.contains("hidden"));
+
+    // Reset: two confirms, then the pilot really is a rookie again - and the
+    // fresh save is stamped newest, so the wipe wins the squad merge too.
+    const before = SF.profile.load("Marc");
+    before.money = 4321; SF.profile.save(before);
+    const realConfirm = window.confirm;
+    window.confirm = () => true;
+    clickEl(id("setReset"));
+    window.confirm = realConfirm;
+    const wiped = SF.profile.load("Marc");
+    check("resetting a pilot wipes the career and stamps it newest",
+      wiped.money === SF.profile.blank("Marc").money &&
+      Object.keys(wiped.missions).length === 0 && wiped.savedAt > 0);
+    check("the settings overlay closes after a reset",
+      id("settingsOverlay").classList.contains("hidden"));
   }
 
   /* ---------- the director's-pass moments ---------- */

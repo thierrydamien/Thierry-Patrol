@@ -139,6 +139,26 @@ class World {
       return;
     }
 
+    // Fly-off: the mirror of the launch. When the victory lap ends, autopilot
+    // takes the stick - throttle pinned, climbing off the top of the screen -
+    // so a won mission EXITS instead of cutting to a menu. No clamps here:
+    // leaving the screen is the whole point.
+    if(run && run.phase === "outro"){
+      p.vy = Math.max(p.vy - 2400*dt, -1150);
+      p.vx = damp(p.vx, 0, 6, dt);
+      p.x += p.vx*dt; p.y += p.vy*dt;
+      p.bank = damp(p.bank, 0, 10, dt);
+      p.recoil = 0;
+      // Double trail = engines wide open.
+      p.trail.push({ x: p.x - 5, y: p.y + 15, life: 0 });
+      p.trail.push({ x: p.x + 5, y: p.y + 15, life: 0 });
+      for(let i = p.trail.length-1; i >= 0; i--){
+        p.trail[i].life += dt;
+        if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
+      }
+      return;
+    }
+
     const input = SF.input.state;
 
     // Acceleration-based movement: the ship has weight and carries a little

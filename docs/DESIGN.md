@@ -951,6 +951,39 @@ assigns the saved record over a blank - a preset flag marks every old save
 as already-migrated and the shift never runs. The smoke test caught exactly
 that.
 
+## 8z. Rescues everywhere, the lap home, and a settings panel
+
+Three playtest notes landed together and each got the structural fix rather
+than the patch:
+
+**Freeing people is always a star.** The rescue mechanic existed, but two
+missions broke the rule silently: Cold Approach flew five carriers without a
+rescue objective, and Silent Running had nobody to free at all (you can't
+shoot a carrier open with cold guns). The rule is now written into the smoke
+test - `rescueCount(m) > 0` implies `rescueAll` in the objectives - and
+Silent Running got `podDrops`: pilots who drift down through the traffic on
+their own, caught by flying into them. Rescue by dodging, on the mission
+about dodging.
+
+**Missions exit, they don't stop.** A won mission used to hard-cut to the
+results the moment the last enemy died. Now the fight ends into a victory
+lap - "AREA CLEAR!", the calm menu track fades in, a few seconds of free
+flight to sweep up the last coins under a long invulnerability window - and
+then the autopilot takes the stick: the same block that flies the launch
+runs in reverse, throttle pinned, double engine trail, off the top of the
+screen. Only when the ship has actually left does `endMission` run. The
+launch and the fly-off bookend every mission with the same move.
+
+**Settings is a place, not a scatter.** One overlay, reachable from the
+pilot picker and the menu: master sound, music and effects as separate
+persisted switches (music mutes at the gain node so toggling back on rejoins
+the song mid-flight), screen shake (a feel multiplier for most players,
+motion sickness for a few - killed at the source in fx.js), the Squad Sync
+panel's entry point, and pilot reset. Reset is the one deliberately scary
+button: two confirms, then a fresh blank saved immediately - which stamps it
+newest, so the wipe wins the per-pilot merge on every synced device instead
+of being quietly "repaired" by it.
+
 ## 9. What I'd do next
 
 Roughly in value order:

@@ -121,6 +121,11 @@ const COMMS = {
     "Halfway, {you}. Holding up well.",
     "That's the midpoint - keep it together.",
   ]},
+  headHome: { speaker:"control", cooldown:999, lines:[
+    "Sky's clear, {you}. Come on home.",
+    "That's all of them. Bring it back, {you}.",
+    "Clean sweep. Set course for home.",
+  ]},
   personalBest: { speaker:"mate", cooldown:999, lines:[
     "That's a new record, {you}!",
     "You just beat it. Nice flying.",

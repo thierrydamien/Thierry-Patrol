@@ -135,9 +135,16 @@ function startMission(missionIndex, difficultyId){
   const wavesEndT = mission.waves.reduce((t, wv) => Math.max(t, wv.t), 0) + 10;
   const stats = {
     spawned: 0, kills: 0, escaped: 0, killRatio: 0, coins: 0,
-    rescues: 0, rescuesTotal: director.rescuesPlanned,
+    rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
     damageTaken: 0, livesLost: 0, completed: false,
   };
+
+  // Free-drifting pilots (no carrier to open): their entry times are fixed up
+  // front, spread across the early/middle of the timeline so the last one has
+  // resolved - caught or lost - before the waves run out.
+  const podTimes = [];
+  for(let i = 0; i < (mission.podDrops || 0); i++)
+    podTimes.push(wavesEndT * (0.12 + 0.66 * i / Math.max(1, mission.podDrops - 1)));
 
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
@@ -164,6 +171,7 @@ function startMission(missionIndex, difficultyId){
     // second, engines wide open, before control is handed over.
     introFly: 1.1,
     coinTimer: 2.0,
+    podTimes,
     ended: false,
   };
 
@@ -196,6 +204,28 @@ function startMission(missionIndex, difficultyId){
   SF.input.clearMovement();
   audio.init();
   resize();
+}
+
+/*
+ * A won mission doesn't cut to a menu - the fight ends, you get a few seconds
+ * of open sky (and the last coins), then the ship opens the throttle and
+ * leaves the screen on its own. Only once it's gone do the results appear.
+ */
+function beginVictoryLap(){
+  const run = game.run;
+  if(!run || run.ended || run.lapStarted) return;
+  run.lapStarted = true;
+  run.phase = "lap";
+  run.phaseTimer = 2.6;
+  const p = game.world.player;
+  if(p) p.invuln = Math.max(p.invuln, 30);   // no stray bullet ruins the ending
+  run.bannerText = "AREA CLEAR!";
+  run.bannerSub = "grab the last coins — then head home";
+  run.bannerColor = "#4ade80";
+  run.bannerUntil = performance.now() + 2200;
+  audio.play("waveClear");
+  audio.setMusic("menu");                  // the fight is over - let it breathe
+  SF.comms.say("headHome");
 }
 
 function endMission(completed){
@@ -524,13 +554,29 @@ function update(dt, timeMs){
     }
   } else if(run.phase === "clearing"){
     run.phaseTimer -= dt;
-    if(run.phaseTimer <= 0 && !run.ended) endMission(true);
+    if(run.phaseTimer <= 0 && !run.ended) beginVictoryLap();
+  } else if(run.phase === "lap"){
+    // The victory lap: the sky is yours for a few seconds. Free flight, the
+    // last coins still falling, nothing that can hurt you.
+    run.phaseTimer -= dt;
+    if(run.phaseTimer <= 0){
+      run.phase = "outro";
+      run.outroFly = 1.6;          // safety net - the fly-off ends it sooner
+      audio.play("flyoff");
+      fx.shake(5);
+    }
+  } else if(run.phase === "outro"){
+    // Autopilot has the ship now (see updatePlayer): throttle pinned, climbing
+    // hard. The results wait until it has actually left the sky.
+    run.outroFly -= dt;
+    const pl = game.world.player;
+    if(!run.ended && ((pl && pl.y < -70) || run.outroFly <= 0)) endMission(true);
   }
 
-  // Boss defeated: run out the celebration, then hand over to the results.
+  // Boss defeated: run out the celebration, then the same lap home.
   if(run.finishTimer > 0){
     run.finishTimer -= dt;
-    if(run.finishTimer <= 0 && !run.ended){ endMission(true); return; }
+    if(run.finishTimer <= 0 && !run.ended) beginVictoryLap();
   }
 
   // Progress readout: waves spawned, then boss health.
@@ -572,6 +618,15 @@ function update(dt, timeMs){
       spawnPowerup(rand(40, VW-40), -20);
       run.powerupTimer = rand(16, 26);
     }
+  }
+
+  // Free-drifting pilots: they enter at their scripted times and sink slowly
+  // through whatever the mission is throwing at you. Catching one is flying,
+  // not shooting, which is what lets the no-guns mission keep rescues.
+  if(run.podTimes.length && run.phase === "waves" && run.director.time >= run.podTimes[0]){
+    run.podTimes.shift();
+    game.world.spawnPickup("rescue", rand(60, VW - 60), -24);
+    fx.text(VW/2, VH*0.2, "PILOT ADRIFT — CATCH THEM!", "#ffd23f", 17, true);
   }
 
   // Silent running: coins rain down a random lane every few seconds. With the

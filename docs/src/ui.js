@@ -1638,9 +1638,14 @@ function paintCloudStatus(st){
 }
 
 if(SF.cloud && SF.cloud.configured()){
-  $("cloudBtn").classList.remove("hidden");
+  $("setCloud").classList.remove("hidden");
   SF.cloud.onStatus(paintCloudStatus);
-  click($("cloudBtn"), () => { renderCloud(); $("cloudOverlay").classList.remove("hidden"); });
+  // Squad Sync lives inside Settings now; opening it swaps overlays.
+  click($("setCloud"), () => {
+    $("settingsOverlay").classList.add("hidden");
+    renderCloud();
+    $("cloudOverlay").classList.remove("hidden");
+  });
   click($("cloudCloseBtn"), () => { $("cloudOverlay").classList.add("hidden"); renderProfiles(); });
   click($("cloudSyncBtn"), () => {
     SF.cloud.ensureCode();
@@ -1672,6 +1677,60 @@ if(SF.cloud && SF.cloud.configured()){
   });
   SF.cloud.boot();
 }
+
+/* ---------------------------------------------------------
+   SETTINGS
+   One overlay for everything device-level: the sound switches
+   (master / music / effects), screen shake, the Squad Sync
+   entry point, and the only deliberately scary button in the
+   game - resetting a pilot.
+   --------------------------------------------------------- */
+function renderSettings(){
+  const pill = (id, on) => {
+    const el = $(id).querySelector(".set-pill");
+    el.textContent = on ? "ON" : "OFF";
+    el.classList.toggle("off", !on);
+  };
+  pill("setSound", !audio.isMuted());
+  pill("setMusicRow", audio.musicEnabled());
+  pill("setSfx", audio.sfxEnabled());
+  pill("setShake", SF.fx.shakeEnabled());
+  const resetBtn = $("setReset");
+  resetBtn.classList.toggle("hidden", !profile);
+  if(profile) resetBtn.querySelector("span").textContent = "🗑 Reset " + profile.name;
+}
+function openSettings(){
+  renderSettings();
+  $("settingsOverlay").classList.remove("hidden");
+}
+click($("settingsBtnPicker"), openSettings);
+click($("settingsBtnMenu"), openSettings);
+click($("settingsCloseBtn"), () => {
+  $("settingsOverlay").classList.add("hidden");
+  // The in-game mute button shows the same master switch - keep it honest.
+  $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
+});
+click($("setSound"), () => { audio.setMuted(!audio.isMuted()); renderSettings(); });
+click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); renderSettings(); });
+click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
+click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
+click($("setReset"), () => {
+  if(!profile) return;
+  const who = profile.name;
+  if(!window.confirm("Start " + who + " over from ZERO?\n\nStars, money, upgrades and medals all go" +
+                     " - on every synced device too. This cannot be undone.")) return;
+  if(!window.confirm("Really erase " + who + "'s whole career?")) return;
+  // A fresh blank saved now carries the newest savedAt, so the wipe wins the
+  // per-pilot merge on every other device instead of being "repaired" by it.
+  const fresh = P.blank(who);
+  P.save(fresh);
+  profile = fresh;
+  SF.game.profile = fresh;
+  $("settingsOverlay").classList.add("hidden");
+  queueToast({ icon:"🗑", name: who + " starts over as a rookie" });
+  renderMenu();
+  show("screen-menu");
+});
 
 click($("addProfileBtn"), () => {
   const name = prompt("Pilot's name?");
