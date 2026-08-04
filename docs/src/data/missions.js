@@ -43,9 +43,9 @@ const OBJECTIVES = {
   keepLives: { label:"Don't lose a single life", icon:"❤️",
                test: s => s.livesLost === 0,
                progress: s => s.livesLost === 0 ? "clean" : (s.livesLost + " lost") },
-  convoy:    { label:"Every hauler survives", icon:"🛡️",
+  convoy:    { label:"Bring the hauler home", icon:"🛡️",
                test: s => s.convoyTotal > 0 && s.convoyLost === 0,
-               progress: s => (s.convoyTotal || 0) - (s.convoyLost || 0) + "/" + (s.convoyTotal || 0) },
+               progress: s => s.convoyLost ? "lost" : "safe" },
 };
 
 /* ---------------------------------------------------------
@@ -453,8 +453,8 @@ const MISSIONS = [
   },
   {
     id:9, name:"The Convoy", subtitle:"Bring them home",
-    brief:"Three supply haulers are crossing to the front with everything the squadron needs. They can't dodge and they can't shoot back - YOU are their shield. Every hauler home, pilot.",
-    goal:"GUARD the big blue ships!",
+    brief:"One supply hauler is crossing to the front with everything the squadron needs. It can't dodge and it can't shoot back, and they are coming straight for it. Stay close and keep it alive all the way home.",
+    goal:"GUARD our hauler — keep it alive!",
     convoy:true,
     face:"interceptor",               // the hunters the haulers can't outrun
     waves: [

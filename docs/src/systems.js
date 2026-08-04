@@ -57,6 +57,9 @@ class WaveDirector {
       if(s.delay <= 0){
         const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
+          // Two in three go for the convoy; the rest still hunt the player,
+          // so parking next to the hauler is never a free win.
+          huntsEscort: !!this.mission.convoy && chance(0.66),
         });
         if(spawned.counted) this.spawnedCount++;
         this.pending.splice(i, 1);

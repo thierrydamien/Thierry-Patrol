@@ -241,7 +241,7 @@ function startMission(missionIndex, difficultyId){
     spawned: 0, kills: 0, escaped: 0, killRatio: 0, coins: 0,
     rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
     damageTaken: 0, livesLost: 0, completed: false,
-    convoyTotal: mission.convoy ? 3 : 0, convoyLost: 0,
+    convoyTotal: mission.convoy ? 1 : 0, convoyLost: 0,
   };
 
   // Free-drifting pilots (no carrier to open): their entry times are fixed up
@@ -299,8 +299,8 @@ function startMission(missionIndex, difficultyId){
     supplyTimes,
     // The Storm: gusts cycle calm -> warn (streaks, no push) -> blow.
     storm: mission.storm ? { mode:"calm", timer: 5, dir: 1, str: 0 } : null,
-    // The Convoy: three haulers cross the sky; you are their shield.
-    convoy: mission.convoy ? { spawnAt: [4, 46, 88], spawned: 0 } : null,
+    // The Convoy: ONE hauler, escorted the whole way.
+    convoy: mission.convoy ? { launched: false, released: false } : null,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -770,6 +770,7 @@ function useOverdrive(){
    --------------------------------------------------------- */
 const behaviourCtx = {
   VW, VH, player: null, difficulty: null, smart: 0,
+  escort: null,           // the Convoy's hauler, when there is one to hunt
   pickups: null,          // the Coin Thief hunts loose coins
   world: null,            // minelayers, hives and menders reach into the field
   onEscape: null,
@@ -789,6 +790,7 @@ function update(dt, timeMs){
   behaviourCtx.player = game.world.player;
   behaviourCtx.pickups = game.world.pickups;
   behaviourCtx.world = game.world;
+  behaviourCtx.escort = game.world.escortTarget();   // what the hunters aim at
   behaviourCtx.difficulty = run.difficulty;
   behaviourCtx.smart = run.difficulty.smart;
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
@@ -1054,25 +1056,39 @@ function update(dt, timeMs){
    * so there is nearly always someone to protect. They can't dodge and they
    * can't shoot - the mission is what the player does about that.
    */
-  if(run.convoy && run.phase === "waves" && run.convoy.spawned < run.convoy.spawnAt.length &&
-     run.director.time >= run.convoy.spawnAt[run.convoy.spawned]){
-    const lane = [0.30, 0.70, 0.50][run.convoy.spawned];
-    game.world.spawnHauler(VW*lane, Math.round(24 * run.difficulty.hpMult));
-    run.convoy.spawned++;
-    fx.text(VW/2, VH*0.22, "HAULER CROSSING — COVER IT!", "#7cc4ff", 17, true);
+  if(run.convoy && !run.convoy.launched && run.phase === "waves"){
+    run.convoy.launched = true;
+    // Sized so it can absorb a real beating: this ship is on screen for the
+    // whole mission, so its health bar is the level's tension - it must drain
+    // visibly under pressure without ever dying to one bad moment.
+    game.world.spawnHauler(VW*0.5, Math.round(260 * run.difficulty.hpMult));
+    fx.text(VW/2, VH*0.46, "GUARD THE HAULER!", "#7cc4ff", 22, true);
     audio.play("supplyDrop");
+  }
+  // The sky is clear: it runs for home, and arriving is the win.
+  if(run.convoy && !run.convoy.released && run.phase !== "intro" &&
+     run.director.finishedSpawning && game.world.countEnemies() === 0){
+    run.convoy.released = true;
+    game.world.releaseHaulers();
+    audio.play("flyoff");
   }
   game.world.updateHaulers(dt, {
     onHaulerDown: (h) => {
       run.stats.convoyLost++;
-      fx.explosion(h.x, h.y, 90, "#ff8a3d", true);
-      fx.shake(18);
+      fx.explosion(h.x, h.y, 120, "#ff8a3d", true);
+      fx.shake(24);
+      fx.text(VW/2, VH*0.42, "HAULER LOST", "#ff5d73", 24, true);
       audio.play("enemyExplode", true);
       SF.comms.say("haulerDown");
     },
+    onHaulerHurt: () => {
+      fx.text(VW/2, VH*0.42, "THE HAULER IS BREAKING UP!", "#ffd23f", 20, true);
+      audio.play("alarm");
+      SF.comms.say("haulerHurt");
+    },
     onHaulerSafe: (h) => {
-      run.score += 400;
-      fx.text(h.x, 60, "HAULER THROUGH!", "#4ade80", 16, true);
+      run.score += 1500;
+      fx.text(VW/2, VH*0.4, "HAULER HOME SAFE!", "#4ade80", 24, true);
       audio.play("rescue");
       SF.comms.say("haulerSafe");
     },

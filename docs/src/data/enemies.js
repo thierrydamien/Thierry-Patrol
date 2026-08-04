@@ -61,10 +61,14 @@ const BEHAVIOURS = {
 
   /** Accelerates straight at wherever the player was when it locked on. */
   kamikaze(e, dt, c){
-    if(!e.locked && e.y > 40 && c.player){
-      e.lockX = c.player.x; e.lockY = c.player.y; e.locked = true;
-      const dx = e.lockX - e.x, dy = Math.max(40, e.lockY - e.y);
-      const l = Math.hypot(dx, dy);
+    // A convoy-hunter picks the HAULER, not the pilot - and it may have to
+    // climb to reach it, so the usual "always dives" floor is lifted here.
+    const esc = e.huntsEscort && c.escort;
+    const aim = esc || c.player;
+    if(!e.locked && e.y > 40 && aim){
+      e.lockX = aim.x; e.lockY = aim.y; e.locked = true;
+      const dx = e.lockX - e.x, dy = esc ? (e.lockY - e.y) : Math.max(40, e.lockY - e.y);
+      const l = Math.max(1, Math.hypot(dx, dy));
       e.vx = dx/l * e.speed * 1.5;
       e.vy = dy/l * e.speed * 1.5;
     }
@@ -159,9 +163,13 @@ const BEHAVIOURS = {
    * lock by moving rather than just sidestepping once.
    */
   intercept(e, dt, c){
-    const target = c.player ? c.player.x : c.VW/2;
+    const esc = e.huntsEscort && c.escort;
+    const aim = esc || c.player;
+    const target = aim ? aim.x : c.VW/2;
     e.x = lerp(e.x, target, Math.min(1, dt * (1.1 + c.smart*0.35)));
-    e.y += e.vy * (e.y > c.VH*0.5 ? 1.25 : 0.85) * dt;
+    // Hunting the convoy means holding ITS line, not sinking past it.
+    if(esc) e.y += (esc.y - e.y) * Math.min(1, dt*1.1);
+    else e.y += e.vy * (e.y > c.VH*0.5 ? 1.25 : 0.85) * dt;
   },
 
   /**

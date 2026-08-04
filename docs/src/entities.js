@@ -90,30 +90,57 @@ class World {
     this.silentClock = 0; this.lastSilentShot = -99;
   }
 
-  /* ---------------- HAULERS (the Convoy) ----------------
-     Big, slow, unarmed, and yours to keep alive. They cross bottom-to-top
-     on rails: they can't dodge, which is the whole point of the level. */
+  /* ---------------- THE HAULER (the Convoy) ----------------
+   * ONE ship, for the whole mission. The first cut sent three across in
+   * sequence and it read as scenery drifting past - nothing to bond with,
+   * and by the time you understood what it was, it had gone. A single ship
+   * that flies WITH you the whole way, wears its damage where you can see
+   * it, and only goes home at the end is something you can actually feel
+   * protective of - which is the entire point of the level.
+   *
+   * It rises to station, holds there taking fire, and leaves only when the
+   * sky is clear (`release`).
+   */
   spawnHauler(x, hp){
-    const h = { x, y: VH + 70, vy: -(VH + 160)/34, r: 34,
-                hp, maxHp: hp, sway: rand(0, 6.28), alive: true, hitFlash: 0 };
+    const h = { x, y: VH + 90, stationY: VH*0.30, r: 38,
+                hp, maxHp: hp, sway: rand(0, 6.28), alive: true, hitFlash: 0,
+                released: false, safe: false, warned: 0 };
     this.haulers.push(h);
     return h;
+  }
+  /** The sky is clear: the hauler opens up and runs for home. */
+  releaseHaulers(){ this.haulers.forEach(h => { if(h.alive) h.released = true; }); }
+  /** What the convoy-hunters aim at, or null when there is nothing to guard. */
+  escortTarget(){
+    for(let i = 0; i < this.haulers.length; i++)
+      if(this.haulers[i].alive && this.haulers[i].y > 0) return this.haulers[i];
+    return null;
   }
   updateHaulers(dt, hooks){
     for(let i = 0; i < this.haulers.length; i++){
       const h = this.haulers[i];
       if(!h.alive) continue;
       h.sway += dt;
-      h.y += h.vy*dt;
-      h.x += Math.sin(h.sway*0.7)*6*dt;
       h.hitFlash = Math.max(0, h.hitFlash - dt*4);
+      if(h.released){
+        h.fly = (h.fly || 0) + dt;
+        h.y -= (120 + h.fly*260)*dt;                  // throttle open, climbing
+      } else if(h.y > h.stationY){
+        h.y -= Math.min(90, (h.y - h.stationY)*1.4 + 20)*dt;   // easing to station
+      } else {
+        h.y = h.stationY + Math.sin(h.sway*0.6)*7;    // holding, breathing
+        h.x += Math.sin(h.sway*0.4)*10*dt;
+      }
       if(h.hp <= 0){
         h.alive = false;
         if(hooks && hooks.onHaulerDown) hooks.onHaulerDown(h);
-      } else if(h.y < -80){
+      } else if(h.y < -90){
         h.alive = false;
         h.safe = true;
         if(hooks && hooks.onHaulerSafe) hooks.onHaulerSafe(h);
+      } else if(hooks && hooks.onHaulerHurt && h.hp/h.maxHp <= 0.35 && h.warned < 1){
+        h.warned = 1;
+        hooks.onHaulerHurt(h);
       }
     }
   }
@@ -393,6 +420,11 @@ class World {
     e.money = Math.round(type.money * (elite ? ELITE.moneyMult : 1));
     e.behaviour = type.behaviour;
     e.state = 0; e.stateTimer = 0; e.phase = rand(0, TAU); e.locked = false; e.speedMul = 1;
+    // Convoy-hunters: on an escort mission most of the wing goes for the
+    // hauler rather than the pilot, so the threat is visible and the job is
+    // real. Some still come for you - a level where nothing chases you is a
+    // level where standing still works.
+    e.huntsEscort = !!o.huntsEscort;
     e.anchorX = x; e.weaveWidth = rand(62, 118); e.weaveSpeed = rand(1.3, 2.0);
     e.hoverY = o.hoverY != null ? o.hoverY : rand(170, 340);
     e.hoverTime = rand(3.5, 6);
@@ -493,14 +525,21 @@ class World {
     const p = this.player;
     const aimed = chance(ctxObj.difficulty.aimed);
     const speed = fire.speed;
-    if(fire.pattern === "spread3"){
+    // A convoy-hunter shoots at the CONVOY. Without this the escort mission
+    // was scenery: the haulers only ever took splash and the odd collision,
+    // so "protect them" was a promise the enemies never tested.
+    const esc = e.huntsEscort ? this.escortTarget() : null;
+    if(fire.pattern === "spread3" && !esc){
       [-0.35, 0, 0.35].forEach(a => {
         this.spawnEnemyBullet(e.x, e.y + e.r, Math.sin(a)*speed, Math.cos(a)*speed, "bolt", 4.5);
       });
-    } else if(fire.pattern === "aimed" || aimed){
-      const dx = (p ? p.x : VW/2) - e.x, dy = Math.max(50, (p ? p.y : VH) - e.y);
-      const l = Math.hypot(dx, dy);
-      this.spawnEnemyBullet(e.x, e.y + e.r, dx/l*speed, dy/l*speed, "aimed", 4);
+    } else if(esc || fire.pattern === "aimed" || aimed){
+      const tx = esc ? esc.x : (p ? p.x : VW/2);
+      const ty = esc ? esc.y : (p ? p.y : VH);
+      const dx = tx - e.x, dy = esc ? (ty - e.y) : Math.max(50, ty - e.y);
+      const l = Math.max(1, Math.hypot(dx, dy));
+      this.spawnEnemyBullet(e.x, e.y + e.r*(dy < 0 ? -1 : 1),
+                            dx/l*speed, dy/l*speed, esc ? "aimed" : "aimed", 4);
     } else {
       this.spawnEnemyBullet(e.x, e.y + e.r, 0, speed, "bolt", 4);
     }

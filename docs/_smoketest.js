@@ -971,27 +971,66 @@ async function run(){
     check("the gust shoves whatever is flying",
       ex0 === null || Math.abs(SF.game.world.enemies.items[0].x - ex0) > 2);
 
-    /* The convoy: haulers cross, take fire, and are mourned or celebrated. */
+    /* The convoy: ONE hauler, hunted for real, escorted the whole way. */
     SF.game.startMission(M.findIndex(m => m.convoy), "pilot");
-    await runFrames(60);
+    await runFrames(200);
     const runC = SF.game.run;
-    check("the convoy mission tracks three haulers",
-      runC.stats.convoyTotal === 3 && runC.convoy.spawnAt.length === 3);
-    await runFrames(240);   // past the first spawn at t=4
     const W2 = SF.game.world;
-    check("a hauler is on the wing", W2.haulers.some(h => h.alive));
+    check("the convoy is a single ship you escort the whole way",
+      runC.stats.convoyTotal === 1 && W2.haulers.filter(h => h.alive).length === 1);
     const h0 = W2.haulers.find(h => h.alive);
+    check("the hauler holds station on screen, not passing through",
+      h0.y > 0 && h0.y < SF.entityConst.VH && !h0.released);
+    check("the hauler can take a real beating", h0.maxHp >= 150);
+    // The whole complaint: the enemies weren't actually going for it.
+    check("most of the wing hunts the convoy, but not all of it", (() => {
+      let hunters = 0, total = 0;
+      for(let i = 0; i < 400; i++){
+        const e = W2.spawnEnemy("kamikaze", 300, 40, {
+          difficulty: SF.config.DIFFICULTY_BY_ID.pilot,
+          huntsEscort: Math.random() < 0.66,
+        });
+        total++; if(e.huntsEscort) hunters++;
+        e.alive = false;
+      }
+      return total === 400 && hunters > 200 && hunters < 340;
+    })());
+    check("a convoy-hunter dives at the hauler, not the pilot", (() => {
+      const e = W2.spawnEnemy("kamikaze", 60, 60, {
+        difficulty: SF.config.DIFFICULTY_BY_ID.pilot, huntsEscort: true });
+      e.locked = false;
+      const ctxK = { player: W2.player, escort: h0, VW: SF.entityConst.VW,
+                     VH: SF.entityConst.VH, smart: 0 };
+      SF.enemyData.BEHAVIOURS.kamikaze(e, 1/60, ctxK);
+      e.alive = false;
+      // It locked on the hauler's position, not the ship's.
+      return e.locked && Math.abs(e.lockX - h0.x) < 1 && Math.abs(e.lockY - h0.y) < 1 &&
+             Math.abs(e.lockY - W2.player.y) > 40;
+    })());
+    check("a convoy-hunter shoots at the hauler", (() => {
+      W2.enemyBullets.killAll();
+      const e = W2.spawnEnemy("striker", 300, 60, {
+        difficulty: SF.config.DIFFICULTY_BY_ID.pilot, huntsEscort: true });
+      W2.enemyShoot(e, { pattern:"aimed", speed: 200 },
+                    { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+      e.alive = false;
+      const b = W2.enemyBullets.items.find(q => q.alive);
+      if(!b) return false;
+      // Travelling toward the hauler's line, not straight down the screen.
+      const wantY = h0.y - 60, wantX = h0.x - 300;
+      return Math.sign(b.vy) === Math.sign(wantY) || Math.abs(b.vx - wantX) < 200;
+    })());
     const hpBefore = h0.hp;
     W2.spawnEnemyBullet(h0.x, h0.y - 2, 0, 60, "bolt", 5);
     await runFrames(3);
     check("enemy fire hurts the convoy", h0.hp < hpBefore);
     h0.hp = 0;
     await runFrames(3);
-    check("a lost hauler is counted against the objective",
+    check("a lost hauler fails the objective",
       runC.stats.convoyLost === 1 &&
       !SF.missions.OBJECTIVES.convoy.test(runC.stats));
-    check("a full convoy passes the objective",
-      SF.missions.OBJECTIVES.convoy.test({ convoyTotal:3, convoyLost:0 }));
+    check("a hauler brought home passes the objective",
+      SF.missions.OBJECTIVES.convoy.test({ convoyTotal:1, convoyLost:0 }));
 
     /* The searchlight: the dark pass exists and survives a frame. */
     const black = M.find(m => m.blackout);

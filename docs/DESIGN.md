@@ -1634,6 +1634,43 @@ money note must never take the instruction's place; the bonus gets its own
 popup below the card now, and a test asserts nothing writes to the goal
 line after it is set.
 
+## 8ay. The Convoy, rebuilt: one ship, actually hunted
+
+"I like the idea for the convoy but it's not clear how it works and the
+enemies aren't really attacking it. Also, it'd be better to protect 1
+single convoy instead of it going up and disappearing and another coming
+up after." Three notes, and all three were fair - the first version was an
+escort mission where nothing escorted anything.
+
+**The enemies weren't attacking it, and that was literal.** Not a tuning
+problem: no code path existed for it. Every behaviour aimed at the player,
+every aimed shot targeted the player, so the haulers only ever took splash
+and the occasional accidental collision. "Protect them" was a promise the
+enemies never tested. Now enemies carry a `huntsEscort` flag - two in three
+on this mission - and for those, kamikazes lock onto the HAULER (climbing
+to reach it if they must, since the usual "always dives" floor assumed the
+target was below), interceptors hold its line instead of sinking past it,
+and aimed fire is aimed at it. The remaining third still come for you, so
+parking next to the hauler is never a free win.
+
+**One ship, the whole mission.** Three haulers crossing in sequence read as
+scenery drifting past: by the time you worked out what one was, it had
+gone, and there was nothing to get attached to. Now a single hauler rises
+to station, holds there for the entire level wearing its damage where you
+can see it, and runs for home only when the sky is clear. Arriving is the
+win. Its health bar is the level's tension, so it is sized to absorb a real
+beating rather than die to one bad moment.
+
+**Clarity was a drawing problem.** The first cut hid the health bar until
+the ship was hurt - so the thing you were meant to protect looked exactly
+like the things you were meant to shoot. It now wears friendly brackets, a
+permanent health bar that flashes red under 35%, and the words OUR HAULER —
+PROTECT IT under its hull. Control calls out when it's breaking up.
+
+Verified by probe rather than assertion: mid-fight the hauler was at
+193/260 with 6 of 14 live enemies actively hunting it. Before this change
+that number was zero, by construction.
+
 ## 9. What I'd do next
 
 Roughly in value order:

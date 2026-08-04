@@ -793,13 +793,38 @@ function drawHaulers(ctx, world, timeMs){
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
     }
-    if(h.hp < h.maxHp){
-      const w = 56, k = Math.max(0, h.hp/h.maxHp);
-      ctx.fillStyle = "rgba(6,10,22,0.75)";
-      ctx.fillRect(-w/2, -h.r - 16, w, 7);
-      ctx.fillStyle = k > 0.5 ? "#4ade80" : k > 0.25 ? "#ffd23f" : "#ff5d73";
-      ctx.fillRect(-w/2 + 1, -h.r - 15, (w - 2)*k, 5);
+    /*
+     * The hauler must never be mistaken for traffic: it wears a permanent
+     * name, a permanent health bar, and a friendly bracket. The first cut
+     * hid the bar until it was hurt - which meant the thing you were
+     * supposed to be protecting looked exactly like everything you were
+     * supposed to be shooting.
+     */
+    const k = Math.max(0, h.hp/h.maxHp);
+    const w = 92;
+    ctx.strokeStyle = "rgba(124,196,255,0.55)";
+    ctx.lineWidth = 2.5;
+    [-1, 1].forEach(sd => {                       // friendly brackets
+      ctx.beginPath();
+      ctx.moveTo(sd*(w/2), -h.r - 4);
+      ctx.lineTo(sd*(w/2 + 7), -h.r - 4);
+      ctx.lineTo(sd*(w/2 + 7), h.r + 4);
+      ctx.lineTo(sd*(w/2), h.r + 4);
+      ctx.stroke();
+    });
+    ctx.fillStyle = "rgba(6,10,22,0.8)";
+    ctx.fillRect(-w/2, -h.r - 26, w, 10);
+    ctx.fillStyle = k > 0.5 ? "#4ade80" : k > 0.25 ? "#ffd23f" : "#ff5d73";
+    ctx.fillRect(-w/2 + 2, -h.r - 24, (w - 4)*k, 6);
+    if(k <= 0.35 && Math.floor(timeMs/220) % 2 === 0){
+      ctx.strokeStyle = "#ff5d73"; ctx.lineWidth = 2;
+      ctx.strokeRect(-w/2, -h.r - 26, w, 10);
     }
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#bfe3ff";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.fillText("OUR HAULER — PROTECT IT", 0, h.r + 26);
+    ctx.textAlign = "left";
     ctx.restore();
   }
 }

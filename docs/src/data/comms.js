@@ -137,8 +137,12 @@ const COMMS = {
     "It's blowing hard out there. Lean AGAINST the gusts, {you}.",
   ]},
   convoyStart: { speaker:"control", cooldown:999, lines:[
-    "Those haulers can't dodge and can't shoot, {you}. You're their shield.",
-    "The convoy is counting on you, {you}. Every hauler home.",
+    "That hauler can't dodge or shoot back, {you}. Stay near it and kill what comes.",
+    "They're going straight for our hauler, {you}. Don't let them reach it.",
+  ]},
+  haulerHurt: { speaker:"mate", cooldown:20, lines:[
+    "The hauler's in a bad way, {you} - get them off it!",
+    "It can't take much more! Clear them out, {you}!",
   ]},
   trenchStart: { speaker:"control", cooldown:999, lines:[
     "Walls ahead, {you}. Read each gate, find the gap, thread it.",
