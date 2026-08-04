@@ -870,6 +870,28 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .hs-row.bump .hs-value { color: var(--accent); }
 .hs-bar i { transition: width .6s var(--ease-pop); }
 
+/* Flight tuning cards (MY SHIP) */
+.tune-wrap { margin-bottom: 14px; }
+.tune-row { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:6px; }
+.tune-card {
+  display:flex; flex-direction:column; gap:3px; align-items:flex-start; text-align:left;
+  font-family:inherit; color:#fff; cursor:pointer;
+  padding:10px 10px 9px; border-radius:12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.tune-card i { font-style:normal; font-size:20px; }
+.tune-card b { font-size:13px; font-weight:900; letter-spacing:1px; }
+.tune-card span { font-size:10.5px; line-height:1.35; color: rgba(255,255,255,0.6); }
+.tune-card em { font-style:normal; font-size:10px; font-weight:700; letter-spacing:0.4px; color: var(--accent); }
+.tune-card.on {
+  border-color: rgba(63,201,255,0.75);
+  background: rgba(63,201,255,0.1);
+  box-shadow: 0 0 14px -6px rgba(63,201,255,0.8);
+}
+.tune-card.on b::after { content: " ✓"; color:#3fc9ff; }
+
 /* Parts tab: progress + tappable chips */
 .parts-head { text-align:center; margin-bottom:10px; font-size:13px; color: var(--ink-dim); }
 .parts-head b { color:#fff; }

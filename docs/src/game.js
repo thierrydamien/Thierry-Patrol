@@ -67,6 +67,10 @@ function resize(){
    --------------------------------------------------------- */
 function buildLoadout(profile, difficulty){
   const lv = id => P.upgradeLevel(profile, id);
+  // Flight tuning: a whole-ship stat trade chosen in MY SHIP. `fire` scales
+  // the fire interval (above 1 = slower guns), and dps is scaled to match so
+  // boss HP sizing stays honest about what the ship actually puts out.
+  const tune = SF.config.TUNE_BY_ID[profile.tune] || SF.config.TUNES[0];
   // Wingman drones are flown by the *other* pilots in the household, in their
   // own ship colours and under their own callsigns. Buying a Wingman Drone
   // doesn't summon a nameless escort - it calls your brother in.
@@ -78,11 +82,11 @@ function buildLoadout(profile, difficulty){
   }));
   return {
     crew,
-    lives: 3 + lv("life") + difficulty.bonusLives,
+    lives: 3 + lv("life") + difficulty.bonusLives + tune.lives,
     shieldMax: lv("shield"),
     invulnTime: 1.7 + lv("armor")*0.6,
-    speedMult: 1 + lv("thrusters")*0.14,
-    fireInterval: 0.30 * SF.config.fireRateMult(lv("rapid")),
+    speedMult: (1 + lv("thrusters")*0.14) * tune.speed,
+    fireInterval: 0.30 * SF.config.fireRateMult(lv("rapid")) * tune.fire,
     spreadLvl: lv("spread"),
     damage: 1 + lv("damage"),
     pierce: lv("pierce"),
@@ -97,7 +101,8 @@ function buildLoadout(profile, difficulty){
     // The same levels object the hangar draws from, so the ship you fly is
     // the ship you built - every bought part visible in combat.
     levels: SF.shipart.levelsOf(profile),
-    dps: singleTargetDps(lv),
+    dps: singleTargetDps(lv) / tune.fire,
+    tune: tune.id,
   };
 }
 

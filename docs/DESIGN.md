@@ -1127,13 +1127,28 @@ branch where the post-blast `finishTimer` either spawns the next boss in
 the queue or begins the victory lap. Every system downstream - the death
 drumroll, the final blast, fireworks, the fly-off - just works.
 
+## 8ah. Flight Tuning
+
+"Ship classes" shipped as three TUNES of the one good hull - the drawn-faces
+lesson applied to ships: a second code-drawn hull would hit the same quality
+ceiling, but stats have no ceiling. VANGUARD is the baseline; FALCON trades
+gun cadence for +22% speed; TITAN trades speed for a spare life. The rule
+in the table itself: every tune that gains something gives something up, so
+there is no best, only a playstyle - which for twin brothers means an
+argument, which is the point. Chosen in MY SHIP with free instant switching,
+and the sales pitch is the spec panel: the SPEED and FIRE RATE bars sweep to
+the new numbers the moment a card is tapped. `dps` is scaled with the tune
+so boss HP sizing stays honest. Per-pilot, synced, migrated ("warpdrive9000"
+from a foreign save falls back to vanguard).
+
+The toast component also grew a `label` - it announced everything as MEDAL
+UNLOCKED, which was fine when medals were all it announced.
+
 ## 9. What I'd do next
 
 Roughly in value order:
 
-1. **Ship classes** — a second hull with different stats (glass cannon vs
-   tank), which doubles the reason to keep earning.
-2. **Wingman AI** — drones that drift and target rather than firing straight.
+1. **Wingman AI** — drones that drift and target rather than firing straight.
 
 ## 10. Testing
 

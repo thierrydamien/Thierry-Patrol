@@ -245,9 +245,32 @@ const MEDAL_PAY = {
 };
 ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });
 
+/* ---------------------------------------------------------
+   FLIGHT TUNING
+   Three tunes of the same hull, chosen in MY SHIP. Stats
+   only - the art stays the one good ship (code-drawn hull
+   variants would hit the same quality ceiling the drawn
+   faces did). Rule: every tune that gains something gives
+   something up, so there is no "best", only a playstyle.
+   `fire` multiplies the fire INTERVAL - above 1 = slower.
+   --------------------------------------------------------- */
+const TUNES = [
+  { id:"vanguard", icon:"⚖️", name:"VANGUARD",
+    blurb:"The ship as the yard built it. Balanced.",
+    speed:1.00, fire:1.00, lives:0 },
+  { id:"falcon",   icon:"🦅", name:"FALCON",
+    blurb:"Stripped plating, hotter engines. Fly much faster - the guns run a beat slower.",
+    speed:1.22, fire:1.12, lives:0 },
+  { id:"titan",    icon:"🛡️", name:"TITAN",
+    blurb:"Extra plating and a spare seat. One more life - heavier on the stick.",
+    speed:0.88, fire:1.05, lives:1 },
+];
+const TUNE_BY_ID = {};
+TUNES.forEach(t => TUNE_BY_ID[t.id] = t);
+
 SF.config = {
   SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
-  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS,
+  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID,
   spreadPattern, fireRateMult,
 };
 })();

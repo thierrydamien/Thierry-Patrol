@@ -785,8 +785,45 @@ function renderShelf(panel, catId){
 }
 
 /** The parts ladder: what's on the ship and what's still missing. */
+/** "+22% speed · guns 12% slower" - the trade in one kid-readable line. */
+function tuneStats(t){
+  const bits = [];
+  if(t.speed > 1) bits.push("+" + Math.round((t.speed - 1)*100) + "% speed");
+  if(t.speed < 1) bits.push(Math.round((t.speed - 1)*100) + "% speed");
+  if(t.lives > 0) bits.push("+" + t.lives + " ♥");
+  if(t.fire > 1) bits.push("guns " + Math.round((t.fire - 1)*100) + "% slower");
+  return bits.length ? bits.join(" · ") : "no trade-offs";
+}
+
 function renderPartsTab(panel, levels, next){
   const A = SF.shipart;
+
+  // Flight tuning: the same good-looking hull, three ways to fly it. Picking
+  // one is free and instant - the spec bars above sweep to the new numbers,
+  // which is the whole sales pitch.
+  const tuneWrap = document.createElement("div");
+  tuneWrap.className = "tune-wrap";
+  tuneWrap.innerHTML = `<label class="panel-label">FLIGHT TUNING</label>`;
+  const tuneRow = document.createElement("div");
+  tuneRow.className = "tune-row";
+  SF.config.TUNES.forEach(t => {
+    const on = (profile.tune || "vanguard") === t.id;
+    const card = document.createElement("button");
+    card.className = "tune-card" + (on ? " on" : "");
+    card.innerHTML = `<i>${t.icon}</i><b>${esc(t.name)}</b>
+      <span>${esc(t.blurb)}</span><em>${esc(tuneStats(t))}</em>`;
+    click(card, () => {
+      if(profile.tune === t.id) return;
+      profile.tune = t.id;
+      P.save(profile);
+      renderArmory();
+      queueToast({ icon: t.icon, name: t.name + " tune fitted", label:"HANGAR" });
+    });
+    tuneRow.appendChild(card);
+  });
+  tuneWrap.appendChild(tuneRow);
+  panel.appendChild(tuneWrap);
+
   const owned = A.ownedCount(levels);
   const head = document.createElement("div");
   head.className = "parts-head";
@@ -1258,14 +1295,14 @@ function buyUpgrade(id){
   P.checkAchievements(profile).forEach(queueToast);
   renderArmory();
   const rankNow = P.rankFor(profile);
-  if(rankNow.name !== rankBefore) queueToast({ icon: rankNow.badge, name: "PROMOTED: " + rankNow.name });
+  if(rankNow.name !== rankBefore) queueToast({ icon: rankNow.badge, name: "PROMOTED: " + rankNow.name, label:"RANK UP" });
 
   // A purchase that changes the *shape* of the ship deserves to be seen, and
   // the twentieth level is the story's chapter break.
   const partsNow = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
   if(partsNow > partsBefore){
     const part = SF.shipart.PARTS.filter(pt => (P.upgradeLevel(profile, pt.up) >= pt.at))[partsNow-1];
-    queueToast({ icon:"🔧", name: "FITTED: " + (part ? part.name : "NEW PART") });
+    queueToast({ icon:"🔧", name: "FITTED: " + (part ? part.name : "NEW PART"), label:"HANGAR" });
     // And the bay celebrates: white flash + gold ring rolling off the hull.
     hangar.celebrate = performance.now();
   }
@@ -1700,6 +1737,10 @@ function nextToast(){
   audio.play("achievement");
   const el = $("achievementToast");
   el.classList.remove("hidden");
+  // The toast serves more than medals now - a `label` names the occasion
+  // (default keeps the medal ceremony), and non-medal toasts drop the trophy.
+  $("at-label").textContent = a.label || "MEDAL UNLOCKED";
+  $("at-icon").textContent = a.label ? "📣" : "🏆";
   $("at-name").textContent = a.icon + " " + a.name;
   requestAnimationFrame(() => el.classList.add("show"));
   setTimeout(() => {
@@ -1786,7 +1827,7 @@ if(SF.cloud && SF.cloud.configured()){
     const n = SF.cloud.restoreBackup(0);
     renderCloud(); renderProfiles();
     paintCloudStatus({ state:"ok", error:null });
-    if(n) queueToast({ icon:"💾", name: n + " pilot" + (n === 1 ? "" : "s") + " restored" });
+    if(n) queueToast({ icon:"💾", name: n + " pilot" + (n === 1 ? "" : "s") + " restored", label:"SQUAD SYNC" });
   });
   SF.cloud.boot();
 }
@@ -1840,7 +1881,7 @@ click($("setReset"), () => {
   profile = fresh;
   SF.game.profile = fresh;
   $("settingsOverlay").classList.add("hidden");
-  queueToast({ icon:"🗑", name: who + " starts over as a rookie" });
+  queueToast({ icon:"🗑", name: who + " starts over as a rookie", label:"PILOT RESET" });
   renderMenu();
   show("screen-menu");
 });
@@ -1855,14 +1896,14 @@ click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
 // sky, same rules, PILOT difficulty for everyone: a fair fight over a score.
 click($("dailyBtn"), () => {
   if(!dailyUnlocked(profile)){
-    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Daily Patrol" });
+    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Daily Patrol", label:"LOCKED" });
     return;
   }
   launch("daily", "pilot");
 });
 click($("rushBtn"), () => {
   if(!rushUnlocked(profile)){
-    queueToast({ icon:"🔒", name:"Beat the Mission 4 boss to open the Rush" });
+    queueToast({ icon:"🔒", name:"Beat the Mission 4 boss to open the Rush", label:"LOCKED" });
     return;
   }
   launch("rush", "pilot");
@@ -1874,7 +1915,7 @@ click($("testFlightBtn"), () => launch("test", "pilot"));
 SF.game.onTestFlightEnd = (r) => {
   renderArmory();
   show("screen-armory");
-  queueToast({ icon:"🎯", name:"Test complete — " + r.kills + " targets down" });
+  queueToast({ icon:"🎯", name:"Test complete — " + r.kills + " targets down", label:"TEST RANGE" });
 };
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });

@@ -73,6 +73,7 @@ function blank(name){
   return {
     name, callsign: name, shipColor: SHIP_COLORS[0], badge: null,
     money: 0, upgrades: {},
+    tune: "vanguard",   // flight tuning (MY SHIP) - stats trade, never art
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
     lastMission: 1, lastDifficulty: "pilot",
@@ -133,6 +134,7 @@ function snapshot(){
 function migrate(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.missions || typeof p.missions !== "object") p.missions = {};
+  if(!p.tune || !SF.config.TUNE_BY_ID[p.tune]) p.tune = "vanguard";
 
   /*
    * v2: Silent Running was inserted as mission 9, pushing the old 9-14 up to

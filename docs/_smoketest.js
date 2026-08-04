@@ -1116,6 +1116,55 @@ async function run(){
     SF.game.state = "idle";
   }
 
+  /* ---------- flight tuning ---------- */
+  {
+    check("every tune that gains something gives something up",
+      SF.config.TUNES.length === 3 &&
+      SF.config.TUNES.every(t => t.id === "vanguard" ||
+        ((t.speed > 1 || t.lives > 0) && (t.fire > 1 || t.speed < 1))));
+
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const base = SF.profile.blank("Tuner");
+    const stock = SF.game.buildLoadout(base, diff);
+    check("a fresh pilot flies the balanced vanguard tune",
+      base.tune === "vanguard" && stock.tune === "vanguard");
+
+    base.tune = "falcon";
+    const falcon = SF.game.buildLoadout(base, diff);
+    check("the falcon is faster with slower guns",
+      falcon.speedMult > stock.speedMult && falcon.fireInterval > stock.fireInterval &&
+      falcon.lives === stock.lives);
+    check("boss sizing sees the falcon's real output",
+      falcon.dps < stock.dps);
+
+    base.tune = "titan";
+    const titan = SF.game.buildLoadout(base, diff);
+    check("the titan trades speed for a spare life",
+      titan.lives === stock.lives + 1 && titan.speedMult < stock.speedMult);
+
+    // A bad value from an old or foreign save falls back to vanguard.
+    base.tune = "warpdrive9000";
+    check("an unknown tune never breaks a loadout",
+      SF.game.buildLoadout(SF.profile.migrate(base), diff).tune === "vanguard");
+
+    // Through the UI: pick a tune in MY SHIP, and it persists.
+    SF.profile.save(SF.profile.blank("Tuner"));
+    clickEl(id("switchBtn"));
+    SF.ui.renderProfiles();
+    clickEl(Array.from(qa("#profileGrid .profile-card"))
+      .find(c => /Tuner/.test(c.textContent)) || qa("#profileGrid .profile-card")[0]);
+    clickEl(id("armoryBtn"));
+    const partsTab = Array.from(qa("#armoryTabs button")).find(b => /MY SHIP/.test(b.textContent));
+    clickEl(partsTab);
+    const falconCard = Array.from(qa(".tune-card")).find(c => /FALCON/.test(c.textContent));
+    clickEl(falconCard);
+    check("picking a tune in MY SHIP persists on the pilot",
+      SF.profile.load("Tuner").tune === "falcon");
+    check("the chosen tune reads as chosen",
+      Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
+    clickEl(id("armoryBackBtn"));
+  }
+
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
     try {
