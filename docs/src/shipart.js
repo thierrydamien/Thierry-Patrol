@@ -339,6 +339,101 @@ function ownedCount(levels){ return PARTS.reduce((n,p) => n + (owns(levels,p) ? 
    DRAWING
    opts: { color, levels, t, size, ghost, mateColor, idle }
    --------------------------------------------------------- */
+/*
+ * Tune accents: each flight tune reshapes the ship a little, in the same
+ * visual language as the bolt-on parts - so "which tune am I flying?" is
+ * answered by looking at the ship, in the hangar and in combat alike.
+ */
+const TUNE_ART = {
+  falcon: {
+    behind(ctx, S, o){       // hot twin plumes at the wing roots
+      const flick = 0.8 + Math.sin(o.t*19)*0.2;
+      [-1, 1].forEach(s => {
+        const x = s*S*0.16;
+        const g = ctx.createLinearGradient(0, S*0.30, 0, S*0.30 + S*0.5*flick);
+        g.addColorStop(0, "rgba(255,190,90,0.9)");
+        g.addColorStop(1, "rgba(255,80,40,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x - S*0.045, S*0.30); ctx.lineTo(x + S*0.045, S*0.30);
+        ctx.lineTo(x, S*0.30 + S*0.5*flick); ctx.closePath(); ctx.fill();
+      });
+    },
+    front(ctx, S, o){        // swept-back fins + a racing stripe
+      ctx.fillStyle = o.color; glow(ctx, o.color, S*0.05);
+      [-1, 1].forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s*S*0.30, S*0.02); ctx.lineTo(s*S*0.52, S*0.32); ctx.lineTo(s*S*0.28, S*0.20);
+        ctx.closePath(); ctx.fill();
+      });
+      noGlow(ctx);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillRect(-S*0.013, -S*0.40, S*0.026, S*0.56);
+    },
+  },
+  titan: {
+    front(ctx, S, o){        // riveted flank slabs + a nose plate
+      ctx.fillStyle = o.metal;
+      [-1, 1].forEach(s => { rrect(ctx, s*S*0.30 - S*0.05, -S*0.14, S*0.10, S*0.40, S*0.03); fillEdge(ctx, S); });
+      rrect(ctx, -S*0.10, -S*0.52, S*0.20, S*0.12, S*0.03); fillEdge(ctx, S);
+      ctx.fillStyle = "rgba(16,20,32,0.7)";
+      [-1, 1].forEach(s => [0, 1, 2].forEach(k => {
+        ctx.beginPath(); ctx.arc(s*S*0.30, -S*0.06 + k*S*0.12, S*0.014, 0, TAU); ctx.fill();
+      }));
+    },
+  },
+  viper: {
+    front(ctx, S, o){        // twin overclocked rails, tips burning
+      ctx.fillStyle = o.metal;
+      [-1, 1].forEach(s => { rrect(ctx, s*S*0.05 - S*0.02, -S*0.66, S*0.04, S*0.30, S*0.015); fillEdge(ctx, S); });
+      ctx.fillStyle = "#ff5d73"; glow(ctx, "#ff5d73", S*0.08);
+      [-1, 1].forEach(s => { ctx.beginPath(); ctx.arc(s*S*0.05, -S*0.66, S*0.024, 0, TAU); ctx.fill(); });
+      noGlow(ctx);
+    },
+  },
+  scavenger: {
+    front(ctx, S, o){        // the golden collector scoop, sparks orbiting in
+      ctx.strokeStyle = "#ffd23f"; glow(ctx, "#ffd23f", S*0.07);
+      ctx.lineWidth = S*0.035; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(0, S*0.12, S*0.34, Math.PI*0.15, Math.PI*0.85); ctx.stroke();
+      ctx.fillStyle = "#ffe9a8";
+      [0, 1, 2].forEach(k => {
+        const a = Math.PI*0.5 + Math.sin(o.t*2 + k*2.1)*Math.PI*0.3;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*S*0.34, S*0.12 + Math.sin(a)*S*0.34, S*0.02, 0, TAU); ctx.fill();
+      });
+      noGlow(ctx);
+    },
+  },
+  ghost: {
+    front(ctx, S, o){        // phase shimmer: a breathing outline off the hull
+      const a = 0.28 + Math.sin(o.t*3)*0.16;
+      ctx.strokeStyle = "rgba(160,180,255," + a.toFixed(2) + ")";
+      glow(ctx, "#9aa5ff", S*0.09);
+      ctx.lineWidth = S*0.02;
+      ctx.beginPath(); ctx.ellipse(0, -S*0.04, S*0.42, S*0.52, 0, 0, TAU); ctx.stroke();
+      noGlow(ctx);
+    },
+  },
+  apex: {
+    front(ctx, S, o){        // the Leviathan's gold: trim chevrons and edging
+      ctx.strokeStyle = "#ffd23f"; glow(ctx, "#ffd23f", S*0.06);
+      ctx.lineWidth = S*0.026; ctx.lineCap = "round";
+      [0, 1].forEach(k => {
+        const y = -S*0.44 + k*S*0.10;
+        ctx.beginPath();
+        ctx.moveTo(-S*0.10, y + S*0.06); ctx.lineTo(0, y); ctx.lineTo(S*0.10, y + S*0.06);
+        ctx.stroke();
+      });
+      [-1, 1].forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s*S*0.14, -S*0.10); ctx.lineTo(s*S*0.44, S*0.22);
+        ctx.stroke();
+      });
+      noGlow(ctx);
+    },
+  },
+};
+
 function drawShip(ctx, cx, cy, size, opts){
   const o = {
     color: opts.color || "#f5a623",
@@ -369,9 +464,12 @@ function drawShip(ctx, cx, cy, size, opts){
     ctx.lineTo(0, S*0.34 + S*0.22*flick); ctx.closePath(); ctx.fill();
   }
 
+  const tuneArt = TUNE_ART[opts.tune];
   behind.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
+  if(tuneArt && tuneArt.behind){ ctx.save(); tuneArt.behind(ctx, S, o); ctx.restore(); }
   drawHull(ctx, S, o.color);
   front.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
+  if(tuneArt && tuneArt.front){ ctx.save(); tuneArt.front(ctx, S, o); ctx.restore(); }
 
   // The grey silhouette of what's next: always something to want.
   if(opts.ghost){

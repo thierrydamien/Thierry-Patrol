@@ -135,6 +135,9 @@ function migrate(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.missions || typeof p.missions !== "object") p.missions = {};
   if(!p.tune || !SF.config.TUNE_BY_ID[p.tune]) p.tune = "vanguard";
+  // NOTE: the earned-tune check (a tune whose boss hasn't been beaten falls
+  // back to vanguard) lives BELOW the mission-id shifts - it reads mission
+  // records, so it must see them at their final ids.
 
   /*
    * v2: Silent Running was inserted as mission 9, pushing the old 9-14 up to
@@ -165,6 +168,13 @@ function migrate(p){
     }
     if(typeof p.lastMission === "number" && p.lastMission >= 13) p.lastMission += 1;
     p.missionsVer = 3;
+  }
+  // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
+  // actually beaten (old save, or a copied one) reverts to the baseline.
+  {
+    const td = SF.config.TUNE_BY_ID[p.tune];
+    if(td && td.unlockMission && !((p.missions[td.unlockMission] || {}).cleared))
+      p.tune = "vanguard";
   }
   if(!Array.isArray(p.achievements)) p.achievements = [];
   if(!p.medalsClaimed || typeof p.medalsClaimed !== "object") p.medalsClaimed = {};

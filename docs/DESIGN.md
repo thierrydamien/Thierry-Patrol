@@ -1206,6 +1206,30 @@ makes a deep run survivable. A bomb crate on a pilot who never bought the
 upgrade also CREATES the button (bombsMax bumps to 1) - a free taste of the
 Armory's best argument.
 
+## 8al. Tunes v2: boss trophies you can see
+
+The customer's three notes on flight tuning, all structural: it should
+change how the ship LOOKS, there should be more of them, and they should be
+boss rewards. So tunes are trophies now - one per campaign boss, in order:
+FALCON (Marauder), TITAN (Jailer), VIPER (Sentinel, overclocked cannons),
+SCAVENGER (Warden, the collector rig), GHOST (Phantom, phase plating), and
+APEX (Leviathan) - which deliberately breaks the every-gain-has-a-cost rule
+because it is THE campaign-completion reward. Locked cards name the boss to
+beat; a first clear pops TUNE UNLOCKED.
+
+Each tune paints accents on the hull in the same code-drawn language as the
+21 bolt-on parts (the face lesson holds: no new hull art, only new parts):
+swept fins and hot plumes, riveted slabs, red-tipped rails, a golden scoop,
+a breathing shimmer, gold trim. Threaded through every ship drawing - the
+hangar, combat, the menu icon, the pilot cards - so "which tune am I
+flying?" is answered by looking.
+
+And MY SHIP stopped being two things: the 21-chip parts inventory (per the
+customer: confusing, not that useful) is gone, replaced by the tuning bay -
+big cards with kid-readable green-▲/red-▼ lines and a one-line how-it-works.
+migrate() reverts any fitted tune whose boss this pilot hasn't actually
+beaten, so a copied save can't wear an unearned crown.
+
 ## 9. What I'd do next
 
 Roughly in value order:

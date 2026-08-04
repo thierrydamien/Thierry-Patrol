@@ -84,15 +84,15 @@ function buildLoadout(profile, difficulty){
     crew,
     lives: 3 + lv("life") + difficulty.bonusLives + tune.lives,
     shieldMax: lv("shield"),
-    invulnTime: 1.7 + lv("armor")*0.6,
+    invulnTime: (1.7 + lv("armor")*0.6) * (tune.invuln || 1),
     speedMult: (1 + lv("thrusters")*0.14) * tune.speed,
     fireInterval: 0.30 * SF.config.fireRateMult(lv("rapid")) * tune.fire,
     spreadLvl: lv("spread"),
     damage: 1 + lv("damage"),
     pierce: lv("pierce"),
     homingLvl: lv("homing"),
-    magnetRange: 60 + lv("magnet")*68,
-    moneyMult: 1 + lv("fortune")*0.15,
+    magnetRange: (60 + lv("magnet")*68) * (tune.magnet || 1),
+    moneyMult: (1 + lv("fortune")*0.15) * (tune.money || 1),
     drones: lv("wingman"),
     bombs: lv("bomb"),
     overdrives: lv("overdrive"),
@@ -380,7 +380,7 @@ function endMission(completed){
   // longest run, no campaign record, no lastMission (the campaign hint must
   // keep pointing at a real map stop).
   let prevFamilyBest = null, prevSelfBest = 0;
-  let endlessNewBest = false, prevEndlessBest = 0;
+  let endlessNewBest = false, prevEndlessBest = 0, firstClear = false;
   // A rush books how deep the queue got - a boss mid-fight doesn't count.
   const rushBeaten = run.mission.bossRush
     ? run.rushIndex - (game.world.boss ? 1 : 0) : 0;
@@ -401,6 +401,7 @@ function endMission(completed){
     // the record and "did I beat anything?" can no longer be answered.
     prevFamilyBest = P.familyBest(run.mission.id);
     const prevRec = profile.missions[run.mission.id];
+    firstClear = completed && !(prevRec && prevRec.cleared);
     prevSelfBest = prevRec && prevRec.best
       ? Math.max.apply(null, [0].concat(Object.values(prevRec.best).map(Number))) : 0;
     P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0, run.score, completed);
@@ -416,6 +417,7 @@ function endMission(completed){
       completed, stars, run, unlocked,
       endless: !!run.mission.endless, endlessNewBest, prevEndlessBest,
       rush: !!run.mission.bossRush, rushBeaten, rushTotal: run.rushList.length,
+      firstClear,
       durationSec: Math.round(run.time),
       prevFamilyBest, prevSelfBest,
       objectives: run.objectiveDefs.map(def => ({

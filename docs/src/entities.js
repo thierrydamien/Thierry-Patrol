@@ -110,6 +110,7 @@ class World {
       overdriveTime: loadout.overdriveTime, overdriveUntil: 0,
       tempRapidUntil: 0, tempSpreadUntil: 0, tempScoreUntil: 0, tempHomingUntil: 0,
       color: loadout.color,
+      tune: loadout.tune,
       levels: loadout.levels || {},
       recoil: 0,
       trail: [],

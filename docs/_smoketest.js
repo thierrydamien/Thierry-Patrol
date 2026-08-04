@@ -239,10 +239,16 @@ async function run(){
 
   const tabByName = n => qa("#armoryTabs .armory-tab").find(t => t.textContent.includes(n));
   clickEl(tabByName("MY SHIP"));
+  // The part inventory left the DOM (MY SHIP is the tuning bay now) but the
+  // part model still drives the hangar ghost and the "next part" line.
   check("a stock ship lists every part as unfitted",
-    qa("#armoryPanel .part-chip").length === SF.shipart.PARTS.length &&
-    qa("#armoryPanel .part-chip.owned").length === 0);
-  check("the parts tab marks which part is next", qa("#armoryPanel .part-chip.next").length === 1);
+    SF.shipart.ownedCount({}) === 0 &&
+    SF.shipart.partList({}).length === SF.shipart.PARTS.length);
+  check("a stock ship still has a next part to want",
+    !!SF.shipart.nextPart({}));
+  check("MY SHIP is the tuning bay",
+    qa("#armoryPanel .tune-card").length === SF.config.TUNES.length &&
+    qa("#armoryPanel .part-chip").length === 0);
   clickEl(tabByName("PILOT"));
   check("pilot card shows gear progress", /Gear 0\/53/.test(id("pcGear").textContent));
   check("pilot tab carries callsign, colour and badge",
@@ -298,7 +304,7 @@ async function run(){
   check("story closes on continue", id("storyOverlay").classList.contains("hidden"));
   clickEl(tabByName("MY SHIP"));
   check("a maxed ship has every part fitted",
-    qa("#armoryPanel .part-chip.owned").length === SF.shipart.PARTS.length);
+    SF.shipart.ownedCount(SF.shipart.levelsOf(SF.profile.load("Marc"))) === SF.shipart.PARTS.length);
   check("a maxed ship has nothing left to want", /COMPLETE/.test(id("hangarNext").textContent));
   clickEl(id("armoryBackBtn"));
 
@@ -1260,10 +1266,16 @@ async function run(){
 
   /* ---------- flight tuning ---------- */
   {
-    check("every tune that gains something gives something up",
-      SF.config.TUNES.length === 3 &&
-      SF.config.TUNES.every(t => t.id === "vanguard" ||
-        ((t.speed > 1 || t.lives > 0) && (t.fire > 1 || t.speed < 1))));
+    check("every tune that gains something gives something up (apex excepted)",
+      SF.config.TUNES.length === 7 &&
+      SF.config.TUNES.every(t => t.id === "vanguard" || t.apex ||
+        (t.fire > 1 || t.speed < 1)));
+    check("every boss mission awards exactly one tune",
+      [4, 6, 8, 12, 14, 16].every(mid =>
+        SF.config.TUNES.filter(t => t.unlockMission === mid).length === 1));
+    check("every tune states its trade in kid words",
+      SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length &&
+        Array.isArray(t.cons) && (t.cons.length || t.id === "vanguard" || t.apex)));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
     const base = SF.profile.blank("Tuner");
@@ -1289,8 +1301,36 @@ async function run(){
     check("an unknown tune never breaks a loadout",
       SF.game.buildLoadout(SF.profile.migrate(base), diff).tune === "vanguard");
 
-    // Through the UI: pick a tune in MY SHIP, and it persists.
-    SF.profile.save(SF.profile.blank("Tuner"));
+    // A tune is a trophy: fitted without its boss beaten, it reverts.
+    const cheat = SF.profile.blank("Cheat");
+    cheat.tune = "apex";
+    check("an unearned tune reverts to vanguard",
+      SF.profile.migrate(cheat).tune === "vanguard");
+    const earned = SF.profile.blank("Earned");
+    earned.tune = "falcon";
+    earned.missions[4] = { cleared:true, stars:{}, best:{} };
+    check("an earned tune survives the same check",
+      SF.profile.migrate(earned).tune === "falcon");
+
+    // Ship art: each unlockable tune paints its own accent on the hull, and
+    // drawing every one of them must not throw.
+    check("every unlockable tune changes the ship's look", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      const cv = window.document.createElement("canvas");
+      const c = cv.getContext("2d");
+      return ["falcon","titan","viper","scavenger","ghost","apex"].every(tid => {
+        if(!new RegExp("  " + tid + ": \\{").test(src)) return false;
+        try { SF.shipart.drawShip(c, 60, 60, 90, { color:"#3399ff", levels:{}, t:1, tune: tid }); }
+        catch(e){ return false; }
+        return true;
+      });
+    })());
+
+    // Through the UI: pick a tune in MY SHIP, and it persists. The Tuner has
+    // beaten the first boss, so FALCON is open - and only FALCON.
+    const tunerProf = SF.profile.blank("Tuner");
+    tunerProf.missions[4] = { cleared:true, stars:{pilot:2}, best:{} };
+    SF.profile.save(tunerProf);
     clickEl(id("switchBtn"));
     SF.ui.renderProfiles();
     clickEl(Array.from(qa("#profileGrid .profile-card"))
@@ -1304,7 +1344,36 @@ async function run(){
       SF.profile.load("Tuner").tune === "falcon");
     check("the chosen tune reads as chosen",
       Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
+    check("locked tunes say which boss to beat, and refuse to fit", (() => {
+      const viperCard = Array.from(qa(".tune-card")).find(c => /VIPER/.test(c.textContent));
+      if(!viperCard || !/beat Mission 8/.test(viperCard.textContent)) return false;
+      clickEl(viperCard);
+      return SF.profile.load("Tuner").tune === "falcon";   // unchanged
+    })());
+    check("the confusing parts grid is gone from MY SHIP",
+      qa(".part-chip").length === 0 && qa(".tune-how").length === 1);
     clickEl(id("armoryBackBtn"));
+
+    // Beating a boss mission for the first time flags the trophy moment -
+    // the payload flag is what queues the TUNE UNLOCKED toast.
+    SF.game.profile = SF.profile.load("Tuner");
+    let payload = null;
+    const prevEnd = SF.game.onMissionEnd;
+    SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
+    SF.game.startMission(5, "pilot");     // mission 6, the Jailer
+    SF.game.endMission(true);
+    SF.game.onMissionEnd = prevEnd;
+    check("a first boss clear flags the tune it won",
+      payload && payload.firstClear === true &&
+      payload.run.mission.boss === "jailer" &&
+      SF.config.TUNES.some(t => t.unlockMission === payload.run.mission.id));
+    SF.game.startMission(5, "pilot");
+    payload = null;
+    SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
+    SF.game.endMission(true);
+    SF.game.onMissionEnd = prevEnd;
+    check("a repeat clear is not a first clear", payload && payload.firstClear === false);
+    SF.game.state = "idle";
   }
 
   /* ---------- the director's-pass moments ---------- */

@@ -96,7 +96,7 @@ function drawTitleArt(canvasId, p, t){
   const levels = p ? SF.shipart.levelsOf(p) : {};
   const col = p ? p.shipColor : "#f5a623";
   const bob = Math.sin(t*1.1)*H*0.006;
-  SF.shipart.drawShip(ctx, W*0.66, H*0.22 + bob, W*0.28, { color: col, levels, t: t + 1.1, idle:false });
+  SF.shipart.drawShip(ctx, W*0.66, H*0.22 + bob, W*0.28, { color: col, levels, t: t + 1.1, idle:false, tune: p && p.tune });
 
   // A wing of three behind it, small, for depth - each on its own rhythm.
   [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz], i) => {
@@ -153,7 +153,7 @@ function renderProfiles(){
     const ctx = card.querySelector("canvas").getContext("2d");
     if(ctx){
       SF.shipart.drawShip(ctx, 66, 68, 108,
-        { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+        { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false, tune: p.tune });
       // With an installed portrait, the pilot rides their card's corner.
       SF.pilotart.paint(ctx, 24, 24, 44, p);
     }
@@ -263,7 +263,7 @@ function drawMenuIcons(){
 
   paint("playBtn", c => {
     SF.shipart.drawShip(c, 38, 40, 58,
-      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0 });
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0, tune: profile.tune });
   });
 
   paint("dailyBtn", c => {              // a sun coming up over the horizon
@@ -776,7 +776,7 @@ function drawCampaign(){
   const side = here.x > 0.5 ? 1 : -1;
   const bob = Math.sin(t*1.4)*3;
   SF.shipart.drawShip(ctx, px(here) + side*84, py(here) + 30 + bob, 52, {
-    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t,
+    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t, tune: profile.tune,
   });
   ctx.textAlign = "left";
 }
@@ -889,70 +889,56 @@ function renderShelf(panel, catId){
 }
 
 /** The parts ladder: what's on the ship and what's still missing. */
-/** "+22% speed · guns 12% slower" - the trade in one kid-readable line. */
-function tuneStats(t){
-  const bits = [];
-  if(t.speed > 1) bits.push("+" + Math.round((t.speed - 1)*100) + "% speed");
-  if(t.speed < 1) bits.push(Math.round((t.speed - 1)*100) + "% speed");
-  if(t.lives > 0) bits.push("+" + t.lives + " ♥");
-  if(t.fire > 1) bits.push("guns " + Math.round((t.fire - 1)*100) + "% slower");
-  return bits.length ? bits.join(" · ") : "no trade-offs";
+/*
+ * MY SHIP = the tuning bay. (The 21-chip parts inventory that used to live
+ * here was, per the customer, confusing and not that useful - the hangar's
+ * "next part" line and the shelves already do that job.)
+ *
+ * Tunes are boss trophies: beat a campaign boss, win its tune. Each one
+ * changes how the ship flies AND how it looks - the hangar above redraws the
+ * moment a card is tapped, which is the whole explanation a kid needs.
+ */
+function tuneUnlocked(t){
+  return !t.unlockMission ||
+    !!((profile.missions && profile.missions[t.unlockMission] || {}).cleared);
 }
 
-function renderPartsTab(panel, levels, next){
-  const A = SF.shipart;
-
-  // Flight tuning: the same good-looking hull, three ways to fly it. Picking
-  // one is free and instant - the spec bars above sweep to the new numbers,
-  // which is the whole sales pitch.
-  const tuneWrap = document.createElement("div");
-  tuneWrap.className = "tune-wrap";
-  tuneWrap.innerHTML = `<label class="panel-label">FLIGHT TUNING</label>`;
-  const tuneRow = document.createElement("div");
-  tuneRow.className = "tune-row";
+function renderPartsTab(panel){
+  const wrap = document.createElement("div");
+  wrap.className = "tune-wrap";
+  wrap.innerHTML = `<label class="panel-label">FLIGHT TUNING</label>
+    <p class="tune-how">Beat a boss, win its tune. Fit ONE - it changes how your
+    ship flies <b>and how it looks</b>. Swap any time, free.</p>`;
+  const row = document.createElement("div");
+  row.className = "tune-row two-col";
   SF.config.TUNES.forEach(t => {
+    const open = tuneUnlocked(t);
     const on = (profile.tune || "vanguard") === t.id;
     const card = document.createElement("button");
-    card.className = "tune-card" + (on ? " on" : "");
+    card.className = "tune-card" + (on ? " on" : "") + (open ? "" : " tlocked");
+    const lines =
+      t.pros.map(x => `<em class="good">▲ ${esc(x)}</em>`).join("") +
+      t.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
     card.innerHTML = `<i>${t.icon}</i><b>${esc(t.name)}</b>
-      <span>${esc(t.blurb)}</span><em>${esc(tuneStats(t))}</em>`;
+      <span>${esc(t.blurb)}</span>${lines}
+      <u>${on ? "FITTED ✓" : open ? "tap to fit"
+            : "🔒 beat Mission " + t.unlockMission + "'s boss"}</u>`;
     click(card, () => {
+      if(!open){
+        queueToast({ icon:"🔒", name:"Beat Mission " + t.unlockMission + "'s boss to win " + t.name,
+                     label:"LOCKED" });
+        return;
+      }
       if(profile.tune === t.id) return;
       profile.tune = t.id;
       P.save(profile);
-      renderArmory();
+      renderArmory();      // hangar + spec bars redraw: the ship visibly changes
       queueToast({ icon: t.icon, name: t.name + " tune fitted", label:"HANGAR" });
     });
-    tuneRow.appendChild(card);
+    row.appendChild(card);
   });
-  tuneWrap.appendChild(tuneRow);
-  panel.appendChild(tuneWrap);
-
-  const owned = A.ownedCount(levels);
-  const head = document.createElement("div");
-  head.className = "parts-head";
-  head.innerHTML = `<b>${owned} of ${A.PARTS.length}</b> parts fitted
-    <div class="parts-bar"><i style="width:${Math.round(owned/A.PARTS.length*100)}%"></i></div>
-    <span class="parts-hint">tap a missing part to go buy the upgrade that fits it</span>`;
-  panel.appendChild(head);
-  const grid = document.createElement("div");
-  grid.className = "hangar-parts";
-  A.partList(levels).forEach(({ part, owned:has }) => {
-    const chip = document.createElement(has ? "div" : "button");
-    chip.className = "part-chip" + (has ? " owned" : "") + (next && part.id === next.id ? " next" : "");
-    const u = UPGRADE_BY_ID[part.up];
-    const cost = has ? null : P.nextCost(profile, u);
-    chip.innerHTML = `<b>${esc(part.name)}</b><span>${has ? esc(part.blurb)
-      : esc(u.name) + " lv" + part.at + (cost !== null && P.upgradeLevel(profile, u.id) === part.at - 1
-          ? " — " + money(cost) : "")}</span>`;
-    // A missing part is a shopping trip waiting to happen: tapping it opens
-    // the shelf that sells the upgrade which fits it.
-    if(!has){
-      click(chip, () => { armoryTab = u.cat; renderArmory(); });
-    }
-    grid.appendChild(chip);
-  });
-  panel.appendChild(grid);
+  wrap.appendChild(row);
+  panel.appendChild(wrap);
 }
 
 /** Everything about the pilot rather than the ship. */
@@ -1030,7 +1016,7 @@ function drawHangar(){
     A.drawShip(ctx, W*0.28, H*0.52, Math.min(W*0.30, H*0.62), {
       color: profile.shipColor, levels: {}, t: hangar.t });
     A.drawShip(ctx, W*0.72, H*0.52, Math.min(W*0.30, H*0.62), {
-      color: profile.shipColor, levels, t: hangar.t });
+      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune });
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(W/2, H*0.10); ctx.lineTo(W/2, H*0.90); ctx.stroke();
@@ -1039,7 +1025,7 @@ function drawHangar(){
     // sit inside the bay rather than being cropped by it.
     const S = Math.min(W*0.40, H*0.66);
     A.drawShip(ctx, W/2, H*0.50, S, {
-      color: profile.shipColor, levels, t: hangar.t,
+      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
     });
@@ -1731,6 +1717,13 @@ function showResults(result){
   $("overlayResults").classList.remove("hidden");
   renderMenu();
   (unlocked || []).forEach(queueToast);
+  // First time a campaign boss falls, its tune becomes yours - and the toast
+  // says where to go fit it.
+  if(result.firstClear && run.mission.boss){
+    const wonTune = SF.config.TUNES.find(t => t.unlockMission === run.mission.id);
+    if(wonTune) queueToast({ icon: wonTune.icon,
+      name: wonTune.name + " tune won! Fit it in MY SHIP", label:"TUNE UNLOCKED" });
+  }
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");

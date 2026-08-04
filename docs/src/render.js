@@ -362,7 +362,7 @@ function drawPlayer(ctx, p, timeMs){
   // The ship they actually built: same drawing the hangar shows, every
   // bought part bolted on and visible in combat.
   SF.shipart.drawShip(ctx, 0, 0, size, {
-    color: p.color, levels: p.levels, t: timeMs/1000, idle: false,
+    color: p.color, levels: p.levels, t: timeMs/1000, idle: false, tune: p.tune,
   });
   ctx.restore();
 

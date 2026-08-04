@@ -272,14 +272,35 @@ const SUPPLIES = [
    --------------------------------------------------------- */
 const TUNES = [
   { id:"vanguard", icon:"⚖️", name:"VANGUARD",
-    blurb:"The ship as the yard built it. Balanced.",
+    blurb:"The ship as the yard built it.",
+    pros:["ready for anything"], cons:[],
     speed:1.00, fire:1.00, lives:0 },
-  { id:"falcon",   icon:"🦅", name:"FALCON",
-    blurb:"Stripped plating, hotter engines. Fly much faster - the guns run a beat slower.",
+  { id:"falcon",   icon:"🦅", name:"FALCON", unlockMission:4,
+    blurb:"The Marauder's engines, bolted on. Swept fins, hot twin plumes.",
+    pros:["+22% speed"], cons:["slower guns"],
     speed:1.22, fire:1.12, lives:0 },
-  { id:"titan",    icon:"🛡️", name:"TITAN",
-    blurb:"Extra plating and a spare seat. One more life - heavier on the stick.",
+  { id:"titan",    icon:"🛡️", name:"TITAN", unlockMission:6,
+    blurb:"The Jailer's armour plates. A spare seat and slabs down the flanks.",
+    pros:["+1 life"], cons:["-12% speed","slower guns"],
     speed:0.88, fire:1.05, lives:1 },
+  { id:"viper",    icon:"🐍", name:"VIPER", unlockMission:8,
+    blurb:"The Sentinel's overclocked cannons on twin rails.",
+    pros:["+14% fire rate"], cons:["-8% speed"],
+    speed:0.92, fire:0.88, lives:0 },
+  { id:"scavenger",icon:"🧲", name:"SCAVENGER", unlockMission:12,
+    blurb:"The Warden's collector rig. A golden scoop under the nose.",
+    pros:["coins fly to you","+12% pay"], cons:["slower guns"],
+    speed:1.00, fire:1.06, lives:0, magnet:1.7, money:1.12 },
+  { id:"ghost",    icon:"👻", name:"GHOST", unlockMission:14,
+    blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
+    pros:["+5% speed","longer safety after a hit"], cons:["slower guns"],
+    speed:1.05, fire:1.08, lives:0, invuln:1.5 },
+  /* The final boss's trophy breaks the every-gain-has-a-cost rule on
+     purpose: it is THE reward for finishing the campaign. */
+  { id:"apex",     icon:"👑", name:"APEX", unlockMission:16, apex:true,
+    blurb:"The Leviathan's core, fitted to your ship. Gold trim. No trade-offs - you earned it.",
+    pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
+    speed:1.08, fire:0.95, lives:1 },
 ];
 const TUNE_BY_ID = {};
 TUNES.forEach(t => TUNE_BY_ID[t.id] = t);
