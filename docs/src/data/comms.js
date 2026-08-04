@@ -126,6 +126,15 @@ const COMMS = {
     "No cannons this run, {you}. Slip through quiet and don't get touched.",
     "The crew's working on the guns. Until then: dodge everything.",
   ]},
+  devourerStart: { speaker:"control", cooldown:999, lines:[
+    "That's it, {you}. That's the thing that ate their sun.",
+    "Everything you've got, {you}. Right now.",
+  ]},
+  fleetArrives: { speaker:"mate", cooldown:999, lines:[
+    "{you} - look behind you. EVERYONE came.",
+    "You brought us all home. Our turn.",
+    "You're not doing this one alone, {you}.",
+  ]},
   headHome: { speaker:"control", cooldown:999, lines:[
     "Sky's clear, {you}. Come on home.",
     "That's all of them. Bring it back, {you}.",

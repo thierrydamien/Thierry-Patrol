@@ -144,10 +144,55 @@ const BOSSES = {
     ],
   },
   /*
-   * The finale, and the only four-phase fight in the game. Each phase takes
-   * something else away from you: room, then cover, then time. Four weak
-   * points means a well-aimed run can strip it down to almost nothing, which
-   * is the reward for having learned every earlier boss.
+   * ===================== THE DEVOURER =====================
+   * The grand finale. Everything about it is deliberately one size larger
+   * than the game has ever gone: twice the Leviathan's bulk, five phases,
+   * a scripted cinematic arrival, attacks that use the WHOLE screen, and a
+   * death that takes eight seconds to finish.
+   *
+   * The design rule that keeps it fair for a seven-year-old: every attack
+   * paints where it will land BEFORE it lands, and each phase asks one clear
+   * question -
+   *   1 AWAKENING   "which columns are lit?"      (step out of the lanes)
+   *   2 THE ARMS    "where is the claw sweeping?" (get above/below it)
+   *   3 CORE        "where is the gap?"           (walk the spiral)
+   *   4 STAR EATER  "which half is safe?"         (pick a side, commit)
+   *   5 LAST LIGHT  "all of it - but you're not alone"
+   * Phase five is the payoff: every pilot this squadron ever pulled out of
+   * the dark flies in to help (see finale.js).
+   */
+  devourer: {
+    name: "THE DEVOURER", epithet: "it ate their star. ours is next.",
+    finale: true,
+    hp: 4200, fightSeconds: 95, size: 300, tint: "#ff3d5a", entryY: 172,
+    weakPoints: [
+      // Four armour plates seal the core. Blow them off to open the fight up -
+      // and each one takes an attack with it.
+      { id:"plateNW", x:-96, y:-26, r:26, hp:230, disables:"laneBeams" },
+      { id:"plateNE", x: 96, y:-26, r:26, hp:230, disables:"hangarLaunch" },
+      { id:"plateSW", x:-72, y: 62, r:24, hp:200, disables:"clawSweep" },
+      { id:"plateSE", x: 72, y: 62, r:24, hp:200, disables:"starLance" },
+      { id:"core",    x:  0, y:  6, r:34, hp:420, disables:"novaSafeZone" },
+    ],
+    phases: [
+      { at:1.00, speed: 44, telegraph:0.75, gap:[1.9,2.5],
+        attacks:["laneBeams","spreadVolley"] },
+      { at:0.76, speed: 70, telegraph:0.65, gap:[1.5,2.1],
+        attacks:["clawSweep","hangarLaunch","aimedBurst"] },
+      { at:0.52, speed: 96, telegraph:0.55, gap:[1.2,1.7],
+        attacks:["novaSafeZone","spiralArms","ringBurst"] },
+      { at:0.30, speed:120, telegraph:0.60, gap:[1.1,1.6],
+        attacks:["starLance","laneBeams","mineField"] },
+      { at:0.13, speed:150, telegraph:0.45, gap:[0.9,1.3],
+        attacks:["novaSafeZone","spiralArms","clawSweep","aimedBurst","starLance"],
+        enrage:true, lastLight:true },
+    ],
+  },
+  /*
+   * The old finale, and the only four-phase fight before the Devourer. Each
+   * phase takes something else away from you: room, then cover, then time.
+   * Four weak points means a well-aimed run can strip it down to almost
+   * nothing, which is the reward for having learned every earlier boss.
    */
   leviathan: {
     name: "THE LEVIATHAN", epithet: "the last thing between you and home",
@@ -663,6 +708,55 @@ const MISSIONS = [
     ],
     boss: "leviathan",
     objectives: ["complete","kill90","rescueAll"],
+  },
+
+  /* =========================================================
+     ACT THREE - THE LAST STAR
+     Two missions. The first is quiet on purpose: the Devourer
+     hangs in the sky the whole way, too big to fight and
+     getting closer, and the mission is the dread. The second
+     is the fight the whole campaign has been walking toward.
+     ========================================================= */
+  {
+    id:17, name:"The Long Dark", subtitle:"Something is out there",
+    brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
+    waves: [
+      // Deliberately sparse to start. Empty sky is the scariest thing here.
+      w(1,   "grunt",    6, "line"),
+      w(14,  "asteroid", 6, "scatter"),
+      w(24,  "sniper",   3, "sides"),
+      w(34,  "interceptor", 6, "line"),
+      w(44,  "boulder",  2, "twinColumns"),
+      w(52,  "swooper",  8, "arc"),
+      // ...and then everything they have left, all at once.
+      w(62,  "grunt",   13, "wall"),
+      w(68,  "striker",  8, "tripleColumns", { elite: 1 }),
+      w(76,  "kamikaze",10, "pincer"),
+      w(84,  "carrier",  3, "twinColumns"),
+      w(90,  "brute",    5, "wall", { elite: 1 }),
+      w(98,  "hive",     3, "sides"),
+      w(104, "weaver",  12, "scatter"),
+      w(112, "splitter", 7, "arc"),
+      w(120, "turret",   5, "twinColumns", { elite: 2 }),
+      w(128, "grunt",   14, "wall"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:18, name:"The Devourer", subtitle:"The last star",
+    brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
+    // A short escort screen, then the only thing that matters. The waves are
+    // brief by design: nobody wants a chore between them and the finale.
+    waves: [
+      w(1,   "interceptor", 8, "line"),
+      w(9,   "striker",  8, "arc", { elite: 1 }),
+      w(17,  "swooper", 10, "pincer", { elite: 1 }),
+      w(25,  "brute",    5, "wall", { elite: 2 }),
+      w(33,  "carrier",  2, "twinColumns"),
+      w(39,  "grunt",   14, "wall"),
+    ],
+    boss: "devourer",
+    objectives: ["complete","rescueAll","keepLives"],
   },
 ];
 

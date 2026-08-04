@@ -168,6 +168,7 @@ const RUSH_ORDER = [
   { missionId: 12, boss: "warden"    },
   { missionId: 14, boss: "phantom"   },
   { missionId: 16, boss: "leviathan" },
+  { missionId: 18, boss: "devourer"  },
 ];
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
@@ -230,6 +231,7 @@ function startMission(missionIndex, difficultyId){
 
   game.world.reset();
   fx.reset();
+  SF.finale.reset();                      // no intro/fleet/death left running
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7 : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
@@ -350,6 +352,7 @@ function beginVictoryLap(){
 function endMission(completed){
   const run = game.run;
   if(!run || run.ended) return;
+  document.body.classList.remove("cinema");
   run.ended = true;
   run.progress = completed ? 1 : run.progress;
   run.stats.completed = completed;
@@ -613,6 +616,17 @@ function killBoss(boss){
   boss.deathDur = 2.3;
   boss.deathFx = 0;
   boss.hp = 0;
+  // The Devourer dies for eight seconds, in five stages, on its own clock.
+  if(boss.def.finale){
+    boss.finaleDeath = true;
+    SF.finale.beginDeath(boss);
+    audio.setMusic(null);
+    run.score += Math.round(4000 * run.difficulty.pay);
+    game.profile.bossesDefeated++;
+    fx.hitStop(200);
+    fx.shake(30);
+    return;
+  }
   run.score += Math.round(1200 * run.difficulty.pay);
   game.profile.bossesDefeated++;
   audio.play("bossExplode");
@@ -624,6 +638,17 @@ function killBoss(boss){
 function finalBossBlast(boss){
   const run = game.run;
   const bx = boss.x, by = boss.y;
+  // The finale already spent eight seconds blowing itself apart; all that is
+  // left here is the payout and the ride home.
+  if(boss.finaleDeath){
+    game.world.dropCoins(bx, Math.min(by, VH*0.4),
+      Math.round(900 * run.difficulty.pay * game.world.player.moneyMult));
+    fx.text(VW/2, VH*0.34, "THE SKY IS OURS", "#ffd23f", 34, true);
+    game.world.boss = null;
+    run.bossActive = false;
+    run.finishTimer = 1.4;
+    return;
+  }
   // The blast itself: white-out, a triple shockwave, a debris storm, and a
   // long hit-stop so the frame it happens on physically lands.
   fx.flash(1, "255,230,160");
@@ -773,22 +798,46 @@ function update(dt, timeMs){
     run.stats.spawned = run.director.spawnedCount;
     if(run.director.finishedSpawning && game.world.countEnemies() === 0){
       if(run.mission.boss){
-        run.phase = "boss";
         run.bossActive = true;
         run.bossSpawned = true;
         game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
-        audio.play("bossAlarm");
-        audio.setMusic("boss");
-        run.bannerText = "⚠ WARNING ⚠";
-        run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
-        run.bannerColor = "#ff5d73";
-        run.bannerUntil = performance.now() + 2400;
-        audio.play("alarm");
-        SF.comms.say("bossIncoming");
+        if(BOSSES[run.mission.boss].finale){
+          // The Devourer gets an arrival instead of a banner: the sky goes
+          // out, it comes down, it is named. finale.js owns the timeline.
+          run.phase = "finaleIntro";
+          game.world.enemyBullets.killAll();
+          SF.finale.beginIntro();
+          audio.setMusic(null);          // silence is the loudest cue there is
+        } else {
+          run.phase = "boss";
+          audio.play("bossAlarm");
+          audio.setMusic("boss");
+          run.bannerText = "⚠ WARNING ⚠";
+          run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
+          run.bannerColor = "#ff5d73";
+          run.bannerUntil = performance.now() + 2400;
+          audio.play("alarm");
+          SF.comms.say("bossIncoming");
+        }
       } else {
         run.phase = "clearing";
         run.phaseTimer = 1.2;
       }
+    }
+  } else if(run.phase === "finaleIntro"){
+    // Theatre. Nothing spawns, nothing shoots, the boss flies its entrance -
+    // and then the fight starts for real.
+    document.body.classList.add("cinema");
+    if(SF.finale.updateIntro(dt, game.world.boss)){
+      document.body.classList.remove("cinema");
+      run.phase = "boss";
+      audio.play("bossAlarm");
+      audio.setMusic("boss");
+      run.bannerText = "ALL WINGS — ENGAGE";
+      run.bannerSub = "everything you have, " + pilotName();
+      run.bannerColor = "#ff5d73";
+      run.bannerUntil = performance.now() + 2200;
+      SF.comms.say("devourerStart");
     }
   } else if(run.phase === "clearing"){
     run.phaseTimer -= dt;
@@ -874,7 +923,23 @@ function update(dt, timeMs){
   game.world.updatePlayer(dt, timeMs);
   game.world.updateBullets(dt);
   game.world.updateEnemies(dt, behaviourCtx);
-  if(game.world.boss) SF.bosses.update(game.world.boss, dt, game.world, behaviourCtx, timeMs);
+  // The Devourer's arrival and its death are choreographed by finale.js; the
+  // fight engine only drives it in between.
+  const bossNow = game.world.boss;
+  if(bossNow && run.phase !== "finaleIntro" && !bossNow.finaleDeath)
+    SF.bosses.update(bossNow, dt, game.world, behaviourCtx, timeMs);
+  if(bossNow && bossNow.finaleDeath && SF.finale.updateDeath(dt, bossNow, game.world))
+    finalBossBlast(bossNow);
+  // Phase five: the rescued pilots arrive, and they fight with you.
+  if(bossNow && bossNow.phase && bossNow.phase.lastLight && !SF.finale.fleetSize()){
+    SF.finale.summonFleet(game.world, game.profile);
+    run.bannerText = "THE FLEET IS WITH YOU";
+    run.bannerSub = "every pilot you ever brought home";
+    run.bannerColor = "#7cc4ff";
+    run.bannerUntil = timeMs + 3000;
+    SF.comms.say("fleetArrives");
+  }
+  SF.finale.updateFleet(dt, game.world, timeMs);
 
   game.world.updatePickups(dt, onPickupCollected);
 
@@ -1074,12 +1139,17 @@ function draw(timeMs){
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
+  SF.render.drawArena(ctx, world.boss, timeMs);      // the Devourer's screen-wide attacks
+  SF.render.drawFleet(ctx, timeMs);                  // the rescued pilots, phase five
   SF.render.drawBullets(ctx, world);
   SF.render.drawPlayer(ctx, world.player, timeMs);
   fx.drawParticles(ctx);
   SF.render.drawForeground(ctx);
   fx.drawTexts(ctx);
-  if(game.run){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  // The arrival is a cutscene: no HUD, no radio, no buttons over it.
+  const cinema = game.run && game.run.phase === "finaleIntro";
+  if(game.run && !cinema){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   fx.drawFlash(ctx, VW, VH);
   ctx.restore();
 }

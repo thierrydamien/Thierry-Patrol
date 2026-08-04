@@ -107,7 +107,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/finale.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -130,8 +130,8 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("16 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 16 &&
+  check("18 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 18 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
@@ -1279,6 +1279,164 @@ async function run(){
     return !/\$/.test(seen);
   })());
 
+  /* ---------- THE FINALE: the Devourer ---------- */
+  {
+    const { VW, VH } = SF.entityConst;
+    const D = SF.missions.BOSSES.devourer;
+    check("the finale is the biggest thing in the game",
+      D && D.finale === true && D.phases.length === 5 &&
+      D.size > SF.missions.BOSSES.leviathan.size * 1.5 &&
+      D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
+    check("the finale mission closes the campaign",
+      SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "devourer" &&
+      SF.missions.MISSIONS.find(m => m.id === 17).boss === undefined);
+    check("beating it awards the last tune and the last medal",
+      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 18) &&
+      SF.config.ACHIEVEMENTS.some(a => a.id === "devourer" && a.pay > 0));
+
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const W = SF.game.world;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Fin"), diff));
+    const boss = SF.bosses.create("devourer", diff, 60);
+    boss.entering = false; boss.x = VW/2; boss.y = 140;
+    boss.phase = boss.def.phases[0];
+
+    /* The fairness contract: every arena attack paints where it lands and
+       CANNOT hurt anyone during its warning. */
+    /* Fire ONE attack in isolation: the boss's own AI is muzzled first, or it
+       queues a second attack mid-measurement and the reading is nonsense. */
+    const soloFire = (name) => {
+      boss.lanes = boss.nova = boss.lance = boss.claw = null;
+      boss.telegraph = null; boss.burst = null;
+      SF.bosses.ATTACKS[name].fire(boss, W, { difficulty: diff });
+      boss.attackTimer = 9999;
+    };
+    const runToLive = () => {
+      for(let i = 0; i < 300 && !SF.bosses.arenaLive(boss); i++){
+        boss.attackTimer = 9999;
+        SF.bosses.update(boss, 1/30, W, { difficulty: diff }, 0);
+      }
+    };
+    check("lane beams warn before they burn", (() => {
+      soloFire("laneBeams");
+      const lx = boss.lanes.xs[0];
+      const warned = SF.bosses.beamHits(boss, lx, VH*0.7);
+      runToLive();
+      return !warned && SF.bosses.beamHits(boss, lx, VH*0.7);
+    })());
+    check("an unlit lane is always safe", (() => {
+      soloFire("laneBeams");
+      const L = boss.lanes;
+      const gap = [0.1,0.3,0.5,0.7,0.9].map(f => f*VW)
+        .find(x => L.xs.every(lx => Math.abs(x - lx) > L.w));
+      runToLive();
+      return gap !== undefined && !SF.bosses.beamHits(boss, gap, VH*0.7);
+    })());
+    check("the star lance warns, then owns one half", (() => {
+      soloFire("starLance");
+      const side = boss.lance.side;
+      const doomedX = side < 0 ? 60 : VW - 60, safeX = side < 0 ? VW - 60 : 60;
+      const warned = SF.bosses.beamHits(boss, doomedX, VH*0.7);
+      runToLive();
+      return !warned && SF.bosses.beamHits(boss, doomedX, VH*0.7) &&
+             !SF.bosses.beamHits(boss, safeX, VH*0.7);
+    })());
+    check("the nova burns everywhere EXCEPT the ring", (() => {
+      soloFire("novaSafeZone");
+      const n = boss.nova;
+      const warned = SF.bosses.beamHits(boss, 20, 20);
+      runToLive();
+      return !warned && SF.bosses.beamHits(boss, 20, 20) &&
+             !SF.bosses.beamHits(boss, n.cx, n.cy);
+    })());
+    check("the claw sweeps a band you can be above or below", (() => {
+      W.player.x = VW/2; W.player.y = VH*0.6;
+      soloFire("clawSweep");
+      const c = boss.claw;
+      const warned = SF.bosses.beamHits(boss, c.x, c.y);
+      for(let i = 0; i < 90; i++){
+        boss.attackTimer = 9999;
+        SF.bosses.update(boss, 1/30, W, { difficulty: diff }, 0);
+      }
+      const clear = boss.claw ? !SF.bosses.beamHits(boss, boss.claw.x, boss.claw.y - 170) : true;
+      return !warned && clear;
+    })());
+    // Left running long enough, every arena attack cleans itself up.
+    for(let i = 0; i < 400; i++){
+      boss.attackTimer = 9999;
+      SF.bosses.update(boss, 1/30, W, { difficulty: diff }, 0);
+    }
+    check("every arena attack expires - none can hang around forever",
+      !boss.lanes && !boss.nova && !boss.lance && !boss.claw);
+
+    /* The arrival: it descends, it ends, and it never throws without a canvas. */
+    W.reset();
+    const b2 = SF.bosses.create("devourer", diff, 60);
+    SF.finale.reset();
+    SF.finale.beginIntro();
+    check("the arrival starts above the screen", (() => {
+      SF.finale.updateIntro(1/30, b2);
+      return SF.finale.introActive() && b2.y < 0;
+    })());
+    let guard = 0, done = false;
+    while(!done && guard++ < 2000) done = SF.finale.updateIntro(1/30, b2);
+    check("the arrival ends with it on station",
+      done && !SF.finale.introActive() && Math.abs(b2.y - b2.targetY) < 2);
+    check("the arrival draws without a canvas context", (() => {
+      SF.finale.beginIntro();
+      const cv = window.document.createElement("canvas");
+      const c = cv.getContext("2d");
+      let threw = false;
+      try {
+        for(let i = 0; i < 40; i++){
+          SF.finale.updateIntro(0.2, b2);
+          SF.render.drawFinaleIntro(c, i*100);
+        }
+      } catch(e){ threw = true; }
+      SF.finale.reset();
+      return !threw;
+    })());
+
+    /* The fleet: it arrives once, it shoots for you. */
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Fin"), diff));
+    W.boss = SF.bosses.create("devourer", diff, 60);
+    W.boss.entering = false;
+    SF.finale.reset();
+    SF.finale.summonFleet(W, SF.profile.blank("Fin"));
+    check("the fleet arrives as a real wing", SF.finale.fleetSize() >= 5);
+    const before = W.bullets.items.filter(b => b.alive).length;
+    for(let i = 0; i < 120; i++) SF.finale.updateFleet(1/30, W, i*33);
+    check("the fleet fires for you - their shots are your shots",
+      W.bullets.items.filter(b => b.alive).length > before);
+    SF.finale.summonFleet(W, SF.profile.blank("Fin"));
+    check("the fleet never arrives twice", SF.finale.fleetSize() <= 7);
+
+    /* The death: five stages, and it clears the sky when it goes. */
+    SF.finale.reset();
+    const b3 = SF.bosses.create("devourer", diff, 60);
+    b3.entering = false; b3.x = VW/2; b3.y = 150; b3.finaleDeath = true;
+    W.spawnEnemy("grunt", 100, 300, { difficulty: diff });
+    W.spawnEnemyBullet(120, 320, 0, 100, "bolt", 4);
+    SF.finale.beginDeath(b3);
+    const stages = new Set();
+    let over = false; guard = 0;
+    while(!over && guard++ < 2000){
+      const st = SF.finale.deathStage();
+      if(st) stages.add(st.id);
+      over = SF.finale.updateDeath(1/30, b3, W);
+    }
+    check("the death runs all five stages",
+      over && stages.size === 5 && stages.has("implode") && stages.has("blast"));
+    check("the death blast clears the sky",
+      W.enemies.items.every(e => !e.alive) && W.enemyBullets.items.every(b => !b.alive));
+    check("the finale death is longer than any other ending",
+      SF.finale.DEATH_TOTAL > 6 && SF.finale.INTRO_TOTAL > 8);
+    SF.finale.reset();
+    W.reset();
+  }
+
   /* ---------- the menu speaks the game's art ---------- */
   check("menu buttons carry drawn icons, not emoji",
     qa("#screen-menu .menu-btn").every(b => b.querySelector(".mb-icon")) &&
@@ -1288,11 +1446,11 @@ async function run(){
   /* ---------- flight tuning ---------- */
   {
     check("every tune that gains something gives something up (apex excepted)",
-      SF.config.TUNES.length === 7 &&
+      SF.config.TUNES.length === 8 &&
       SF.config.TUNES.every(t => t.id === "vanguard" || t.apex ||
         (t.fire > 1 || t.speed < 1)));
     check("every boss mission awards exactly one tune",
-      [4, 6, 8, 12, 14, 16].every(mid =>
+      [4, 6, 8, 12, 14, 16, 18].every(mid =>
         SF.config.TUNES.filter(t => t.unlockMission === mid).length === 1));
     check("every tune states its trade in kid words",
       SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length &&

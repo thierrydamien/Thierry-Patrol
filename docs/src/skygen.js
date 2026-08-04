@@ -117,6 +117,20 @@ const SKIES = [
     props:[ {k:"sun",    x:0.70, y:0.26, r:0.125, color:"#ffb46b"},
             {k:"planet", x:0.26, y:0.68, r:0.244, lit:"#b8501f", dark:"#280702", bands:true, crescent:true},
             {k:"rocks",  x:0.68, y:0.82, r:0.14, n:16} ] },
+
+  /* --- Act 3. Their star is out. The first of these two skies is the
+     approach: near-black, almost starless, and the Devourer itself sitting
+     in it. The second is the fight - the dead star's last embers. --- */
+  { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
+    density:0.4, stars:0.45, bright:1,
+    props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
+            {k:"planet", x:0.16, y:0.86, r:0.10, lit:"#1b2136", dark:"#02030a", crescent:true} ] },
+
+  { name:"The Last Star", clouds:["#7f1d1d","#dc2626","#1c0505"], dust:"#0d0202", star:"#ffd9d9",
+    density:1.4, stars:0.6, bright:4,
+    props:[ {k:"sun",    x:0.50, y:0.30, r:0.20, color:"#ff6b4a"},
+            {k:"rocks",  x:0.22, y:0.70, r:0.20, n:24},
+            {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -247,6 +261,58 @@ function drawGalaxy(ctx, W, H, p, rand){
     }
     ctx.restore();
   });
+}
+
+/*
+ * The Devourer, seen from a long way off. Painted into the SKY of the
+ * approach mission - a black bulk with a ring of cold running lights and one
+ * red eye, too big to fight, hanging where their star used to be. Nothing
+ * else in the game is drawn into the backdrop like this; it exists so the
+ * mission before the finale is spent looking at what is coming.
+ */
+function drawDevourerSilhouette(ctx, W, H, p){
+  const cx = W*p.x, cy = H*p.y, R = W*p.r;
+  ctx.save();
+  // The eclipse it casts: everything behind it goes darker.
+  const shade = ctx.createRadialGradient(cx, cy, R*0.4, cx, cy, R*2.4);
+  shade.addColorStop(0, "rgba(0,0,0,0.85)");
+  shade.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(cx - R*2.4, cy - R*2.4, R*4.8, R*4.8);
+
+  // Hull: a squat hexagonal bulk with shoulder arms.
+  ctx.fillStyle = "#05060e";
+  ctx.beginPath();
+  ctx.moveTo(cx - R,       cy - R*0.28);
+  ctx.lineTo(cx - R*0.52,  cy - R*0.78);
+  ctx.lineTo(cx + R*0.52,  cy - R*0.78);
+  ctx.lineTo(cx + R,       cy - R*0.28);
+  ctx.lineTo(cx + R*0.66,  cy + R*0.72);
+  ctx.lineTo(cx - R*0.66,  cy + R*0.72);
+  ctx.closePath(); ctx.fill();
+  [-1, 1].forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(cx + s*R*0.88, cy - R*0.34);
+    ctx.lineTo(cx + s*R*1.5,  cy - R*0.10);
+    ctx.lineTo(cx + s*R*1.42, cy + R*0.30);
+    ctx.lineTo(cx + s*R*0.80, cy + R*0.34);
+    ctx.closePath(); ctx.fill();
+  });
+
+  // Cold running lights along the shoulders, and the eye.
+  ctx.fillStyle = "rgba(120,180,255,0.5)";
+  for(let i = 0; i < 9; i++){
+    const t = i/8;
+    ctx.fillRect(cx - R*0.52 + t*R*1.04, cy - R*0.74, R*0.03, R*0.03);
+  }
+  ctx.globalCompositeOperation = "lighter";
+  const eye = ctx.createRadialGradient(cx, cy + R*0.02, 0, cx, cy + R*0.02, R*0.42);
+  eye.addColorStop(0, "rgba(255,70,90,0.85)");
+  eye.addColorStop(0.4, "rgba(255,40,70,0.25)");
+  eye.addColorStop(1, "rgba(255,0,40,0)");
+  ctx.fillStyle = eye;
+  ctx.beginPath(); ctx.arc(cx, cy + R*0.02, R*0.42, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
 function drawRocks(ctx, W, H, p, rand){
@@ -430,6 +496,7 @@ function build(missionIndex, W, H){
     else if(pr.k === "sun") drawSun(ctx, W, H, pr);
     else if(pr.k === "galaxy") drawGalaxy(ctx, W, H, pr, rand);
     else if(pr.k === "rocks") drawRocks(ctx, W, H, pr, rand);
+    else if(pr.k === "devourer") drawDevourerSilhouette(ctx, W, H, pr);
   });
   ctx.restore();
 

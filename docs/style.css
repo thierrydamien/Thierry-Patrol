@@ -961,3 +961,8 @@ button.part-chip:active { transform: scale(0.96); }
   8%   { opacity:1; }
   100% { opacity:0.85; transform: translateY(108vh) rotate(660deg); }
 }
+
+/* The finale's arrival is a cutscene: every on-screen control steps aside. */
+body.cinema .ability-bar,
+body.cinema #pauseBtn,
+body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s ease; }

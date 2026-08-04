@@ -164,6 +164,92 @@ SOUNDS.supplyGet = { minGap: 400, fn: () => {
   noise(0.12, 0.06, 5000, 900, 0.28);
 } };
 
+/* ---------------------------------------------------------
+   THE DEVOURER
+   Exclusive cues. Everything here sits lower and longer than
+   the rest of the game's palette - the finale should sound
+   like a bigger room.
+   --------------------------------------------------------- */
+SOUNDS.devourerWake = { minGap: 4000, fn: () => {
+  // Sub-bass swell out of nothing: the sound of the lights going out.
+  tone(28, 2.6, "sine", 0.26, 20);
+  tone(41, 2.2, "sawtooth", 0.05, 30);
+  noise(2.4, 0.06, 300, 40);
+} };
+SOUNDS.devourerRise = { minGap: 3000, fn: () => {
+  // Vast machinery moving: a slow grinding descent.
+  tone(34, 3.2, "sawtooth", 0.13, 52);
+  tone(52, 3.0, "square", 0.05, 78);
+  noise(3.0, 0.13, 220, 900);
+} };
+SOUNDS.devourerPower = { minGap: 2500, fn: () => {
+  // Systems coming online, one bank at a time.
+  [110, 147, 185, 220, 294].forEach((f, i) =>
+    tone(f, 0.5, "triangle", 0.05, f*1.5, i*0.34));
+  noise(1.8, 0.08, 600, 3000);
+} };
+SOUNDS.devourerRoar = { minGap: 3000, fn: () => {
+  // The name card hit: a detuned three-octave blare.
+  [41, 82, 164].forEach(f => tone(f, 1.5, "sawtooth", 0.13, f*0.94));
+  tone(38, 1.6, "square", 0.08, 30);
+  noise(1.2, 0.3, 1800, 60);
+} };
+SOUNDS.devourerCharge = { minGap: 300, fn: () => {
+  tone(180, 0.75, "sawtooth", 0.055, 620);
+  noise(0.6, 0.06, 400, 2600);
+} };
+SOUNDS.laneFire = { minGap: 250, fn: () => {
+  noise(0.5, 0.3, 3200, 120);
+  tone(120, 0.4, "sawtooth", 0.09, 44);
+} };
+SOUNDS.clawGroan = { minGap: 700, fn: () => {
+  tone(62, 1.1, "sawtooth", 0.10, 38);
+  noise(0.9, 0.09, 500, 130);
+} };
+SOUNDS.clawSlam = { minGap: 500, fn: () => {
+  noise(0.4, 0.34, 900, 60);
+  tone(52, 0.5, "square", 0.12, 26);
+} };
+SOUNDS.hangarOpen = { minGap: 700, fn: () => {
+  noise(0.7, 0.16, 1400, 260);
+  [74, 98].forEach((f,i) => tone(f, 0.5, "square", 0.06, f*1.4, i*0.12));
+} };
+SOUNDS.novaBurn = { minGap: 400, fn: () => {
+  noise(1.0, 0.34, 5200, 200);
+  tone(220, 0.8, "sawtooth", 0.07, 60);
+} };
+SOUNDS.lanceCharge = { minGap: 600, fn: () => {
+  tone(90, 1.5, "sawtooth", 0.09, 900);
+  noise(1.4, 0.09, 300, 4200);
+} };
+SOUNDS.lanceFire = { minGap: 500, fn: () => {
+  noise(1.1, 0.42, 6000, 140);
+  tone(70, 1.0, "sawtooth", 0.16, 30);
+  tone(140, 0.8, "square", 0.07, 44);
+} };
+SOUNDS.fleetArrive = { minGap: 3000, fn: () => {
+  // The cavalry: a bright rising major fanfare, wide and warm.
+  [392, 523, 659, 784, 1046].forEach((f,i) => tone(f, 0.5, "triangle", 0.075, null, i*0.1));
+  [196, 262].forEach((f,i) => tone(f, 1.2, "sine", 0.06, null, i*0.1));
+} };
+SOUNDS.devourerDeath = { minGap: 4000, fn: () => {
+  [41, 55, 82].forEach((f,i) => tone(f, 2.0, "sawtooth", 0.11, f*0.55, i*0.1));
+  noise(2.2, 0.22, 1600, 50);
+} };
+SOUNDS.devourerImplode = { minGap: 3000, fn: () => {
+  // The held breath: a rising whine that stops dead.
+  tone(60, 1.3, "sawtooth", 0.12, 1800);
+  noise(1.3, 0.14, 200, 5200);
+} };
+SOUNDS.devourerFinalBlast = { minGap: 4000, fn: () => {
+  // Bigger than megaBoom, and layered under it.
+  tone(30, 2.4, "sine", 0.3, 18);
+  tone(60, 1.6, "sawtooth", 0.14, 24);
+  noise(2.6, 0.55, 4000, 30);
+  [262, 330, 392, 523, 659, 784].forEach((f,i) =>
+    tone(f, 0.6, "triangle", 0.06, null, 0.9 + i*0.11));
+} };
+
 SOUNDS.tractor = { minGap: 900, fn: () => {
   // The Jailer's beam: a low warbling drone, more grip than gun.
   [82, 110, 82].forEach((f,i) => tone(f, 0.42, "sawtooth", 0.07, f*1.4, i*0.3));

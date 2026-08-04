@@ -228,6 +228,7 @@ const ACHIEVEMENTS = [
   { id:"daily_ace",    icon:"🌅", name:"Dawn Patrol",     desc:"Score 3,000 on a Daily Patrol",       check:p=>p.endlessBest>=3000 },
   { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes on a Daily Patrol",    check:p=>p.endlessLongest>=240 },
   { id:"gauntlet",     icon:"☠️", name:"Gauntlet Runner", desc:"Beat 3 bosses in one Boss Rush",      check:p=>p.bossRushBest>=3 },
+  { id:"devourer",     icon:"🌟", name:"The Last Star",   desc:"Destroy the Devourer",                check:p=>p.devourerDown },
   { id:"rush_master",  icon:"🏴", name:"Rush Master",     desc:"Beat 5 bosses in one Boss Rush",      check:p=>p.bossRushBest>=5 },
 ];
 
@@ -242,6 +243,7 @@ const MEDAL_PAY_DEFAULT = 500;
 const MEDAL_PAY = {
   first_blood: 200, sharpshooter: 400, boss_slayer: 800,
   maxed_one: 1500, quartermaster: 2000, big_spender: 6000, rush_master: 2500,
+  devourer: 10000,
   ace_pilot: 1200, veteran_wings: 2500, nightmare: 5000, campaign: 5000,
 };
 ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });
@@ -297,6 +299,10 @@ const TUNES = [
     speed:1.05, fire:1.08, lives:0, invuln:1.5 },
   /* The final boss's trophy breaks the every-gain-has-a-cost rule on
      purpose: it is THE reward for finishing the campaign. */
+  { id:"nova",     name:"NOVA", unlockMission:18, apex:true,
+    blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
+    pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
+    speed:1.12, fire:0.90, lives:1, magnet:1.5 },
   { id:"apex",     name:"APEX", unlockMission:16, apex:true,
     blurb:"The Leviathan's core, fitted to your ship. Gold trim. No trade-offs - you earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],

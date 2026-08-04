@@ -66,13 +66,14 @@ const STORY = {
 
   /* Campaign cleared: a proper curtain, still not a full stop. */
   campaign: {
-    title: "SKIES CLEAR",
+    title: "THE STAR CAME BACK",
     panels: [
-      { art:"sky",  text:"The Leviathan came apart over their own star, and the lanes from here to home are empty." },
-      { art:"crew", text:"Every pilot you pulled out of the dark got home, {you}. They know your name down there." },
-      { art:"now",  text:"There are harder skies than these - fly the missions again on the tiers that used to be impossible, and find out." },
+      { art:"sky",  text:"The Devourer came apart in a light so bright that every pilot in the sector saw it from home. Where it was, there is nothing now - just the dark, and then, slowly, stars again." },
+      { art:"crew", text:"They all came, {you}. Every pilot you ever pulled out of a cell or caught drifting - they turned up at the end and flew the last minute with you. That's the part they'll tell." },
+      { art:"now",  text:"Command's calling it the day the war ended. Down there they're calling it something else: the day the Thierrys went out to the last star and came back." },
+      { art:"sky",  text:"The sky is yours, {you}. Take it anywhere - the missions are still up there on the harder tiers, and nobody has ever flown the Daily Patrol as far as you're about to." },
     ],
-    button:"FINISH",
+    button:"COME HOME",
   },
 };
 

@@ -197,6 +197,96 @@ const ATTACKS = {
       world.spawnEnemyBullet(boss.x, boss.y + boss.r*0.4, dx/l*360, dy/l*360, "aimed", 5.5);
     },
   },
+  /* =========================================================
+     THE DEVOURER'S ARSENAL
+     Five attacks that use the whole screen instead of shooting
+     across it. Each one paints where it will land during a long
+     warning, then burns for a short beat - so the answer is
+     always "move THERE", never "guess". They run off state on
+     the boss (lanes/claw/nova/lance) that both the updater and
+     the renderer read, and land damage through beamHits().
+     ========================================================= */
+
+  /* Columns of fire. Three of five lanes light up, then burn. The most
+     readable attack in the game: stand in an unlit column. */
+  laneBeams: {
+    telegraphKind: "beam",
+    fire(boss){
+      const LANES = 5, xs = [];
+      const pool = Array.from({length: LANES}, (_, i) => (i + 0.5) * (VW/LANES));
+      const take = boss.phase.enrage ? 3 : 2;
+      for(let i = 0; i < take; i++) xs.push(pool.splice(randInt(0, pool.length-1), 1)[0]);
+      boss.lanes = { xs, w: VW/LANES*0.72, t: 0, warn: 0.95, burn: 0.95 };
+      audio.play("devourerCharge");
+    },
+  },
+
+  /* A claw arm reaches down out of the hull and sweeps across a band of the
+     screen. You can be above it or below it - just not in it. */
+  clawSweep: {
+    telegraphKind: "hatch",
+    fire(boss, world){
+      const p = world.player;
+      const side = (p && p.x > VW/2) ? 1 : -1;
+      boss.claw = {
+        y: clamp((p ? p.y : VH*0.6) + rand(-40, 40), VH*0.34, VH*0.86),
+        x: side > 0 ? VW + 90 : -90, dir: -side,
+        t: 0, warn: 0.85, sweep: 2.0, r: 46,
+      };
+      audio.play("clawGroan");
+    },
+  },
+
+  /* Both hangar bays open and pour ships out. Twice what any other boss
+     summons, because it is the size of a moon. */
+  hangarLaunch: {
+    telegraphKind: "hatch",
+    fire(boss, world, ctxObj){
+      const n = boss.phase.enrage ? 8 : 6;
+      for(let i = 0; i < n; i++){
+        const side = i % 2 ? 1 : -1;
+        const type = ctxObj.difficulty.smart >= 2 || i % 3 === 0 ? "swooper" : "interceptor";
+        const m = world.spawnEnemy(type,
+          clamp(boss.x + side*(90 + (i>>1)*26), 45, VW-45), boss.y + 40,
+          { difficulty: ctxObj.difficulty, hoverY: rand(200, 340) });
+        m.fromBoss = true;
+      }
+      fx.ring(boss.x - 96, boss.y + 40, 70, "#ffb03d", 3, 0.4);
+      fx.ring(boss.x + 96, boss.y + 40, 70, "#ffb03d", 3, 0.4);
+      audio.play("hangarOpen");
+    },
+  },
+
+  /* The signature. The whole sky ignites EXCEPT one circle - fly into the
+     ring and nothing can touch you. Kids read this instantly. */
+  novaSafeZone: {
+    telegraphKind: "charge",
+    fire(boss, world){
+      const p = world.player;
+      // The safe ring is placed away from where the player is loitering, but
+      // always inside the field and always reachable in the warning window.
+      const px = p ? p.x : VW/2;
+      const cx = clamp(px < VW/2 ? rand(VW*0.55, VW*0.85) : rand(VW*0.15, VW*0.45), 90, VW-90);
+      boss.nova = { cx, cy: rand(VH*0.52, VH*0.78), r: 96,
+                    t: 0, warn: 1.45, burn: 1.0 };
+      audio.play("devourerCharge");
+    },
+  },
+
+  /* It turns the star's fire on half the sky. Pick a side and commit. */
+  starLance: {
+    telegraphKind: "charge",
+    fire(boss, world){
+      const p = world.player;
+      // Fires at the half the player is NOT in more often than not, so it
+      // asks for a move rather than punishing where they already stand.
+      const playerLeft = (p ? p.x : VW/2) < VW/2;
+      const side = rand(0, 1) < 0.72 ? (playerLeft ? -1 : 1) : (playerLeft ? 1 : -1);
+      boss.lance = { side, t: 0, warn: 1.6, burn: 1.15 };
+      audio.play("lanceCharge");
+    },
+  },
+
   callMinions: {
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
@@ -256,6 +346,9 @@ function update(boss, dt, world, ctxObj, timeMs){
    * doesn't know it yet.
    */
   if(boss.dying){
+    // The finale's death is choreographed by finale.js - the fight engine
+    // must not also run its own drumroll on top of it.
+    if(boss.finaleDeath) return;
     boss.deathT += dt;
     boss.y += 24*dt;                                  // engines dead, sinking
     boss.x += Math.sin(boss.deathT*9) * 30 * dt;      // shuddering
@@ -315,6 +408,8 @@ function update(boss, dt, world, ctxObj, timeMs){
     if(boss.beam.x < 45 || boss.beam.x > VW-45) boss.beam.dir *= -1;
     if(boss.beam.timer <= 0) boss.beam = null;
   }
+
+  updateArena(boss, dt, world);
 
   // Tractor beam: drags the player toward the hull while it holds.
   if(boss.pull){
@@ -403,12 +498,91 @@ function damage(boss, amount, x, y){
   return { killed, weakPointDestroyed };
 }
 
-/** True if the sweeping beam is currently burning through this point. */
+/*
+ * The Devourer's arena attacks, ticked. Each is a two-stage clock: `warn`
+ * paints the danger and cannot hurt you, then `burn` is live. Keeping the
+ * clocks here (rather than in the renderer) means pause, hit-stop and the
+ * results screen all behave, and the draw code stays a pure read.
+ */
+function updateArena(boss, dt, world){
+  if(boss.lanes){
+    boss.lanes.t += dt;
+    if(boss.lanes.t > boss.lanes.warn + boss.lanes.burn) boss.lanes = null;
+    else if(boss.lanes.t > boss.lanes.warn && !boss.lanes.hit){
+      boss.lanes.hit = true;
+      fx.shake(10);
+      audio.play("laneFire");
+    }
+  }
+  if(boss.claw){
+    const c = boss.claw;
+    c.t += dt;
+    if(c.t > c.warn){
+      c.x += c.dir * (VW + 180) / c.sweep * dt;
+      if(!c.roared){ c.roared = true; fx.shake(8); audio.play("clawSlam"); }
+    }
+    if(c.t > c.warn + c.sweep + 0.2) boss.claw = null;
+  }
+  if(boss.nova){
+    boss.nova.t += dt;
+    if(boss.nova.t > boss.nova.warn && !boss.nova.hit){
+      boss.nova.hit = true;
+      fx.shake(16);
+      fx.flash(0.5, "255,220,160");
+      audio.play("novaBurn");
+    }
+    if(boss.nova.t > boss.nova.warn + boss.nova.burn) boss.nova = null;
+  }
+  if(boss.lance){
+    boss.lance.t += dt;
+    if(boss.lance.t > boss.lance.warn && !boss.lance.hit){
+      boss.lance.hit = true;
+      fx.shake(22);
+      fx.flash(0.6, "255,120,60");
+      audio.play("lanceFire");
+    }
+    if(boss.lance.t > boss.lance.warn + boss.lance.burn) boss.lance = null;
+  }
+}
+
+/** True while an arena attack is live (past its warning) - used by the HUD. */
+function arenaLive(boss){
+  return !!(boss && ((boss.lanes && boss.lanes.t > boss.lanes.warn) ||
+                     (boss.nova  && boss.nova.t  > boss.nova.warn) ||
+                     (boss.lance && boss.lance.t > boss.lance.warn)));
+}
+
+/**
+ * True if any boss area attack is currently burning through this point: the
+ * sweeping beam, and all of the Devourer's arena attacks. One hook, so the
+ * collision layer never needs to know what a Devourer is.
+ */
 function beamHits(boss, x, y){
-  if(!boss.beam || boss.beam.timer > 1.2) return false; // first 0.3s is warm-up
-  return Math.abs(x - boss.beam.x) < boss.beam.width/2 && y > boss.y;
+  if(boss.beam && boss.beam.timer <= 1.2 &&                 // first 0.3s warms up
+     Math.abs(x - boss.beam.x) < boss.beam.width/2 && y > boss.y) return true;
+
+  const L = boss.lanes;
+  if(L && L.t > L.warn && L.xs.some(lx => Math.abs(x - lx) < L.w/2)) return true;
+
+  const c = boss.claw;
+  if(c && c.t > c.warn){
+    const dx = x - c.x, dy = y - c.y;
+    if(dx*dx + dy*dy < c.r*c.r) return true;
+  }
+
+  const n = boss.nova;
+  if(n && n.t > n.warn){
+    const dx = x - n.cx, dy = y - n.cy;
+    if(dx*dx + dy*dy > n.r*n.r) return true;                // safe INSIDE the ring
+  }
+
+  const la = boss.lance;
+  if(la && la.t > la.warn){
+    if(la.side < 0 ? x < VW/2 : x > VW/2) return true;
+  }
+  return false;
 }
 
 SF.bosses = {
-  bossHpFor, create, update, damage, beamHits, ATTACKS };
+  bossHpFor, create, update, damage, beamHits, arenaLive, ATTACKS };
 })();

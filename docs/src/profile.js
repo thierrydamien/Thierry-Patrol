@@ -311,6 +311,7 @@ function achievementStats(p){
     endlessBest: p.endlessBest || 0,
     endlessLongest: p.endlessLongest || 0,
     bossRushBest: p.bossRushBest || 0,
+    devourerDown: !!(p.missions[18] && p.missions[18].cleared),
   };
 }
 

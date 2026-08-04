@@ -925,7 +925,7 @@ function drawBoss(ctx, boss, timeMs){
 
   // A slow-breathing aura in the boss's own tint. It grows angrier-looking as
   // the fight goes on, and reads as "under power" rather than "pasted on".
-  {
+  if(!boss.def.finale){
     const enraged = boss.phase && boss.phase.enrage;
     const pulse = 0.5 + Math.sin(timeMs/(enraged ? 130 : 420))*0.5;
     ctx.save();
@@ -945,6 +945,15 @@ function drawBoss(ctx, boss, timeMs){
   // bomber, the Leviathan a hive. Same damage compositing as before; the
   // tinted PNG remains only as a fallback.
   const bossId = Object.keys(SF.missions.BOSSES).find(k => SF.missions.BOSSES[k] === boss.def) || "";
+  // The finale gets hull art of its own: the scaled-up enemy silhouettes that
+  // serve every other boss read as a coloured blob at this size, and the last
+  // boss in the game cannot be a blob.
+  if(boss.def.finale){
+    drawDevourerHull(ctx, boss, bx, by, size, damage, timeMs);
+    drawWeakPoints(ctx, boss, bx, by, timeMs);
+    ctx.restore();   // cloak alpha off
+    return;
+  }
   const bossShape = { marauder:"brute", sentinel:"carrier", warden:"bomber",
                       jailer:"shielder", phantom:"sniper", leviathan:"hive" }[bossId] || null;
   const bossArt = bossShape ? SF.enemyArt.spriteFor(bossShape, boss.tint, false) : null;
@@ -1008,7 +1017,178 @@ function drawBoss(ctx, boss, timeMs){
     ctx.beginPath(); ctx.arc(bx, by, size*0.42*(0.7+0.3*pct), 0, TAU); ctx.fill();
   }
 
-  // Weak points: bright while alive, smoking craters once blown off.
+  drawWeakPoints(ctx, boss, bx, by, timeMs);
+  ctx.restore();   // cloak alpha off
+}
+
+/*
+ * THE DEVOURER'S HULL - the only boss in the game with art of its own.
+ *
+ * Drawn live rather than blitted from a sprite because it has to react: the
+ * furnace brightens as the fight escalates, the intake glows when it is
+ * charging, seams crack open as it takes damage, and at close to a third of
+ * the screen wide it needs real panel detail to read as a machine instead of
+ * a shape. Everything is in boss-local units of S so it scales cleanly.
+ */
+function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
+  const s = S/300;                       // design was drawn at S = 300
+  const phase = boss.phaseIndex || 0;
+  const heat = Math.min(1, damage*0.7 + phase*0.12);   // hotter as it dies
+  ctx.save();
+  ctx.translate(bx, by);
+
+  // --- the halo it sits in: a slow corona, redder as it degrades
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const cor = ctx.createRadialGradient(0, 0, S*0.24, 0, 0, S*0.95);
+  cor.addColorStop(0, "rgba(255," + Math.round(70 - heat*50) + ",60," + (0.10 + heat*0.10).toFixed(2) + ")");
+  cor.addColorStop(1, "rgba(255,20,50,0)");
+  ctx.fillStyle = cor;
+  ctx.beginPath(); ctx.arc(0, 0, S*0.95, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  // --- shoulder arms (the hangars live out here)
+  [-1, 1].forEach(side => {
+    ctx.fillStyle = "#1a0c1a";
+    ctx.beginPath();
+    ctx.moveTo(side*S*0.30, -S*0.16);
+    ctx.lineTo(side*S*0.62, -S*0.20);
+    ctx.lineTo(side*S*0.68,  S*0.02);
+    ctx.lineTo(side*S*0.58,  S*0.20);
+    ctx.lineTo(side*S*0.30,  S*0.14);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#63304f"; ctx.lineWidth = 3*s; ctx.stroke();
+    // hangar mouth
+    ctx.fillStyle = "#0c0710";
+    ctx.fillRect(side*S*0.42 - S*0.075, S*0.02, S*0.15, S*0.09);
+    ctx.fillStyle = "rgba(255,140,60," + (0.35 + Math.sin(timeMs/300 + side)*0.2).toFixed(2) + ")";
+    ctx.fillRect(side*S*0.42 - S*0.065, S*0.04, S*0.13, S*0.025);
+  });
+
+  // --- main hull: a heavy angular slab
+  const hull = ctx.createLinearGradient(0, -S*0.42, 0, S*0.34);
+  hull.addColorStop(0, "#2b1020");
+  hull.addColorStop(0.45, "#180a18");
+  hull.addColorStop(1, "#0b040c");
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.moveTo(-S*0.20, -S*0.42);
+  ctx.lineTo( S*0.20, -S*0.42);
+  ctx.lineTo( S*0.40, -S*0.20);
+  ctx.lineTo( S*0.44,  S*0.10);
+  ctx.lineTo( S*0.26,  S*0.32);
+  ctx.lineTo(-S*0.26,  S*0.32);
+  ctx.lineTo(-S*0.44,  S*0.10);
+  ctx.lineTo(-S*0.40, -S*0.20);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#7d3a5c"; ctx.lineWidth = 3.5*s; ctx.stroke();
+
+  // --- panel lines and armour ribs
+  ctx.strokeStyle = "rgba(0,0,0,0.45)"; ctx.lineWidth = 2.5*s;
+  for(let i = -2; i <= 2; i++){
+    ctx.beginPath();
+    ctx.moveTo(i*S*0.13, -S*0.40);
+    ctx.lineTo(i*S*0.15,  S*0.30);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,200,220,0.07)"; ctx.lineWidth = 2*s;
+  [-0.22, 0, 0.18].forEach(fy => {
+    ctx.beginPath();
+    ctx.moveTo(-S*0.40, S*fy); ctx.lineTo(S*0.40, S*fy); ctx.stroke();
+  });
+
+  // --- the crown: a ridge of sensor spines along the leading edge
+  ctx.fillStyle = "#7d3a5c";
+  for(let i = -3; i <= 3; i++){
+    const x = i*S*0.075;
+    ctx.beginPath();
+    ctx.moveTo(x - S*0.018, -S*0.42);
+    ctx.lineTo(x,           -S*0.50 - Math.abs(i)*S*0.008);
+    ctx.lineTo(x + S*0.018, -S*0.42);
+    ctx.closePath(); ctx.fill();
+  }
+  // running lights, marching
+  for(let i = -4; i <= 4; i++){
+    const on = (Math.floor(timeMs/140) + i) % 5 === 0;
+    ctx.fillStyle = on ? "rgba(180,220,255,0.95)" : "rgba(90,140,200,0.35)";
+    ctx.beginPath(); ctx.arc(i*S*0.062, -S*0.395, S*0.011, 0, TAU); ctx.fill();
+  }
+
+  // --- the intake: the maw it eats stars with, under the hull
+  ctx.fillStyle = "#08040c";
+  ctx.beginPath();
+  ctx.moveTo(-S*0.22, S*0.20);
+  ctx.lineTo( S*0.22, S*0.20);
+  ctx.lineTo( S*0.15, S*0.36);
+  ctx.lineTo(-S*0.15, S*0.36);
+  ctx.closePath(); ctx.fill();
+  // intake vanes, lit from inside
+  const maw = 0.4 + heat*0.6 + Math.sin(timeMs/200)*0.12;
+  ctx.strokeStyle = "rgba(255," + Math.round(150 - heat*90) + ",60," + clamp(maw,0,1).toFixed(2) + ")";
+  ctx.lineWidth = 3*s;
+  for(let i = -3; i <= 3; i++){
+    ctx.beginPath();
+    ctx.moveTo(i*S*0.06, S*0.21);
+    ctx.lineTo(i*S*0.042, S*0.35);
+    ctx.stroke();
+  }
+
+  // --- the furnace core: the heart of the thing, and the reason it glows
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const pulse = 0.72 + Math.sin(timeMs/(boss.phase && boss.phase.enrage ? 90 : 260))*0.28;
+  const coreR = S*0.17*(0.9 + pulse*0.16);
+  const g = ctx.createRadialGradient(0, S*0.02, 0, 0, S*0.02, coreR*1.7);
+  g.addColorStop(0,   "rgba(255,255,240," + (0.75*pulse).toFixed(2) + ")");
+  g.addColorStop(0.3, "rgba(255," + Math.round(190 - heat*120) + ",90," + (0.6*pulse).toFixed(2) + ")");
+  g.addColorStop(1,   "rgba(255,40,60,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, S*0.02, coreR*1.7, 0, TAU); ctx.fill();
+  ctx.restore();
+  // containment ring around it
+  ctx.strokeStyle = "rgba(255,220,160,0.75)"; ctx.lineWidth = 4*s;
+  ctx.beginPath(); ctx.arc(0, S*0.02, coreR, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = "rgba(120,60,90,0.9)"; ctx.lineWidth = 7*s;
+  for(let i = 0; i < 6; i++){
+    const a = (TAU/6)*i + timeMs/3000;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*coreR*0.98, S*0.02 + Math.sin(a)*coreR*0.98);
+    ctx.lineTo(Math.cos(a)*coreR*1.34, S*0.02 + Math.sin(a)*coreR*1.34);
+    ctx.stroke();
+  }
+
+  // --- battle damage: seams tear open and glow through
+  const cracks = Math.min(boss.wounds.length, Math.floor(damage*11));
+  for(let i = 0; i < cracks; i++){
+    const w = boss.wounds[i];
+    const wx = w.x*s*1.9, wy = w.y*s*1.9;
+    ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.lineWidth = w.r*0.22*s;
+    ctx.beginPath();
+    ctx.moveTo(wx - w.r*s, wy - w.r*0.4*s);
+    ctx.lineTo(wx + w.r*0.4*s, wy);
+    ctx.lineTo(wx + w.r*s, wy + w.r*0.5*s);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255," + Math.round(160 - heat*90) + ",70," +
+                      (0.35 + Math.sin(timeMs/170 + i)*0.2).toFixed(2) + ")";
+    ctx.lineWidth = w.r*0.10*s;
+    ctx.stroke();
+  }
+
+  // Hit flash, deliberately faint: under sustained fire this fills EVERY frame,
+  // and at 0.42 it bleached the whole hull to grey. The hull must stay dark.
+  if(boss.flash > 0){
+    ctx.fillStyle = "rgba(255,190,210," + Math.min(0.13, boss.flash*0.13).toFixed(3) + ")";
+    ctx.beginPath();
+    ctx.moveTo(-S*0.20, -S*0.42); ctx.lineTo(S*0.20, -S*0.42);
+    ctx.lineTo(S*0.44, S*0.10); ctx.lineTo(S*0.26, S*0.32);
+    ctx.lineTo(-S*0.26, S*0.32); ctx.lineTo(-S*0.44, S*0.10);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Weak points: bright while alive, smoking craters once blown off. */
+function drawWeakPoints(ctx, boss, bx, by, timeMs){
   boss.weakPoints.forEach(wp => {
     const wx = bx + wp.ox, wy = by + wp.oy;
     if(wp.destroyed){
@@ -1030,7 +1210,289 @@ function drawBoss(ctx, boss, timeMs){
     ctx.fillStyle = "#ffd23f";
     ctx.fillRect(wx-wp.r, wy+wp.r+2, wp.r*2*hpPct, 2.5);
   });
-  ctx.restore();   // cloak alpha off
+}
+
+/* =========================================================
+   THE FINALE'S EXCLUSIVE VISUALS
+   Nothing else in the game draws at this scale. The rule that
+   keeps it fair: WARNING state is transparent and outlined,
+   BURN state is opaque and solid - so "is that live yet?" is
+   answered by how solid it looks, from across the room.
+   ========================================================= */
+
+/** The Devourer's arena attacks: lane columns, claw, nova ring, star lance. */
+function drawArena(ctx, boss, timeMs){
+  if(!boss || (!boss.alive && !boss.dying)) return;
+
+  // --- Columns of fire -------------------------------------------------
+  const L = boss.lanes;
+  if(L){
+    const live = L.t > L.warn;
+    const k = live ? 1 - (L.t - L.warn)/L.burn : L.t/L.warn;
+    ctx.save();
+    L.xs.forEach(lx => {
+      if(live){
+        ctx.globalCompositeOperation = "lighter";
+        const g = ctx.createLinearGradient(lx - L.w/2, 0, lx + L.w/2, 0);
+        g.addColorStop(0,   "rgba(255,80,60,0)");
+        g.addColorStop(0.5, "rgba(255,220,180," + (0.75*k).toFixed(2) + ")");
+        g.addColorStop(1,   "rgba(255,80,60,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(lx - L.w/2, 0, L.w, VH);
+        ctx.fillStyle = "rgba(255,255,255," + (0.85*k).toFixed(2) + ")";
+        ctx.fillRect(lx - 3, 0, 6, VH);
+      } else {
+        ctx.globalAlpha = 0.18 + k*0.3;
+        ctx.fillStyle = "#ff5d73";
+        ctx.fillRect(lx - L.w/2, 0, L.w, VH);
+        ctx.globalAlpha = 0.7 + Math.sin(timeMs/45)*0.3;
+        ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2;
+        ctx.setLineDash([12, 10]);
+        ctx.beginPath();
+        ctx.moveTo(lx - L.w/2, 0); ctx.lineTo(lx - L.w/2, VH);
+        ctx.moveTo(lx + L.w/2, 0); ctx.lineTo(lx + L.w/2, VH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    });
+    ctx.restore();
+  }
+
+  // --- The claw --------------------------------------------------------
+  const c = boss.claw;
+  if(c){
+    const live = c.t > c.warn;
+    ctx.save();
+    if(!live){
+      // The band it will sweep, dashed and pulsing.
+      ctx.globalAlpha = 0.16 + Math.sin(timeMs/60)*0.08;
+      ctx.fillStyle = "#ff5d73";
+      ctx.fillRect(0, c.y - c.r, VW, c.r*2);
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2; ctx.setLineDash([14, 9]);
+      ctx.beginPath();
+      ctx.moveTo(0, c.y - c.r); ctx.lineTo(VW, c.y - c.r);
+      ctx.moveTo(0, c.y + c.r); ctx.lineTo(VW, c.y + c.r);
+      ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      // The arm: a segmented limb from the hull down to the claw head.
+      ctx.strokeStyle = "#3a2030"; ctx.lineWidth = 26; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(boss.x, boss.y + boss.r*0.4);
+      ctx.quadraticCurveTo((boss.x + c.x)/2, c.y - 130, c.x, c.y);
+      ctx.stroke();
+      ctx.strokeStyle = "#6b3b52"; ctx.lineWidth = 14;
+      ctx.stroke();
+      // The head: a glowing grabber with pincers.
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(0, 0, 4, 0, 0, c.r*1.5);
+      g.addColorStop(0, "rgba(255,120,90,0.9)");
+      g.addColorStop(1, "rgba(255,60,60,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, c.r*1.5, 0, TAU); ctx.fill();
+      ctx.restore();
+      // Pincers, drawn in the claw head's own frame. (They were briefly built
+      // from head-local coordinates but painted in screen space, which parked
+      // them in the top-left corner of the playfield.)
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(Math.sin(c.t*7)*0.12);
+      ctx.fillStyle = "#8d2b4a";
+      [-1, 1].forEach(sd => {
+        ctx.beginPath();
+        ctx.moveTo(sd*c.r*0.20, -c.r*0.90);
+        ctx.lineTo(sd*c.r*1.15, -c.r*0.10);
+        ctx.lineTo(sd*c.r*0.90,  c.r*0.85);
+        ctx.lineTo(sd*c.r*0.10,  c.r*0.20);
+        ctx.closePath();
+        ctx.fill();
+      });
+      ctx.fillStyle = "#ffd9a8";
+      ctx.beginPath(); ctx.arc(0, 0, c.r*0.35, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // --- The nova, and its one safe ring ---------------------------------
+  const n = boss.nova;
+  if(n){
+    const live = n.t > n.warn;
+    const k = live ? 1 - (n.t - n.warn)/n.burn : n.t/n.warn;
+    ctx.save();
+    if(live){
+      // Everything outside the ring is fire. The ring is a hole in it.
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,150,60," + (0.5*k).toFixed(2) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r, 0, TAU); ctx.stroke();
+    } else {
+      // Warning: the ring draws itself, with a shrinking guide and a label.
+      ctx.globalAlpha = 0.10 + k*0.25;
+      ctx.fillStyle = "#ff8a3d";
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 4;
+      ctx.setLineDash([16, 12]);
+      ctx.lineDashOffset = -timeMs/28;
+      ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 90*(1-k), 0, TAU); ctx.stroke();
+      ctx.fillStyle = "#4ade80";
+      ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+      ctx.textAlign = "center";
+      // Below the ring when there's room, above when there isn't - either way
+      // clear of the centre band where mission banners live.
+      const ly = n.cy + n.r + 26 < VH - 40 ? n.cy + n.r + 26 : n.cy - n.r - 16;
+      ctx.fillText("GET IN THE RING!", n.cx, ly);
+      ctx.textAlign = "left";
+    }
+    ctx.restore();
+  }
+
+  // --- The star lance: half the sky --------------------------------------
+  const la = boss.lance;
+  if(la){
+    const live = la.t > la.warn;
+    const k = live ? 1 - (la.t - la.warn)/la.burn : la.t/la.warn;
+    const x0 = la.side < 0 ? 0 : VW/2;
+    ctx.save();
+    if(live){
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createLinearGradient(x0, 0, x0 + VW/2, 0);
+      const hot = "rgba(255,240,200," + (0.8*k).toFixed(2) + ")";
+      g.addColorStop(la.side < 0 ? 0 : 1, hot);
+      g.addColorStop(la.side < 0 ? 1 : 0, "rgba(255,90,40," + (0.5*k).toFixed(2) + ")");
+      ctx.fillStyle = g;
+      ctx.fillRect(x0, 0, VW/2, VH);
+      ctx.fillStyle = "rgba(255,255,255," + (0.9*k).toFixed(2) + ")";
+      ctx.fillRect(VW/2 - 4, 0, 8, VH);
+    } else {
+      ctx.globalAlpha = 0.12 + k*0.28;
+      ctx.fillStyle = "#ff8a3d";
+      ctx.fillRect(x0, 0, VW/2, VH);
+      // A scan line running down the doomed half, plus the safe-side arrow.
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3;
+      const sy = VH*(k % 1);
+      ctx.beginPath(); ctx.moveTo(x0, sy); ctx.lineTo(x0 + VW/2, sy); ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#4ade80";
+      ctx.beginPath(); ctx.moveTo(VW/2, 0); ctx.lineTo(VW/2, VH); ctx.stroke();
+      ctx.fillStyle = "#4ade80";
+      ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(la.side < 0 ? "→ THIS SIDE" : "THIS SIDE ←",
+                   VW/2 + (la.side < 0 ? 88 : -88), VH*0.72);
+      ctx.textAlign = "left";
+    }
+    ctx.restore();
+  }
+}
+
+/** The rescued pilots, holding formation and firing, in phase five. */
+function drawFleet(ctx, timeMs){
+  const list = SF.finale && SF.finale.fleetList ? SF.finale.fleetList() : [];
+  for(let i = 0; i < list.length; i++){
+    const f = list[i];
+    if(f.t < 0) continue;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.rotate(f.bank*0.35);
+    SF.shipart.drawShip(ctx, 0, 0, 46,
+      { color: f.color, levels: f.levels, t: timeMs/1000 + i, idle:false });
+    ctx.restore();
+    ctx.save();
+    ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.strokeText(f.name, f.x, f.y + 30);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.name, f.x, f.y + 30);
+    ctx.restore();
+  }
+}
+
+/** The arrival: black, letterbox, and the name of the thing. */
+function drawFinaleIntro(ctx, timeMs){
+  if(!SF.finale || !SF.finale.introActive()) return;
+  const beat = SF.finale.introBeat();
+  if(!beat) return;
+
+  // Letterbox bars: they slide in over the first beat and hold.
+  const bar = Math.min(1, beat.i >= 1 ? 1 : beat.k) * VH*0.11;
+  ctx.save();
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, VW, bar);
+  ctx.fillRect(0, VH - bar, VW, bar);
+
+  // The dark: the star going out. Full black, then it lifts as it descends.
+  let dark = 0;
+  if(beat.id === "dark") dark = 0.94;
+  else if(beat.id === "rise") dark = 0.94 - beat.k*0.55;
+  else dark = 0.34;
+  ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.textAlign = "center";
+  if(beat.id === "dark"){
+    const a = Math.sin(Math.min(1, beat.k*1.6) * Math.PI);
+    ctx.globalAlpha = clamp(a*1.4, 0, 1);
+    ctx.fillStyle = "#9aa8c8";
+    ctx.font = "600 17px Rajdhani, Arial, sans-serif";
+    ctx.fillText("THEIR STAR WENT OUT AT 04:00.", VW/2, VH*0.44);
+    ctx.fillText("SOMETHING ATE IT.", VW/2, VH*0.44 + 26);
+    ctx.globalAlpha = 1;
+  }
+  if(beat.id === "power"){
+    // A red eye opening in the dark, and a rising klaxon glow.
+    const pulse = 0.3 + Math.sin(timeMs/90)*0.2 + beat.k*0.5;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "rgba(255,40,60," + (pulse*0.25).toFixed(2) + ")";
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = clamp(beat.k*1.6, 0, 1);
+    ctx.fillStyle = "#ff5d73";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.fillText("MASS: UNREADABLE   ·   POWER: RISING", VW/2, VH - bar - 26);
+    ctx.globalAlpha = 1;
+  }
+  if(beat.id === "name"){
+    const k = beat.k;
+    const grow = 1 + (1 - Math.min(1, k*3))*0.5;      // slams down to size
+    const a = clamp(k < 0.82 ? k*4 : (1-k)*5.5, 0, 1);
+    ctx.globalAlpha = a;
+    ctx.save();
+    ctx.translate(VW/2, VH*0.46);
+    ctx.scale(grow, grow);
+    ctx.shadowColor = "#ff2d55"; ctx.shadowBlur = 34;
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 46px Rajdhani, Arial, sans-serif";
+    ctx.fillText("THE DEVOURER", 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ff9db0";
+    ctx.font = "italic 16px Rajdhani, Arial, sans-serif";
+    ctx.fillText("it ate their star. ours is next.", 0, 30);
+    ctx.restore();
+    // Hairlines that fly apart from the title.
+    ctx.strokeStyle = "rgba(255,45,85," + a.toFixed(2) + ")";
+    ctx.lineWidth = 2;
+    const spread = VW*0.12 + k*VW*0.42;
+    ctx.beginPath();
+    ctx.moveTo(VW/2 - spread, VH*0.46 - 42); ctx.lineTo(VW/2 + spread, VH*0.46 - 42);
+    ctx.moveTo(VW/2 - spread, VH*0.46 + 46); ctx.lineTo(VW/2 + spread, VH*0.46 + 46);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "left";
+  ctx.restore();
 }
 
 /** The Jailer's tractor beam: a rippling green cone locked onto the ship. */
@@ -1509,7 +1971,10 @@ function drawHud(ctx, game){
 
   // Centre banner: full-width cinematic band with accent rules, not a grey box.
   // A boss entrance owns the centre of the screen; the banner yields.
-  if(run.bannerText && performance.now() < run.bannerUntil &&
+  // A banner never sits on top of an attack warning - the warning is the one
+  // the player has to read RIGHT NOW.
+  const arenaBusy = bossIn && (bossIn.lanes || bossIn.nova || bossIn.lance || bossIn.claw);
+  if(run.bannerText && performance.now() < run.bannerUntil && !arenaBusy &&
      !(bossIn && bossIn.alive && bossIn.entering)){
     const remain = (run.bannerUntil - performance.now())/1000;
     const a = clamp(remain*2, 0, 1);
@@ -1551,6 +2016,7 @@ SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
+  drawArena, drawFleet, drawFinaleIntro,
   tinted,
 };
 })();

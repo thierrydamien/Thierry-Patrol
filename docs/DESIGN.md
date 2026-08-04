@@ -1240,6 +1240,56 @@ plain typographic now. What stays: the padlock (a universal state glyph),
 and the medal set - those emoji ARE the medal art, a consistent set inside
 a designed card. The toast trophy now appears only on actual medals.
 
+## 8an. THE DEVOURER - the finale
+
+The brief was "the moment players talk about afterwards". The answer was to
+break, on purpose and only once, every rule of scale the game had kept.
+
+**Two missions, not one.** The no-adjacent-bosses rule forced a breather
+before it, which turned out to be the best thing in the act: mission 17,
+"The Long Dark", is deliberately sparse and near-starless, and the Devourer
+itself hangs in its SKY the whole way - painted into the backdrop by a
+skygen prop, too big to fight, with one red eye. You spend a mission looking
+at what is coming. Then mission 18 is the fight.
+
+**The arrival.** Four scripted beats (~10.6s): black with one line of text
+("THEIR STAR WENT OUT AT 04:00. SOMETHING ATE IT."), a slow descent out of
+the dark with the room shaking, systems powering on bank by bank, then the
+name slamming down. HUD, radio, and every on-screen button step aside
+(`body.cinema`), the ship holds fire, and the music cuts to SILENCE - the
+loudest cue available.
+
+**Five phases, five questions.** Each phase asks one readable thing:
+which columns are lit (laneBeams) → where is the claw sweeping (clawSweep,
+plus hangars pouring ships) → where is the gap (spiral/ring) → which half is
+safe (starLance) → all of it. The fairness contract is enforced by tests:
+every arena attack has a WARN stage that paints the danger and cannot hurt
+you, then a short BURN stage that can. Warnings are transparent and dashed;
+live fire is solid. `beamHits` grew to cover all of them, so the collision
+layer still knows nothing about any of it.
+
+**The fleet.** At 13% health every pilot the squadron ever rescued flies in -
+the household under their real names and colours, then RIO, BASHER, KESTREL
+and the rest - and they shoot. Their rounds are spawned into the PLAYER's
+bullet pool, so weak points, hit flashes and boss damage all work for free.
+It is a damage assist, a breather, and the campaign's whole premise paying
+itself off in one shot.
+
+**The death.** Eight seconds in five stages where nothing else gets two:
+armour blowing off piece by piece, light tearing out of the seams, an
+implosion that drags every bullet on screen INTO the hull and goes quiet,
+then a white-out with a five-ring shockwave that clears the sky, then slow
+embers while the fleet holds station. Only then the results.
+
+Three bugs worth keeping in the record, all caught by looking at it rather
+than by tests: the boss silhouette system (a tinted enemy sprite, scaled) is
+fine at 150px and reads as a coloured blob at 300, so the finale got the
+only hand-drawn hull in the game; the generic tint aura and the 0.42-alpha
+hit flash - invisible problems on small bosses - bleached that hull to grey
+under sustained fire; and the claw's pincers were built in head-local
+coordinates but painted in screen space, which parked them in the top-left
+corner of the playfield.
+
 ## 9. What I'd do next
 
 Roughly in value order:
