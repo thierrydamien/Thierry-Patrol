@@ -228,6 +228,7 @@ const ACHIEVEMENTS = [
   { id:"daily_ace",    icon:"🌅", name:"Dawn Patrol",     desc:"Score 3,000 on a Daily Patrol",       check:p=>p.endlessBest>=3000 },
   { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes on a Daily Patrol",    check:p=>p.endlessLongest>=240 },
   { id:"gauntlet",     icon:"☠️", name:"Gauntlet Runner", desc:"Beat 3 bosses in one Boss Rush",      check:p=>p.bossRushBest>=3 },
+  { id:"rush_master",  icon:"🏴", name:"Rush Master",     desc:"Beat 5 bosses in one Boss Rush",      check:p=>p.bossRushBest>=5 },
 ];
 
 /*
@@ -240,7 +241,7 @@ const ACHIEVEMENTS = [
 const MEDAL_PAY_DEFAULT = 500;
 const MEDAL_PAY = {
   first_blood: 200, sharpshooter: 400, boss_slayer: 800,
-  maxed_one: 1500, quartermaster: 2000, big_spender: 6000,
+  maxed_one: 1500, quartermaster: 2000, big_spender: 6000, rush_master: 2500,
   ace_pilot: 1200, veteran_wings: 2500, nightmare: 5000, campaign: 5000,
 };
 ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });

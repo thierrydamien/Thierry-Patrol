@@ -1144,6 +1144,32 @@ from a foreign save falls back to vanguard).
 The toast component also grew a `label` - it announced everything as MEDAL
 UNLOCKED, which was fine when medals were all it announced.
 
+## 8ai. Two new bosses, a harder rush, and a menu with faces
+
+The customer's verdict on the menu was right: six same-grey rows with pasted
+emoji. Each mode now owns an accent colour (edge + background whisper) and a
+glyph drawn in the game's own neon canvas style - FLY shows the pilot's
+ACTUAL ship, the rush a horned red hull, the daily a sunrise, and so on. No
+emoji anywhere in the row labels.
+
+And "boss rush is too easy" got the structural answer: more bosses, harder
+stages, new mechanics. THE JAILER (mission 6, Prison Break - which suddenly
+makes sense as a boss mission) owns the game's first attack that touches the
+STICK: a tractor beam that drags the ship toward the hull, escapable at
+about a third of player thrust; its cell weak points free a rescue pod each
+when blown open - the boss is the rescue mission. THE PHANTOM (mission 13)
+cloaks to a shimmer between actions and blinks: vanish, reappear over YOUR
+column marked by a white ring, arrive shooting. Kill the core and it can't
+jump. Both slot into the rush queue (six bosses now, campaign order), and
+each rush stage multiplies hp (+15%/stage) and attack pace (+10%/stage) via
+`boss.hurry` - deeper is genuinely harder. Rush Master (5 bosses) joins the
+medals.
+
+The bug worth writing down: the cloak's lazy initializer returned "visible"
+on the first update instead of initializing-then-lerping - invisible in play
+(it converges in frames), caught only because the unit test called update
+exactly once.
+
 ## 9. What I'd do next
 
 Roughly in value order:

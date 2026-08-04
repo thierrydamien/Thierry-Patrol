@@ -228,8 +228,112 @@ function renderMenu(){
   setSub("champSub", rows.length > 1
     ? (rows[0].callsign || rows[0].name) + " leads with " + P.totalStars(rows[0]) + " ★"
     : "No one to race yet");
+  drawMenuIcons();
 }
 function setSub(id, text){ const el = $(id); if(el) el.textContent = text; }
+
+/* ---------------------------------------------------------
+   MENU ICONS
+   Each mode gets a glyph drawn in the game's own neon style
+   (emoji looked pasted-on next to the canvas art). FLY shows
+   the pilot's actual ship; the rest are hand-drawn marks in
+   the mode's accent colour.
+   --------------------------------------------------------- */
+function star5(c, x, y, r){
+  c.beginPath();
+  for(let i=0;i<10;i++){
+    const rr = i % 2 === 0 ? r : r*0.45;
+    const a = -Math.PI/2 + (i/10)*Math.PI*2;
+    c[i === 0 ? "moveTo" : "lineTo"](x + Math.cos(a)*rr, y + Math.sin(a)*rr);
+  }
+  c.closePath();
+}
+function drawMenuIcons(){
+  const paint = (btnId, fn) => {
+    const btn = $(btnId);
+    const cv = btn && btn.querySelector(".mb-icon");
+    const c = cv && cv.getContext("2d");
+    if(!c) return;
+    c.clearRect(0, 0, 76, 76);
+    c.save();
+    try { fn(c); } catch(e){}
+    c.restore();
+  };
+  const glowSet = (c, color) => { c.shadowColor = color; c.shadowBlur = 10; };
+
+  paint("playBtn", c => {
+    SF.shipart.drawShip(c, 38, 40, 58,
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0 });
+  });
+
+  paint("dailyBtn", c => {              // a sun coming up over the horizon
+    glowSet(c, "#ffd23f");
+    c.fillStyle = "#ffd23f";
+    c.beginPath(); c.arc(38, 46, 15, Math.PI, 0); c.fill();
+    c.strokeStyle = "#ffd23f"; c.lineWidth = 3; c.lineCap = "round";
+    for(let i=0;i<5;i++){
+      const a = Math.PI + (i/4)*Math.PI;
+      c.beginPath();
+      c.moveTo(38 + Math.cos(a)*21, 46 + Math.sin(a)*21);
+      c.lineTo(38 + Math.cos(a)*27, 46 + Math.sin(a)*27);
+      c.stroke();
+    }
+    c.strokeStyle = "rgba(255,210,63,0.65)"; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(10, 48); c.lineTo(66, 48); c.stroke();
+  });
+
+  paint("rushBtn", c => {               // a horned boss hull, eyes lit
+    glowSet(c, "#ff5d73");
+    c.fillStyle = "#ff5d73";
+    c.beginPath();
+    c.moveTo(38, 16);                   // crown
+    c.lineTo(58, 28); c.lineTo(66, 14); c.lineTo(64, 38);  // right horn
+    c.lineTo(50, 56); c.lineTo(38, 50); c.lineTo(26, 56);  // jaw
+    c.lineTo(12, 38); c.lineTo(10, 14); c.lineTo(18, 28);  // left horn
+    c.closePath(); c.fill();
+    c.shadowBlur = 0;
+    c.fillStyle = "#1a0b12";
+    c.beginPath(); c.arc(29, 34, 4.4, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(47, 34, 4.4, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#ffe9a8";
+    c.beginPath(); c.arc(29, 34, 1.8, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(47, 34, 1.8, 0, Math.PI*2); c.fill();
+  });
+
+  paint("armoryBtn", c => {             // a wrench across a bolt
+    glowSet(c, "#7cc4ff");
+    c.strokeStyle = "#7cc4ff"; c.fillStyle = "#7cc4ff";
+    c.lineWidth = 9; c.lineCap = "round";
+    c.beginPath(); c.moveTo(28, 48); c.lineTo(52, 24); c.stroke();
+    c.lineWidth = 0;
+    c.beginPath(); c.arc(24, 52, 11, -0.6, Math.PI*1.35); c.lineWidth = 8; c.stroke();
+    c.beginPath(); c.arc(56, 20, 11, Math.PI - 0.6, Math.PI*2.35); c.stroke();
+  });
+
+  paint("achievementsBtn", c => {       // a medal on its ribbon
+    glowSet(c, "#4ade80");
+    c.fillStyle = "#2f9e5b";
+    c.beginPath(); c.moveTo(28, 10); c.lineTo(38, 30); c.lineTo(20, 34); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(48, 10); c.lineTo(38, 30); c.lineTo(56, 34); c.closePath(); c.fill();
+    c.fillStyle = "#4ade80";
+    c.beginPath(); c.arc(38, 45, 15, 0, Math.PI*2); c.fill();
+    c.shadowBlur = 0;
+    c.fillStyle = "#0f2b18";
+    star5(c, 38, 45, 8); c.fill();
+  });
+
+  paint("leaderboardBtn", c => {        // the podium, star on first place
+    glowSet(c, "#c084fc");
+    c.fillStyle = "#c084fc";
+    c.fillRect(12, 42, 15, 22);         // second
+    c.fillRect(30, 34, 16, 30);         // first
+    c.fillRect(49, 48, 15, 16);         // third
+    c.shadowBlur = 0;
+    c.fillStyle = "#ffd23f";
+    glowSet(c, "#ffd23f");
+    star5(c, 38, 22, 7); c.fill();
+  });
+}
 
 /* ---------------------------------------------------------
    THE CAMPAIGN MAP
@@ -1232,7 +1336,7 @@ function dailyUnlocked(p){
 }
 
 // Boss missions, in campaign order - the rush queue mirrors these.
-const RUSH_IDS = [4, 8, 12, 15];
+const RUSH_IDS = [4, 6, 8, 12, 13, 15];
 function rushUnlocked(p){
   const rec = p && p.missions && p.missions[4];
   return !!(rec && rec.cleared);

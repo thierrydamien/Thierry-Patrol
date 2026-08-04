@@ -1100,6 +1100,8 @@ async function run(){
     await runFrames(320);
     check("the next boss follows the blast",
       SF.game.world.boss && SF.game.world.boss.name === "SKY SENTINEL");
+    check("later rush stages come harder",
+      SF.game.world.boss.hurry > 1 && SF.game.world.boss.maxHp > 0);
     SF.game.world.boss.hp = 1;
     await runFrames(560);
     check("an emptied queue ends in the victory lap",
@@ -1112,9 +1114,64 @@ async function run(){
       id("resultTitle").textContent === "RUSH COMPLETE!" &&
       /ALL 2 bosses/.test(id("resultSubtitle").textContent));
     check("the gauntlet medal exists and pays",
-      SF.config.ACHIEVEMENTS.some(a => a.id === "gauntlet" && a.pay > 0));
+      SF.config.ACHIEVEMENTS.some(a => a.id === "gauntlet" && a.pay > 0) &&
+      SF.config.ACHIEVEMENTS.some(a => a.id === "rush_master" && a.pay > 0));
     SF.game.state = "idle";
   }
+
+  /* ---------- the new bosses: the Jailer and the Phantom ---------- */
+  {
+    check("prison break and cold approach got their bosses",
+      SF.missions.MISSIONS.find(m => m.id === 6).boss === "jailer" &&
+      SF.missions.MISSIONS.find(m => m.id === 13).boss === "phantom" &&
+      SF.missions.BOSSES.jailer.rescuePods === true &&
+      SF.missions.BOSSES.phantom.cloak === true);
+
+    const pilotDiff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const W = SF.game.world;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("BossTest"), pilotDiff));
+    W.player.x = 300; W.player.y = 600; W.player.vx = 0; W.player.vy = 0;
+
+    // The tractor beam is a force on the SHIP, not a bullet.
+    const jb = SF.bosses.create("jailer", pilotDiff, 60);
+    jb.entering = false; jb.x = 300; jb.y = 150;
+    jb.pull = { timer: 1 };
+    SF.bosses.update(jb, 0.1, W, {}, 0);
+    check("the jailer's beam drags the ship toward it", W.player.vy < 0);
+
+    // The phantom's blink lands over your column and arrives shooting.
+    const pb = SF.bosses.create("phantom", pilotDiff, 60);
+    pb.entering = false; pb.phase = pb.def.phases[0];
+    SF.bosses.ATTACKS.blink.fire(pb, W);
+    check("the phantom blinks to your column and arrives shooting",
+      Math.abs(pb.x - 300) <= 71 && pb.burst && pb.burst.attack === "blink");
+    // Cloak: faded while idle, lit while telegraphing.
+    pb.burst = null;                     // the blink's arrival volley is done
+    SF.bosses.update(pb, 3, W, {}, 0);
+    const fadedA = pb.cloakA;
+    pb.telegraph = { attack:"aimedBurst", timer: 9, max: 9, kind:"lock" };
+    SF.bosses.update(pb, 3, W, {}, 0);
+    check("the phantom fades between actions and lights up to act",
+      fadedA < 0.6 && pb.cloakA > fadedA);
+    W.reset();
+
+    // All six bosses queue in campaign order once everything is cleared.
+    const prof6 = SF.profile.blank("RushAll");
+    [4, 6, 8, 12, 13, 15].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+    SF.profile.save(prof6);
+    SF.game.profile = prof6;
+    SF.game.startMission("rush", "pilot");
+    check("the rush queue covers all six bosses in campaign order",
+      SF.game.run.rushList.join(",") === "marauder,jailer,sentinel,warden,phantom,leviathan");
+    SF.game.state = "idle";
+  }
+
+  /* ---------- the menu speaks the game's art ---------- */
+  check("menu buttons carry drawn icons, not emoji",
+    qa("#screen-menu .menu-btn").every(b => b.querySelector(".mb-icon")) &&
+    qa("#screen-menu .menu-btn b").every(b =>
+      !/[\u{1F300}-\u{1FAFF}☀-➿]/u.test(b.textContent)));
 
   /* ---------- flight tuning ---------- */
   {

@@ -82,6 +82,27 @@ const BOSSES = {
     ],
   },
   /*
+   * Prison Break's warden-of-cells. Its whole idea is the tractor beam: the
+   * one attack in the game that grabs your SHIP instead of shooting at it -
+   * fighting the pull is a new input feel, and the danger is being dragged
+   * into the hull. The cells are the weak points, and blowing one open frees
+   * a pilot mid-fight (rescuePods) - the boss IS the rescue mission.
+   */
+  jailer: {
+    name: "THE JAILER", epithet: "keeper of the cells",
+    hp: 560, fightSeconds: 34, size: 140, tint: "#4ade80", entryY: 152,
+    rescuePods: true,
+    weakPoints: [
+      { id:"leftCell",  x:-48, y:16, r:18, hp:95, disables:"callMinions" },
+      { id:"rightCell", x: 48, y:16, r:18, hp:95, disables:"tractorPull" },
+    ],
+    phases: [
+      { at:1.00, speed: 75, telegraph:0.60, gap:[1.5,2.0], attacks:["tractorPull","spreadVolley"] },
+      { at:0.55, speed:112, telegraph:0.50, gap:[1.1,1.6], attacks:["tractorPull","aimedBurst","callMinions"] },
+      { at:0.22, speed:150, telegraph:0.38, gap:[0.8,1.2], attacks:["tractorPull","ringBurst","aimedBurst"], enrage:true },
+    ],
+  },
+  /*
    * Act 2's mid-boss. Its whole idea is the arena shrinking: it seeds mines
    * rather than shooting at you, so the longer you take the less room you have.
    * Blow the two hatches off early and it can't do that any more - the fight
@@ -99,6 +120,27 @@ const BOSSES = {
       { at:1.00, speed: 85, telegraph:0.55, gap:[1.3,1.8], attacks:["mineField","aimedBurst","spreadVolley"] },
       { at:0.60, speed:125, telegraph:0.44, gap:[1.0,1.4], attacks:["spiralArms","mineField","sweepBeam"] },
       { at:0.28, speed:170, telegraph:0.32, gap:[0.6,1.0], attacks:["spiralArms","ringBurst","aimedBurst"], enrage:true },
+    ],
+  },
+  /*
+   * Cold Approach's ghost. Between actions it fades to a shimmer - "where is
+   * it?" is the fight's question - and its signature is the blink: vanish,
+   * reappear over YOUR column marked by a white ring, arrive shooting. Kill
+   * the core and it can't jump any more.
+   */
+  phantom: {
+    name: "THE PHANTOM", epithet: "the one you can't see",
+    hp: 1300, fightSeconds: 54, size: 150, tint: "#9aa5ff", entryY: 158,
+    cloak: true,
+    weakPoints: [
+      { id:"core",      x:  0, y:-6, r:20, hp:160, disables:"blink" },
+      { id:"leftLens",  x:-50, y:14, r:17, hp:110, disables:"ringBurst" },
+      { id:"rightLens", x: 50, y:14, r:17, hp:110, disables:"sweepBeam" },
+    ],
+    phases: [
+      { at:1.00, speed: 82, telegraph:0.55, gap:[1.4,1.9], attacks:["blink","aimedBurst","spreadVolley"] },
+      { at:0.60, speed:120, telegraph:0.45, gap:[1.0,1.4], attacks:["blink","ringBurst","sweepBeam","aimedBurst"] },
+      { at:0.25, speed:165, telegraph:0.32, gap:[0.65,1.0], attacks:["blink","spiralArms","aimedBurst"], enrage:true },
     ],
   },
   /*
@@ -290,6 +332,7 @@ const MISSIONS = [
       w(121, "striker", 7, "wall"),
       w(129, "carrier", 3, "tripleColumns"),
     ],
+    boss: "jailer",
     objectives: ["complete","rescueAll","killAll"],
   },
   {
@@ -520,6 +563,7 @@ const MISSIONS = [
       w(116, "kamikaze",10, "scatter"),
       w(124, "turret",   5, "twinColumns", { elite: 2 }),
     ],
+    boss: "phantom",
     // Five carriers fly this route - a mission with people to free always
     // makes freeing them one of its stars.
     objectives: ["complete","rescueAll","noDamage"],

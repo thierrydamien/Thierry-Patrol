@@ -163,8 +163,10 @@ function buildTestRange(){
  */
 const RUSH_ORDER = [
   { missionId: 4,  boss: "marauder"  },
+  { missionId: 6,  boss: "jailer"    },
   { missionId: 8,  boss: "sentinel"  },
   { missionId: 12, boss: "warden"    },
+  { missionId: 13, boss: "phantom"   },
   { missionId: 15, boss: "leviathan" },
 ];
 function rushBossList(profile){
@@ -193,6 +195,14 @@ function spawnRushBoss(){
   run.bossActive = true;
   run.bossSpawned = true;
   game.world.boss = SF.bosses.create(id, run.difficulty, p ? p.dps : 60);
+  // The queue escalates: each stage is tougher and attacks faster than the
+  // campaign version, so a deep rush is earned, not endured.
+  const stage = run.rushIndex - 1;
+  if(stage > 0){
+    const b = game.world.boss;
+    b.hp = b.maxHp = Math.round(b.maxHp * (1 + 0.15*stage));
+    b.hurry = 1 + 0.10*stage;
+  }
   audio.play("bossAlarm");
   audio.setMusic("boss");
   run.bannerText = "⚠ BOSS " + run.rushIndex + " OF " + run.rushList.length + " ⚠";
@@ -495,6 +505,14 @@ const callbacks = {
       SF.comms.say("bossWeakPoint");
       game.world.dropCoins(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy,
                            Math.round(40 * run.difficulty.pay * game.world.player.moneyMult));
+      // The Jailer's cells hold OUR pilots: blowing one open frees them,
+      // mid-fight - the boss is the rescue mission.
+      if(boss.def.rescuePods){
+        game.world.spawnPickup("rescue",
+          boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy + 26);
+        fx.text(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy + 40,
+                "CELL OPEN!", "#4ade80", 17, true);
+      }
     }
     if(res.killed) killBoss(boss);
   },

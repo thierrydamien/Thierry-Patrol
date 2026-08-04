@@ -161,6 +161,42 @@ const ATTACKS = {
       }
     },
   },
+  /*
+   * The Jailer's signature: a tractor beam that DRAGS the ship toward the
+   * hull. Nothing else in the game touches the player's stick - fighting the
+   * pull is a genuinely new input feel, and the danger is the collision, not
+   * a bullet. Escapable by design: the pull is ~a third of player thrust.
+   */
+  tractorPull: {
+    telegraphKind: "beam",
+    fire(boss, world){
+      boss.pull = { timer: 1.5 };
+      audio.play("tractor");
+    },
+  },
+  /*
+   * The Phantom's signature: vanish, reappear over YOUR column, arrive
+   * shooting. The telegraph is the warning; the white ring marks where it
+   * lands, and three aimed bolts follow - so the read is "ring appears,
+   * sidestep NOW".
+   */
+  blink: {
+    telegraphKind: "charge",
+    fire(boss, world){
+      const p = world.player;
+      fx.ring(boss.x, boss.y, 90, boss.tint, 3, 0.35);
+      fx.sparks(boss.x, boss.y, 14, boss.tint, 220);
+      boss.x = clamp((p ? p.x : VW/2) + rand(-70, 70), 78, VW-78);
+      fx.ring(boss.x, boss.y, 90, "#ffffff", 3, 0.4);
+      boss.burst = { attack:"blink", left: boss.phase.enrage ? 5 : 3, timer: 0.1, gap: 0.11 };
+    },
+    burstShot(boss, world){
+      const p = world.player;
+      const dx = (p ? p.x : VW/2) - boss.x, dy = Math.max(60, (p ? p.y : VH) - boss.y);
+      const l = Math.hypot(dx, dy);
+      world.spawnEnemyBullet(boss.x, boss.y + boss.r*0.4, dx/l*360, dy/l*360, "aimed", 5.5);
+    },
+  },
   callMinions: {
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
@@ -280,6 +316,28 @@ function update(boss, dt, world, ctxObj, timeMs){
     if(boss.beam.timer <= 0) boss.beam = null;
   }
 
+  // Tractor beam: drags the player toward the hull while it holds.
+  if(boss.pull){
+    boss.pull.timer -= dt;
+    const p = world.player;
+    if(p && p.alive && boss.pull.timer > 0){
+      const dx = boss.x - p.x, dy = boss.y - p.y;
+      const l = Math.max(60, Math.hypot(dx, dy));
+      p.vx += dx/l * 380 * dt;
+      p.vy += dy/l * 380 * dt;
+    }
+    if(boss.pull.timer <= 0) boss.pull = null;
+  }
+
+  // Cloak: the Phantom fades out between actions and lights up to act, so
+  // "where is it?" is the fight's question but every attack stays readable.
+  if(boss.def.cloak){
+    const lit = !!(boss.telegraph || boss.burst || boss.beam || boss.flash > 0.2);
+    const target = lit ? 1 : 0.32;
+    if(boss.cloakA === undefined) boss.cloakA = 1;   // arrives visible...
+    boss.cloakA += (target - boss.cloakA) * Math.min(1, dt*4);  // ...then fades
+  }
+
   // Telegraph -> fire
   if(boss.telegraph){
     boss.telegraph.timer -= dt;
@@ -287,7 +345,9 @@ function update(boss, dt, world, ctxObj, timeMs){
       const atk = ATTACKS[boss.telegraph.attack];
       atk.fire(boss, world, ctxObj);
       boss.telegraph = null;
-      boss.attackTimer = rand(boss.phase.gap[0], boss.phase.gap[1]);
+      // `hurry` is the Boss Rush stage multiplier: later queue stages attack
+      // faster, which is what "harder" means without touching readability.
+      boss.attackTimer = rand(boss.phase.gap[0], boss.phase.gap[1]) / (boss.hurry || 1);
     }
     return;
   }

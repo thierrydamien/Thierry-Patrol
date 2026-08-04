@@ -867,6 +867,16 @@ function drawBoss(ctx, boss, timeMs){
   // Telegraphs first, underneath the boss, so they never obscure it.
   drawTelegraph(ctx, boss, timeMs);
   drawBeam(ctx, boss);
+  drawTractor(ctx, boss, timeMs);
+
+  // The Phantom's cloak: everything from the aura to the hull inherits this
+  // alpha. Weak points set their own alpha, so the targets stay findable on
+  // a faded boss - which is exactly the fight.
+  ctx.save();
+  if(boss.def.cloak){
+    const shimmer = 1 + Math.sin(timeMs/90)*0.06;
+    ctx.globalAlpha = clamp((boss.cloakA === undefined ? 1 : boss.cloakA) * shimmer, 0.2, 1);
+  }
 
   // A slow-breathing aura in the boss's own tint. It grows angrier-looking as
   // the fight goes on, and reads as "under power" rather than "pasted on".
@@ -890,7 +900,8 @@ function drawBoss(ctx, boss, timeMs){
   // bomber, the Leviathan a hive. Same damage compositing as before; the
   // tinted PNG remains only as a fallback.
   const bossId = Object.keys(SF.missions.BOSSES).find(k => SF.missions.BOSSES[k] === boss.def) || "";
-  const bossShape = { marauder:"brute", sentinel:"carrier", warden:"bomber", leviathan:"hive" }[bossId] || null;
+  const bossShape = { marauder:"brute", sentinel:"carrier", warden:"bomber",
+                      jailer:"shielder", phantom:"sniper", leviathan:"hive" }[bossId] || null;
   const bossArt = bossShape ? SF.enemyArt.spriteFor(bossShape, boss.tint, false) : null;
   if(bossArt || assetsReady){
     const B = bossBufCtx;
@@ -974,6 +985,36 @@ function drawBoss(ctx, boss, timeMs){
     ctx.fillStyle = "#ffd23f";
     ctx.fillRect(wx-wp.r, wy+wp.r+2, wp.r*2*hpPct, 2.5);
   });
+  ctx.restore();   // cloak alpha off
+}
+
+/** The Jailer's tractor beam: a rippling green cone locked onto the ship. */
+function drawTractor(ctx, boss, timeMs){
+  if(!boss.pull) return;
+  const p = SF.game.world.player;
+  if(!p || !p.alive) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const ripple = 0.14 + Math.sin(timeMs/60)*0.06;
+  const g = ctx.createLinearGradient(boss.x, boss.y, p.x, p.y);
+  g.addColorStop(0, "rgba(74,222,128," + (ripple + 0.22) + ")");
+  g.addColorStop(1, "rgba(74,222,128," + ripple + ")");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(boss.x - 26, boss.y + boss.r*0.4);
+  ctx.lineTo(boss.x + 26, boss.y + boss.r*0.4);
+  ctx.lineTo(p.x + 20, p.y);
+  ctx.lineTo(p.x - 20, p.y);
+  ctx.closePath();
+  ctx.fill();
+  // Motes streaming UP the beam - the direction the ship is being dragged.
+  for(let i=0;i<3;i++){
+    const t = ((timeMs/700 + i/3) % 1);
+    const mx = p.x + (boss.x - p.x)*t, my = p.y + (boss.y - p.y)*t;
+    ctx.fillStyle = "rgba(160,255,190,0.7)";
+    ctx.beginPath(); ctx.arc(mx + Math.sin(timeMs/80 + i)*6, my, 2.4, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
 }
 
 /** Wind-up cues. Each attack reads differently on sight. */

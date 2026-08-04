@@ -151,6 +151,11 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.tractor = { minGap: 900, fn: () => {
+  // The Jailer's beam: a low warbling drone, more grip than gun.
+  [82, 110, 82].forEach((f,i) => tone(f, 0.42, "sawtooth", 0.07, f*1.4, i*0.3));
+} };
+
 SOUNDS.megaBoom = { minGap: 1500, fn: () => {
   // The final boss blast: a sub-bass swell under a long roar of air - felt
   // as much as heard, and bigger than anything else in the game.
