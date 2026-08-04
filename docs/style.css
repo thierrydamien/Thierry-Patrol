@@ -340,9 +340,8 @@ html, body {
   border: 2px solid rgba(255,255,255,0.18); border-radius:18px; padding:14px; margin-bottom:16px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
-.pc-left { position:relative; flex:0 0 auto; }
-.pc-ship { width:62px; height:62px; border-radius:50%; box-shadow: 0 0 20px rgba(255,255,255,0.28); }
-.pc-rank-badge { position:absolute; bottom:-4px; right:-6px; line-height:0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+.pc-left { position:relative; flex:0 0 auto; display:flex; align-items:center; }
+.pc-rank-badge { line-height:0; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)); }
 .pc-right { flex:1; min-width:0; }
 .pc-name { font-weight:900; font-size:19px; letter-spacing:0.5px; }
 .pc-rank { font-weight:800; font-size:12px; letter-spacing:1.5px; margin-top:1px; }

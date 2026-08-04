@@ -1170,11 +1170,17 @@ function launch(index, difficultyId){
    ARMORY
    --------------------------------------------------------- */
 function renderPilotCard(){
-  if(!$("pcShip")) return;          // only mounted while the PILOT tab is open
+  if(!$("pcRankBadge")) return;     // only mounted while the PILOT tab is open
   const rank = P.rankFor(profile), next = P.nextRank(profile);
   const gear = P.gearLevel(profile);
-  $("pcShip").style.background = `radial-gradient(circle at 35% 30%, #fff6, ${profile.shipColor})`;
-  SF.insignia.mount($("pcRankBadge"), P.badgeFor(profile), profile.shipColor, 34);
+  /*
+   * The card used to lead with a plain circle filled with the pilot's ship
+   * colour, with the insignia - also in their ship colour - pinned to its
+   * corner: two elements carrying one fact, directly under a bay showing the
+   * real ship at full size. The patch alone is the emblem now, at the size the
+   * blob used to occupy.
+   */
+  SF.insignia.mount($("pcRankBadge"), P.badgeFor(profile), profile.shipColor, 62);
   $("pcName").textContent = profile.callsign || profile.name;
   const rankEl = $("pcRank");
   rankEl.textContent = rank.name;
