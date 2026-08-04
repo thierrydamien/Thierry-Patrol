@@ -366,10 +366,12 @@ const MISSIONS = [
    * entirely in your thumb. Coins rain in marked lanes so greed pulls you
    * into traffic.
    *
-   * Playtest rule that shaped the roster: with no gun, dodging TRAFFIC is
-   * fair and dodging AIMED FIRE on top of it is not - so nothing here
-   * shoots. world.silent enforces it globally, and the wave list carries no
-   * snipers or minelayers: hulls, rocks, chasers and walls only.
+   * Playtest calibration, in two steps: full enemy fire was undodgeable
+   * with no gun, and full silence was flat. The rule now: SPARSE fire only.
+   * world.silent throttles the whole fleet to one shared shot every couple
+   * of seconds, and the only dedicated shooters are a few Marksmen - the
+   * telegraphed kind that draw their line first. No minelayers: mines were
+   * clutter you couldn't clear.
    *
    * `podDrops` pilots drift down through the traffic on their own - escapees
    * from the blockade, no carrier to shoot open - so freeing people stays an
@@ -386,7 +388,7 @@ const MISSIONS = [
       w(20,  "swooper",  7, "arc"),
       w(27,  "interceptor", 5, "line"),
       w(34,  "grunt",    9, "wall"),
-      w(40,  "swooper",  6, "sides"),
+      w(40,  "sniper",   2, "sides"),
       w(46,  "kamikaze", 6, "pincer"),
       w(52,  "asteroid", 5, "scatter"),
       w(58,  "asteroid", 6, "scatter"),
@@ -394,7 +396,7 @@ const MISSIONS = [
       w(68,  "swooper",  9, "vee"),
       w(75,  "interceptor", 7, "sides"),
       w(82,  "grunt",   10, "wall"),
-      w(88,  "weaver",   8, "arc"),
+      w(88,  "sniper",   3, "arc"),
       w(93,  "kamikaze", 8, "scatter"),
       w(100, "boulder",  2, "sides"),
       w(106, "swooper", 10, "pincer"),

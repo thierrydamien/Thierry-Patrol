@@ -85,6 +85,7 @@ class World {
     this.pickups.killAll();
     this.boss = null;
     this.silent = false;   // set per mission by startMission (noGuns runs)
+    this.silentClock = 0; this.lastSilentShot = -99;
   }
 
   /* ---------------- PLAYER ---------------- */
@@ -293,11 +294,15 @@ class World {
   }
 
   spawnEnemyBullet(x, y, vx, vy, kind, r){
-    // Silent running: with the player's guns dead, NOBODY shoots. The whole
-    // mission is traffic - dodging hulls and rocks is fair with no gun,
-    // dodging aimed fire on top of it was not (playtest verdict). One gate
-    // here silences every firing path: generic fire, snipers, everything.
-    if(this.silent) return null;
+    // Silent running: with the player's guns dead, the fleet barely shoots.
+    // Playtest calibration in two steps: full fire was undodgeable, full
+    // silence was flat - so the whole fleet shares ONE shot every couple of
+    // seconds. A single spaced-out bolt is a thing you dodge; a volley was a
+    // wall. The throttle sits here so every firing path obeys it.
+    if(this.silent){
+      if(this.silentClock - this.lastSilentShot < 2.2) return null;
+      this.lastSilentShot = this.silentClock;
+    }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
     return b;
@@ -385,6 +390,7 @@ class World {
   }
 
   updateEnemies(dt, ctxObj){
+    if(this.silent) this.silentClock += dt;   // paces the shared-shot throttle
     const items = this.enemies.items;
     this.applyGuardianShields();
     for(let i=0;i<items.length;i++){

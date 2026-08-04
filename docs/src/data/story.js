@@ -58,7 +58,7 @@ const STORY = {
     title: "GUNS DOWN",
     panels: [
       { art:"now",  text:"That last blast from the Sentinel fried every cannon on your ship, {you}. The crew can fix them - but not out here." },
-      { art:"sky",  text:"The repair yard is on the far side of their blockade. Fly dark, stay quiet, and dodge EVERYTHING - nothing will shoot at a ship they can't see, but nothing will move out of your way either." },
+      { art:"sky",  text:"The repair yard is on the far side of their blockade. Fly dark, stay quiet, and dodge EVERYTHING - most of them can't even see you, so the shots are few. The traffic won't move out of your way, though." },
       { art:"crew", text:"No guns means no mistakes, {you}. Catch the coins, catch our drifting pilots, and bring the ship home in one piece." },
     ],
     button:"FLY DARK",

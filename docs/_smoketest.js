@@ -777,15 +777,20 @@ async function run(){
     check("the coin objective tracks pickups",
       SF.game.run.objectiveIds.includes("coinRush"));
 
-    /* Playtest rule: with no gun, dodging traffic is fair - dodging aimed
-       fire on top of it is not. Nothing may shoot on a silent run. */
-    check("the world is silent - no firing path can spawn a bullet",
-      SF.game.world.silent === true &&
-      SF.game.world.spawnEnemyBullet(100, 100, 0, 100, "bolt", 4) === null &&
-      SF.game.world.enemyBullets.items.every(b => !b.alive));
-    check("the silent roster carries no shooters",
-      SF.missions.MISSIONS.find(m => m.noGuns).waves.every(wv =>
-        wv.type !== "sniper" && wv.type !== "bomber"));
+    /* Playtest calibration: full fire was undodgeable, full silence was
+       flat. The whole fleet shares one shot every couple of seconds. */
+    check("silent running fires sparsely - one shared shot, then throttled", (() => {
+      const W = SF.game.world;
+      W.lastSilentShot = -99;
+      const first = W.spawnEnemyBullet(100, 100, 0, 100, "bolt", 4);
+      const second = W.spawnEnemyBullet(100, 100, 0, 100, "bolt", 4);
+      if(first) first.alive = false;
+      return W.silent === true && first !== null && second === null;
+    })());
+    check("the silent roster keeps shooters rare and telegraphed",
+      SF.missions.MISSIONS.find(m => m.noGuns).waves.every(wv => wv.type !== "bomber") &&
+      SF.missions.MISSIONS.find(m => m.noGuns).waves
+        .filter(wv => wv.type === "sniper").reduce((n,wv) => n + wv.n, 0) <= 6);
     check("the broken guns are explained before launch",
       /guns/i.test(SF.missions.MISSIONS.find(m => m.noGuns).brief) &&
       !!SF.storyData.STORY.silent && SF.storyData.STORY.silent.panels.length >= 2 &&

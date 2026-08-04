@@ -1092,12 +1092,13 @@ second or so until the results land. A cleared sky deserves applause.
 
 The playtest verdict was blunt: dodging traffic with no gun is fair; dodging
 AIMED FIRE on top of it often wasn't dodgeable at all - unavoidable damage,
-the one thing a skill mission must never contain. Two fixes, one structural:
-`world.silent` gates `spawnEnemyBullet` itself, so every firing path -
-generic cadence, sniper charge shots, all of it - is silenced on a no-guns
-run with one line; and the wave list dropped its snipers and minelayers for
-more traffic (swoopers, weavers, rocks). The mission's difficulty now lives
-entirely in hulls, walls, chasers and greed.
+the one thing a skill mission must never contain. The calibration took two
+steps: full fire was undodgeable, and full silence turned out flat - so
+`world.silent` now THROTTLES `spawnEnemyBullet` itself: the whole fleet
+shares one shot every couple of seconds (measured live: one bolt in 47s,
+never two on screen). The only dedicated shooters are a few telegraphed
+Marksmen; the minelayers stayed out. The difficulty lives in hulls, walls,
+chasers, greed - and the occasional single bolt you see coming.
 
 And the fiction finally answers "why can't I shoot?" the way the customer
 suggested: the Sentinel's last blast broke the guns. It's told three times,
