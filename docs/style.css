@@ -820,3 +820,44 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   background: rgba(8,12,28,0.9);
   backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
+
+/* Spec row bump when a purchase moves it */
+@keyframes hsBump {
+  0% { transform: none; }
+  30% { transform: scale(1.04); }
+  100% { transform: none; }
+}
+.hs-row.bump { animation: hsBump .5s var(--ease-pop); }
+.hs-row.bump .hs-value { color: var(--accent); }
+.hs-bar i { transition: width .6s var(--ease-pop); }
+
+/* Parts tab: progress + tappable chips */
+.parts-head { text-align:center; margin-bottom:10px; font-size:13px; color: var(--ink-dim); }
+.parts-head b { color:#fff; }
+.parts-bar {
+  height:7px; border-radius:4px; background: rgba(255,255,255,0.08);
+  overflow:hidden; margin:6px auto 4px; max-width:280px;
+}
+.parts-bar i { display:block; height:100%; border-radius:4px;
+  background: linear-gradient(90deg, #3fc9ff, #7c9bff); }
+.parts-hint { font-size:10px; color: var(--ink-faint); font-style:italic; }
+button.part-chip { font-family:inherit; text-align:left; cursor:pointer;
+  transition: transform .12s ease, border-color .12s ease; }
+button.part-chip:active { transform: scale(0.96); }
+@media (hover:hover){ button.part-chip:hover { border-color: var(--accent); } }
+
+/* NEXT PART is a button now */
+.hangar-next.tappable { cursor:pointer; border-radius:10px; }
+@media (hover:hover){ .hangar-next.tappable:hover b { color: var(--accent); } }
+.hangar-next.tappable:active { transform: scale(0.98); }
+
+/* Campaign card: kicker + call to action */
+.campaign-hint { cursor:pointer; transition: transform .12s ease, border-color .12s ease; }
+.campaign-hint:active { transform: scale(0.98); }
+@media (hover:hover){ .campaign-hint:hover { border-color: var(--accent); } }
+.ch-kicker { font-size:9px; font-weight:700; letter-spacing:2px; color: var(--accent); }
+.ch-go {
+  font-size:10px; font-weight:700; letter-spacing:2px; color:#241a00;
+  background: linear-gradient(135deg, #ffc85c, var(--accent));
+  border-radius:7px; padding:3px 12px; margin-top:3px;
+}

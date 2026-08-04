@@ -26,6 +26,7 @@ function show(id){
   Object.keys(screens).forEach(k => screens[k].classList.remove("active"));
   screens[id].classList.add("active");
   if(id === "screen-game") SF.game.resize();
+  if(id === "screen-profiles" || id === "screen-menu") startTitleLoop();
 }
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
@@ -46,16 +47,34 @@ function click(el, fn){
    with its logo. This paints our own instead: a generated
    sky, a planet, and the pilot's ship coming at you.
    --------------------------------------------------------- */
-function drawTitleArt(canvasId, p){
+/*
+ * The home screens are alive, not a poster: the wing bobs, exhausts flicker
+ * and a handful of stars twinkle, driven by one rAF loop that only runs while
+ * a menu-bg screen is up. The sky itself stays a cached canvas - the per-frame
+ * cost is four small ships and a dozen twinkles.
+ */
+let titleRaf = 0, titleT = 0;
+function drawTitleArt(canvasId, p, t){
   const cv = $(canvasId);
   const ctx = cv && cv.getContext("2d");
   if(!ctx) return;
   const W = cv.width, H = cv.height;
+  t = t || 0;
   ctx.clearRect(0, 0, W, H);
 
   const sky = SF.skygen.build(7, W, H);           // The Deep: the most dramatic
   if(sky) ctx.drawImage(sky, 0, 0);
   else { ctx.fillStyle = "#070716"; ctx.fillRect(0, 0, W, H); }
+
+  // A handful of live twinkles over the cached sky.
+  for(let i=0;i<14;i++){
+    const tx = ((Math.sin(i*127.1)*43758.5453) % 1 + 1) % 1;
+    const ty = ((Math.sin(i*311.7)*43758.5453) % 1 + 1) % 1;
+    ctx.globalAlpha = 0.25 + Math.abs(Math.sin(t*1.3 + i*2.1))*0.55;
+    ctx.fillStyle = i % 3 ? "#ffffff" : "#ffe9c4";
+    ctx.fillRect(tx*W, ty*H*0.72, 2, 2);
+  }
+  ctx.globalAlpha = 1;
 
   // A big planet low and left, so the ship has something to fly past.
   const g = ctx.createRadialGradient(W*0.16, H*0.86, W*0.05, W*0.30, H*0.94, W*0.62);
@@ -71,11 +90,13 @@ function drawTitleArt(canvasId, p){
   // The hero: their ship if we know who is flying, a stock one otherwise.
   const levels = p ? SF.shipart.levelsOf(p) : {};
   const col = p ? p.shipColor : "#f5a623";
-  SF.shipart.drawShip(ctx, W*0.66, H*0.22, W*0.28, { color: col, levels, t: 1.1, idle:false });
+  const bob = Math.sin(t*1.1)*H*0.006;
+  SF.shipart.drawShip(ctx, W*0.66, H*0.22 + bob, W*0.28, { color: col, levels, t: t + 1.1, idle:false });
 
-  // A wing of three behind it, small, for depth.
-  [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz]) => {
-    SF.shipart.drawShip(ctx, W*x, H*y, W*sz, { color: col, levels:{}, t: 0.4, idle:false });
+  // A wing of three behind it, small, for depth - each on its own rhythm.
+  [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz], i) => {
+    const b2 = Math.sin(t*1.3 + i*2.4)*H*0.005;
+    SF.shipart.drawShip(ctx, W*x, H*y + b2, W*sz, { color: col, levels:{}, t: t + i*0.7, idle:false });
   });
 
   // Darken toward the bottom so the UI over it stays readable.
@@ -85,6 +106,20 @@ function drawTitleArt(canvasId, p){
   fade.addColorStop(1, "rgba(5,4,15,0.95)");
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, W, H);
+}
+
+function startTitleLoop(){
+  if(titleRaf) return;
+  const step = () => {
+    titleRaf = 0;
+    const onProfiles = screens["screen-profiles"].classList.contains("active");
+    const onMenu = screens["screen-menu"].classList.contains("active");
+    if(!onProfiles && !onMenu) return;            // stops itself off-screen
+    titleT += 1/60;
+    drawTitleArt(onProfiles ? "titleArt" : "menuArt", onProfiles ? null : profile, titleT);
+    titleRaf = requestAnimationFrame(step);
+  };
+  titleRaf = requestAnimationFrame(step);
 }
 
 /* ---------------------------------------------------------
@@ -371,15 +406,21 @@ function renderMissions(){
   const m = MISSIONS[next];
   const best = P.familyBest(m.id);
   const me = profile.callsign || profile.name;
+  // The card names itself and goes somewhere: it briefs your next mission
+  // and tapping it opens that briefing. Before it had a header it read as an
+  // unexplained box floating over the map.
   $("campaignHint").innerHTML =
+    `<span class="ch-kicker">\u25b6 UP NEXT \u00b7 MISSION ${m.id}</span>` +
     `<b>${esc(m.name)}</b>` +
     `<span class="ch-sub">${esc(m.subtitle)}</span>` +
     `<span>${enemyCount(m)} enemies${rescueCount(m) ? " · " + rescueCount(m) + " to rescue" : ""}` +
     `${m.boss ? " · BOSS" : ""}</span>` +
     `<span class="ch-record">${best
-      ? (best.name === me ? "🏅 You hold this one · " + best.score
-                          : "🏅 " + esc(best.name) + " holds this · " + best.score)
-      : "Nobody has flown this yet - claim it"}</span>`;
+      ? (best.name === me ? "🏅 You hold this one · " + best.score.toLocaleString()
+                          : "🏅 " + esc(best.name) + " holds this · " + best.score.toLocaleString())
+      : "Nobody has flown this yet - claim it"}</span>` +
+    `<span class="ch-go">TAP TO FLY</span>`;
+  $("campaignHint").onclick = () => { audio.play("uiClick"); openBriefing(next); };
 
   startCampaignLoop();
   scrollToNextStop(next);
@@ -617,7 +658,7 @@ function drawCampaign(){
    you shop; the shelves are tabbed so only one is ever on
    screen, which keeps the scroll short on a tablet.
    --------------------------------------------------------- */
-const hangar = { raf:0, t:0, compare:false, ctx:null };
+const hangar = { raf:0, t:0, compare:false, ctx:null, celebrate:0 };
 let armoryTab = "guns";
 
 /** Tabs: the four shelves, then the parts ladder, then everything about you. */
@@ -633,11 +674,22 @@ function renderArmory(){
   const next = A.nextPart(levels);
 
   $("armoryMoney").textContent = money(profile.money);
-  $("hangarNext").innerHTML = next
-    ? `<span class="hn-label">NEXT PART</span><b>${esc(next.name)}</b>
-       <span class="hn-how">${esc(UPGRADE_BY_ID[next.up].name)} lv${next.at}</span>`
-    : `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>
+  if(next){
+    const u = UPGRADE_BY_ID[next.up];
+    const atNext = P.upgradeLevel(profile, u.id) === next.at - 1;
+    const cost = atNext ? P.nextCost(profile, u) : null;
+    $("hangarNext").innerHTML =
+      `<span class="hn-label">NEXT PART TO FIT</span><b>${esc(next.name)}</b>
+       <span class="hn-how">buy ${esc(u.name)} Lv ${next.at}${cost !== null ? " — " + money(cost) : ""} · tap to shop</span>`;
+    $("hangarNext").onclick = () => { audio.play("uiClick"); armoryTab = u.cat; renderArmory(); };
+    $("hangarNext").classList.add("tappable");
+  } else {
+    $("hangarNext").innerHTML =
+      `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>
        <span class="hn-how">Nothing left to bolt on</span>`;
+    $("hangarNext").onclick = null;
+    $("hangarNext").classList.remove("tappable");
+  }
   $("hangarCompareBtn").textContent = hangar.compare ? "MY SHIP" : "COMPARE";
   $("hangarCompareLabels").classList.toggle("hidden", !hangar.compare);
   renderShipSpecs();
@@ -708,17 +760,28 @@ function renderShelf(panel, catId){
 /** The parts ladder: what's on the ship and what's still missing. */
 function renderPartsTab(panel, levels, next){
   const A = SF.shipart;
+  const owned = A.ownedCount(levels);
   const head = document.createElement("div");
   head.className = "parts-head";
-  head.textContent = A.ownedCount(levels) + " of " + A.PARTS.length + " parts fitted";
+  head.innerHTML = `<b>${owned} of ${A.PARTS.length}</b> parts fitted
+    <div class="parts-bar"><i style="width:${Math.round(owned/A.PARTS.length*100)}%"></i></div>
+    <span class="parts-hint">tap a missing part to go buy the upgrade that fits it</span>`;
   panel.appendChild(head);
   const grid = document.createElement("div");
   grid.className = "hangar-parts";
   A.partList(levels).forEach(({ part, owned:has }) => {
-    const chip = document.createElement("div");
+    const chip = document.createElement(has ? "div" : "button");
     chip.className = "part-chip" + (has ? " owned" : "") + (next && part.id === next.id ? " next" : "");
+    const u = UPGRADE_BY_ID[part.up];
+    const cost = has ? null : P.nextCost(profile, u);
     chip.innerHTML = `<b>${esc(part.name)}</b><span>${has ? esc(part.blurb)
-      : esc(UPGRADE_BY_ID[part.up].name) + " lv" + part.at}</span>`;
+      : esc(u.name) + " lv" + part.at + (cost !== null && P.upgradeLevel(profile, u.id) === part.at - 1
+          ? " — " + money(cost) : "")}</span>`;
+    // A missing part is a shopping trip waiting to happen: tapping it opens
+    // the shelf that sells the upgrade which fits it.
+    if(!has){
+      click(chip, () => { armoryTab = u.cat; renderArmory(); });
+    }
     grid.appendChild(chip);
   });
   panel.appendChild(grid);
@@ -815,6 +878,23 @@ function drawHangar(){
     // With an installed portrait, the pilot is visible at the controls.
     const bob = Math.sin(hangar.t*1.6)*S*0.018;
     SF.pilotart.paint(ctx, W/2, H*0.50 + bob - S*0.055, S*0.15, profile);
+
+    // Part-fitted celebration: a white flash and a gold ring rolling off the
+    // hull for a beat after a purchase bolts something new on.
+    const since = (performance.now() - hangar.celebrate)/1000;
+    if(hangar.celebrate && since < 0.9){
+      const k = since/0.9;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = (1-k)*0.5;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(W/2, H*0.50, S*0.55*(0.6+k*0.2), 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1-k;
+      ctx.strokeStyle = "#ffd23f";
+      ctx.lineWidth = 4*(1-k) + 1;
+      ctx.beginPath(); ctx.arc(W/2, H*0.50, S*(0.4 + k*0.55), 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
   }
 }
 
@@ -854,14 +934,34 @@ function renderShipSpecs(){
     { label:"SPEED",     value: now.speedMult,              max: top.speedMult,              show: "x" + now.speedMult.toFixed(2) },
     { label:"TOUGHNESS", value: now.lives + now.shieldMax,  max: top.lives + top.shieldMax,  show: now.lives + "\u2665 " + now.shieldMax + "\u26e8" },
   ];
-  el.innerHTML = rows.map(r => {
-    const pct = Math.max(3, Math.round(Math.min(1, r.value/r.max) * 100));
-    return `<div class="hs-row">
-      <span class="hs-label">${r.label}</span>
-      <div class="hs-bar"><i style="width:${pct}%"></i></div>
-      <span class="hs-value">${r.show}</span>
-    </div>`;
-  }).join("");
+
+  /*
+   * Updated IN PLACE, never rebuilt: a rebuilt bar appears at its new width
+   * with no motion, which is why buying an upgrade "didn't do anything".
+   * Updating the same element lets the CSS width transition sweep, and a
+   * changed row gets a bump so the eye lands on exactly what improved.
+   */
+  if(el.children.length !== rows.length){
+    el.innerHTML = rows.map(r => `<div class="hs-row">
+        <span class="hs-label">${r.label}</span>
+        <div class="hs-bar"><i style="width:0%"></i></div>
+        <span class="hs-value"></span>
+      </div>`).join("");
+  }
+  rows.forEach((r, i) => {
+    const rowEl = el.children[i];
+    const bar = rowEl.querySelector(".hs-bar i");
+    const val = rowEl.querySelector(".hs-value");
+    const pct = Math.max(3, Math.round(Math.min(1, r.value/r.max) * 100)) + "%";
+    const changed = val.textContent !== "" && val.textContent !== r.show;
+    if(bar.style.width !== pct) requestAnimationFrame(() => { bar.style.width = pct; });
+    val.textContent = r.show;
+    if(changed){
+      rowEl.classList.remove("bump");
+      void rowEl.offsetWidth;               // restart the animation
+      rowEl.classList.add("bump");
+    }
+  });
 }
 
 /* ---------------------------------------------------------
@@ -1113,6 +1213,8 @@ function buyUpgrade(id){
   if(partsNow > partsBefore){
     const part = SF.shipart.PARTS.filter(pt => (P.upgradeLevel(profile, pt.up) >= pt.at))[partsNow-1];
     queueToast({ icon:"🔧", name: "FITTED: " + (part ? part.name : "NEW PART") });
+    // And the bay celebrates: white flash + gold ring rolling off the hull.
+    hangar.celebrate = performance.now();
   }
   if(P.gearLevel(profile) >= 20) maybeStory("ace");
   else if(partsNow > 0 && partsBefore === 0) maybeStory("firstPart");
@@ -1597,6 +1699,7 @@ SF.game.onMissionEnd = showResults;
 SF.game.attach($("game"), document.querySelector(".game-frame"), $("screen-game"));
 $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
 renderProfiles();
+startTitleLoop();
 SF.game.resize();
 SF.game.start();
 // The display font arrives async; one-shot canvases (title art, briefing
