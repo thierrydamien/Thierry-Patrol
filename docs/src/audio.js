@@ -220,16 +220,19 @@ function tryPlay(){
   } catch(e){ /* jsdom, or autoplay refusal - a later gesture retries */ }
 }
 
-/** Pause/resume to match the mute + music switches, without losing place. */
+/** Pause/resume to match the mute + music switches, without losing place.
+    A hidden tab counts as "off" too - background music from a page nobody is
+    looking at is how a game gets force-closed. */
 function applyMusicState(){
   if(!musicEl) return;
-  if(muted || !musicOn){
+  if(muted || !musicOn || document.hidden){
     try { musicEl.pause(); } catch(e){}
   } else {
     musicEl.volume = musicVol;
     tryPlay();
   }
 }
+document.addEventListener("visibilitychange", applyMusicState);
 
 /** Switches the soundtrack: a logical name, or null for silence. The old
     song fades down while the new one fades up. */

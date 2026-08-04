@@ -1282,6 +1282,36 @@ function drawHud(ctx, game){
     oy += oySize + 3;
   }
 
+  // Active power-ups tick down in plain sight, right under the objectives. A
+  // 9-second buff nobody can see the end of just reads as "my guns went weird
+  // for a bit" - the draining bar is what makes it a resource kids race.
+  if(p){
+    const nowT = performance.now();
+    const boosts = [];
+    if(nowT < p.overdriveUntil)
+      boosts.push({ label:"OVERDRIVE", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
+    if(nowT < p.tempRapidUntil)
+      boosts.push({ label:"RAPID", color:"#ffd23f", left:(p.tempRapidUntil-nowT)/9000 });
+    if(nowT < p.tempSpreadUntil)
+      boosts.push({ label:"SPREAD", color:"#3399ff", left:(p.tempSpreadUntil-nowT)/9000 });
+    if(nowT < p.tempScoreUntil)
+      boosts.push({ label:"SCORE \u00d72", color:"#ff66b3", left:(p.tempScoreUntil-nowT)/9000 });
+    if(nowT < p.tempHomingUntil)
+      boosts.push({ label:"HOMING", color:"#22d3ee", left:(p.tempHomingUntil-nowT)/9000 });
+    for(let i=0;i<boosts.length;i++){
+      const b = boosts[i], bx = PAD, by = oy + 4 + i*17, w = 76;
+      ctx.fillStyle = "rgba(10,14,34,0.55)";
+      ctx.fillRect(bx, by, w, 13);
+      ctx.fillStyle = b.color + "44";
+      ctx.fillRect(bx, by, w * clamp(b.left, 0, 1), 13);
+      ctx.strokeStyle = b.color + "88"; ctx.lineWidth = 1;
+      ctx.strokeRect(bx+0.5, by+0.5, w-1, 12);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 8px Rajdhani, Arial, sans-serif";
+      ctx.fillText(b.label, bx+5, by+9.5);
+    }
+  }
+
   // Combo - bumps up in scale for a beat every time it climbs.
   if(run.combo >= 3){
     if(run.combo !== hudLastCombo){

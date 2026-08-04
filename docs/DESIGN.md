@@ -998,6 +998,28 @@ and rotates one per mission so back-to-back flights don't repeat, and
 Autoplay refusals self-heal - every tap already calls `init()` for the
 WebAudio unlock, and now that also retries the paused music element.
 
+## 8ab. The app layer
+
+A review pass with fresh eyes found the gaps that weren't in the game but
+around it:
+
+- **It's an app now.** Manifest, home-screen icons rendered from the game's
+  own upgraded hero ship, and a service worker. The caching rule that keeps
+  deploys safe: code is network-first (a deploy is picked up on the next
+  online load; the cache only answers when the network can't), assets are
+  cache-first (music and sprites load once, then come from disk forever). So
+  after one online visit the game works in the car.
+- **Losing the screen pauses the game.** App switch, iPad lock, tab change -
+  `visibilitychange` pauses a live mission and the music with it. Nobody
+  comes back to a dead ship they never saw die.
+- **Power-ups tick down in plain sight.** Draining pills under the objective
+  list, one per active buff. A 9-second buff nobody can see the end of reads
+  as "my guns went weird for a bit"; a draining bar is a resource you race.
+- **A losing streak earns real advice.** Two fails in a row on the same
+  mission and tier turns the retry line into "try an easier difficulty, or
+  buy an upgrade in the ARMORY" - a seven-year-old doesn't think of either
+  on his own. Any win resets the streak.
+
 ## 9. What I'd do next
 
 Roughly in value order:

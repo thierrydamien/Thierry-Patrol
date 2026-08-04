@@ -863,6 +863,52 @@ async function run(){
       id("settingsOverlay").classList.contains("hidden"));
   }
 
+  /* ---------- the app layer: icon, offline, focus ---------- */
+  check("the page ships a manifest, icons and a service worker", (() => {
+    const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    const man = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
+    return /manifest\.webmanifest/.test(html) && /apple-touch-icon/.test(html) &&
+      man.icons.every(i => fs.existsSync(path.join(__dirname, i.src))) &&
+      fs.existsSync(path.join(__dirname, "sw.js")) &&
+      fs.existsSync(path.join(__dirname, "apple-touch-icon.png")) &&
+      fs.existsSync(path.join(__dirname, "favicon-32.png"));
+  })());
+  check("the service worker keeps code network-first (deploys stay live)", (() => {
+    const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
+    return /networkFirst\(req\)/.test(sw) && /cacheFirst\(req\)/.test(sw) &&
+      /assets/.test(sw);
+  })());
+
+  {
+    // Switching apps mid-mission pauses the game rather than flying it blind.
+    SF.game.profile = SF.profile.load("Marc");
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "rookie");
+    await runFrames(10);
+    Object.defineProperty(window.document, "hidden", { get: () => true, configurable: true });
+    window.document.dispatchEvent(new window.Event("visibilitychange"));
+    check("losing the screen pauses the mission", SF.game.state === "paused");
+    Object.defineProperty(window.document, "hidden", { get: () => false, configurable: true });
+    window.document.dispatchEvent(new window.Event("visibilitychange"));
+    SF.game.state = "idle";
+    id("overlayPause").classList.add("hidden");
+
+    // Two losses in a row on the same flight turn the retry line into advice.
+    SF.game.startMission(1, "pilot");
+    SF.game.endMission(false);
+    SF.game.startMission(1, "pilot");
+    SF.game.endMission(false);
+    check("a losing streak earns a real tip",
+      /ARMORY|easier/.test(id("resultSubtitle").textContent));
+    SF.game.startMission(1, "pilot");
+    SF.game.endMission(true);
+    SF.game.startMission(1, "pilot");
+    SF.game.endMission(false);
+    check("one loss after a win stays encouraging",
+      !/ARMORY/.test(id("resultSubtitle").textContent));
+    SF.game.state = "idle";
+  }
+
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
     try {

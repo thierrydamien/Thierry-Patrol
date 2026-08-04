@@ -15,6 +15,7 @@ const P = SF.profile;
 const audio = SF.audio;
 
 let profile = null;
+let failStreak = null;   // { key: "mission:tier", n } - resets on any win
 let selectedMissionIndex = 0;
 
 /* ---------------------------------------------------------
@@ -1435,11 +1436,20 @@ function showResults(result){
   // always keep the money you collected, so a failed run is never wasted.
   const sub = $("resultSubtitle");
   if(completed){
+    failStreak = null;
     sub.textContent = stars === 3
       ? "Perfect flying, " + (profile.callsign || profile.name) + "!"
       : "Nice work, " + (profile.callsign || profile.name) + "!";
   } else {
-    sub.textContent = "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
+    // Two losses in a row on the same flight earns a real tip instead of the
+    // same "go again". Seven-year-olds don't think of turning the difficulty
+    // down or shopping - the game has to say it out loud.
+    const failKey = run.mission.id + ":" + run.difficulty.id;
+    failStreak = failStreak && failStreak.key === failKey
+      ? { key: failKey, n: failStreak.n + 1 } : { key: failKey, n: 1 };
+    sub.textContent = failStreak.n >= 2
+      ? "This one's tough! Try an easier difficulty, or buy an upgrade in the ARMORY first."
+      : "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
   }
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
@@ -1755,6 +1765,12 @@ click($("achievementsBackBtn"), () => show("screen-menu"));
 click($("leaderboardBackBtn"), () => show("screen-menu"));
 click($("pauseBtn"), togglePause);
 click($("resumeBtn"), togglePause);
+
+// Switching apps, locking the iPad, or changing tabs pauses the mission by
+// itself - nobody should come back to a dead ship they never saw die.
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden && SF.game.state === "playing") togglePause();
+});
 click($("restartBtn"), () => {
   $("overlayPause").classList.add("hidden");
   launch(SF.game.run.missionIndex, SF.game.run.difficulty.id);
@@ -1831,6 +1847,12 @@ SF.render.loadAssets(() => {
   document.body.classList.add("assets-ready");
   repaintArt();
 });
+
+// Offline support: after the first online visit, the whole game (music
+// included) comes out of the cache - see sw.js for the update-safety rules.
+if("serviceWorker" in navigator){
+  try { navigator.serviceWorker.register("sw.js"); } catch(e){}
+}
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory,
