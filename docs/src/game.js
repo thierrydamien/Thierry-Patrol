@@ -134,7 +134,7 @@ function startMission(missionIndex, difficultyId){
   const director = new SF.systems.WaveDirector(mission, difficulty, game.world);
   const wavesEndT = mission.waves.reduce((t, wv) => Math.max(t, wv.t), 0) + 10;
   const stats = {
-    spawned: 0, kills: 0, escaped: 0, killRatio: 0,
+    spawned: 0, kills: 0, escaped: 0, killRatio: 0, coins: 0,
     rescues: 0, rescuesTotal: director.rescuesPlanned,
     damageTaken: 0, livesLost: 0, completed: false,
   };
@@ -163,6 +163,7 @@ function startMission(missionIndex, difficultyId){
     // The ship LAUNCHES - rockets up from below the screen for the first
     // second, engines wide open, before control is handed over.
     introFly: 1.1,
+    coinTimer: 2.0,
     ended: false,
   };
 
@@ -178,6 +179,12 @@ function startMission(missionIndex, difficultyId){
     game.run.payScale *= 2;
     game.run.dailyDouble = true;
     game.run.bannerSub = "FIRST FLIGHT TODAY — DOUBLE PAY!";
+  }
+  if(mission.noGuns){
+    game.run.bannerSub = game.run.dailyDouble
+      ? "GUNS OFFLINE · DOUBLE PAY — JUST FLY!"
+      : "GUNS OFFLINE — DODGE EVERYTHING!";
+    game.run.bannerColor = "#3fc9ff";
   }
 
   const p0 = game.world.player;
@@ -418,6 +425,7 @@ function pilotName(){
    ABILITIES
    --------------------------------------------------------- */
 function useBomb(){
+  if(game.run && game.run.mission.noGuns) return false;
   const p = game.world.player;
   if(game.state !== "playing" || !p || !p.alive || p.bombs <= 0) return false;
   p.bombs--;
@@ -444,6 +452,7 @@ function useBomb(){
 }
 
 function useOverdrive(){
+  if(game.run && game.run.mission.noGuns) return false;
   const p = game.world.player;
   if(game.state !== "playing" || !p || !p.alive || p.overdrives <= 0) return false;
   if(performance.now() < p.overdriveUntil) return false;
@@ -565,6 +574,24 @@ function update(dt, timeMs){
     }
   }
 
+  // Silent running: coins rain down a random lane every few seconds. With the
+  // guns cold this IS the game - greed pulls you into traffic, and the coin
+  // objective is scored on how much of the temptation you survive taking.
+  if(run.mission.coinRain && run.phase !== "intro"){
+    run.coinTimer -= dt;
+    if(run.coinTimer <= 0){
+      const laneX = rand(50, VW - 50);
+      const drift = rand(-40, 40);
+      for(let i = 0; i < 6; i++){
+        const c = game.world.spawnPickup("coin",
+          clamp(laneX + drift*i/5 + rand(-8, 8), 30, VW - 30),
+          -24 - i*46, { value: Math.max(2, Math.round(4 * run.difficulty.pay)) });
+        c.vx = 0; c.vy = 128;
+      }
+      run.coinTimer = rand(2.2, 3.4);
+    }
+  }
+
   SF.systems.resolve(game.world, behaviourCtx, dt);
 
   if(run.comboTimer > 0){
@@ -658,6 +685,7 @@ function onPickupCollected(item, lost){
   }
   if(item.kind === "coin"){
     run.money += item.value;
+    run.stats.coins++;
     audio.play("coin");
     fx.sparks(item.x, item.y, 3, "#ffd23f", 90);
   } else if(item.kind === "rescue"){

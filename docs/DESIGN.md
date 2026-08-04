@@ -927,6 +927,30 @@ reads CREDITS x2 while it is live.
 **Three stars rains confetti.** Fifty-four CSS-animated scraps over the
 results screen. Pride deserves paper.
 
+## 8y. Silent Running
+
+One mission flies with the guns cold - Sky Force's courier levels, and the
+change of texture a fifteen-stop campaign needs. Mission 9, first stop of the
+chase into their space: you are sneaking, so nothing may fire - not the guns
+(skipped in updatePlayer), not bombs or overdrive (both refuse, and the
+buttons are hidden rather than greyed: absent reads as "not this mission",
+grey reads as "broken").
+
+With shooting gone the game IS the temptation: coins rain down a random lane
+every few seconds, and the objectives are complete / grab 60 coins / don't
+lose a life - greed pulls you into the traffic the mission is throwing at
+you. The cast is everything that threatens without needing to be shot:
+kamikazes and interceptors that chase, snipers that draw their lines, walls
+with one gap, minelayers, rocks.
+
+Inserting a mission mid-campaign renumbers everything after it, and records
+are keyed by mission id - so migrate() gained a v2 shift (9-14 up to 10-15,
+descending so nothing collides, lastMission nudged, one-shot flag). The trap
+worth writing down: the flag must NOT appear in blank(), because load()
+assigns the saved record over a blank - a preset flag marks every old save
+as already-migrated and the shift never runs. The smoke test caught exactly
+that.
+
 ## 9. What I'd do next
 
 Roughly in value order:

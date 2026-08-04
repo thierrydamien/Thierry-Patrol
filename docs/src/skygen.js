@@ -72,6 +72,11 @@ const SKIES = [
   /* --- Act 2. Colder and emptier heading out, hotter as you close on their
      home star, so the run has a direction you can see. --- */
 
+  { name:"The Blockade", clouds:["#0b1d3a","#173a6b","#050c1c"], dust:"#020409", star:"#9fc0e8",
+    density:0.65, stars:0.55, bright:1,
+    props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
+            {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
+
   { name:"The Wreck Line", clouds:["#475569","#64748b","#1e293b"], dust:"#05070c", star:"#e2e8f0",
     density:0.8, stars:1.1, bright:2,
     props:[ {k:"rocks",  x:0.50, y:0.42, r:0.30, n:34},

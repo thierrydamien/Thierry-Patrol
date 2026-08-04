@@ -37,6 +37,9 @@ const OBJECTIVES = {
   noDamage:  { label:"Take no damage at all", icon:"🧿",
                test: s => s.damageTaken === 0,
                progress: s => s.damageTaken === 0 ? "clean" : "hit" },
+  coinRush:  { label:"Grab 60 coins", icon:"🪙",
+               test: s => s.coins >= 60,
+               progress: s => (s.coins || 0) + "/60" },
   keepLives: { label:"Don't lose a single life", icon:"❤️",
                test: s => s.livesLost === 0,
                progress: s => s.livesLost === 0 ? "clean" : (s.livesLost + " lost") },
@@ -355,6 +358,43 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
 
+  /*
+   * The blockade run: the one mission where the guns are cold. Sky Force has
+   * these courier levels and they are the change of texture a long campaign
+   * needs - two minutes where the skill is entirely in your thumb. Coins rain
+   * in marked lanes so greed pulls you into traffic, and nothing here needs
+   * shooting: kamikazes and interceptors chase, snipers draw their lines,
+   * minelayers seed the road, walls have one gap. Hold nothing but your nerve.
+   */
+  {
+    id:9, name:"Silent Running", subtitle:"Guns cold. Just fly.",
+    brief:"Sneaking into THEIR space, so no shooting - they'd see the flashes! Dodge everything and grab the coins.",
+    noGuns:true, coinRain:true,
+    waves: [
+      w(1,   "grunt",    7, "wall"),
+      w(8,   "kamikaze", 4, "sides"),
+      w(14,  "asteroid", 5, "scatter"),
+      w(20,  "swooper",  7, "arc"),
+      w(27,  "interceptor", 5, "line"),
+      w(34,  "grunt",    9, "wall"),
+      w(40,  "sniper",   3, "sides"),
+      w(46,  "kamikaze", 6, "pincer"),
+      w(52,  "bomber",   3, "twinColumns"),
+      w(58,  "asteroid", 6, "scatter"),
+      w(63,  "boulder",  2, "twinColumns"),
+      w(68,  "swooper",  9, "vee"),
+      w(75,  "interceptor", 7, "sides"),
+      w(82,  "grunt",   10, "wall"),
+      w(88,  "sniper",   4, "arc"),
+      w(93,  "kamikaze", 8, "scatter"),
+      w(100, "bomber",   3, "arc"),
+      w(106, "swooper", 10, "pincer"),
+      w(113, "grunt",   11, "wall"),
+      w(118, "kamikaze", 9, "sides"),
+    ],
+    objectives: ["complete","coinRush","keepLives"],
+  },
+
   /* =========================================================
      ACT TWO
      The Sentinel falling doesn't end the war, it starts the
@@ -364,7 +404,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:9, name:"The Wreck Line", subtitle:"Through the debris",
+    id:10, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
     waves: [
       w(1,   "asteroid", 6, "scatter"),
@@ -392,7 +432,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:10, name:"The Hatchery", subtitle:"It keeps growing",
+    id:11, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     waves: [
       w(1,   "hive",     2, "twinColumns"),
@@ -420,7 +460,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:11, name:"The Warden", subtitle:"Their jailer",
+    id:12, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     waves: [
       w(1,   "striker",  7, "arc"),
@@ -446,7 +486,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:12, name:"Cold Approach", subtitle:"Line up the shot",
+    id:13, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     waves: [
       w(1,   "sniper",   4, "sides"),
@@ -472,7 +512,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","noDamage"],
   },
   {
-    id:13, name:"All Hands", subtitle:"Everyone who is left",
+    id:14, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     waves: [
       w(1,   "carrier",  3, "tripleColumns"),
@@ -502,7 +542,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:14, name:"The Leviathan", subtitle:"The last one",
+    id:15, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     waves: [
       w(1,   "grunt",   12, "wall"),

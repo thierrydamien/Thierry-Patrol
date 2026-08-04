@@ -184,7 +184,9 @@ class World {
       if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
     }
 
-    // Guns are automatic.
+    // Guns are automatic - except on a silent-running mission, where the
+    // whole point is that they never speak.
+    if(run && run.mission && run.mission.noGuns) return;
     p.cooldown -= dt;
     if(p.cooldown <= 0){
       this.fireWeapons(timeMs);

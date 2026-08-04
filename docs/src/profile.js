@@ -133,6 +133,24 @@ function snapshot(){
 function migrate(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.missions || typeof p.missions !== "object") p.missions = {};
+
+  /*
+   * v2: Silent Running was inserted as mission 9, pushing the old 9-14 up to
+   * 10-15. Records are keyed by mission id, so without this shift every act
+   * two record would point one mission early. Descending order so nothing
+   * overwrites; the flag makes it run exactly once per save, everywhere -
+   * cloud sync just carries the migrated record like any other.
+   */
+  // NOTE: the flag must never appear in blank() - load() assigns the saved
+  // record over a blank, so a preset flag would mark every old save as
+  // already-migrated and the shift would never run.
+  if((p.missionsVer || 1) < 2){
+    for(let id = 14; id >= 9; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 9) p.lastMission += 1;
+    p.missionsVer = 2;
+  }
   if(!Array.isArray(p.achievements)) p.achievements = [];
   if(!p.medalsClaimed || typeof p.medalsClaimed !== "object") p.medalsClaimed = {};
 

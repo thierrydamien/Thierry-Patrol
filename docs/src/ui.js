@@ -1165,6 +1165,10 @@ function launch(index, difficultyId){
   show("screen-game");
   hideResults();
   SF.game.startMission(index, difficultyId);
+  // Silent running hides the specials entirely - a greyed-out bomb button
+  // reads as "broken", an absent one reads as "not this mission".
+  document.querySelector(".ability-bar").classList
+    .toggle("hidden", !!SF.game.run.mission.noGuns);
   syncAbilityButtons(true);
 }
 

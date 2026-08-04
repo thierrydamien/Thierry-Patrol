@@ -130,7 +130,7 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("14 campaign missions defined", SF.missions.MISSIONS.length === 14);
+  check("15 campaign missions defined", SF.missions.MISSIONS.length === 15);
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
   check("every wave references a real enemy type",
@@ -741,6 +741,49 @@ async function run(){
     JSON.stringify({ name:"Renamed", callsign:"Renamed", money: 5678, totalKills: 21 }));
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
+
+  /* ---------- silent running (the dodge mission) ---------- */
+  {
+    const dodgeIx = SF.missions.MISSIONS.findIndex(m => m.noGuns);
+    check("exactly one mission flies with guns cold",
+      SF.missions.MISSIONS.filter(m => m.noGuns).length === 1);
+    const prof = SF.profile.blank("Dodge"); prof.callsign = "Dodge";
+    prof.upgrades = { rapid:3, damage:3, bomb:2, overdrive:2 };
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    SF.game.startMission(dodgeIx, "pilot");
+    await runFrames(400);
+    check("guns stay cold for the whole run",
+      !SF.game.world.bullets.items.some(b => b.alive) && SF.game.run.stats.spawned > 0);
+    check("bombs and overdrive refuse to fire on a silent mission",
+      SF.game.useBomb() === false && SF.game.useOverdrive() === false);
+    check("coins rain without any kills",
+      SF.game.world.pickups.items.some(pk => pk.alive && pk.kind === "coin"));
+    check("the coin objective tracks pickups",
+      SF.game.run.objectiveIds.includes("coinRush"));
+    SF.game.state = "idle";
+  }
+
+  /* ---------- act-two records shift around the new mission ---------- */
+  {
+    const oldSave = { name:"Shift", callsign:"Shift",
+      missions: { "8": { cleared:true, stars:{pilot:2}, best:{pilot:1000} },
+                  "9": { cleared:true, stars:{pilot:3}, best:{pilot:2000} },
+                  "14": { cleared:true, stars:{pilot:1}, best:{pilot:3000} } },
+      lastMission: 9 };
+    window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
+    SF.profile.addName("Shift");
+    const shifted = SF.profile.load("Shift");
+    check("pre-dodge records move up one mission",
+      shifted.missions["10"] && shifted.missions["10"].stars.pilot === 3 &&
+      shifted.missions["15"] && shifted.missions["15"].stars.pilot === 1 &&
+      !shifted.missions["14"] && shifted.lastMission === 10);
+    check("act-one records stay where they were",
+      shifted.missions["8"] && shifted.missions["8"].stars.pilot === 2);
+    check("the shift runs exactly once",
+      SF.profile.migrate(shifted).missions["10"].stars.pilot === 3);
+  }
 
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
