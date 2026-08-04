@@ -113,6 +113,14 @@ const COMMS = {
     "Something big on the scope, {you}.",
     "Heads up - that's their flagship.",
   ]},
+  armoured: { speaker:"control", cooldown:999, lines:[
+    "Your shots are bouncing off, {you} - shoot the PARTS, not the middle!",
+    "It's sealed. Knock the bits off it first!",
+  ]},
+  coreExposed: { speaker:"mate", cooldown:999, lines:[
+    "Armour's off - HIT THE MIDDLE, {you}!",
+    "The core's wide open. Now!",
+  ]},
   bossWeakPoint: { speaker:"mate", cooldown:10, lines:[
     "You knocked a gun off it!",
     "It's coming apart, {you}!",

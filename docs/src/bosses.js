@@ -25,13 +25,15 @@ const audio = SF.audio;
  * `def.fightSeconds` is how long the encounter should last for the ship that
  * turns up; the pool is derived from the loadout's real single-target DPS.
  * ACCURACY is the share of that DPS that actually lands on a patrolling boss
- * while you are also dodging it. It is *measured*, not guessed: instrumented
- * bot runs land 18-33% depending on how wide the spread is, so 0.32 puts a
- * competent run at the target and a scrappy one somewhat over it. Because the
- * pool is derived from dps, the fight length is independent of firepower -
- * changing this number moves every boss fight at once.
+ * while you are also dodging it. It is *measured*, not guessed - and the first
+ * measurement was taken against small, evasive bosses. Re-measured against the
+ * current roster (bigger hulls, and players who park under them), a competent
+ * run lands far more than the old 0.32: the Marauder was dying in 15s against
+ * a 26s design, the Warden in 37s against 50. Bosses were, as the customer
+ * put it, too easy to kill. 0.46 is the measured middle. Because the pool is
+ * derived from dps, this one number moves every boss fight at once.
  */
-const ACCURACY = 0.32;
+const ACCURACY = 0.46;
 function bossHpFor(def, difficulty, dps){
   const target = def.fightSeconds || 30;
   // The dps floor only guards against a divide-by-nothing loadout; it is
@@ -47,8 +49,11 @@ function create(defId, difficulty, dps){
   // Weak points stay a fixed share of the hull, so "shoot the guns off" is
   // worth the same detour whatever you fly in with.
   const wpScale = hp / Math.round(def.hp * difficulty.bossHp);
+  // On an armoured boss the plates are the main event rather than an optional
+  // detour, so they come off faster than a bolt-on weak point would.
+  const armourScale = def.armoured ? 0.4 : 1;
   const boss = {
-    alive: true, def, name: def.name, tint: def.tint,
+    alive: true, def, defId, name: def.name, tint: def.tint,
     x: VW/2, y: -150, targetY: def.entryY,
     vx: 78, size: def.size, r: def.size*0.42,
     hp, maxHp: hp,
@@ -60,8 +65,8 @@ function create(defId, difficulty, dps){
     flash: 0, wobble: 0, smokeTimer: 0, deathTimer: 0,
     weakPoints: def.weakPoints.map(wp => ({
       id: wp.id, ox: wp.x, oy: wp.y, r: wp.r,
-      hp: Math.round(wp.hp * difficulty.bossHp * wpScale),
-      maxHp: Math.round(wp.hp * difficulty.bossHp * wpScale),
+      hp: Math.round(wp.hp * difficulty.bossHp * wpScale * armourScale),
+      maxHp: Math.round(wp.hp * difficulty.bossHp * wpScale * armourScale),
       disables: wp.disables, destroyed: false, flash: 0,
     })),
     // Pre-rolled damage spots so scorching and chunks appear in stable places.
@@ -471,6 +476,16 @@ function damage(boss, amount, x, y){
     if((x-wx)*(x-wx) + (y-wy)*(y-wy) < wp.r*wp.r){ onWeak = wp; break; }
   }
 
+  // Armoured bosses are SEALED: hull hits chip but can never finish them while
+  // a single plate survives. "Destroy the parts one by one" has to be a rule
+  // the fight enforces, not a suggestion the player may ignore.
+  const sealed = boss.def.armoured && boss.weakPoints.some(w => !w.destroyed);
+  // Chip damage stops at a reserve rather than at zero. Flooring it at 1 meant
+  // the hull was already dead by the time the last plate came off, so "CORE
+  // EXPOSED!" was followed instantly by the boss exploding - the core phase
+  // has to still be there when you earn it.
+  const sealFloor = boss.maxHp * 0.45;
+
   let weakPointDestroyed = null;
   if(onWeak){
     onWeak.hp -= amount;
@@ -487,11 +502,40 @@ function damage(boss, amount, x, y){
       fx.hitStop(70);
       audio.play("enemyExplode", true);
     }
+  } else if(sealed){
+    // Armour eats most of it, and the hull can never drop below a sliver.
+    boss.hp = Math.max(sealFloor, boss.hp - amount*0.35);
+    boss.flash = 0.55;
+    fx.sparks(x, y, 4, "#c9d4e4", 210);
+    audio.play("armourClang");
+    boss.armourHint = (boss.armourHint || 0) + 1;
+    if(boss.armourHint === 14){
+      fx.text(boss.x, boss.y + boss.r*0.8, "SHOOT THE PARTS!", "#ffd23f", 21, true);
+      SF.comms.say("armoured");
+    }
   } else {
     boss.hp -= amount;
     boss.flash = 1;
     fx.sparks(x, y, 3, boss.hp/boss.maxHp < 0.5 ? "#ffb03d" : "#ff5d73", 150);
     audio.play("bossHit");
+  }
+
+  // Weak-point hits also damage the hull (double, for precision) - and that
+  // path bypassed the seal, so a sealed boss could die with plates still
+  // bolted on and skip its own mechanic entirely. The floor applies to every
+  // route to the hull, not just the hull-fire one.
+  if(sealed && boss.weakPoints.some(w => !w.destroyed)) boss.hp = Math.max(sealFloor, boss.hp);
+
+  // The moment the last plate goes, the fight visibly changes.
+  if(weakPointDestroyed && boss.def.armoured &&
+     boss.weakPoints.every(w => w.destroyed)){
+    fx.ring(boss.x, boss.y, boss.size*1.5, "#ffffff", 6, 0.7);
+    fx.ring(boss.x, boss.y, boss.size*1.1, "#ffd23f", 4, 0.9);
+    fx.flash(0.45, "255,230,170");
+    fx.shake(20); fx.hitStop(130);
+    fx.text(boss.x, boss.y, "CORE EXPOSED!", "#ffd23f", 28, true);
+    audio.play("coreExposed");
+    SF.comms.say("coreExposed");
   }
 
   const killed = boss.hp <= 0;
@@ -584,6 +628,16 @@ function beamHits(boss, x, y){
   return false;
 }
 
+/** True while armour still seals this boss - the HUD says so. */
+function isSealed(boss){
+  return !!(boss && boss.def.armoured && boss.weakPoints.some(w => !w.destroyed));
+}
+/** How many parts are still bolted on. */
+function partsLeft(boss){
+  return boss ? boss.weakPoints.filter(w => !w.destroyed).length : 0;
+}
+
 SF.bosses = {
-  bossHpFor, create, update, damage, beamHits, arenaLive, ATTACKS };
+  bossHpFor, create, update, damage, beamHits, arenaLive,
+  isSealed, partsLeft, ATTACKS };
 })();

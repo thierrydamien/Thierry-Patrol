@@ -1316,6 +1316,46 @@ sometimes dealt LESS damage than the careless one, because parking in the
 nova's safe ring aims your guns away from the boss. Dodging costs damage -
 an emergent tension nobody designed, and a good one.
 
+## 8ap. Every boss to the finale's standard
+
+Three linked asks, and they turned out to be one job.
+
+**Hulls.** Every boss except the Devourer was a tinted ENEMY sprite, scaled
+up. That is fine at 130px and it is a coloured blob at 300 - and it is
+actively wrong for fights whose mechanic is "shoot the parts off", because
+there were no visible parts. `bossart.js` now holds a hand-drawn hull for
+each: the Marauder's welded raider wedge with two enormous side cannons, the
+Jailer's lit cell blocks behind bars, the Sentinel's carrier deck and
+command tower, the Warden's minelaying rig, the Phantom's blade with three
+lenses, the Leviathan's four-part frame. Each is built around ITS OWN weak
+point coordinates, so the thing the game tells you to shoot is visibly a
+thing bolted onto the ship.
+
+**Armour.** `armoured: true` makes a boss SEALED: hull fire chips at 35% and
+can never take it below a 45% reserve, so the parts must come off before the
+core can be killed. Stripping the last one fires "CORE EXPOSED!" - white
+ring, hit-stop, unlocking chord - and the fight opens up. The Jailer,
+Sentinel, Leviathan and Devourer are sealed; the Marauder (first boss) and
+the two gimmick bosses are not, so the idea is taught before it is
+required. Three signals keep it fair: a HUD line counting parts left, a
+"SHOOT THE PARTS!" callout after enough wasted hull hits, and the radio.
+
+**Difficulty.** The customer said bosses die too fast, and the probe agreed:
+the Marauder was dying in 15s against a 26s design, the Warden in 37 against
+50. The cause was ACCURACY - the engine sizes every boss from "share of your
+DPS that actually lands", measured long ago against small evasive bosses.
+Against the current roster (bigger hulls, players who park underneath) 0.32
+was far too low. 0.46 is the re-measured value, and it lifts every boss in
+the game at once; the armoured fights had their design targets trimmed to
+compensate for the phase armour adds.
+
+Two bugs the new tests caught, both invisible in play until they weren't:
+weak-point hits damage the hull too, and that path bypassed the seal - so a
+sealed boss could die with plates still attached and skip its own mechanic.
+And the chip floor was 1, which meant the hull was already dead by the time
+the last plate fell: "CORE EXPOSED!" would have been followed instantly by
+the boss exploding, with no core phase at all.
+
 ## 9. What I'd do next
 
 Roughly in value order:

@@ -107,7 +107,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/finale.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/finale.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -654,6 +654,10 @@ async function run(){
       W.createPlayer(SF.game.buildLoadout(prof, diff));
       const boss = W.boss = SF.bosses.create(id, diff, 60);
       boss.entering = false; boss.y = boss.def.entryY;
+      // An armoured boss holds a health reserve until its plates are off, so
+      // its late phases are BEHIND the armour by design. Strip it first; this
+      // check is about phase coverage, not about the seal.
+      if(boss.def.armoured) boss.weakPoints.forEach(wp => { wp.hp = 0; wp.destroyed = true; });
       const phasesHit = new Set();
       for(let f=0; f<4200; f++){
         SF.bosses.update(boss, W, ctxc, 1/60);
@@ -1112,13 +1116,21 @@ async function run(){
     check("the first boss arrives immediately - no waves",
       SF.game.run.bossActive && SF.game.world.boss &&
       SF.game.world.boss.name === "THE MARAUDER" && SF.game.run.stats.spawned === 0);
-    SF.game.world.boss.hp = 1;               // autofire finishes it
+    // Sentinel is armoured now: strip its plates before the hull can be killed.
+    const strip = () => {
+      const bb = SF.game.world.boss;
+      if(!bb) return;
+      bb.weakPoints.forEach(wp => { wp.hp = 0; wp.destroyed = true;
+        if(wp.disables) bb.disabled[wp.disables] = true; });
+      bb.hp = 1;
+    };
+    strip();
     await runFrames(320);
     check("the next boss follows the blast",
       SF.game.world.boss && SF.game.world.boss.name === "SKY SENTINEL");
     check("later rush stages come harder",
       SF.game.world.boss.hurry > 1 && SF.game.world.boss.maxHp > 0);
-    SF.game.world.boss.hp = 1;
+    strip();
     await runFrames(560);
     check("an emptied queue ends in the victory lap",
       SF.game.run.lapStarted === true || SF.game.run.ended);
@@ -1278,6 +1290,67 @@ async function run(){
       .map(s => id(s).textContent).join(" ");
     return !/\$/.test(seen);
   })());
+
+  /* ---------- armoured bosses: the parts come off first ---------- */
+  {
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const W = SF.game.world;
+    W.reset();
+    check("the big bosses are sealed, the teaching ones are not",
+      ["jailer","sentinel","leviathan","devourer"].every(id => SF.missions.BOSSES[id].armoured) &&
+      !SF.missions.BOSSES.marauder.armoured);
+
+    const b = SF.bosses.create("sentinel", diff, 60);
+    b.entering = false; b.x = 300; b.y = 150;
+    check("a sealed boss reports itself sealed",
+      SF.bosses.isSealed(b) && SF.bosses.partsLeft(b) === b.weakPoints.length);
+
+    // Hull fire cannot finish it, however much you pour in.
+    for(let i = 0; i < 400; i++) SF.bosses.damage(b, 500, b.x, b.y + 60);
+    check("armour makes the core unkillable until the parts are off",
+      b.alive && b.hp >= 1 && SF.bosses.isSealed(b));
+
+    // Kill the parts: the seal breaks and the core becomes killable.
+    b.weakPoints.forEach(wp => {
+      let guard = 0;
+      while(!wp.destroyed && guard++ < 4000)
+        SF.bosses.damage(b, 6, b.x + wp.ox, b.y + wp.oy);
+    });
+    check("stripping every part exposes the core",
+      !SF.bosses.isSealed(b) && SF.bosses.partsLeft(b) === 0 && b.alive);
+    const before = b.hp;
+    SF.bosses.damage(b, 50, b.x, b.y + 60);
+    check("an exposed core takes full damage", b.hp <= before - 50);
+    let guard = 0;
+    while(b.alive && guard++ < 900) SF.bosses.damage(b, 200, b.x, b.y + 60);
+    check("an exposed core can actually be killed", !b.alive);
+
+    check("an unsealed boss is never gated",
+      (() => {
+        const m = SF.bosses.create("marauder", diff, 60);
+        m.entering = false;
+        const h0 = m.hp;
+        SF.bosses.damage(m, 40, m.x, m.y + 40);
+        return !SF.bosses.isSealed(m) && m.hp <= h0 - 40;
+      })());
+  }
+
+  /* ---------- every boss has a hull of its own ---------- */
+  check("every boss is hand-drawn, not a scaled enemy sprite", (() => {
+    const ids = Object.keys(SF.missions.BOSSES);
+    const cv = window.document.createElement("canvas");
+    const c = cv.getContext("2d");
+    return ids.every(id => {
+      if(id === "devourer") return true;          // the finale draws its own
+      if(!SF.bossart.has(id)) return false;
+      const b = SF.bosses.create(id, SF.config.DIFFICULTY_BY_ID.pilot, 60);
+      try { SF.bossart.draw(c, b, b.size, 0.5, 900); } catch(e){ return false; }
+      return true;
+    });
+  })());
+  check("boss fights are sized for a competent pilot, not a perfect one",
+    SF.bosses.bossHpFor(SF.missions.BOSSES.marauder, SF.config.DIFFICULTY_BY_ID.pilot, 100) >
+    SF.missions.BOSSES.marauder.fightSeconds * 100 * 0.4);
 
   /* ---------- THE FINALE: the Devourer ---------- */
   {

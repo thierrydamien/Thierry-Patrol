@@ -954,6 +954,17 @@ function drawBoss(ctx, boss, timeMs){
     ctx.restore();   // cloak alpha off
     return;
   }
+  // Every boss with a hand-drawn hull uses it; the tinted enemy silhouette is
+  // now only a fallback for anything that hasn't been drawn yet.
+  if(SF.bossart && SF.bossart.has(bossId)){
+    ctx.save();
+    ctx.translate(bx, by);
+    SF.bossart.draw(ctx, boss, size, damage, timeMs);
+    ctx.restore();
+    drawWeakPoints(ctx, boss, bx, by, timeMs);
+    ctx.restore();   // cloak alpha off
+    return;
+  }
   const bossShape = { marauder:"brute", sentinel:"carrier", warden:"bomber",
                       jailer:"shielder", phantom:"sniper", leviathan:"hive" }[bossId] || null;
   const bossArt = bossShape ? SF.enemyArt.spriteFor(bossShape, boss.tint, false) : null;
@@ -1956,6 +1967,14 @@ function drawHud(ctx, game){
     ctx.shadowColor = boss.tint; ctx.shadowBlur = 6;
     ctx.fillText(boss.name, VW/2, barY-14);
     ctx.shadowBlur = 0;
+    // Sealed bosses say so, and count down: the goal is never a mystery.
+    if(SF.bosses.isSealed(boss)){
+      const left = SF.bosses.partsLeft(boss);
+      ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+      ctx.fillStyle = "#ffd23f";
+      ctx.fillText("ARMOURED — " + left + " PART" + (left === 1 ? "" : "S") + " LEFT",
+                   VW/2, barY + 22);
+    }
     ctx.textAlign = "left";
   }
 

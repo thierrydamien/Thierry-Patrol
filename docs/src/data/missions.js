@@ -69,7 +69,8 @@ const BOSSES = {
   },
   sentinel: {
     name: "SKY SENTINEL", epithet: "their flagship",
-    hp: 820, fightSeconds: 44, size: 150, tint: "#a855f7", entryY: 158,
+    hp: 820, fightSeconds: 33, size: 150, tint: "#a855f7", entryY: 158,
+    armoured: true,
     weakPoints: [
       { id:"core",     x:  0, y:-8, r:20, hp:150, disables:"sweepBeam" },
       { id:"leftPod",  x:-52, y:18, r:17, hp:95, disables:"ringBurst" },
@@ -90,7 +91,8 @@ const BOSSES = {
    */
   jailer: {
     name: "THE JAILER", epithet: "keeper of the cells",
-    hp: 560, fightSeconds: 34, size: 140, tint: "#4ade80", entryY: 152,
+    hp: 560, fightSeconds: 25, size: 140, tint: "#4ade80", entryY: 152,
+    armoured: true,
     rescuePods: true,
     weakPoints: [
       { id:"leftCell",  x:-48, y:16, r:18, hp:95, disables:"callMinions" },
@@ -164,7 +166,8 @@ const BOSSES = {
   devourer: {
     name: "THE DEVOURER", epithet: "it ate their star. ours is next.",
     finale: true,
-    hp: 4200, fightSeconds: 70, size: 300, tint: "#ff3d5a", entryY: 172,
+    hp: 4200, fightSeconds: 58, size: 300, tint: "#ff3d5a", entryY: 172,
+    armoured: true,
     weakPoints: [
       // Four armour plates seal the core. Blow them off to open the fight up -
       // and each one takes an attack with it.
@@ -196,7 +199,8 @@ const BOSSES = {
    */
   leviathan: {
     name: "THE LEVIATHAN", epithet: "the last thing between you and home",
-    hp: 1700, fightSeconds: 66, size: 176, tint: "#f97316", entryY: 164,
+    hp: 1700, fightSeconds: 50, size: 176, tint: "#f97316", entryY: 164,
+    armoured: true,
     weakPoints: [
       { id:"core",      x:  0, y:-18, r:22, hp:220, disables:"sweepBeam" },
       { id:"leftPod",   x:-62, y: 14, r:18, hp:150, disables:"spiralArms" },

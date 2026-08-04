@@ -145,6 +145,17 @@ const SOUNDS = {
   star:       { minGap: 90, fn: (n) => { tone(700 + (n||0)*180, 0.16, "triangle", 0.07, null); }},
 };
 
+SOUNDS.armourClang = { minGap: 90, fn: () => {
+  // A dead, ringing clang: the sound of a shot that did nothing.
+  tone(rand(1500,1800), 0.05, "square", 0.022, 700);
+  noise(0.05, 0.05, 4000, 1200);
+} };
+SOUNDS.coreExposed = { minGap: 900, fn: () => {
+  // Armour off: a bright unlocking chord.
+  [330, 440, 554, 740, 880].forEach((f,i) => tone(f, 0.3, "triangle", 0.07, null, i*0.06));
+  noise(0.5, 0.16, 3000, 300);
+} };
+
 SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   // Two slow klaxon sweeps - dread, not panic.
   tone(320, 0.42, "sawtooth", 0.11, -140, 0);
