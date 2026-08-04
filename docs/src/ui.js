@@ -919,10 +919,16 @@ function renderPartsTab(panel){
     const lines =
       t.pros.map(x => `<em class="good">▲ ${esc(x)}</em>`).join("") +
       t.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
-    card.innerHTML = `<i>${t.icon}</i><b>${esc(t.name)}</b>
+    // The card's icon is YOUR ship wearing this tune - the most honest
+    // preview possible, and no pasted-on emoji.
+    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(t.name)}</b>
       <span>${esc(t.blurb)}</span>${lines}
       <u>${on ? "FITTED ✓" : open ? "tap to fit"
             : "🔒 beat Mission " + t.unlockMission + "'s boss"}</u>`;
+    const tc = card.querySelector(".tc-ship").getContext("2d");
+    if(tc) SF.shipart.drawShip(tc, 48, 50, 72,
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
+        t: 0.8, idle: false, tune: t.id });
     click(card, () => {
       if(!open){
         queueToast({ icon:"🔒", name:"Beat Mission " + t.unlockMission + "'s boss to win " + t.name,
@@ -933,7 +939,7 @@ function renderPartsTab(panel){
       profile.tune = t.id;
       P.save(profile);
       renderArmory();      // hangar + spec bars redraw: the ship visibly changes
-      queueToast({ icon: t.icon, name: t.name + " tune fitted", label:"HANGAR" });
+      queueToast({ name: t.name + " tune fitted", label:"HANGAR" });
     });
     row.appendChild(card);
   });
@@ -1275,7 +1281,7 @@ function renderBriefTiers(index){
   const earnedHere = (profile.missions[m.id] && profile.missions[m.id].stars[briefTier]) || 0;
   $("briefObjectives").innerHTML = m.objectives.map((id, i) => {
     const o = OBJECTIVES[id];
-    return `<div class="bo-row"><span class="bo-icon">${o.icon}</span>
+    return `<div class="bo-row">
               <span class="bo-text">${esc(o.label)}</span>
               <span class="bo-star${i < earnedHere ? " on" : ""}">★</span></div>`;
   }).join("");
@@ -1548,9 +1554,9 @@ function renderLeaderboard(){
   const daily = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
     .sort((a,b) => b.endlessBest - a.endlessBest);
   const dailyRow = daily.length ? `<div class="rb-row rb-daily${daily[0].name === profile.name ? " mine" : ""}">
-      <span class="rb-num">🌅</span>
+      <span class="rb-num">★</span>
       <span class="rb-name">Daily Patrol</span>
-      <span class="rb-holder">👑 ${esc(daily[0].callsign || daily[0].name)}</span>
+      <span class="rb-holder">${esc(daily[0].callsign || daily[0].name)}</span>
       <span class="rb-score">${daily[0].endlessBest.toLocaleString()}</span>
     </div>` : "";
   $("recordBoard").innerHTML = dailyRow + flown.map(m => {
@@ -1721,8 +1727,8 @@ function showResults(result){
   // says where to go fit it.
   if(result.firstClear && run.mission.boss){
     const wonTune = SF.config.TUNES.find(t => t.unlockMission === run.mission.id);
-    if(wonTune) queueToast({ icon: wonTune.icon,
-      name: wonTune.name + " tune won! Fit it in MY SHIP", label:"TUNE UNLOCKED" });
+    if(wonTune) queueToast({ name: wonTune.name + " tune won! Fit it in MY SHIP",
+      label:"TUNE UNLOCKED" });
   }
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
@@ -1736,8 +1742,8 @@ function rushRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Rush record</span><b>${mine ? "☠️ YOURS" :
-    "☠️ " + esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
+  return `<div class="rl record"><span>Rush record</span><b>${mine ? "YOURS" :
+    esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
 }
 
 /** Who holds the Daily Patrol crown right now - shown after every daily run. */
@@ -1747,8 +1753,8 @@ function dailyRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Daily crown</span><b>${mine ? "👑 YOURS" :
-    "👑 " + esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString("en-US")} pts</b></div>`;
+  return `<div class="rl record"><span>Daily crown</span><b>${mine ? "YOURS" :
+    esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString("en-US")} pts</b></div>`;
 }
 
 /**
@@ -1837,8 +1843,10 @@ function nextToast(){
   // The toast serves more than medals now - a `label` names the occasion
   // (default keeps the medal ceremony), and non-medal toasts drop the trophy.
   $("at-label").textContent = a.label || "MEDAL UNLOCKED";
-  $("at-icon").textContent = a.label ? "📣" : "🏆";
-  $("at-name").textContent = a.icon + " " + a.name;
+  // Only a real medal gets the trophy; other toasts carry no pasted-on icon.
+  $("at-icon").textContent = a.label ? "" : "🏆";
+  $("at-icon").classList.toggle("hidden", !!a.label);
+  $("at-name").textContent = (a.icon ? a.icon + " " : "") + a.name;
   requestAnimationFrame(() => el.classList.add("show"));
   setTimeout(() => {
     el.classList.remove("show");
@@ -1924,7 +1932,7 @@ if(SF.cloud && SF.cloud.configured()){
     const n = SF.cloud.restoreBackup(0);
     renderCloud(); renderProfiles();
     paintCloudStatus({ state:"ok", error:null });
-    if(n) queueToast({ icon:"💾", name: n + " pilot" + (n === 1 ? "" : "s") + " restored", label:"SQUAD SYNC" });
+    if(n) queueToast({ name: n + " pilot" + (n === 1 ? "" : "s") + " restored", label:"SQUAD SYNC" });
   });
   SF.cloud.boot();
 }
@@ -1948,7 +1956,7 @@ function renderSettings(){
   pill("setShake", SF.fx.shakeEnabled());
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
-  if(profile) resetBtn.querySelector("span").textContent = "🗑 Reset " + profile.name;
+  if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
 }
 function openSettings(){
   renderSettings();
@@ -1978,7 +1986,7 @@ click($("setReset"), () => {
   profile = fresh;
   SF.game.profile = fresh;
   $("settingsOverlay").classList.add("hidden");
-  queueToast({ icon:"🗑", name: who + " starts over as a rookie", label:"PILOT RESET" });
+  queueToast({ name: who + " starts over as a rookie", label:"PILOT RESET" });
   renderMenu();
   show("screen-menu");
 });
@@ -2012,7 +2020,7 @@ click($("testFlightBtn"), () => launch("test", "pilot"));
 SF.game.onTestFlightEnd = (r) => {
   renderArmory();
   show("screen-armory");
-  queueToast({ icon:"🎯", name:"Test complete — " + r.kills + " targets down", label:"TEST RANGE" });
+  queueToast({ name:"Test complete — " + r.kills + " targets down", label:"TEST RANGE" });
 };
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });

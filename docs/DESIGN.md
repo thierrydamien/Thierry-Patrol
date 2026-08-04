@@ -1230,6 +1230,16 @@ big cards with kid-readable green-▲/red-▼ lines and a one-line how-it-works.
 migrate() reverts any fitted tune whose boss this pilot hasn't actually
 beaten, so a copied save can't wear an unearned crown.
 
+## 8am. The emoji sweep
+
+Same verdict as the menu, applied everywhere: emoji pasted next to canvas
+art reads as scaffolding. Tune cards now use the most honest icon possible -
+YOUR ship wearing that tune, drawn live; settings rows, toasts, record
+lines, the briefing's objective list and the championship's daily row are
+plain typographic now. What stays: the padlock (a universal state glyph),
+and the medal set - those emoji ARE the medal art, a consistent set inside
+a designed card. The toast trophy now appears only on actual medals.
+
 ## 9. What I'd do next
 
 Roughly in value order:
