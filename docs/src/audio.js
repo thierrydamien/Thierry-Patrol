@@ -145,6 +145,15 @@ const SOUNDS = {
   star:       { minGap: 90, fn: (n) => { tone(700 + (n||0)*180, 0.16, "triangle", 0.07, null); }},
 };
 
+SOUNDS.chargeWind = { minGap: 700, fn: () => {
+  // Engines spooling for a ram: a rising whine.
+  tone(120, 0.55, "sawtooth", 0.07, 640);
+} };
+SOUNDS.chargeHit = { minGap: 500, fn: () => {
+  noise(0.45, 0.3, 1400, 70);
+  tone(70, 0.4, "square", 0.1, 34);
+} };
+
 SOUNDS.armourClang = { minGap: 90, fn: () => {
   // A dead, ringing clang: the sound of a shot that did nothing.
   tone(rand(1500,1800), 0.05, "square", 0.022, 700);

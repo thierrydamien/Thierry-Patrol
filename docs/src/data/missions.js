@@ -58,13 +58,13 @@ const BOSSES = {
     name: "THE MARAUDER", epithet: "first of the raiders",
     hp: 380, fightSeconds: 26, size: 132, tint: "#ff2d55", entryY: 150,
     weakPoints: [
-      { id:"leftGun",  x:-44, y:14, r:18, hp:70, disables:"spreadVolley" },
-      { id:"rightGun", x: 44, y:14, r:18, hp:70, disables:"spreadVolley" },
+      { id:"leftGun",  x:-62, y:-4, r:18, hp:70, disables:"spreadVolley" },
+      { id:"rightGun", x: 62, y:-4, r:18, hp:70, disables:"chargeRam" },
     ],
     phases: [
-      { at:1.00, speed: 70, telegraph:0.55, gap:[1.5,2.1], attacks:["spreadVolley","aimedBurst"] },
-      { at:0.50, speed:110, telegraph:0.45, gap:[1.0,1.5], attacks:["spreadVolley","aimedBurst","callMinions"] },
-      { at:0.20, speed:145, telegraph:0.35, gap:[0.7,1.1], attacks:["ringBurst","aimedBurst"], enrage:true },
+      { at:1.00, speed: 70, telegraph:0.60, gap:[1.5,2.1], attacks:["spreadVolley","chargeRam","aimedBurst"] },
+      { at:0.50, speed:110, telegraph:0.50, gap:[1.0,1.5], attacks:["chargeRam","aimedBurst","callMinions"] },
+      { at:0.20, speed:145, telegraph:0.38, gap:[0.7,1.1], attacks:["chargeRam","ringBurst","aimedBurst"], enrage:true },
     ],
   },
   sentinel: {
@@ -72,9 +72,9 @@ const BOSSES = {
     hp: 820, fightSeconds: 33, size: 150, tint: "#a855f7", entryY: 158,
     armoured: true,
     weakPoints: [
-      { id:"core",     x:  0, y:-8, r:20, hp:150, disables:"sweepBeam" },
-      { id:"leftPod",  x:-52, y:18, r:17, hp:95, disables:"ringBurst" },
-      { id:"rightPod", x: 52, y:18, r:17, hp:95, disables:"callMinions" },
+      { id:"core",     x:  0, y:-30, r:20, hp:150, disables:"sweepBeam" },
+      { id:"leftPod",  x:-68, y: 20, r:17, hp:95, disables:"ringBurst" },
+      { id:"rightPod", x: 68, y: 20, r:17, hp:95, disables:"callMinions" },
     ],
     phases: [
       { at:1.00, speed: 80, telegraph:0.55, gap:[1.4,1.9], attacks:["spreadVolley","sweepBeam"] },
@@ -95,8 +95,8 @@ const BOSSES = {
     armoured: true,
     rescuePods: true,
     weakPoints: [
-      { id:"leftCell",  x:-48, y:16, r:18, hp:95, disables:"callMinions" },
-      { id:"rightCell", x: 48, y:16, r:18, hp:95, disables:"tractorPull" },
+      { id:"leftCell",  x:-56, y: 2, r:20, hp:95, disables:"callMinions" },
+      { id:"rightCell", x: 56, y: 2, r:20, hp:95, disables:"tractorPull" },
     ],
     phases: [
       { at:1.00, speed: 75, telegraph:0.60, gap:[1.5,2.0], attacks:["tractorPull","spreadVolley"] },
@@ -114,9 +114,9 @@ const BOSSES = {
     name: "THE WARDEN", epithet: "keeper of the minefields",
     hp: 1150, fightSeconds: 50, size: 158, tint: "#22d3ee", entryY: 152,
     weakPoints: [
-      { id:"leftHatch",  x:-56, y: 16, r:18, hp:130, disables:"mineField" },
-      { id:"rightHatch", x: 56, y: 16, r:18, hp:130, disables:"mineField" },
-      { id:"spine",      x:  0, y:-16, r:21, hp:180, disables:"spiralArms" },
+      { id:"leftHatch",  x:-58, y: 14, r:18, hp:130, disables:"mineField" },
+      { id:"rightHatch", x: 58, y: 14, r:18, hp:130, disables:"mineField" },
+      { id:"spine",      x:  0, y:-46, r:21, hp:180, disables:"spiralArms" },
     ],
     phases: [
       { at:1.00, speed: 85, telegraph:0.55, gap:[1.3,1.8], attacks:["mineField","aimedBurst","spreadVolley"] },
@@ -166,7 +166,7 @@ const BOSSES = {
   devourer: {
     name: "THE DEVOURER", epithet: "it ate their star. ours is next.",
     finale: true,
-    hp: 4200, fightSeconds: 58, size: 300, tint: "#ff3d5a", entryY: 172,
+    hp: 4200, fightSeconds: 58, size: 360, tint: "#ff3d5a", entryY: 196,
     armoured: true,
     weakPoints: [
       // Four armour plates seal the core. Blow them off to open the fight up -
@@ -199,13 +199,13 @@ const BOSSES = {
    */
   leviathan: {
     name: "THE LEVIATHAN", epithet: "the last thing between you and home",
-    hp: 1700, fightSeconds: 50, size: 176, tint: "#f97316", entryY: 164,
+    hp: 1700, fightSeconds: 50, size: 250, tint: "#f97316", entryY: 190,
     armoured: true,
     weakPoints: [
-      { id:"core",      x:  0, y:-18, r:22, hp:220, disables:"sweepBeam" },
-      { id:"leftPod",   x:-62, y: 14, r:18, hp:150, disables:"spiralArms" },
-      { id:"rightPod",  x: 62, y: 14, r:18, hp:150, disables:"ringBurst" },
-      { id:"hatch",     x:  0, y: 44, r:19, hp:165, disables:"callMinions" },
+      { id:"core",      x:  0, y:-40, r:24, hp:220, disables:"sweepBeam" },
+      { id:"leftPod",   x:-96, y:  6, r:20, hp:150, disables:"spiralArms" },
+      { id:"rightPod",  x: 96, y:  6, r:20, hp:150, disables:"ringBurst" },
+      { id:"hatch",     x:  0, y: 62, r:21, hp:165, disables:"callMinions" },
     ],
     phases: [
       { at:1.00, speed: 88, telegraph:0.55, gap:[1.3,1.8], attacks:["spreadVolley","aimedBurst","sweepBeam"] },

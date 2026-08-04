@@ -52,8 +52,16 @@ function create(defId, difficulty, dps){
   // On an armoured boss the plates are the main event rather than an optional
   // detour, so they come off faster than a bolt-on weak point would.
   const armourScale = def.armoured ? 0.4 : 1;
+  // How far the boss may drift before an outer part leaves the column the
+  // player can physically fly into. The Leviathan's pods sit at +-62; at the
+  // old fixed patrol limit of 78 that put one at x=16, and the ship clamps at
+  // x=24 - the part was UNREACHABLE and the fight unwinnable. Never let a
+  // weak point go somewhere the guns cannot follow.
+  const reach = def.weakPoints.reduce((m, wp) => Math.max(m, Math.abs(wp.x) + wp.r), 0);
+  const patrolMargin = Math.max(78, reach + 34);
+
   const boss = {
-    alive: true, def, defId, name: def.name, tint: def.tint,
+    alive: true, def, defId, name: def.name, tint: def.tint, patrolMargin,
     x: VW/2, y: -150, targetY: def.entryY,
     vx: 78, size: def.size, r: def.size*0.42,
     hp, maxHp: hp,
@@ -191,7 +199,7 @@ const ATTACKS = {
       const p = world.player;
       fx.ring(boss.x, boss.y, 90, boss.tint, 3, 0.35);
       fx.sparks(boss.x, boss.y, 14, boss.tint, 220);
-      boss.x = clamp((p ? p.x : VW/2) + rand(-70, 70), 78, VW-78);
+      boss.x = clamp((p ? p.x : VW/2) + rand(-70, 70), boss.patrolMargin, VW-boss.patrolMargin);
       fx.ring(boss.x, boss.y, 90, "#ffffff", 3, 0.4);
       boss.burst = { attack:"blink", left: boss.phase.enrage ? 5 : 3, timer: 0.1, gap: 0.11 };
     },
@@ -292,6 +300,21 @@ const ATTACKS = {
     },
   },
 
+  /*
+   * The Marauder's signature, and the first boss's whole personality: it
+   * doesn't shoot at you, it COMES at you. Telegraphed by rearing back, then
+   * a fast dive down the screen and a slow climb home. The first boss should
+   * teach "read the wind-up, then move", and a charge teaches it in one go.
+   */
+  chargeRam: {
+    telegraphKind: "lock",
+    fire(boss, world){
+      const p = world.player;
+      boss.charge = { x: p ? p.x : VW/2, t: 0, rear: 0.45, dive: 0.55, back: 1.1,
+                      homeY: boss.targetY };
+      audio.play("chargeWind");
+    },
+  },
   callMinions: {
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
@@ -393,8 +416,9 @@ function update(boss, dt, world, ctxObj, timeMs){
 
   // Patrol
   boss.x += boss.vx * (boss.phase.speed/70) * dt;
-  if(boss.x < 78){ boss.x = 78; boss.vx = Math.abs(boss.vx); }
-  if(boss.x > VW-78){ boss.x = VW-78; boss.vx = -Math.abs(boss.vx); }
+  const m = boss.patrolMargin;
+  if(boss.x < m){ boss.x = m; boss.vx = Math.abs(boss.vx); }
+  if(boss.x > VW-m){ boss.x = VW-m; boss.vx = -Math.abs(boss.vx); }
 
   // Multi-shot bursts
   if(boss.burst){
@@ -413,6 +437,24 @@ function update(boss, dt, world, ctxObj, timeMs){
     boss.beam.x += boss.beam.dir * 190 * dt;
     if(boss.beam.x < 45 || boss.beam.x > VW-45) boss.beam.dir *= -1;
     if(boss.beam.timer <= 0) boss.beam = null;
+  }
+
+  // The charge: rear up, dive at the marked column, climb back.
+  if(boss.charge){
+    const c = boss.charge;
+    c.t += dt;
+    if(c.t < c.rear){
+      boss.y -= 90*dt;                                     // winding up
+      boss.x += (c.x - boss.x) * Math.min(1, dt*3);        // lining you up
+    } else if(c.t < c.rear + c.dive){
+      boss.y += 900*dt;                                    // the dive
+      if(!c.roared){ c.roared = true; fx.shake(16); audio.play("chargeHit"); }
+    } else if(c.t < c.rear + c.dive + c.back){
+      boss.y += (c.homeY - boss.y) * Math.min(1, dt*2.6);  // climbing home
+    } else {
+      boss.y = c.homeY; boss.charge = null;
+    }
+    if(boss.y > VH*0.72) boss.y = VH*0.72;
   }
 
   updateArena(boss, dt, world);
@@ -619,6 +661,12 @@ function beamHits(boss, x, y){
   if(n && n.t > n.warn){
     const dx = x - n.cx, dy = y - n.cy;
     if(dx*dx + dy*dy > n.r*n.r) return true;                // safe INSIDE the ring
+  }
+
+  // A boss mid-charge is a moving wall: its hull is the hazard.
+  if(boss.charge && boss.charge.t > boss.charge.rear){
+    const dx = x - boss.x, dy = y - boss.y;
+    if(dx*dx + dy*dy < boss.r*boss.r) return true;
   }
 
   const la = boss.lance;

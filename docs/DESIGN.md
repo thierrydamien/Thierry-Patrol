@@ -1356,6 +1356,38 @@ And the chip floor was 1, which meant the hull was already dead by the time
 the last plate fell: "CORE EXPOSED!" would have been followed instantly by
 the boss exploding, with no core phase at all.
 
+## 8aq. Six silhouettes, and the part you could never hit
+
+Two customer notes, one of them a bug report in disguise.
+
+**"The first three or four bosses are the same with different colour."**
+Fair, and the hulls being hand-drawn didn't save them: every one was a wide
+slab with two round parts on its flanks. Drawing them separately isn't the
+same as designing them separately. They are now four different SHAPES, and
+the weak point layouts moved to suit: the Marauder is a dart with its
+cannons out on forward-swept arms, the Jailer is an H of two upright barred
+cell towers, the Sentinel is a carrier deck with pods on the wingtips and
+the command tower high on the spine, and the Warden is a RING - the only
+circular thing in the game. The Marauder also stopped being a generic
+shooter and got the game's only ram: it rears up, marks your column, and
+DIVES, hull-first. A first boss should teach "read the wind-up, then move",
+and a charge teaches it in one move.
+
+**"The Leviathan is impossible to kill."** It was. Its pods sit at +-62 from
+the hull, the patrol clamp let it drift to x=78, which put the outer pod at
+x=16 - and the ship clamps at x=24 and fires straight up. The part was
+literally unreachable, so an armoured Leviathan could not be stripped and
+therefore could not be killed. The patrol limit is no longer a magic 78: it
+is derived from the boss's own parts (`reach + 34`), so no weak point can
+ever sit outside the column the guns can follow. A test now asserts that for
+every boss at both patrol limits.
+
+And the customer's diagnosis of WHY it went unnoticed was right too: at 176
+the Leviathan's four parts were close enough to the middle that spraying the
+centre hit them anyway, so nobody had to aim. It is 250 now, with its parts
+pushed to the corners, and the Devourer went to 360 to stay unmistakably the
+largest thing in the game.
+
 ## 9. What I'd do next
 
 Roughly in value order:

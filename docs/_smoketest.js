@@ -1352,13 +1352,25 @@ async function run(){
     SF.bosses.bossHpFor(SF.missions.BOSSES.marauder, SF.config.DIFFICULTY_BY_ID.pilot, 100) >
     SF.missions.BOSSES.marauder.fightSeconds * 100 * 0.4);
 
+  check("no boss can park a weak point where the guns cannot reach", (() => {
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const { VW } = SF.entityConst;
+    return Object.keys(SF.missions.BOSSES).every(id => {
+      const b = SF.bosses.create(id, diff, 60);
+      const worst = b.weakPoints.reduce((m, wp) => Math.max(m, Math.abs(wp.ox) + wp.r), 0);
+      // At either patrol limit, the outermost part must still sit inside the
+      // column the ship can fly into (x >= 24, x <= VW-24).
+      return b.patrolMargin - worst >= 24 && (VW - b.patrolMargin) + worst <= VW - 24;
+    });
+  })());
+
   /* ---------- THE FINALE: the Devourer ---------- */
   {
     const { VW, VH } = SF.entityConst;
     const D = SF.missions.BOSSES.devourer;
     check("the finale is the biggest thing in the game",
       D && D.finale === true && D.phases.length === 5 &&
-      D.size > SF.missions.BOSSES.leviathan.size * 1.5 &&
+      D.size > SF.missions.BOSSES.leviathan.size * 1.35 &&
       D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
     check("the finale mission closes the campaign",
       SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "devourer" &&
