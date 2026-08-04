@@ -884,6 +884,7 @@ function update(dt, timeMs){
       run.outroFly = 1.6;          // safety net - the fly-off ends it sooner
       audio.play("flyoff");
       fx.shake(5);
+      SF.finale.beginFlyoff();     // the family leaves the sky with you
     }
   } else if(run.phase === "outro"){
     // Autopilot has the ship now (see updatePlayer): throttle pinned, climbing
@@ -954,14 +955,16 @@ function update(dt, timeMs){
     SF.bosses.update(bossNow, dt, game.world, behaviourCtx, timeMs);
   if(bossNow && bossNow.finaleDeath && SF.finale.updateDeath(dt, bossNow, game.world))
     finalBossBlast(bossNow);
-  // Phase five: the rescued pilots arrive, and they fight with you.
+  // Phase five: the rest of the family arrives, and they fight with you.
+  // No fanfare on a device with a single pilot - nobody invented shows up.
   if(bossNow && bossNow.phase && bossNow.phase.lastLight && !SF.finale.fleetSize()){
-    SF.finale.summonFleet(game.world, game.profile);
-    run.bannerText = "THE FLEET IS WITH YOU";
-    run.bannerSub = "every pilot you ever brought home";
-    run.bannerColor = "#7cc4ff";
-    run.bannerUntil = timeMs + 3000;
-    SF.comms.say("fleetArrives");
+    if(SF.finale.summonFleet(game.world, game.profile).length){
+      run.bannerText = "THE SQUADRON IS WITH YOU";
+      run.bannerSub = "the whole family came";
+      run.bannerColor = "#7cc4ff";
+      run.bannerUntil = timeMs + 3000;
+      SF.comms.say("fleetArrives");
+    }
   }
   SF.finale.updateFleet(dt, game.world, timeMs);
 

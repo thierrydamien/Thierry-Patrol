@@ -41,7 +41,7 @@ let intro = null;     // { t, beat, said }
 let fleet = [];       // the rescued pilots, in phase five
 let death = null;     // { t, stage, plates:[...] }
 
-function reset(){ intro = null; fleet = []; death = null; }
+function reset(){ intro = null; fleet = []; death = null; summoned = false; flyoff = false; }
 
 function beginIntro(){
   intro = { t: 0, beat: 0, flashed: false };
@@ -100,26 +100,28 @@ function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
 /* ---------------------------------------------------------
    THE FLEET
-   Phase five: every pilot this squadron pulled out of the
-   dark comes back. Mechanically they are a damage assist and
-   a breather; emotionally they are the whole campaign paying
-   itself off in one shot.
+   Phase five: the rest of the household flies in to finish it
+   with you. Mechanically they are a damage assist and a
+   breather; emotionally they are the whole family paying the
+   campaign off in one shot.
    --------------------------------------------------------- */
-const FLEET_NAMES = ["RIO", "BASHER", "KESTREL", "MAGPIE", "SPARROW", "TUCK", "NELL", "PIP"];
+let summoned = false;   // one summons per fight, even if the household is empty
+let flyoff = false;     // the end: everyone leaves the sky together
 
 function summonFleet(world, profile){
-  if(fleet.length) return fleet;
+  if(summoned) return fleet;
+  summoned = true;
   const P = SF.profile;
-  // The household flies at the front, under their own names and colours;
-  // the rescued pilots fill the wing behind them.
-  const family = P.listNames().map(P.load)
+  // Only the real squadron: the other pilots of this household, under their
+  // own names, colours and builds. No invented wingmen - the customer was
+  // explicit ("no made up planes"), and they're right: a made-up name in the
+  // family's finest moment would mean nothing to the people it's for.
+  const roster = P.listNames().map(P.load)
     .filter(q => q.name !== (profile && profile.name))
     .map(q => ({ name: (q.callsign || q.name).toUpperCase(), color: q.shipColor,
-                 levels: SF.shipart.levelsOf(q) }));
-  const rescued = FLEET_NAMES.map((n, i) => ({
-    name: n, color: ["#7cc4ff","#4ade80","#ffd23f","#c084fc","#ff8a3d"][i % 5], levels: {},
-  }));
-  const roster = family.concat(rescued).slice(0, 7);
+                 levels: SF.shipart.levelsOf(q) }))
+    .slice(0, 6);
+  if(!roster.length) return fleet;   // an empty seat is honest; no fanfare
 
   fleet = roster.map((r, i) => {
     const lane = (i - (roster.length-1)/2);
@@ -131,6 +133,7 @@ function summonFleet(world, profile){
       t: -i*0.16,                 // they arrive in a ragged, human stagger
       fire: rand(0.4, 1.1),
       bank: 0,
+      spd: 0,                     // fly-off throttle, wound up at the end
     };
   });
   audio.play("fleetArrive");
@@ -138,12 +141,30 @@ function summonFleet(world, profile){
   return fleet;
 }
 
+/** The end of the mission: the family leaves the sky with you. */
+function beginFlyoff(){ flyoff = true; }
+
 function updateFleet(dt, world, timeMs){
   if(!fleet.length) return;
   const boss = world.boss;
   for(let i = 0; i < fleet.length; i++){
     const f = fleet[i];
     f.t += dt;
+
+    // The fly-off: throttle pinned, climbing hard, in the same ragged stagger
+    // they arrived in - a squadron of people, not a formation of drones.
+    if(flyoff){
+      f.fly = (f.fly || 0) + dt;
+      if(f.fly > i*0.14){
+        f.spd += 1300*dt;
+        f.y -= f.spd*dt;
+        f.x += (f.homeX - f.x) * Math.min(1, dt*2);
+        f.bank *= Math.max(0, 1 - dt*6);
+        if(f.y > -60) fx.muzzle(f.x, f.y + 18, f.color, 0.5);
+      }
+      continue;
+    }
+
     if(f.t < 0) continue;
     // Fly to station, then hold formation with a little life in it.
     const tx = f.homeX + Math.sin(timeMs/900 + i)*10;
@@ -290,7 +311,7 @@ function updateDeath(dt, boss, world){
 
 SF.finale = {
   reset, beginIntro, introActive, introProgress, introBeat, updateIntro, INTRO_TOTAL,
-  summonFleet, updateFleet, fleetSize, fleetList: () => fleet,
+  summonFleet, updateFleet, fleetSize, fleetList: () => fleet, beginFlyoff,
   beginDeath, deathActive, deathStage, updateDeath, DEATH_TOTAL,
 };
 })();

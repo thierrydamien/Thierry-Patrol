@@ -1548,6 +1548,29 @@ against one boss, wrong over the Marauder now that the cinematic has just
 named who it actually is. Comms lines that follow a naming card can't
 claim identities; the line is now about the fight, not the enemy.
 
+## 8av. The fleet is the family now
+
+Two customer notes on the finale's last minutes, both about the same thing:
+the ending belongs to the people it's for.
+
+**"No made up planes."** Phase five used to fill the wing with invented
+callsigns - RIO, BASHER, KESTREL - behind the household pilots. Kids
+notice, and they're right to: a made-up name in the family's finest moment
+means nothing to the people the moment is for. The fleet is now ONLY the
+real squadron - the other pilots of this household, under their own names,
+colours and ship builds. A device with a lone pilot gets no fleet at all
+(and no "everyone came" fanfare, which would be a lie): an empty seat is
+honest, an invented wingman is not. The smoke test now asserts the roster
+IS the household and that no name pool survives in the code.
+
+**"Could they speed off screen together with my plane at the end?"** They
+could and now they do. The victory lap ends, autopilot pins the player's
+throttle - and `beginFlyoff()` pins the family's too. They leave in the
+same ragged stagger they arrived in (each plane 0.14s behind the last,
+engine flare at the tail), because a squadron of people should never move
+like a formation of drones. Verified in the browser: four named planes
+climbing out with the player, sky empty two seconds later.
+
 ## 9. What I'd do next
 
 Roughly in value order:

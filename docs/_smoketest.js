@@ -1564,20 +1564,45 @@ async function run(){
       return !threw;
     })());
 
-    /* The fleet: it arrives once, it shoots for you. */
+    /* The fleet: the real household only - it arrives once, it shoots for
+       you, and at the end it leaves the sky with you. */
     W.reset();
     W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Fin"), diff));
     W.boss = SF.bosses.create("devourer", diff, 60);
     W.boss.entering = false;
     SF.finale.reset();
-    SF.finale.summonFleet(W, SF.profile.blank("Fin"));
-    check("the fleet arrives as a real wing", SF.finale.fleetSize() >= 5);
-    const before = W.bullets.items.filter(b => b.alive).length;
-    for(let i = 0; i < 120; i++) SF.finale.updateFleet(1/30, W, i*33);
-    check("the fleet fires for you - their shots are your shots",
-      W.bullets.items.filter(b => b.alive).length > before);
-    SF.finale.summonFleet(W, SF.profile.blank("Fin"));
-    check("the fleet never arrives twice", SF.finale.fleetSize() <= 7);
+    {
+      const FAMILY = ["Papa", "Wenwen", "Marc", "Charles", "Laurent"];
+      const origList = SF.profile.listNames, origLoad = SF.profile.load;
+      SF.profile.listNames = () => FAMILY.concat("Fin");
+      SF.profile.load = n => SF.profile.blank(n);
+      SF.finale.summonFleet(W, SF.profile.blank("Fin"));
+      const names = SF.finale.fleetList().map(f => f.name);
+      check("the fleet is the real household - everyone, and nobody invented",
+        SF.finale.fleetSize() === FAMILY.length &&
+        FAMILY.every(n => names.includes(n.toUpperCase())));
+      check("the pilot flying isn't duplicated in their own fleet",
+        !names.includes("FIN"));
+      check("no made-up wingman name pool survives in the code",
+        !/FLEET_NAMES/.test(fs.readFileSync(path.join(__dirname, "src/finale.js"), "utf8")));
+      const before = W.bullets.items.filter(b => b.alive).length;
+      for(let i = 0; i < 120; i++) SF.finale.updateFleet(1/30, W, i*33);
+      check("the fleet fires for you - their shots are your shots",
+        W.bullets.items.filter(b => b.alive).length > before);
+      SF.finale.summonFleet(W, SF.profile.blank("Fin"));
+      check("the fleet never arrives twice", SF.finale.fleetSize() === FAMILY.length);
+      /* The end: everyone leaves the sky together, like the player does. */
+      SF.finale.beginFlyoff();
+      for(let i = 0; i < 400; i++) SF.finale.updateFleet(1/30, W, i*33);
+      check("the family speeds off the screen with you at the end",
+        SF.finale.fleetList().every(f => f.y < -40));
+      check("a lone pilot gets no invented wingmen",
+        (() => { SF.finale.reset();
+          SF.profile.listNames = () => ["Fin"];
+          return SF.finale.summonFleet(W, SF.profile.blank("Fin")).length === 0; })());
+      SF.profile.listNames = origList; SF.profile.load = origLoad;
+      SF.finale.reset();
+    }
 
     /* The death: five stages, and it clears the sky when it goes. */
     SF.finale.reset();
