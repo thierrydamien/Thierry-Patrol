@@ -742,6 +742,34 @@ async function run(){
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
 
+  /* ---------- the director's-pass moments ---------- */
+  check("music can be asked for without an AudioContext", (() => {
+    try { SF.audio.setMusic("menu"); SF.audio.setMusic("combat"); SF.audio.setMusic(null); return true; }
+    catch(e){ return false; }
+  })());
+  check("every boss carries an epithet for its entrance card",
+    Object.values(SF.missions.BOSSES).every(b => typeof b.epithet === "string" && b.epithet.length > 4));
+  {
+    const prof = SF.profile.blank("Launch"); prof.callsign = "Launch";
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "rookie");
+    check("the first flight of the day pays double",
+      SF.game.run.dailyDouble === true);
+    check("the launch starts the ship below the screen",
+      SF.game.world.player.y > SF.entityConst.PLAY_BOTTOM);
+    await runFrames(100);
+    check("after the launch the ship is on station and firing",
+      SF.game.world.player.y <= SF.entityConst.PLAY_BOTTOM &&
+      SF.game.run.introFly <= 0 &&
+      SF.game.world.bullets.items.some(b => b.alive));
+    SF.game.startMission(0, "rookie");
+    check("the second flight of the day pays normally",
+      !SF.game.run.dailyDouble);
+    SF.game.state = "idle";
+  }
+
   /* ---------- art repaints when the sprite lands ---------- */
   check("the boot repaint covers whatever screen is showing",
     /repaintArt/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")));

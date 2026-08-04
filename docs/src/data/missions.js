@@ -52,7 +52,7 @@ const OBJECTIVES = {
    --------------------------------------------------------- */
 const BOSSES = {
   marauder: {
-    name: "THE MARAUDER",
+    name: "THE MARAUDER", epithet: "first of the raiders",
     hp: 380, fightSeconds: 26, size: 132, tint: "#ff2d55", entryY: 150,
     weakPoints: [
       { id:"leftGun",  x:-44, y:14, r:18, hp:70, disables:"spreadVolley" },
@@ -65,7 +65,7 @@ const BOSSES = {
     ],
   },
   sentinel: {
-    name: "SKY SENTINEL",
+    name: "SKY SENTINEL", epithet: "their flagship",
     hp: 820, fightSeconds: 44, size: 150, tint: "#a855f7", entryY: 158,
     weakPoints: [
       { id:"core",     x:  0, y:-8, r:20, hp:150, disables:"sweepBeam" },
@@ -85,7 +85,7 @@ const BOSSES = {
    * you get is the one you earn.
    */
   warden: {
-    name: "THE WARDEN",
+    name: "THE WARDEN", epithet: "keeper of the minefields",
     hp: 1150, fightSeconds: 50, size: 158, tint: "#22d3ee", entryY: 152,
     weakPoints: [
       { id:"leftHatch",  x:-56, y: 16, r:18, hp:130, disables:"mineField" },
@@ -105,7 +105,7 @@ const BOSSES = {
    * is the reward for having learned every earlier boss.
    */
   leviathan: {
-    name: "THE LEVIATHAN",
+    name: "THE LEVIATHAN", epithet: "the last thing between you and home",
     hp: 1700, fightSeconds: 66, size: 176, tint: "#f97316", entryY: 164,
     weakPoints: [
       { id:"core",      x:  0, y:-18, r:22, hp:220, disables:"sweepBeam" },

@@ -889,6 +889,39 @@ lost (was 1 - more pressure, still comfortable, and the bot flies into
 bullets that a human dodges); the stock-ship ROOKIE bot failures match the
 pre-change baseline exactly, i.e. bot incompetence, not regression.
 
+## 8x. The director's pass: moments, not features
+
+The final pass before showing it to the players. By then the screens looked
+right and the balance measured right; what was missing was ceremony. Five
+additions, all of them "moments":
+
+**Music, at last.** Two loops sequenced live from the same oscillators as the
+SFX - a slow pentatonic drift for the menus, a driving bass-and-hat loop for
+combat - using the standard WebAudio lookahead scheduler (a coarse timer
+schedules every note falling in the next quarter second at sample-exact
+times). No files, nothing to download, and the mute button already gates it
+because everything routes through the same master gain. Everything stays in A
+minor pentatonic, which is what lets an eight-bar pattern loop for minutes
+without grating.
+
+**The launch is a launch.** The ship starts below the screen and rockets up
+to its station with the throttle pinned and the guns cold for 1.1 seconds.
+One easing line in `updatePlayer`, and tapping LAUNCH finally feels like the
+word.
+
+**Bosses get an entrance.** While one descends, the screen letterboxes, an
+ALERT pulses, the name card lands with an epithet ("THE WARDEN - keeper of
+the minefields") and a klaxon sounds. The mission banner yields the centre of
+the screen while it plays.
+
+**The first flight of the day pays double.** Per pilot, one banner, one
+doubled payScale, a date on the profile - and a reason to come back tomorrow
+that takes a seven-year-old zero reading to understand. The wallet label
+reads CREDITS x2 while it is live.
+
+**Three stars rains confetti.** Fifty-four CSS-animated scraps over the
+results screen. Pride deserves paper.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -898,9 +931,7 @@ Roughly in value order:
 2. **Ship classes** — a second hull with different stats (glass cannon vs
    tank), which doubles the reason to keep earning.
 3. **Wingman AI** — drones that drift and target rather than firing straight.
-4. **Music** — a two-loop synth track (menu/combat) from the existing audio
-   engine; no files needed.
-5. **Endless mode** — after mission 8, procedurally generated waves using the
+4. **Endless mode** — after mission 8, procedurally generated waves using the
    same director, for score chasing.
 
 ## 10. Testing

@@ -119,6 +119,26 @@ class World {
   updatePlayer(dt, timeMs){
     const p = this.player;
     if(!p || !p.alive) return;
+
+    // Launch: the ship rockets up from below the screen to its station,
+    // throttle pinned, guns cold, input ignored - then the mission is yours.
+    const run = SF.game && SF.game.run;
+    if(run && run.introFly > 0){
+      run.introFly -= dt;
+      const home = PLAY_BOTTOM - 86;
+      p.vy = -520; p.vx = 0;
+      p.y += (home - p.y) * Math.min(1, dt*4.5);
+      if(run.introFly <= 0){ p.y = home; p.vy = 0; }
+      p.trail.push({ x: p.x, y: p.y + 15, life: 0 });
+      for(let i = p.trail.length-1; i >= 0; i--){
+        p.trail[i].life += dt;
+        if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
+      }
+      p.bank = 0;
+      if(p.invuln > 0) p.invuln -= dt;
+      return;
+    }
+
     const input = SF.input.state;
 
     // Acceleration-based movement: the ship has weight and carries a little

@@ -27,6 +27,8 @@ function show(id){
   screens[id].classList.add("active");
   if(id === "screen-game") SF.game.resize();
   if(id === "screen-profiles" || id === "screen-menu") startTitleLoop();
+  // Every screen that isn't combat gets the menu loop; launch swaps it.
+  if(id !== "screen-game") audio.setMusic("menu");
 }
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
@@ -1432,6 +1434,28 @@ function showResults(result){
       : "Nice work, " + (profile.callsign || profile.name) + "!";
   } else {
     sub.textContent = "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
+  }
+
+  audio.setMusic("menu");                 // combat's over, breathe
+
+  // Three stars rains confetti. Pride deserves paper.
+  const oldConf = $("overlayResults").querySelector(".confetti");
+  if(oldConf) oldConf.remove();
+  if(completed && stars === 3){
+    const conf = document.createElement("div");
+    conf.className = "confetti";
+    const colors = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ffffff"];
+    for(let i=0;i<54;i++){
+      const bit = document.createElement("i");
+      bit.style.left = (Math.random()*100) + "%";
+      bit.style.background = colors[i % colors.length];
+      bit.style.animationDelay = (Math.random()*1.6) + "s";
+      bit.style.animationDuration = (2.2 + Math.random()*1.6) + "s";
+      bit.style.transform = "rotate(" + Math.round(Math.random()*360) + "deg)";
+      conf.appendChild(bit);
+    }
+    $("overlayResults").appendChild(conf);
+    setTimeout(() => conf.remove(), 6000);
   }
 
   // Stars pop in one at a time - the small ceremony that makes replaying worth it.

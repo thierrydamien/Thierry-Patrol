@@ -860,3 +860,16 @@ button.part-chip:active { transform: scale(0.96); }
   background: linear-gradient(135deg, #ffc85c, var(--accent));
   border-radius:7px; padding:3px 12px; margin-top:3px;
 }
+
+/* ===================== CONFETTI (three stars) ===================== */
+.confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:7; }
+.confetti i {
+  position:absolute; top:-3%;
+  width:8px; height:13px; border-radius:2px; opacity:0;
+  animation: confFall linear forwards;
+}
+@keyframes confFall {
+  0%   { opacity:0; transform: translateY(0) rotate(0deg); }
+  8%   { opacity:1; }
+  100% { opacity:0.85; transform: translateY(108vh) rotate(660deg); }
+}

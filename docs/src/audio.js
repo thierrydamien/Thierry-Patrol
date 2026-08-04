@@ -126,6 +126,12 @@ const SOUNDS = {
   star:       { minGap: 90, fn: (n) => { tone(700 + (n||0)*180, 0.16, "triangle", 0.07, null); }},
 };
 
+SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
+  // Two slow klaxon sweeps - dread, not panic.
+  tone(320, 0.42, "sawtooth", 0.11, -140, 0);
+  tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
+} };
+
 function play(name, arg){
   if(!ctx || muted) return;
   const s = SOUNDS[name];
@@ -140,5 +146,110 @@ function play(name, arg){
 ["pointerdown","touchstart","keydown"].forEach(evt =>
   window.addEventListener(evt, init, { passive: true }));
 
-SF.audio = { init, play, isMuted, setMuted };
+/* ---------------------------------------------------------
+   MUSIC
+   Two loops sequenced from the same oscillators as the SFX -
+   no files, nothing to download, and the mute button already
+   gates it because everything routes through `master`.
+
+   A lookahead scheduler (the standard WebAudio pattern): a
+   coarse timer wakes every 120ms and schedules every step
+   that falls inside the next quarter second at sample-exact
+   times, so the groove never wobbles with the main thread.
+   --------------------------------------------------------- */
+let musicGain = null, musicTimer = null, musicTrack = null;
+let musicStep = 0, musicNext = 0, noiseBuf = null;
+
+/* Minor pentatonic on A - everything in it sounds fine together, which is
+   what lets a tiny pattern loop for minutes without grating. */
+const PENT = [0, 3, 5, 7, 10, 12, 15, 17];
+const hz = (root, semi) => root * Math.pow(2, semi/12);
+
+const TRACKS = {
+  /* Slow and wide: a drone, a soft arp, a rare sparkle. The menus breathe. */
+  menu: {
+    bpm: 72, div: 2,                    // eighth notes
+    step(i, t){
+      const bar = i % 16;
+      if(bar === 0) note(hz(55, 0), "sine", 0.050, 3.4, t, 400);        // low A drone
+      if(bar === 8) note(hz(55, PENT[2]), "sine", 0.035, 3.0, t, 400);
+      const arp = [0, 2, 4, 6, 4, 2][ (i>>1) % 6 ];
+      if(i % 2 === 0) note(hz(220, PENT[arp]), "triangle", 0.030, 0.55, t, 2400);
+      if(i % 32 === 24) note(hz(880, PENT[(i>>3)%5]), "sine", 0.018, 1.2, t, 5000);
+    },
+  },
+  /* Driving: eighth-note bass, a hat tick, a 16th arp that climbs. */
+  combat: {
+    bpm: 128, div: 4,                   // sixteenth notes
+    step(i, t){
+      const b = [0,0,7,0, 5,0,3,0, 0,0,7,0, 10,0,7,3][i % 16];
+      if(i % 2 === 0) note(hz(55, b), "square", 0.042, 0.16, t, 700);   // bass
+      if(i % 4 === 2) hat(t, 0.020);                                     // offbeat hat
+      const runUp = [0,2,3,4, 2,3,4,5, 3,4,5,6, 4,5,6,7][i % 16];
+      if(i % 4 === 0) note(hz(440, PENT[runUp % 8]), "triangle", 0.020, 0.14, t, 3200);
+      if(i % 64 === 60) note(hz(110, 12), "sawtooth", 0.026, 0.5, t, 900); // turnaround
+    },
+  },
+};
+
+/** One scheduled note through its own envelope and lowpass, into master. */
+function note(freq, type, gain, dur, when, cutoff){
+  if(!ctx || muted) return;
+  const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  o.type = type; o.frequency.value = freq;
+  f.type = "lowpass"; f.frequency.value = cutoff || 3000;
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.linearRampToValueAtTime(gain, when + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  o.connect(f); f.connect(g); g.connect(musicGain);
+  o.start(when); o.stop(when + dur + 0.05);
+}
+/** A tiny noise tick - the hi-hat. The buffer is built once. */
+function hat(when, gain){
+  if(!ctx || muted) return;
+  if(!noiseBuf){
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+  }
+  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  src.buffer = noiseBuf;
+  f.type = "highpass"; f.frequency.value = 6000;
+  g.gain.value = gain;
+  src.connect(f); f.connect(g); g.connect(musicGain);
+  src.start(when);
+}
+
+/** Switches the loop: "menu", "combat", or null for silence. Fades both ways. */
+function setMusic(name){
+  if(name === musicTrack) return;
+  init();
+  if(!ctx){ musicTrack = name; return; }
+  if(!musicGain){
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0;
+    musicGain.connect(master);
+  }
+  musicTrack = name;
+  if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
+  musicGain.gain.cancelScheduledValues(ctx.currentTime);
+  if(!name){
+    musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+    return;
+  }
+  musicGain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 0.6);
+  const track = TRACKS[name];
+  musicStep = 0;
+  musicNext = ctx.currentTime + 0.1;
+  const stepDur = 60 / track.bpm / track.div;
+  musicTimer = setInterval(() => {
+    if(!ctx || muted) return;               // muted: skip scheduling, keep time
+    while(musicNext < ctx.currentTime + 0.25){
+      track.step(musicStep++, musicNext);
+      musicNext += stepDur;
+    }
+  }, 120);
+}
+
+SF.audio = { init, play, isMuted, setMuted, setMusic };
 })();

@@ -160,9 +160,30 @@ function startMission(missionIndex, difficultyId){
     bannerColor: "#ffd23f", bannerUntil: performance.now() + 2600,
     objectiveDefs: mission.objectives.map(id => OBJECTIVES[id]),
     objectiveIds: mission.objectives.slice(),
+    // The ship LAUNCHES - rockets up from below the screen for the first
+    // second, engines wide open, before control is handed over.
+    introFly: 1.1,
     ended: false,
   };
+
+  /*
+   * First flight of the day pays double. It is the "come back tomorrow" hook:
+   * one banner, one doubled payScale, and a date on the profile. Deliberately
+   * per-pilot, so each brother gets his own morning bonus.
+   */
+  const today = new Date().toDateString();
+  if(profile.lastFlightDay !== today){
+    profile.lastFlightDay = today;
+    P.save(profile);
+    game.run.payScale *= 2;
+    game.run.dailyDouble = true;
+    game.run.bannerSub = "FIRST FLIGHT TODAY — DOUBLE PAY!";
+  }
+
+  const p0 = game.world.player;
+  p0.y = SF.entityConst.PLAY_BOTTOM + 150;   // start off-screen for the launch
   game.state = "playing";
+  audio.setMusic("combat");
   SF.comms.begin(profile, loadout.crew);
   SF.comms.say("missionStart");
   SF.input.clearMovement();
@@ -479,6 +500,7 @@ function update(dt, timeMs){
         run.bossActive = true;
         run.bossSpawned = true;
         game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
+        audio.play("bossAlarm");
         run.bannerText = "⚠ WARNING ⚠";
         run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
         run.bannerColor = "#ff5d73";

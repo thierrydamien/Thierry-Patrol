@@ -1223,7 +1223,7 @@ function drawHud(ctx, game){
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
-  ctx.fillText("CREDITS", VW-PAD-CLEAR, 8);
+  ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
   ctx.fillStyle = "#ffd23f";
   ctx.shadowColor = "rgba(255,180,40,0.5)"; ctx.shadowBlur = 8;
   ctx.font = "bold 20px 'Courier New', monospace";
@@ -1303,6 +1303,44 @@ function drawHud(ctx, game){
     ctx.textAlign = "left";
   } else hudLastCombo = run.combo || 0;
 
+  // Boss entrance: while it descends, the screen letterboxes and the name
+  // card lands - dread with a byline, not just a health bar appearing.
+  const bossIn = game.world.boss;
+  if(bossIn && bossIn.alive && bossIn.entering){
+    const pulse = 0.5 + Math.sin(nowM/160)*0.5;
+    ctx.save();
+    const bandY = VH*0.30, bandH = 120;
+    const band = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
+    band.addColorStop(0, "rgba(10,2,6,0)");
+    band.addColorStop(0.3, "rgba(10,2,6,0.82)");
+    band.addColorStop(0.7, "rgba(10,2,6,0.82)");
+    band.addColorStop(1, "rgba(10,2,6,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(0, bandY, VW, bandH);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,93,115," + (0.55 + pulse*0.4) + ")";
+    ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
+    ctx.fillText("\u26a0 ALERT \u26a0", VW/2, bandY + 26);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = bossIn.tint; ctx.shadowBlur = 18;
+    ctx.font = "bold 34px Rajdhani, Arial, sans-serif";
+    ctx.fillText(bossIn.name, VW/2, bandY + 62);
+    ctx.shadowBlur = 0;
+    if(bossIn.def.epithet){
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.font = "italic 14px Rajdhani, Arial, sans-serif";
+      ctx.fillText(bossIn.def.epithet, VW/2, bandY + 88);
+    }
+    ctx.textAlign = "left";
+    // Red edge pulse while the alarm sounds
+    const vg = ctx.createRadialGradient(VW/2, VH/2, VH*0.35, VW/2, VH/2, VH*0.75);
+    vg.addColorStop(0, "rgba(255,30,60,0)");
+    vg.addColorStop(1, "rgba(255,30,60," + (0.10 + pulse*0.10) + ")");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.restore();
+  }
+
   // Boss bar: a glass capsule with the boss's own tint, phase ticks, and a
   // fill that goes from tint to warning amber to red.
   const boss = game.world.boss;
@@ -1354,7 +1392,9 @@ function drawHud(ctx, game){
   }
 
   // Centre banner: full-width cinematic band with accent rules, not a grey box.
-  if(run.bannerText && performance.now() < run.bannerUntil){
+  // A boss entrance owns the centre of the screen; the banner yields.
+  if(run.bannerText && performance.now() < run.bannerUntil &&
+     !(bossIn && bossIn.alive && bossIn.entering)){
     const remain = (run.bannerUntil - performance.now())/1000;
     const a = clamp(remain*2, 0, 1);
     ctx.globalAlpha = a;
