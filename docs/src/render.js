@@ -2161,7 +2161,10 @@ function drawHud(ctx, game){
   if(run.bannerText && performance.now() < run.bannerUntil && !arenaBusy &&
      !(bossIn && bossIn.alive && bossIn.entering)){
     const remain = (run.bannerUntil - performance.now())/1000;
-    const a = clamp(remain*2, 0, 1);
+    // A long hold needs a long fade: the band draws OVER the traffic, so it
+    // spends its last second and a half going see-through rather than
+    // sitting opaque and then vanishing.
+    const a = clamp(remain/1.5, 0, 1);
     ctx.globalAlpha = a;
     const cy = VH*0.36, bandH = 92;
     const band = ctx.createLinearGradient(0, cy, 0, cy+bandH);
@@ -2186,9 +2189,11 @@ function drawHud(ctx, game){
     ctx.fillText(run.bannerText, VW/2, cy + 24);
     ctx.shadowBlur = 0;
     if(run.bannerSub){
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.font = "14px Rajdhani, Arial, sans-serif";
-      ctx.fillText(run.bannerSub, VW/2, cy + 58);
+      // The sub-line carries the mission's actual instruction, so it is sized
+      // to be READ from a tablet on a lap - 14px was a footnote.
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 19px Rajdhani, Arial, sans-serif";
+      ctx.fillText(run.bannerSub, VW/2, cy + 60);
     }
     ctx.textAlign = "left";
     ctx.globalAlpha = 1;

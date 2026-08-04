@@ -232,6 +232,7 @@ const MISSIONS = [
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
     brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves.",
+    goal:"Fly with your finger. Shoot!",
     waves: [
       // Act 1 - one shape at a time, with room to breathe
       w(1,   "grunt", 5, "line"),
@@ -255,6 +256,7 @@ const MISSIONS = [
   {
     id:2, name:"Weaving Through", subtitle:"Moving targets",
     brief:"These ones slide left and right. Shoot where they are going, not where they are.",
+    goal:"They slide — aim ahead of them!",
     waves: [
       w(1,   "grunt",  6, "line"),
       w(8,   "weaver", 5, "arc"),
@@ -278,6 +280,7 @@ const MISSIONS = [
   {
     id:3, name:"Return Fire", subtitle:"They shoot back",
     brief:"These ones stop and aim at you. Keep moving and they will miss!",
+    goal:"They shoot back. Keep moving!",
     waves: [
       w(1,   "grunt",   7, "arc"),
       w(8,   "striker", 3, "line"),
@@ -306,6 +309,7 @@ const MISSIONS = [
   {
     id:4, name:"Heavy Metal", subtitle:"First boss",
     brief:"Brutes wear thick armour - Plasma Rounds chew through it. Then something HUGE shows up.",
+    goal:"BOSS! Shoot the guns off its arms",
     waves: [
       w(1,   "grunt",   8, "line"),
       w(8,   "brute",   2, "twinColumns"),
@@ -333,6 +337,7 @@ const MISSIONS = [
   {
     id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
     brief:"Kamikazes pick a spot and rocket at it. Let them come close, then swerve away.",
+    goal:"They dive at you — swerve away!",
     waves: [
       w(1,   "kamikaze", 3, "arc"),
       w(8,   "swooper",  4, "line"),
@@ -361,6 +366,7 @@ const MISSIONS = [
   {
     id:6, name:"The Storm", subtitle:"Fly the wind",
     brief:"A nebula squall is tearing through the Belt. The wind comes in gusts - watch for the streaks, lean against the push, and don't let it shove you into a rock.",
+    goal:"WIND! Watch the streaks, then lean",
     storm:true,
     face:"splitter",                  // the wind takes them apart; it wants you too
     waves: [
@@ -385,6 +391,7 @@ const MISSIONS = [
   {
     id:7, name:"Prison Break", subtitle:"Rescue mission",
     brief:"Those big ships have our friends locked inside. Blast them before they get away!",
+    goal:"Free our friends from the ships!",
     waves: [
       w(1,   "carrier", 1, "column"),
       w(7,   "striker", 4, "line"),
@@ -414,6 +421,7 @@ const MISSIONS = [
   {
     id:8, name:"The Gauntlet", subtitle:"Elites inbound",
     brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
+    goal:"Gold ones are tough — and rich!",
     face:"brute", faceElite:true,     // the gold glowing ones ARE the level
     waves: [
       w(1,   "weaver",   8, "arc"),
@@ -446,6 +454,7 @@ const MISSIONS = [
   {
     id:9, name:"The Convoy", subtitle:"Bring them home",
     brief:"Three supply haulers are crossing to the front with everything the squadron needs. They can't dodge and they can't shoot back - YOU are their shield. Every hauler home, pilot.",
+    goal:"GUARD the big blue ships!",
     convoy:true,
     face:"interceptor",               // the hunters the haulers can't outrun
     waves: [
@@ -469,6 +478,7 @@ const MISSIONS = [
   {
     id:10, name:"Sky Sentinel", subtitle:"Their flagship",
     brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
+    goal:"BOSS! Knock its parts off",
     waves: [
       w(1,   "grunt",   10, "arc"),
       w(8,   "swooper",  6, "vee", { elite: 1 }),
@@ -523,6 +533,7 @@ const MISSIONS = [
   {
     id:11, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
+    goal:"Guns broken — just DODGE!",
     face:"swooper",                   // the thing you spend the level dodging
     noGuns:true, coinRain:true, podDrops:5,
     waves: [
@@ -561,6 +572,7 @@ const MISSIONS = [
   {
     id:12, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
+    goal:"Rocks! Fly around or blast them",
     face:"asteroid",                  // the debris is the level, not its escorts
     waves: [
       w(1,   "asteroid", 6, "scatter"),
@@ -590,6 +602,7 @@ const MISSIONS = [
   {
     id:13, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
+    goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
     waves: [
       w(1,   "hive",     2, "twinColumns"),
@@ -619,6 +632,7 @@ const MISSIONS = [
   {
     id:14, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
+    goal:"BOSS! Don't touch the mines",
     waves: [
       w(1,   "striker",  7, "arc"),
       w(8,   "bomber",   3, "twinColumns"),
@@ -652,6 +666,7 @@ const MISSIONS = [
   {
     id:15, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole! Crack the vaults, grab EVERY coin - and watch the thieves who want them back.",
+    goal:"Grab EVERY coin you can see!",
     waves: [
       w(1,   "grunt",   10, "arc"),
       w(8,   "thief",    2, "sides"),
@@ -681,6 +696,7 @@ const MISSIONS = [
   {
     id:16, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
+    goal:"BOSS! It goes invisible — watch",
     waves: [
       w(1,   "sniper",   4, "sides"),
       w(8,   "turret",   3, "tripleColumns"),
@@ -710,6 +726,7 @@ const MISSIONS = [
   {
     id:17, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
+    goal:"WALLS! Find the gap and fly through",
     trench:true,
     face:"turret",                    // the guns bolted to the walls
     waves: [
@@ -736,6 +753,7 @@ const MISSIONS = [
   {
     id:18, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
+    goal:"Save every last pilot!",
     waves: [
       w(1,   "carrier",  3, "tripleColumns"),
       w(8,   "swooper",  9, "arc", { elite: 1 }),
@@ -766,6 +784,7 @@ const MISSIONS = [
   {
     id:19, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
+    goal:"BOSS! Break off all four parts",
     waves: [
       w(1,   "grunt",   12, "wall"),
       w(8,   "striker",  8, "arc", { elite: 1 }),
@@ -804,6 +823,7 @@ const MISSIONS = [
   {
     id:20, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
+    goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
     face:"mender",                    // the green glow drifting through the dark
     waves: [
@@ -828,6 +848,7 @@ const MISSIONS = [
   {
     id:21, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
+    goal:"Something is out there. Watch out!",
     face:"sniper",                    // what is watching you out of the dark
     waves: [
       // Deliberately sparse to start. Empty sky is the scariest thing here.
@@ -854,6 +875,7 @@ const MISSIONS = [
   {
     id:22, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
+    goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
     // brief by design: nobody wants a chore between them and the finale.
     waves: [

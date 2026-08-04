@@ -1606,6 +1606,34 @@ list all follow the new numbering; the smoke test pins the boss stops at
 4, 7, 10, 14, 16, 19, 22 and walks a three-era save through all three
 migrations.
 
+## 8ax. The opening card, written for a seven-year-old
+
+"The message at the beginning of a level disappears too quickly. It's also
+too complex for kids to read." Both true, and both the same line of code:
+the card printed the mission's full `brief` - two clauses of adult prose,
+up to 180 characters - at 14px, for 2.6 seconds. Nobody was ever going to
+read that, least of all the audience.
+
+Every mission now carries a `goal`: one short instruction in plain words,
+capped at 36 characters by the test suite. "GUARD the big blue ships!"
+"WALLS! Find the gap and fly through" "They dive at you — swerve away!"
+The brief still exists in full on the briefing screen, where there is time
+to read and nothing is shooting at you.
+
+The card holds for **6 seconds** instead of 2.6, at 19px instead of 14. A
+long hold needs a long fade, though - the band draws OVER the traffic, so
+it now spends its last 1.5 seconds going see-through rather than sitting
+opaque and then blinking out. Screenshotted at 1s, 3s and 5.5s to confirm
+the last frame is a ghost you can fight through.
+
+The browser probe caught the real bug, which no unit test would have: on
+the first flight of the day the code REPLACED the sub-line with "FIRST
+FLIGHT TODAY — DOUBLE PAY!". The instruction vanished exactly when it was
+most needed - and for two kids who play daily, that is every session. A
+money note must never take the instruction's place; the bonus gets its own
+popup below the card now, and a test asserts nothing writes to the goal
+line after it is set.
+
 ## 9. What I'd do next
 
 Roughly in value order:

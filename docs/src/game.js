@@ -279,8 +279,16 @@ function startMission(missionIndex, difficultyId){
     bossActive: false, bossSpawned: false, progress: 0,
     objectiveFlashUntil: 0, objectivesMet: 0, finishTimer: 0,
     powerupTimer: rand(12, 20),
-    bannerText: mission.name.toUpperCase(), bannerSub: mission.brief,
-    bannerColor: "#ffd23f", bannerUntil: performance.now() + 2600,
+    /*
+     * The opening card is for a seven-year-old, so it says ONE thing and it
+     * stays put. It used to print the full `brief` - two clauses of adult
+     * prose - for 2.6 seconds, which is neither readable nor read. Now it
+     * shows the mission's `goal`: a handful of plain words, held for six
+     * seconds, which comfortably outlasts the launch and the first wave. The
+     * brief still exists in full on the briefing screen, where there is time.
+     */
+    bannerText: mission.name.toUpperCase(), bannerSub: mission.goal || mission.brief,
+    bannerColor: "#ffd23f", bannerUntil: performance.now() + 6000,
     objectiveDefs: mission.objectives.map(id => OBJECTIVES[id]),
     objectiveIds: mission.objectives.slice(),
     // The ship LAUNCHES - rockets up from below the screen for the first
@@ -310,14 +318,14 @@ function startMission(missionIndex, difficultyId){
     P.save(profile);
     game.run.payScale *= 2;
     game.run.dailyDouble = true;
-    game.run.bannerSub = "FIRST FLIGHT TODAY — DOUBLE PAY!";
+    // A money note must never take the instruction's place: the goal line is
+    // the only thing telling a child what to DO, and the first flight of the
+    // day - which is every day, for these two - is exactly when they need it.
+    // The bonus gets its own popup underneath instead.
+    fx.text(VW/2, VH*0.52, "FIRST FLIGHT TODAY — DOUBLE PAY!", "#ffd23f", 20, true);
   }
-  if(mission.noGuns){
-    game.run.bannerSub = game.run.dailyDouble
-      ? "GUNS OFFLINE · DOUBLE PAY — JUST FLY!"
-      : "GUNS OFFLINE — DODGE EVERYTHING!";
-    game.run.bannerColor = "#3fc9ff";
-  }
+  // The guns-cold run keeps its blue card; its goal already says "just DODGE".
+  if(mission.noGuns) game.run.bannerColor = "#3fc9ff";
 
   const p0 = game.world.player;
   p0.y = SF.entityConst.PLAY_BOTTOM + 150;   // start off-screen for the launch

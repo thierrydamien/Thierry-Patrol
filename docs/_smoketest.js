@@ -133,6 +133,29 @@ async function run(){
   check("22 campaign missions defined, ids sequential",
     SF.missions.MISSIONS.length === 22 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
+  /*
+   * The opening card is the only instruction a child actually gets mid-flight,
+   * so it is held to kid rules: every mission must have one, it must be short
+   * enough to read at a glance AND to fit the 600px canvas at 19px, and it
+   * must not be the adult `brief` sneaking back in.
+   */
+  check("every mission opens with a short goal a child can read",
+    SF.missions.MISSIONS.every(m =>
+      typeof m.goal === "string" && m.goal.length >= 8 && m.goal.length <= 36 &&
+      m.goal !== m.brief));
+  check("the opening card holds long enough to be read",
+    /bannerUntil: performance\.now\(\) \+ (\d+)/.test(
+      fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
+    Number(RegExp.$1) >= 5000);
+  check("the opening card shows the goal, not the briefing prose",
+    /bannerSub: mission\.goal/.test(
+      fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+  // A money note once replaced the goal on the first flight of the day - i.e.
+  // every single day - so the instruction vanished exactly when it mattered.
+  check("nothing overwrites the goal line after it is set",
+    !/bannerSub = /.test(
+      fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")
+        .split("function startMission")[1].split("function ")[0]));
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
   check("every wave references a real enemy type",
