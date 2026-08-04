@@ -668,7 +668,13 @@ function renderShelf(panel, catId){
   const group = document.createElement("div");
   group.className = "shop-group";
   group.style.setProperty("--cat", cat.color);
-  UPGRADES.filter(u => u.cat === cat.id).forEach(u => {
+  // When everything affordable pulses, nothing does. One beacon per shelf:
+  // the cheapest thing you can buy right now.
+  const shelf = UPGRADES.filter(u => u.cat === cat.id);
+  const buyable = shelf.map(u => ({ u, cost: P.nextCost(profile, u) }))
+    .filter(x => x.cost !== null && profile.money >= x.cost);
+  const beacon = buyable.length ? buyable.reduce((a,b) => b.cost < a.cost ? b : a).u.id : null;
+  shelf.forEach(u => {
     const lvl = P.upgradeLevel(profile, u.id);
     const cost = P.nextCost(profile, u);
     const maxed = cost === null;
@@ -676,7 +682,8 @@ function renderShelf(panel, catId){
     // The part this level bolts on, so the shop says what you'll *see*.
     const part = SF.shipart.PARTS.find(pt => pt.up === u.id && pt.at === lvl+1);
     const row = document.createElement("div");
-    row.className = "shop-item" + (maxed ? " maxed" : "") + (affordable ? " affordable" : "");
+    row.className = "shop-item" + (maxed ? " maxed" : "") + (affordable ? " affordable" : "")
+      + (u.id === beacon ? " beacon" : "");
     const pips = Array.from({length:u.max}, (_,i) => `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
     row.innerHTML = `
       <div class="si-badge">${u.icon}</div>
@@ -995,7 +1002,7 @@ function renderBriefTiers(index){
     card.style.setProperty("--tier", d.color);
     card.innerHTML = `
       <span class="diff-name">${locked ? "🔒" : d.name}</span>
-      <span class="diff-tag">${locked ? d.unlockStars + " ★" : d.tag}</span>
+      <span class="diff-tag">${locked ? stars + "/" + d.unlockStars + " ★" : d.tag}</span>
       <span class="diff-stars">${locked ? "" :
         [0,1,2].map(i => `<i class="${i < earned ? "on" : ""}">★</i>`).join("")}</span>`;
     if(!locked) click(card, () => { briefTier = d.id; renderBriefTiers(index); });
@@ -1201,7 +1208,10 @@ function renderLeaderboard(){
    * just two lines of text. Second place stands left, first in the middle and
    * taller, third right - the arrangement everyone already knows how to read.
    */
-  const order = [1, 0, 2].filter(i => i < rows.length);
+  // With three pilots the classic 2-1-3 arrangement reads instantly; with
+  // two, that collapses to "winner on the right", which reads like a table
+  // sorted wrong. Two pilots = winner first, and taller.
+  const order = rows.length === 2 ? [0, 1] : [1, 0, 2].filter(i => i < rows.length);
   const podium = $("podium");
   podium.innerHTML = "";
   order.forEach(i => {
@@ -1246,16 +1256,23 @@ function renderLeaderboard(){
    * a single total tells you who is ahead, but a per-mission board tells you
    * exactly which one to go and take back.
    */
-  $("recordBoard").innerHTML = MISSIONS.map(m => {
+  // Only missions somebody has actually flown get a row - nine bright
+  // "unflown" rows spent the attention colour announcing an absence. The
+  // tail collapses into one quiet line.
+  const flown = MISSIONS.filter(m => P.familyBest(m.id));
+  const unflown = MISSIONS.length - flown.length;
+  $("recordBoard").innerHTML = flown.map(m => {
     const best = P.familyBest(m.id);
-    const mine = best && best.name === (profile.callsign || profile.name);
+    const mine = best.owner === profile.name;
     return `<div class="rb-row${mine ? " mine" : ""}">
       <span class="rb-num">${m.id}</span>
       <span class="rb-name">${esc(m.name)}</span>
-      <span class="rb-holder">${best ? esc(best.name) : "—"}</span>
-      <span class="rb-score">${best ? best.score : "unflown"}</span>
+      <span class="rb-holder">${esc(best.name)}</span>
+      <span class="rb-score">${best.score.toLocaleString()}</span>
     </div>`;
-  }).join("");
+  }).join("") + (unflown > 0
+    ? `<div class="rb-row rb-rest">${unflown} more stop${unflown === 1 ? "" : "s"} nobody has flown yet</div>`
+    : "");
 }
 
 /* ---------------------------------------------------------
@@ -1294,7 +1311,7 @@ function syncAbilityButtons(force){
 function hideResults(){ $("overlayResults").classList.add("hidden"); }
 
 function showResults(result){
-  const { completed, stars, run, objectives, unlocked } = result;
+  const { completed, stars, run, objectives, unlocked, prevFamilyBest, prevSelfBest } = result;
   $("resultTitle").textContent = completed ? "MISSION COMPLETE" : "SHIP DOWN";
   $("resultTitle").style.color = completed ? "#4ade80" : "#ff9d5c";
 
@@ -1318,8 +1335,11 @@ function showResults(result){
     }
   });
 
+  // Unmet objectives say how close you got - "87%" turns a shrug into
+  // "SO close, going again".
   $("resultObjectives").innerHTML = objectives.map(o =>
-    `<div class="ro-row ${o.met ? "met" : ""}"><span>${o.met ? "★" : "☆"}</span> ${esc(o.label)}</div>`
+    `<div class="ro-row ${o.met ? "met" : ""}"><span>${o.met ? "★" : "☆"}</span> ${esc(o.label)}` +
+    (!o.met && o.progress ? ` <i class="ro-progress">${esc(o.progress)}</i>` : "") + `</div>`
   ).join("");
 
   const s = run.stats;
@@ -1332,9 +1352,11 @@ function showResults(result){
     <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
-    ${recordLine(run)}`;
+    ${(unlocked || []).map(a =>
+      `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect $${(a.pay||0).toLocaleString()} in MEDALS</b></div>`).join("")}
+    ${recordLine(run, prevFamilyBest)}`;
 
-  renderResultComms(run, completed, stars);
+  renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest);
 
   const hasNext = completed && run.missionIndex + 1 < MISSIONS.length;
   $("nextBtn").classList.toggle("hidden", !hasNext);
@@ -1351,16 +1373,24 @@ function showResults(result){
  * it. The comms panel can't be seen once the overlay is up, and taking your
  * brother's record is exactly the moment that deserves a voice.
  */
-function renderResultComms(run, completed, stars){
+function renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest){
   const box = $("resultComms");
   const mate = P.squadmates(profile.name)[0] || null;
-  const best = P.familyBest(run.mission.id);
   const me = profile.callsign || profile.name;
 
+  /*
+   * Celebrations must be earned: the old logic called any completed run a
+   * "new record", including a score of zero on a mission nobody had flown -
+   * and a seven-year-old knows when praise is fake. A record needs a previous
+   * score to have actually beaten.
+   */
   let event = null;
-  if(best && best.name === me && mate && run.score > 0 && run.score >= best.score) event = "recordTaken";
+  const tookFamilyRecord = prevFamilyBest && prevFamilyBest.owner !== profile.name &&
+                           run.score > prevFamilyBest.score && mate;
+  const beatOwnBest = prevSelfBest > 0 && run.score > prevSelfBest;
+  if(tookFamilyRecord) event = "recordTaken";
   else if(completed && stars === 3) event = "flawless";
-  else if(completed) event = "personalBest";
+  else if(completed && beatOwnBest) event = "personalBest";
   if(!event){ box.classList.add("hidden"); return; }
 
   const def = SF.commsData.COMMS[event];
@@ -1390,16 +1420,20 @@ function crewLine(){
 }
 
 /** Did this run take the household record for the mission, or how close was it? */
-function recordLine(run){
-  const best = P.familyBest(run.mission.id);
+function recordLine(run, prevBest){
   const me = profile.callsign || profile.name;
-  if(!best || best.score <= run.score){
+  // "New best!" only when there was a real previous score to beat.
+  if(prevBest && run.score > prevBest.score){
     return `<div class="rl record"><span>Family record</span><b>🏆 ${esc(me)} — new best!</b></div>`;
   }
-  if(best.name === me){
-    return `<div class="rl"><span>Family record</span><b>🏅 yours, ${best.score}</b></div>`;
+  const best = prevBest || P.familyBest(run.mission.id);
+  if(!best || best.score <= 0){
+    return `<div class="rl"><span>Family record</span><b>none yet — set one!</b></div>`;
   }
-  return `<div class="rl"><span>${esc(best.name)} to beat</span><b>${best.score - run.score} more</b></div>`;
+  if(best.owner === profile.name){
+    return `<div class="rl"><span>Family record</span><b>🏅 yours, ${best.score.toLocaleString()}</b></div>`;
+  }
+  return `<div class="rl"><span>${esc(best.name)} still holds this</span><b>${best.score.toLocaleString()}</b></div>`;
 }
 
 /* ---------------------------------------------------------

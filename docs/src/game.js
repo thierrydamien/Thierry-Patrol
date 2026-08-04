@@ -201,6 +201,12 @@ function endMission(completed){
   }
   profile.lastMission = run.mission.id;
   profile.lastDifficulty = run.difficulty.id;
+  // Captured BEFORE the save: once recordMission runs, this run's score IS
+  // the record and "did I beat anything?" can no longer be answered.
+  const prevFamilyBest = P.familyBest(run.mission.id);
+  const prevRec = profile.missions[run.mission.id];
+  const prevSelfBest = prevRec && prevRec.best
+    ? Math.max.apply(null, [0].concat(Object.values(prevRec.best).map(Number))) : 0;
   P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0, run.score, completed);
   const unlocked = P.checkAchievements(profile);
 
@@ -208,7 +214,11 @@ function endMission(completed){
   if(game.onMissionEnd){
     game.onMissionEnd({
       completed, stars, run, unlocked,
-      objectives: run.objectiveDefs.map(def => ({ label: def.label, icon: def.icon, met: def.test(run.stats) })),
+      prevFamilyBest, prevSelfBest,
+      objectives: run.objectiveDefs.map(def => ({
+        label: def.label, icon: def.icon, met: def.test(run.stats),
+        progress: def.progress(run.stats),
+      })),
     });
   }
 }

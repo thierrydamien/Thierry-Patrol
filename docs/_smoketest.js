@@ -314,8 +314,13 @@ async function run(){
   check("the championship puts the pilots on a podium",
     qa("#podium .podium-step").length === Math.min(3, SF.profile.listNames().length));
   check("the winner stands on the top step", qa("#podium .place-1").length === 1);
-  check("the record board lists every mission",
-    qa("#recordBoard .rb-row").length === SF.missions.MISSIONS.length);
+  // Only flown missions get a row now; the unflown tail is one quiet line.
+  check("the record board lists flown missions plus a collapsed tail", (() => {
+    const flown = SF.missions.MISSIONS.filter(m => SF.profile.familyBest(m.id)).length;
+    const rows = qa("#recordBoard .rb-row").length;
+    const rest = qa("#recordBoard .rb-rest").length;
+    return rows === flown + rest && (flown === SF.missions.MISSIONS.length || rest === 1);
+  })());
   clickEl(id("leaderboardBackBtn"));
 
   /* ---------- mission select ---------- */
@@ -372,9 +377,13 @@ async function run(){
   check("mission 1 reached the results screen", res1);
   check("results show 3 star slots", qa("#resultStars .rs").length === 3);
   check("results name the family record", /record|to beat/i.test(id("resultLines").textContent));
-  check("a completed run gets a spoken line with a ship portrait",
-    !id("resultComms").classList.contains("hidden") &&
-    id("resultCommsText").textContent.length > 0);
+  // Celebrations must be earned: a first-ever completion with nothing beaten
+  // gets NO "new record!" line - a kid knows fake praise when they hear it.
+  check("an unearned celebration stays silent",
+    id("resultComms").classList.contains("hidden") ||
+    !/record/i.test(id("resultCommsText").textContent));
+  check("results say the record is still unset, honestly",
+    /none yet|record|holds this/i.test(id("resultLines").textContent));
   check("a cleared mission offers the next one", !id("nextBtn").classList.contains("hidden"));
   check("wingmen fly under a squadmate's name",
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));

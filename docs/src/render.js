@@ -1063,8 +1063,17 @@ function drawComms(ctx){
   // High enough to clear the ship and its wingmen at the bottom of the field.
   const x = PAD + slide, y = VH - 225;
 
+  // The panel sits inside the flight envelope, so the ship can end up BEHIND
+  // it mid-fight. When the player is anywhere near, the panel ducks to a
+  // whisper - a message is never worth hiding the thing you're steering.
+  let duck = 1;
+  const pl = SF.game.world && SF.game.world.player;
+  if(pl && pl.alive &&
+     pl.x > x - 40 && pl.x < x + W + 40 &&
+     pl.y > y - 50 && pl.y < y + H + 50) duck = 0.25;
+
   ctx.save();
-  ctx.globalAlpha = outT;
+  ctx.globalAlpha = outT * duck;
 
   ctx.fillStyle = "rgba(6,10,24,0.82)";
   ctx.strokeStyle = msg.color;
