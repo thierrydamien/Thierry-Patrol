@@ -501,6 +501,7 @@ function update(dt, timeMs){
         run.bossSpawned = true;
         game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
         audio.play("bossAlarm");
+        audio.setMusic("boss");
         run.bannerText = "⚠ WARNING ⚠";
         run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
         run.bannerColor = "#ff5d73";

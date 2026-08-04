@@ -166,31 +166,83 @@ const PENT = [0, 3, 5, 7, 10, 12, 15, 17];
 const hz = (root, semi) => root * Math.pow(2, semi/12);
 
 const TRACKS = {
-  /* Slow and wide: a drone, a soft arp, a rare sparkle. The menus breathe. */
+  /*
+   * Repetition was the first review note, so every track is a SONG now, not a
+   * bar: a chord progression (roots in semitones over A), patterns that
+   * alternate by section, scheduled rests, and a touch of velocity jitter so
+   * no two passes sound machine-identical.
+   */
+
+  /* Menus: slow i-VI-iv-III drift, arp contour changes with each chord,
+     every fourth cycle sits out a bar to let the drone breathe. */
   menu: {
-    bpm: 72, div: 2,                    // eighth notes
+    bpm: 72, div: 2,
     step(i, t){
-      const bar = i % 16;
-      if(bar === 0) note(hz(55, 0), "sine", 0.050, 3.4, t, 400);        // low A drone
-      if(bar === 8) note(hz(55, PENT[2]), "sine", 0.035, 3.0, t, 400);
-      const arp = [0, 2, 4, 6, 4, 2][ (i>>1) % 6 ];
-      if(i % 2 === 0) note(hz(220, PENT[arp]), "triangle", 0.030, 0.55, t, 2400);
-      if(i % 32 === 24) note(hz(880, PENT[(i>>3)%5]), "sine", 0.018, 1.2, t, 5000);
+      const CH = [0, 8, 5, 3];                       // A F D C
+      const root = CH[Math.floor(i/16) % CH.length];
+      const cycle = Math.floor(i/64) % 4;
+      const restBar = cycle === 3 && (i % 64) < 8;   // a held breath
+      if(i % 16 === 0) note(hz(55, root), "sine", 0.050, 3.6, t, 400);
+      if(i % 16 === 8) note(hz(55, root + 7), "sine", 0.032, 3.0, t, 400);
+      if(restBar) return;
+      const CONTOURS = [[0,2,4,6,4,2],[4,2,0,2,6,4],[0,4,2,6,4,7],[6,4,2,0,2,4]];
+      const arp = CONTOURS[Math.floor(i/16) % 4][(i>>1) % 6];
+      if(i % 2 === 0) note(hz(220, root + PENT[arp % 8]), "triangle", vel(0.030), 0.55, t, 2400);
+      if(i % 32 === 24) note(hz(880, root + PENT[(i>>4) % 5]), "sine", 0.016, 1.2, t, 5000);
     },
   },
-  /* Driving: eighth-note bass, a hat tick, a 16th arp that climbs. */
+
+  /* Combat: i-VI-III-VII progression, two alternating bass riffs, a fill at
+     every section turn, and every eighth chord a breakdown - hats and pad
+     only - before the bass slams back in. */
   combat: {
-    bpm: 128, div: 4,                   // sixteenth notes
+    bpm: 128, div: 4,
     step(i, t){
-      const b = [0,0,7,0, 5,0,3,0, 0,0,7,0, 10,0,7,3][i % 16];
-      if(i % 2 === 0) note(hz(55, b), "square", 0.042, 0.16, t, 700);   // bass
-      if(i % 4 === 2) hat(t, 0.020);                                     // offbeat hat
+      const CH = [0, 8, 3, 10];                      // A F C G
+      const chordIx = Math.floor(i/32);
+      const root = CH[chordIx % CH.length];
+      const section = Math.floor(i/128) % 2;
+      const breakdown = chordIx % 8 === 7;
+      const RIFFS = [
+        [0,0,7,0, 5,0,3,0, 0,0,7,0, 10,0,7,3],
+        [0,0,0,7, 0,3,0,5, 0,0,10,0, 7,5,3,0],
+      ];
+      if(!breakdown){
+        const b = RIFFS[section][i % 16];
+        if(i % 2 === 0) note(hz(55, root + b), "square", vel(0.042), 0.16, t, 700);
+      } else if(i % 32 >= 24 && i % 2 === 0){
+        // the fill that announces the bass is coming back
+        note(hz(110, root + PENT[(i>>1) % 5]), "sawtooth", vel(0.026), 0.10, t, 1200);
+      }
+      if(i % 4 === 2) hat(t, 0.020);
+      if(breakdown && i % 8 === 0) note(hz(220, root + 12), "sine", 0.022, 0.8, t, 1800);
       const runUp = [0,2,3,4, 2,3,4,5, 3,4,5,6, 4,5,6,7][i % 16];
-      if(i % 4 === 0) note(hz(440, PENT[runUp % 8]), "triangle", 0.020, 0.14, t, 3200);
-      if(i % 64 === 60) note(hz(110, 12), "sawtooth", 0.026, 0.5, t, 900); // turnaround
+      if(!breakdown && i % 4 === 0)
+        note(hz(440, root + PENT[runUp % 8]), "triangle", vel(0.020), 0.14, t, 3200);
+      if(i % 128 === 124) note(hz(110, root + 12), "sawtooth", 0.026, 0.5, t, 900);
+    },
+  },
+
+  /* Boss: faster, and built on a minor-second shove - the ugliest interval
+     there is, at low volume, which reads as dread rather than noise. Tom
+     thumps on the floor, sixteenth hats, a two-note tremolo stab per bar. */
+  boss: {
+    bpm: 140, div: 4,
+    step(i, t){
+      const root = (Math.floor(i/64) % 2) ? 1 : 0;   // the whole bed lurches up a semitone
+      const b = [0,1,0,1, 0,1,3,1, 0,1,0,1, 5,3,1,0][i % 16];
+      if(i % 2 === 0) note(hz(55, root + b), "square", vel(0.046), 0.13, t, 650);
+      if(i % 8 === 0) note(hz(41, root), "sine", 0.060, 0.30, t, 300);     // tom thump
+      if(i % 2 === 1) hat(t, 0.012);
+      if(i % 16 === 12 || i % 16 === 14)
+        note(hz(880, root + 10), "sawtooth", vel(0.016), 0.09, t, 2600);   // stab pair
+      if(i % 64 === 56) note(hz(220, root + 6), "sawtooth", 0.028, 0.7, t, 1000); // tritone turn
     },
   },
 };
+
+/** ±15% velocity so no two passes are machine-identical. */
+function vel(g){ return g * (0.85 + Math.random()*0.3); }
 
 /** One scheduled note through its own envelope and lowpass, into master. */
 function note(freq, type, gain, dur, when, cutoff){

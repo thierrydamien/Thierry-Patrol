@@ -902,7 +902,12 @@ schedules every note falling in the next quarter second at sample-exact
 times). No files, nothing to download, and the mute button already gates it
 because everything routes through the same master gain. Everything stays in A
 minor pentatonic, which is what lets an eight-bar pattern loop for minutes
-without grating.
+without grating. The first review note was "repetitive", which was fair for
+an eight-bar loop: each track is a song now - a chord progression, bass riffs
+that alternate by section, a scheduled breakdown every eighth chord, velocity
+jitter so no two passes are identical - and bosses bring their own third
+track, built on a minor-second shove at 140bpm, which reads as dread rather
+than noise.
 
 **The launch is a launch.** The ship starts below the screen and rockets up
 to its station with the throttle pinned and the guns cold for 1.1 seconds.

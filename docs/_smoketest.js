@@ -744,7 +744,7 @@ async function run(){
 
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
-    try { SF.audio.setMusic("menu"); SF.audio.setMusic("combat"); SF.audio.setMusic(null); return true; }
+    try { SF.audio.setMusic("menu"); SF.audio.setMusic("combat"); SF.audio.setMusic("boss"); SF.audio.setMusic(null); return true; }
     catch(e){ return false; }
   })());
   check("every boss carries an epithet for its entrance card",
