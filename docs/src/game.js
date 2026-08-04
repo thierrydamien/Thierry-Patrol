@@ -27,6 +27,7 @@ const game = {
   state: "idle",          // idle | playing | paused | ending
   profile: null,
   onMissionEnd: null,     // set by the UI layer
+  onTestFlightEnd: null,  // set by the UI layer - the range exits to the Armory
   godMode: false,         // test hook only
 };
 
@@ -120,18 +121,51 @@ function singleTargetDps(lv){
 /* ---------------------------------------------------------
    RUN LIFECYCLE
    --------------------------------------------------------- */
+/*
+ * The Armory's firing range: twenty seconds of targets that never shoot
+ * back, flown with the player's real loadout. It exists so a freshly bought
+ * cannon can be FELT ten seconds after the purchase, not next mission. No
+ * records, no money, no death - it leaves the profile exactly as it found it.
+ */
+const TEST_DIFF = { id:"test", name:"TEST", color:"#3fc9ff",
+  speed:0.9, density:1, hpMult:1, bossHp:1, pay:0,
+  aimed:0, fireRate:99, smart:0, bonusLives:0 };
+const TEST_SECONDS = 20;
+function buildTestRange(){
+  return {
+    id:"test", testFlight:true,
+    name:"Test Range", subtitle:"Free fire",
+    brief:"Twenty seconds of target practice. See what your ship can do!",
+    waves: [
+      { t:0.5,  type:"grunt",  n:8,  form:"wall" },
+      { t:3,    type:"weaver", n:7,  form:"arc" },
+      { t:5.5,  type:"brute",  n:3,  form:"tripleColumns" },
+      { t:8,    type:"grunt",  n:9,  form:"pincer" },
+      { t:10.5, type:"boulder",n:2,  form:"twinColumns" },
+      { t:12.5, type:"weaver", n:8,  form:"scatter" },
+      { t:15,   type:"brute",  n:4,  form:"twinColumns" },
+      { t:17,   type:"grunt",  n:10, form:"wall" },
+    ],
+    objectives: [],
+  };
+}
+
 function startMission(missionIndex, difficultyId){
   const profile = game.profile;
   // "daily" is the endless Daily Patrol - a generated mission, not a campaign
-  // slot. Same day = same seed = same waves on every device.
+  // slot. Same day = same seed = same waves on every device. "test" is the
+  // Armory's firing range.
   const daily = missionIndex === "daily";
+  const test = missionIndex === "test";
   const mission = daily ? SF.daily.build()
+                : test  ? buildTestRange()
                         : MISSIONS[clamp(missionIndex, 0, MISSIONS.length-1)];
-  const difficulty = DIFFICULTY_BY_ID[difficultyId] || DIFFICULTY_BY_ID.pilot;
+  const difficulty = test ? TEST_DIFF
+                          : DIFFICULTY_BY_ID[difficultyId] || DIFFICULTY_BY_ID.pilot;
 
   game.world.reset();
   fx.reset();
-  SF.render.initBackground(daily ? SF.daily.skyIndex() : missionIndex);
+  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
 
@@ -184,8 +218,9 @@ function startMission(missionIndex, difficultyId){
    * one banner, one doubled payScale, and a date on the profile. Deliberately
    * per-pilot, so each brother gets his own morning bonus.
    */
+  // The range must not burn the real first-flight-of-the-day bonus.
   const today = new Date().toDateString();
-  if(profile.lastFlightDay !== today){
+  if(!mission.testFlight && profile.lastFlightDay !== today){
     profile.lastFlightDay = today;
     P.save(profile);
     game.run.payScale *= 2;
@@ -227,7 +262,7 @@ function beginVictoryLap(){
   run.bannerSub = "grab the last coins — then head home";
   run.bannerColor = "#4ade80";
   run.bannerUntil = performance.now() + 2200;
-  audio.play("waveClear");
+  audio.play("victory");
   audio.setMusic("menu");                  // the fight is over - let it breathe
   SF.comms.say("headHome");
 }
@@ -548,6 +583,20 @@ function update(dt, timeMs){
   behaviourCtx.onBossHit = callbacks.onBossHit;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
   behaviourCtx.godMode = game.godMode;
+
+  // The test range: immune, timed, and it exits to the Armory - never to the
+  // results screen. Nothing here may touch records, money or medals.
+  if(run.mission.testFlight){
+    const pl = game.world.player;
+    if(pl) pl.invuln = Math.max(pl.invuln, 5);
+    const targetsGone = run.phase === "waves" &&
+      run.director.finishedSpawning && game.world.countEnemies() === 0;
+    if(run.time >= TEST_SECONDS + 2.5 || targetsGone){
+      game.state = "idle";
+      if(game.onTestFlightEnd) game.onTestFlightEnd({ kills: run.stats.kills });
+      return;
+    }
+  }
 
   // Mission phases
   if(run.phase === "intro"){

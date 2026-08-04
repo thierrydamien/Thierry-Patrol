@@ -907,13 +907,16 @@ async function run(){
     SF.game.startMission(1, "pilot");
     SF.game.endMission(false);
     check("a losing streak earns a real tip",
-      /ARMORY|easier/.test(id("resultSubtitle").textContent));
+      /ARMORY|ROOKIE/.test(id("resultSubtitle").textContent));
+    check("the streak's advice is a button, not a sentence",
+      !id("rookieBtn").classList.contains("hidden"));
     SF.game.startMission(1, "pilot");
     SF.game.endMission(true);
     SF.game.startMission(1, "pilot");
     SF.game.endMission(false);
     check("one loss after a win stays encouraging",
-      !/ARMORY/.test(id("resultSubtitle").textContent));
+      !/ARMORY/.test(id("resultSubtitle").textContent) &&
+      id("rookieBtn").classList.contains("hidden"));
     SF.game.state = "idle";
   }
 
@@ -977,6 +980,41 @@ async function run(){
                t.missions[3] = { cleared:true, stars:{}, best:{} };
                return no && !!(t.missions[3].cleared); })());
   }
+
+  /* ---------- the armory test range ---------- */
+  {
+    const prof = SF.profile.blank("Range"); prof.callsign = "Range";
+    prof.upgrades = { damage:3, spread:2 };
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    const kills0 = prof.totalKills, money0 = prof.money;
+    let ended = null;
+    const prevHook = SF.game.onTestFlightEnd;
+    SF.game.onTestFlightEnd = r => { ended = r; if(prevHook) prevHook(r); };
+    SF.ui.show("screen-game");
+    SF.game.startMission("test", "pilot");
+    check("the range flies targets that never shoot",
+      SF.game.run.mission.testFlight === true && SF.game.run.difficulty.fireRate > 10);
+    check("the range does not burn the first-flight double",
+      !prof.lastFlightDay && !SF.game.run.dailyDouble);
+    await runFrames(60);
+    check("nothing on the range can hurt the ship",
+      SF.game.world.player.invuln > 0);
+    await runFrames(660);
+    SF.game.onTestFlightEnd = prevHook;
+    check("the range times out back to the Armory",
+      ended !== null && typeof ended.kills === "number" && SF.game.state === "idle");
+    check("the range leaves the profile exactly as it found it",
+      prof.totalKills === kills0 && prof.money === money0 &&
+      Object.keys(prof.missions).length === 0);
+    check("no enemy bullet ever flew on the range",
+      SF.game.world.enemyBullets.items.every(b => !b.alive));
+  }
+
+  check("the area-clear fanfare exists", (() => {
+    try { SF.audio.play("victory"); } catch(e){ return false; }
+    return /SOUNDS\.victory/.test(fs.readFileSync(path.join(__dirname, "src/audio.js"), "utf8"));
+  })());
 
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {

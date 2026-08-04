@@ -1046,6 +1046,25 @@ the demoralizing /5966 denominator, and the "Daily crown" line names the
 current holder. The menu button's subtitle is the taunt: "beat Charles's
 5,250 pts".
 
+## 8ad. The firing range, and advice you can tap
+
+Two closures of old loops, one grace note:
+
+- **TEST RANGE** (button in the hangar bay): twenty seconds of targets that
+  never shoot back, flown with the real loadout, immune, timed, and it exits
+  to the Armory - never the results screen. It exists because a freshly
+  bought cannon could only be FELT a whole mission later; now it's ten
+  seconds after the purchase. It leaves the profile exactly as it found it
+  (no records, no money, no medals - the smoke test proves the profile is
+  byte-identical) and deliberately does not burn the first-flight-of-the-day
+  double.
+- **TRY ON ROOKIE** is a button now. The losing-streak tip said "try an
+  easier difficulty" - advice a seven-year-old reads and doesn't act on.
+  After two losses on a harder tier the results screen grows a one-tap
+  button that relaunches the same mission on ROOKIE.
+- The victory lap opens with its own fanfare (rising major arpeggio with a
+  sparkle) instead of borrowing the wave-clear chime.
+
 ## 9. What I'd do next
 
 Roughly in value order:

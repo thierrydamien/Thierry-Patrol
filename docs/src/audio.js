@@ -151,6 +151,13 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.victory = { minGap: 2000, fn: () => {
+  // The AREA CLEAR fanfare: a rising major arpeggio with a sparkle on top -
+  // brighter than waveClear, smaller than missionWin.
+  [523, 659, 784, 1046].forEach((f,i) => tone(f, 0.16, "triangle", 0.07, null, i*0.09));
+  [2093, 2637].forEach((f,i) => tone(f, 0.10, "sine", 0.035, null, 0.36 + i*0.07));
+} };
+
 SOUNDS.flyoff = { minGap: 2000, fn: () => {
   // Engines opening up for the ride home: a long rising sweep over a rush of air.
   tone(140, 0.9, "sawtooth", 0.07, 560);

@@ -657,6 +657,10 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   border:1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.85);
   background: rgba(0,0,0,0.45);
 }
+.test-btn {
+  left:8px; right:auto;
+  color:#9fdcff; border-color: rgba(63,201,255,0.5);
+}
 .armory-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px 0; }
 .hangar-next { display:flex; flex-direction:column; gap:1px; text-align:left; min-width:0; }
 .hangar-next b { font-size:14px; }

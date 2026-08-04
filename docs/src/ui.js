@@ -1486,9 +1486,16 @@ function showResults(result){
     failStreak = failStreak && failStreak.key === failKey
       ? { key: failKey, n: failStreak.n + 1 } : { key: failKey, n: 1 };
     sub.textContent = failStreak.n >= 2
-      ? "This one's tough! Try an easier difficulty, or buy an upgrade in the ARMORY first."
+      ? (run.difficulty.id === "rookie"
+          ? "This one's tough! Grab an upgrade in the ARMORY — even one level helps."
+          : "This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first.")
       : "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
   }
+
+  // Advice a seven-year-old can act on is a BUTTON, not a sentence: after two
+  // losses on a harder tier, the easier way down is one tap.
+  $("rookieBtn").classList.toggle("hidden",
+    !(!endless && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
   // a loss gets the ten-second defeat sting, which hands back to the menu.
@@ -1817,6 +1824,13 @@ click($("dailyBtn"), () => {
 });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
 click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderArmory(); });
+// The firing range: feel the ship you just built, ten seconds after buying it.
+click($("testFlightBtn"), () => launch("test", "pilot"));
+SF.game.onTestFlightEnd = (r) => {
+  renderArmory();
+  show("screen-armory");
+  queueToast({ icon:"🎯", name:"Test complete — " + r.kills + " targets down" });
+};
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });
 click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard"); });
@@ -1845,6 +1859,7 @@ click($("quitBtn"), () => {
   show("screen-missions");
 });
 click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));
+click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie"));
 click($("nextBtn"), () => launch(SF.game.run.missionIndex + 1, SF.game.run.difficulty.id));
 click($("resultsMenuBtn"), () => {
   SF.game.state = "idle";
