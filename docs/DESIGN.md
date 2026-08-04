@@ -1107,6 +1107,26 @@ in three sizes - a GUNS DOWN story card the first time the briefing opens
 line at launch ("Guns are dead, {you}. Don't fight - FLY."). The mission
 sits directly after the Sentinel fight, so the story writes itself.
 
+## 8ag. Boss Rush
+
+The bosses are the game's best moments and the new death sequence made
+chaining them irresistible. The rush queues every boss the pilot has
+ALREADY BEATEN, in campaign order, back to back - it grows as the campaign
+does, which makes it a progress mirror rather than an endgame afterthought.
+Shields recharge between rounds ("SHIELDS RESTORED"), lives don't. Fixed
+PILOT tier so the family record means one thing: `bossRushBest`, the
+deepest anyone has run the queue, shown as the score-to-beat on the menu
+button and as the Rush record line on the results. No stars, no campaign
+records touched - same bookkeeping shape as the Daily Patrol. Gauntlet
+Runner (3 bosses in one rush) joins the medals.
+
+Implementation was pleasantly small: the whole mode is a mission object
+with `bossRush:true` and empty waves, one `spawnRushBoss()` that reuses the
+normal boss-arrival ceremony (alarm, entrance card, boss music), and one
+branch where the post-blast `finishTimer` either spawns the next boss in
+the queue or begins the victory lap. Every system downstream - the death
+drumroll, the final blast, fireworks, the fly-off - just works.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -1114,7 +1134,6 @@ Roughly in value order:
 1. **Ship classes** — a second hull with different stats (glass cannon vs
    tank), which doubles the reason to keep earning.
 2. **Wingman AI** — drones that drift and target rather than firing straight.
-3. **Boss rush** — the four bosses back to back, once the campaign is done.
 
 ## 10. Testing
 

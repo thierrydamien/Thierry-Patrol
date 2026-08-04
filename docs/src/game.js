@@ -150,15 +150,65 @@ function buildTestRange(){
   };
 }
 
+/*
+ * Boss Rush: every boss the pilot has already beaten, back to back. The
+ * campaign hands them out one per act-chapter; the rush is where you prove
+ * you've actually learned them. Shields recharge between rounds - lives
+ * don't. Fixed PILOT difficulty so the family record means one thing.
+ */
+const RUSH_ORDER = [
+  { missionId: 4,  boss: "marauder"  },
+  { missionId: 8,  boss: "sentinel"  },
+  { missionId: 12, boss: "warden"    },
+  { missionId: 15, boss: "leviathan" },
+];
+function rushBossList(profile){
+  return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
+                                profile.missions[r.missionId].cleared)
+                   .map(r => r.boss);
+}
+function buildBossRush(){
+  return {
+    id:"rush", bossRush:true,
+    name:"Boss Rush", subtitle:"All of them. Back to back.",
+    brief:"Every boss you've beaten, one after another. Shields recharge between rounds - lives don't!",
+    waves: [], objectives: [],
+  };
+}
+
+function spawnRushBoss(){
+  const run = game.run;
+  const id = run.rushList[run.rushIndex++];
+  const p = game.world.player;
+  if(run.rushIndex > 1 && p && p.shieldMax > 0){
+    p.shield = p.shieldMax;                    // the breather between rounds
+    fx.text(p.x, p.y - 40, "SHIELDS RESTORED", "#7cc4ff", 16, true);
+  }
+  run.phase = "boss";
+  run.bossActive = true;
+  run.bossSpawned = true;
+  game.world.boss = SF.bosses.create(id, run.difficulty, p ? p.dps : 60);
+  audio.play("bossAlarm");
+  audio.setMusic("boss");
+  run.bannerText = "⚠ BOSS " + run.rushIndex + " OF " + run.rushList.length + " ⚠";
+  run.bannerSub = BOSSES[id].name + " INCOMING";
+  run.bannerColor = "#ff5d73";
+  run.bannerUntil = performance.now() + 2400;
+  audio.play("alarm");
+  SF.comms.say("bossIncoming");
+}
+
 function startMission(missionIndex, difficultyId){
   const profile = game.profile;
   // "daily" is the endless Daily Patrol - a generated mission, not a campaign
   // slot. Same day = same seed = same waves on every device. "test" is the
-  // Armory's firing range.
+  // Armory's firing range, "rush" the boss gauntlet.
   const daily = missionIndex === "daily";
   const test = missionIndex === "test";
+  const rush = missionIndex === "rush";
   const mission = daily ? SF.daily.build()
                 : test  ? buildTestRange()
+                : rush  ? buildBossRush()
                         : MISSIONS[clamp(missionIndex, 0, MISSIONS.length-1)];
   const difficulty = test ? TEST_DIFF
                           : DIFFICULTY_BY_ID[difficultyId] || DIFFICULTY_BY_ID.pilot;
@@ -166,7 +216,7 @@ function startMission(missionIndex, difficultyId){
   game.world.reset();
   fx.reset();
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
-  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : missionIndex);
+  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7 : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
 
@@ -211,6 +261,8 @@ function startMission(missionIndex, difficultyId){
     introFly: 1.1,
     coinTimer: 2.0,
     podTimes,
+    rushList: rush ? rushBossList(profile) : [],
+    rushIndex: 0,
     ended: false,
   };
 
@@ -302,7 +354,13 @@ function endMission(completed){
   // keep pointing at a real map stop).
   let prevFamilyBest = null, prevSelfBest = 0;
   let endlessNewBest = false, prevEndlessBest = 0;
-  if(run.mission.endless){
+  // A rush books how deep the queue got - a boss mid-fight doesn't count.
+  const rushBeaten = run.mission.bossRush
+    ? run.rushIndex - (game.world.boss ? 1 : 0) : 0;
+  if(run.mission.bossRush){
+    if(rushBeaten > (profile.bossRushBest || 0)) profile.bossRushBest = rushBeaten;
+    P.save(profile);
+  } else if(run.mission.endless){
     prevEndlessBest = profile.endlessBest || 0;
     endlessNewBest = run.score > prevEndlessBest;
     if(endlessNewBest) profile.endlessBest = run.score;
@@ -330,6 +388,7 @@ function endMission(completed){
     game.onMissionEnd({
       completed, stars, run, unlocked,
       endless: !!run.mission.endless, endlessNewBest, prevEndlessBest,
+      rush: !!run.mission.bossRush, rushBeaten, rushTotal: run.rushList.length,
       durationSec: Math.round(run.time),
       prevFamilyBest, prevSelfBest,
       objectives: run.objectiveDefs.map(def => ({
@@ -641,6 +700,10 @@ function update(dt, timeMs){
     run.phaseTimer -= dt;
     if(run.phaseTimer <= 0) run.phase = "waves";
   } else if(run.phase === "waves"){
+    if(run.mission.bossRush){
+      spawnRushBoss();                      // no waves here - straight to work
+      return;
+    }
     run.director.update(dt);
     run.stats.spawned = run.director.spawnedCount;
     if(run.director.finishedSpawning && game.world.countEnemies() === 0){
@@ -708,10 +771,14 @@ function update(dt, timeMs){
     if(run.phaseTimer <= 0 && !run.ended) endMission(true);
   }
 
-  // Boss defeated: run out the celebration, then the same lap home.
+  // Boss defeated: run out the celebration - then the next boss if this is a
+  // rush with more in the queue, else the same lap home.
   if(run.finishTimer > 0){
     run.finishTimer -= dt;
-    if(run.finishTimer <= 0 && !run.ended) beginVictoryLap();
+    if(run.finishTimer <= 0 && !run.ended){
+      if(run.mission.bossRush && run.rushIndex < run.rushList.length) spawnRushBoss();
+      else beginVictoryLap();
+    }
   }
 
   // Progress readout: waves spawned, then boss health.

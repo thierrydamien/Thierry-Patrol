@@ -1078,6 +1078,44 @@ async function run(){
       SF.fx._pools.particles.items.filter(q => q.alive).length >= alive0 + 30);
   }
 
+  /* ---------- boss rush ---------- */
+  {
+    const prof = SF.profile.blank("Rush"); prof.callsign = "Rush";
+    prof.upgrades = { damage:5, rapid:4, spread:3, shield:2 };
+    [4, 8].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    SF.game.startMission("rush", "pilot");
+    SF.game.run.introFly = 0;
+    SF.game.world.player.invuln = 9999;      // the test is the queue, not the dodging
+    check("a rush queues every beaten boss in campaign order",
+      SF.game.run.mission.bossRush === true &&
+      SF.game.run.rushList.join(",") === "marauder,sentinel");
+    await runFrames(120);
+    check("the first boss arrives immediately - no waves",
+      SF.game.run.bossActive && SF.game.world.boss &&
+      SF.game.world.boss.name === "THE MARAUDER" && SF.game.run.stats.spawned === 0);
+    SF.game.world.boss.hp = 1;               // autofire finishes it
+    await runFrames(320);
+    check("the next boss follows the blast",
+      SF.game.world.boss && SF.game.world.boss.name === "SKY SENTINEL");
+    SF.game.world.boss.hp = 1;
+    await runFrames(560);
+    check("an emptied queue ends in the victory lap",
+      SF.game.run.lapStarted === true || SF.game.run.ended);
+    await runFrames(260);
+    check("the rush books its best without touching the campaign",
+      SF.game.run.ended && SF.game.run.stats.completed &&
+      prof.bossRushBest === 2 && !prof.missions.rush && prof.lastMission !== "rush");
+    check("the rush results read as a gauntlet",
+      id("resultTitle").textContent === "RUSH COMPLETE!" &&
+      /ALL 2 bosses/.test(id("resultSubtitle").textContent));
+    check("the gauntlet medal exists and pays",
+      SF.config.ACHIEVEMENTS.some(a => a.id === "gauntlet" && a.pay > 0));
+    SF.game.state = "idle";
+  }
+
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
     try {

@@ -227,6 +227,7 @@ const ACHIEVEMENTS = [
   { id:"campaign",     icon:"🏆", name:"Thierry Patrol", desc:"Complete every mission",              check:p=>p.campaignComplete },
   { id:"daily_ace",    icon:"🌅", name:"Dawn Patrol",     desc:"Score 3,000 on a Daily Patrol",       check:p=>p.endlessBest>=3000 },
   { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes on a Daily Patrol",    check:p=>p.endlessLongest>=240 },
+  { id:"gauntlet",     icon:"☠️", name:"Gauntlet Runner", desc:"Beat 3 bosses in one Boss Rush",      check:p=>p.bossRushBest>=3 },
 ];
 
 /*

@@ -181,7 +181,7 @@ function migrate(p){
   });
   ["totalKills","bossesDefeated","maxCombo","lifetimeMoney","rescues",
    "missionsCompleted","flawlessMissions","powerupsCollected","money","highscore",
-   "endlessBest","endlessLongest"].forEach(k => {
+   "endlessBest","endlessLongest","bossRushBest"].forEach(k => {
     if(typeof p[k] !== "number" || Number.isNaN(p[k])) p[k] = 0;
   });
   return p;
@@ -285,6 +285,7 @@ function achievementStats(p){
     campaignComplete: campaignComplete(p),
     endlessBest: p.endlessBest || 0,
     endlessLongest: p.endlessLongest || 0,
+    bossRushBest: p.bossRushBest || 0,
   };
 }
 

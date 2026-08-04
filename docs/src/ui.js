@@ -207,6 +207,15 @@ function renderMenu(){
           rivals[0].endlessBest.toLocaleString("en-US") + " pts"
         : "today's sky - same for everyone");
   }
+  // Boss Rush opens once the first boss falls; the sub is the score to beat.
+  {
+    const bosses = RUSH_IDS.filter(id => profile.missions && profile.missions[id] &&
+                                         profile.missions[id].cleared).length;
+    $("rushBtn").classList.toggle("locked", bosses === 0);
+    setSub("rushSub", bosses === 0 ? "beat the Mission 4 boss first"
+      : bosses + " boss" + (bosses > 1 ? "es" : "") + " in the queue · best " +
+        (profile.bossRushBest || 0) + " down");
+  }
   setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
   {
     const owed = P.unclaimedMedals(profile);
@@ -1185,6 +1194,13 @@ function dailyUnlocked(p){
   return !!(rec && rec.cleared);
 }
 
+// Boss missions, in campaign order - the rush queue mirrors these.
+const RUSH_IDS = [4, 8, 12, 15];
+function rushUnlocked(p){
+  const rec = p && p.missions && p.missions[4];
+  return !!(rec && rec.cleared);
+}
+
 function launch(index, difficultyId){
   audio.init();
   show("screen-game");
@@ -1461,16 +1477,22 @@ function hideResults(){ $("overlayResults").classList.add("hidden"); }
 
 function showResults(result){
   const { completed, stars, run, objectives, unlocked, prevFamilyBest, prevSelfBest,
-          endless, endlessNewBest, durationSec } = result;
-  $("resultTitle").textContent = endless ? "PATROL OVER"
+          endless, endlessNewBest, durationSec, rush, rushBeaten, rushTotal } = result;
+  $("resultTitle").textContent = rush ? (completed ? "RUSH COMPLETE!" : "RUSH OVER")
+    : endless ? "PATROL OVER"
     : completed ? "MISSION COMPLETE" : "SHIP DOWN";
-  $("resultTitle").style.color = endless ? "#ffd23f"
+  $("resultTitle").style.color = rush ? (completed ? "#4ade80" : "#ffd23f")
+    : endless ? "#ffd23f"
     : completed ? "#4ade80" : "#ff9d5c";
 
   // Losing should read as "you nearly had it", not as a telling-off - and you
   // always keep the money you collected, so a failed run is never wasted.
   const sub = $("resultSubtitle");
-  if(endless){
+  if(rush){
+    sub.textContent = completed
+      ? "ALL " + rushTotal + " bosses down, " + (profile.callsign || profile.name) + "!"
+      : rushBeaten + " of " + rushTotal + " bosses down — go again?";
+  } else if(endless){
     // A Daily Patrol run never fails - it just has a length and a score.
     const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
     sub.textContent = endlessNewBest
@@ -1497,9 +1519,10 @@ function showResults(result){
   }
 
   // Advice a seven-year-old can act on is a BUTTON, not a sentence: after two
-  // losses on a harder tier, the easier way down is one tap.
+  // losses on a harder tier, the easier way down is one tap. The arcade modes
+  // (daily, rush) run at a fixed tier, so they never offer it.
   $("rookieBtn").classList.toggle("hidden",
-    !(!endless && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
+    !(!endless && !rush && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
   // a loss gets the ten-second defeat sting, which hands back to the menu.
@@ -1509,7 +1532,7 @@ function showResults(result){
   // Three stars rains confetti. Pride deserves paper.
   const oldConf = $("overlayResults").querySelector(".confetti");
   if(oldConf) oldConf.remove();
-  if((completed && stars === 3) || (endless && endlessNewBest)){
+  if((completed && stars === 3) || (endless && endlessNewBest) || (rush && completed)){
     const conf = document.createElement("div");
     conf.className = "confetti";
     const colors = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ffffff"];
@@ -1529,7 +1552,7 @@ function showResults(result){
   // Stars pop in one at a time - the small ceremony that makes replaying
   // worth it. The Daily Patrol has no stars: the score is the whole story.
   const starBox = $("resultStars");
-  starBox.innerHTML = endless ? "" : [0,1,2].map(i => `<span class="rs" data-i="${i}">★</span>`).join("");
+  starBox.innerHTML = (endless || rush) ? "" : [0,1,2].map(i => `<span class="rs" data-i="${i}">★</span>`).join("");
   Array.from(starBox.children).forEach((el, i) => {
     if(i < stars){
       setTimeout(() => { el.classList.add("on"); audio.play("star", i); }, 380 + i*420);
@@ -1548,16 +1571,16 @@ function showResults(result){
     <div class="rl"><span>Score</span><b>${run.score}</b></div>
     <div class="rl"><span>Money collected</span><b class="money">+$${run.money}</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
-    <div class="rl"><span>Enemies destroyed</span><b>${endless ? s.kills
+    <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
-    <div class="rl"><span>Pilots rescued</span><b>${endless ? s.rescues
+    <div class="rl"><span>Pilots rescued</span><b>${(endless || rush) ? s.rescues
       : s.rescues + "/" + s.rescuesTotal}</b></div>
     <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
     ${(unlocked || []).map(a =>
       `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect $${(a.pay||0).toLocaleString()} in MEDALS</b></div>`).join("")}
-    ${endless ? dailyRecordLine() : recordLine(run, prevFamilyBest)}`;
+    ${endless ? dailyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
   renderResultComms(run, completed || (endless && endlessNewBest), stars, prevFamilyBest,
                     endless ? result.prevEndlessBest : prevSelfBest);
@@ -1570,6 +1593,17 @@ function showResults(result){
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
+}
+
+/** Who has run the gauntlet deepest - shown after every Boss Rush. */
+function rushRecordLine(){
+  const rows = P.listNames().map(P.load).filter(q => (q.bossRushBest || 0) > 0)
+    .sort((a,b) => b.bossRushBest - a.bossRushBest);
+  if(!rows.length) return "";
+  const top = rows[0];
+  const mine = top.name === profile.name;
+  return `<div class="rl record"><span>Rush record</span><b>${mine ? "☠️ YOURS" :
+    "☠️ " + esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
 }
 
 /** Who holds the Daily Patrol crown right now - shown after every daily run. */
@@ -1825,6 +1859,13 @@ click($("dailyBtn"), () => {
     return;
   }
   launch("daily", "pilot");
+});
+click($("rushBtn"), () => {
+  if(!rushUnlocked(profile)){
+    queueToast({ icon:"🔒", name:"Beat the Mission 4 boss to open the Rush" });
+    return;
+  }
+  launch("rush", "pilot");
 });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
 click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderArmory(); });
