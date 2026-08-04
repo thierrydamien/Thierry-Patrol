@@ -394,12 +394,65 @@ function drawHull(ctx, S, color){
     ctx.drawImage(R.tinted(R.assets.ship, color), -S/2, -S/2, S, S);
     return;
   }
-  ctx.fillStyle = color;
+  /*
+   * Sprite-less fallback. It used to be one flat filled arrow, which is what
+   * the pilot picker showed for months whenever it painted before the sprite
+   * loaded - a coloured triangle reads as a placeholder, not a spacecraft. It
+   * is a proper little interceptor now: shaded fuselage, swept wings, a
+   * canopy and a lit engine, so an asset failure degrades to "simpler ship"
+   * rather than "broken".
+   */
+  const dark = shadeHex(color, -0.45), lit = shadeHex(color, 0.42);
+
+  // Swept wings, drawn behind the body
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.moveTo(0, -S*0.06);
+  ctx.lineTo(S*0.42, S*0.20); ctx.lineTo(S*0.30, S*0.30); ctx.lineTo(0, S*0.18);
+  ctx.lineTo(-S*0.30, S*0.30); ctx.lineTo(-S*0.42, S*0.20);
+  ctx.closePath(); ctx.fill();
+
+  // Fuselage, lit from the top-left like everything else in the game
+  const g = ctx.createLinearGradient(-S*0.18, -S*0.45, S*0.16, S*0.35);
+  g.addColorStop(0, lit); g.addColorStop(0.45, color); g.addColorStop(1, dark);
+  ctx.fillStyle = g;
   ctx.beginPath();
   ctx.moveTo(0, -S*0.48);
-  ctx.lineTo(S*0.34, S*0.22); ctx.lineTo(S*0.13, S*0.14); ctx.lineTo(S*0.10, S*0.36);
-  ctx.lineTo(-S*0.10, S*0.36); ctx.lineTo(-S*0.13, S*0.14); ctx.lineTo(-S*0.34, S*0.22);
+  ctx.quadraticCurveTo(S*0.13, -S*0.20, S*0.14, S*0.14);
+  ctx.lineTo(S*0.10, S*0.34);
+  ctx.lineTo(-S*0.10, S*0.34);
+  ctx.lineTo(-S*0.14, S*0.14);
+  ctx.quadraticCurveTo(-S*0.13, -S*0.20, 0, -S*0.48);
   ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(12,16,30,0.5)";
+  ctx.lineWidth = S*0.012;
+  ctx.stroke();
+
+  // Canopy
+  ctx.fillStyle = "rgba(190,230,255,0.9)";
+  ctx.beginPath();
+  ctx.ellipse(0, -S*0.16, S*0.062, S*0.12, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.beginPath();
+  ctx.ellipse(-S*0.02, -S*0.20, S*0.024, S*0.05, 0, 0, TAU);
+  ctx.fill();
+
+  // Nose tip and engine mouth
+  ctx.fillStyle = lit;
+  ctx.beginPath();
+  ctx.moveTo(0, -S*0.48); ctx.lineTo(S*0.035, -S*0.30); ctx.lineTo(-S*0.035, -S*0.30);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(20,24,40,0.85)";
+  rrect(ctx, -S*0.075, S*0.30, S*0.15, S*0.05, S*0.02); ctx.fill();
+}
+
+/** Local shade helper - the module has no other colour maths. */
+function shadeHex(hex, k){
+  const v = parseInt(String(hex).replace("#",""), 16);
+  const c = [(v>>16)&255, (v>>8)&255, v&255];
+  const t = k < 0 ? 0 : 255, a = Math.abs(k);
+  return "rgb(" + c.map(n => Math.round(n + (t-n)*a)).join(",") + ")";
 }
 
 SF.shipart = { PARTS, PART_BY_ID, levelsOf, partList, nextPart, ownedCount, drawShip };

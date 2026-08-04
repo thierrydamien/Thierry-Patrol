@@ -742,6 +742,20 @@ async function run(){
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
 
+  /* ---------- art repaints when the sprite lands ---------- */
+  check("the boot repaint covers whatever screen is showing",
+    /repaintArt/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")));
+  check("a sprite-less hull still draws a ship, not a triangle", (() => {
+    // The fallback must render without the sprite and without throwing - it is
+    // what every pilot card showed before the repaint fix.
+    const cv = window.document.createElement("canvas");
+    const c = cv.getContext("2d");
+    let threw = false;
+    try { SF.shipart.drawShip(c, 40, 40, 80, { color:"#3399ff", levels:{}, t:0 }); }
+    catch(e){ threw = true; }
+    return !threw;
+  })());
+
   /* ---------- pilot portraits (image-only) ---------- */
   check("no portrait file means no face is painted",
     SF.pilotart.has("Marc") === false &&

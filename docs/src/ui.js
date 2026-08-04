@@ -1711,13 +1711,28 @@ if(document.fonts && document.fonts.ready){
   });
 }
 
+/*
+ * Every ship drawn to a one-shot canvas before the sprite finished loading
+ * keeps the flat vector fallback FOREVER, because nothing repaints it. That
+ * is why the pilot picker showed coloured arrows: renderProfiles() runs at
+ * boot, loadAssets lands a moment later, and only the title art was redrawn.
+ * Repaint whatever is actually on screen instead of naming two canvases.
+ */
+function repaintArt(){
+  if(screens["screen-profiles"].classList.contains("active")) renderProfiles();
+  if(screens["screen-menu"].classList.contains("active")) renderMenu();
+  if(screens["screen-armory"].classList.contains("active")) renderArmory();
+  if(screens["screen-leaderboard"].classList.contains("active")) renderLeaderboard();
+  if(screens["screen-briefing"].classList.contains("active") && selectedMissionIndex != null){
+    openBriefing(selectedMissionIndex);
+  }
+  drawTitleArt("titleArt", null, titleT);
+  if(profile) drawTitleArt("menuArt", profile, titleT);
+}
+
 SF.render.loadAssets(() => {
   document.body.classList.add("assets-ready");
-  // The title art composites the ship sprite, which is not loaded on the very
-  // first paint - without this the home screen keeps the flat vector fallback
-  // until you navigate away and back.
-  drawTitleArt("titleArt", null);
-  if(profile) drawTitleArt("menuArt", profile);
+  repaintArt();
 });
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
