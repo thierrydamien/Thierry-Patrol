@@ -278,14 +278,26 @@ class World {
      * Rocks are terrain, and terrain that evaporates isn't terrain. So a
      * `toughSeconds` type is sized from the player's firepower - the same
      * trick the bosses use - and stays roughly N seconds of concentrated fire
-     * however kitted out you are. Ordinary enemies deliberately do NOT do
-     * this: getting easier to sweep aside is the reward for upgrading.
+     * however kitted out you are.
+     *
+     * The mechanics carriers (Guardians, Menders, Hives, Minelayers...) use
+     * the same floor with small values: measured, they died in 1-3 seconds to
+     * a *randomly sweeping bot*, which means a player who aims deleted them
+     * before their mechanic ever came on stage. Popcorn (grunts, weavers,
+     * swoopers, kamikazes) deliberately has no floor: melting the little
+     * ones is the reward for upgrading, and the game keeps that.
      */
     const dps = this.player ? this.player.dps : 0;
-    e.hp = type.toughSeconds && dps > 0
-      ? Math.max(type.hp, Math.round(type.toughSeconds * dps * 0.5 * (diff ? diff.hpMult : 1)))
-      : Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1)
-                               * hpPowerScale(diff, dps) * (elite ? ELITE.hpMult : 1)));
+    const scaled = Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1) * hpPowerScale(diff, dps)));
+    // The floor scales across tiers like boss fights do (bossHp: 0.8-1.5),
+    // NOT with hpMult (0.8-7.5): hard tiers already track firepower through
+    // hpPowerScale, and stacking hpMult on top turned every Mender into a
+    // bullet sponge exactly where the game is already at its hardest.
+    const floor = type.toughSeconds && dps > 0
+      ? Math.round(type.toughSeconds * dps * 0.5 * (diff ? (diff.bossHp || 1) : 1)) : 0;
+    // Elites multiply the scaled path only. The floor is a role guarantee -
+    // "long enough to do its thing" - not a number an elite should 3.5x.
+    e.hp = Math.round(Math.max(scaled * (elite ? ELITE.hpMult : 1), floor, type.hp));
     e.maxHp = e.hp;
     e.r = type.r * (elite ? ELITE.sizeMult : 1);
     e.size = type.size * (elite ? ELITE.sizeMult : 1);
@@ -316,7 +328,10 @@ class World {
     if(o.vx != null) e.vx = o.vx;
     if(o.vy != null) e.vy = o.vy;
     e.life = 0;
-    e.fireTimer = type.fire ? rand(type.fire.every[0], type.fire.every[1]) * (diff ? diff.fireRate : 1) : Infinity;
+    // First shot at just over half a normal roll. With a full roll, most of
+    // the fleet died without ever firing - measured 24% of grunts, 13% of
+    // weavers, 0% of swoopers got a shot off. A silent enemy is scenery.
+    e.fireTimer = type.fire ? rand(type.fire.every[0], type.fire.every[1]) * 0.55 * (diff ? diff.fireRate : 1) : Infinity;
     e.spawnAnim = 0;
     return e;
   }

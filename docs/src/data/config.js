@@ -164,8 +164,14 @@ const DIFFICULTIES = [
     aimed:0, fireRate:1.6, smart:0, bonusLives:1, unlockStars:0 },
   { id:"pilot", name:"PILOT", tag:"Normal", color:"#3399ff",
     blurb:"The normal mission. Fair fight, normal pay.",
+    // "Normal" is what a first-timer judges the game by. The real fix for
+    // "nothing shoots back" was cadence (see enemies.js / entities.js): the
+    // fleet now fires sooner and more often at every tier. On top of that
+    // PILOT only aims slightly more than before - stacking density and
+    // fireRate here as well measurably tipped mission 2 from comfortable to
+    // failed. ROOKIE stays gentle on purpose.
     speed:1.00, density:1.00, hpMult:1.0, bossHp:1.0, pay:1.0,
-    aimed:0.10, fireRate:1.15, smart:0, bonusLives:0, unlockStars:0 },
+    aimed:0.12, fireRate:1.15, smart:0, bonusLives:0, unlockStars:0 },
   { id:"ace", name:"ACE", tag:"Hard", color:"#f39c12",
     blurb:"Tougher enemies that aim right at you. Pays 1.8x.",
     speed:1.26, density:2.05, hpMult:2.6, bossHp:1.15, pay:1.8, hpTrack:0.35,

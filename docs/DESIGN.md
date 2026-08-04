@@ -847,6 +847,48 @@ readouts placed clear of the corner buttons; combo counter that pops on each
 step; cinematic full-width banners; a cached vignette; foreground dust for
 speed; the rescue emoji replaced by a drawn survivor pod.
 
+## 8w. Making the sky answer back
+
+The complaint was "too easy", and the reflex would have been bigger health
+numbers. Instrumentation said the real problem was different: **most of the
+fleet died without ever acting.** Measured on PILOT with mid-campaign gear,
+24% of grunts, 13% of weavers and 0% of swoopers got a shot off before dying,
+and the mechanics enemies - Guardians, Menders, Hives, Minelayers - lived
+1-3 seconds against a *randomly sweeping bot*, which means a player who aims
+deleted them before their mechanic ever came on stage. The player was not
+reacting to anything, because there was nothing to react to.
+
+Three changes, none of which is blanket HP:
+
+**First shot at 55% of a normal roll** (entities.js). Fire timers used to
+start with a full interval roll, so an enemy that lived 2.5 seconds against a
+2.4-4.0s first-shot roll usually died silent. One line; the acted-before-dying
+rate roughly doubled across the popcorn.
+
+**Cadence by role** (enemies.js). The "react to me" cast - strikers, turrets,
+brutes, swoopers, interceptors - fires meaningfully more often. The popcorn
+keeps a slower sustain: the first attempt tightened everyone and measurably
+tipped mission 2 from comfortable (1 life lost) to failed (4), because five
+heat sources stacked on one tier. The final shape keeps the early first shot
+everywhere and the higher sustain only on the threat cast.
+
+**Durability floors on mechanics carriers only** (toughSeconds, the rocks'
+trick). Guardian 1.1s, Mender 1.0, Hive 1.1, Minelayer 0.9, Turret 1.0,
+Brute 1.2, Hauler 1.2, and small floors on Splitter/Thief/Marksman - sized
+from the player's own DPS, so they hold their role at any gear level, while
+grunts and weavers stay meltable on purpose: that is still the reward for
+upgrading. Two traps found on the way: elites must multiply the scaled path,
+not the floor (a 3.5x floor made elite brutes four-second wave enemies), and
+the floor scales across tiers like boss fights (bossHp 0.8-1.5), not with
+hpMult (0.8-7.5) - hard tiers already track firepower, and stacking hpMult on
+top turned every Mender into a sponge exactly where the game is hardest.
+
+PILOT additionally aims a little more (0.10 -> 0.12). ROOKIE is untouched.
+Verified by replaying: mission 2 completes in 6 of 7 bot runs at 2-3 lives
+lost (was 1 - more pressure, still comfortable, and the bot flies into
+bullets that a human dodges); the stock-ship ROOKIE bot failures match the
+pre-change baseline exactly, i.e. bot incompetence, not regression.
+
 ## 9. What I'd do next
 
 Roughly in value order:

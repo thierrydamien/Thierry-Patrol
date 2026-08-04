@@ -285,22 +285,22 @@ const ENEMY_TYPES = {
   grunt: {
     name:"Grunt", behaviour:"dive", hp:1, r:13, size:42, speed:138,
     score:5, money:6, tint:null,
-    fire:{ pattern:"straight", every:[2.4,4.0], speed:255 },
+    fire:{ pattern:"straight", every:[2.0,3.4], speed:255 },
   },
   weaver: {
     name:"Weaver", behaviour:"weave", hp:1, r:13, size:42, speed:120,
     score:7, money:7, tint:"#ff9d4a",
-    fire:{ pattern:"straight", every:[2.6,4.2], speed:245 },
+    fire:{ pattern:"straight", every:[2.1,3.5], speed:245 },
   },
   striker: {
     name:"Striker", behaviour:"hover", hp:2, r:15, size:46, speed:162,
     score:10, money:10, tint:"#a855f7",
-    fire:{ pattern:"aimed", every:[1.4,2.2], speed:280 },
+    fire:{ pattern:"aimed", every:[1.2,1.9], speed:280 },
   },
   swooper: {
     name:"Swooper", behaviour:"swoop", hp:2, r:15, size:44, speed:188,
     score:12, money:11, tint:"#4ade80",
-    fire:{ pattern:"straight", every:[2.0,3.2], speed:268 },
+    fire:{ pattern:"straight", every:[1.3,2.2], speed:268 },
   },
   kamikaze: {
     name:"Kamikaze", behaviour:"kamikaze", hp:1, r:13, size:40, speed:212,
@@ -309,16 +309,19 @@ const ENEMY_TYPES = {
   turret: {
     name:"Gun Platform", behaviour:"turret", hp:5, r:20, size:62, speed:88,
     score:24, money:24, tint:"#60a5fa",
-    fire:{ pattern:"spread3", every:[1.8,2.6], speed:245 },
+    fire:{ pattern:"spread3", every:[1.5,2.2], speed:245 },
+    toughSeconds:1.0,          // an emplacement should have to be *reduced*
   },
   brute: {
     name:"Brute", behaviour:"brute", hp:6, r:21, size:64, speed:88,
     score:26, money:26, tint:"#f43f5e",
-    fire:{ pattern:"spread3", every:[2.2,3.4], speed:232 },
+    fire:{ pattern:"spread3", every:[1.9,2.9], speed:232 },
+    toughSeconds:1.2,          // armour that armour-piercing rounds matter for
   },
   carrier: {
     name:"Prison Hauler", behaviour:"carrier", hp:8, r:23, size:72, speed:76,
     score:40, money:42, tint:"#facc15", carriesRescue:true,
+    toughSeconds:1.2,          // a hauler should cross real sky before it pops
     fire:{ pattern:"straight", every:[2.6,3.6], speed:220 },
   },
 
@@ -327,13 +330,15 @@ const ENEMY_TYPES = {
   shielder: {
     name:"Guardian", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
     score:34, money:34, tint:"#22d3ee", fire:null,
+    toughSeconds:1.1,          // the bubble has to exist before it can be popped
     shieldRadius:135,          // everything inside this is untouchable
   },
   splitter: {
     name:"Splitter", behaviour:"dive", hp:4, r:19, size:58, speed:118,
     score:20, money:18, tint:"#4ade80",
+    toughSeconds:0.6,
     splitsInto:{ type:"shard", n:3 },
-    fire:{ pattern:"straight", every:[2.6,4.0], speed:240 },
+    fire:{ pattern:"straight", every:[2.0,3.2], speed:240 },
   },
   shard: {
     name:"Shard", behaviour:"kamikaze", hp:1, r:10, size:30, speed:230,
@@ -342,6 +347,7 @@ const ENEMY_TYPES = {
   thief: {
     name:"Coin Thief", behaviour:"thief", hp:3, r:15, size:46, speed:190,
     score:18, money:16, tint:"#facc15", fire:null,
+    toughSeconds:0.7,          // stealing takes time; catching him must too
   },
   asteroid: {
     name:"Asteroid", behaviour:"tumble", hp:9, r:26, size:74, speed:104,
@@ -357,16 +363,18 @@ const ENEMY_TYPES = {
   sniper: {
     name:"Marksman", behaviour:"sniper", hp:3, r:16, size:50, speed:130,
     score:22, money:20, tint:"#f472b6", fire:null,
+    toughSeconds:0.7,
     chargeTime:1.7,            // long enough to see the line and move
   },
   interceptor: {
     name:"Interceptor", behaviour:"intercept", hp:2, r:14, size:44, speed:150,
     score:16, money:15, tint:"#fb923c",
-    fire:{ pattern:"straight", every:[2.2,3.4], speed:270 },
+    fire:{ pattern:"straight", every:[1.6,2.6], speed:270 },
   },
   bomber: {
     name:"Minelayer", behaviour:"bomber", hp:9, r:22, size:68, speed:96,
     score:32, money:32, tint:"#a3e635", fire:null,
+    toughSeconds:0.9,          // it exists to leave mines behind - let it
   },
   mine: {
     name:"Mine", behaviour:"mine", hp:1, r:12, size:30, speed:34,
@@ -375,10 +383,12 @@ const ENEMY_TYPES = {
   hive: {
     name:"Hive", behaviour:"hive", hp:11, r:24, size:76, speed:104,
     score:44, money:44, tint:"#c084fc", fire:null,
+    toughSeconds:1.1,          // a hive that never hatches is just a target
   },
   mender: {
     name:"Mender", behaviour:"mender", hp:6, r:19, size:56, speed:110,
     score:30, money:30, tint:"#34d399", fire:null,
+    toughSeconds:1.0,          // the heal beam is the whole point
     heals:true,
   },
   boulder: {
