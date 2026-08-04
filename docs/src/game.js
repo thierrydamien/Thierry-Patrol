@@ -165,10 +165,10 @@ const RUSH_ORDER = [
   { missionId: 4,  boss: "marauder"  },
   { missionId: 7,  boss: "jailer"    },
   { missionId: 10, boss: "sentinel"  },
-  { missionId: 14, boss: "warden"    },
-  { missionId: 16, boss: "phantom"   },
-  { missionId: 19, boss: "leviathan" },
-  { missionId: 22, boss: "devourer"  },
+  { missionId: 15, boss: "warden"    },
+  { missionId: 17, boss: "phantom"   },
+  { missionId: 20, boss: "leviathan" },
+  { missionId: 23, boss: "devourer"  },
 ];
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
@@ -264,7 +264,7 @@ function startMission(missionIndex, difficultyId){
 
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
-    halfwayShown: false, boulderShown: false,
+    halfwayShown: false, boulderShown: false, rivalShown: false,
     /*
      * Per-kill payout, damped by the tier's density. A hard tier now sends
      * three times as many enemies, so paying `pay` per head would have made
@@ -333,6 +333,7 @@ function startMission(missionIndex, difficultyId){
   audio.setMusic("combat");
   SF.comms.begin(profile, loadout.crew);
   SF.comms.say(mission.noGuns ? "silentStart"
+             : mission.rival ? "rivalStart"
              : mission.storm ? "stormStart"
              : mission.convoy ? "convoyStart"
              : mission.trench ? "trenchStart"
@@ -457,6 +458,23 @@ const callbacks = {
     const run = game.run;
     e.alive = false;
     if(e.counted){ run.stats.kills++; }
+
+    // Beating the rival is the level, so it gets a boss-sized send-off - it
+    // just isn't a boss, and never blocks the mission the way one would.
+    if(e.type.named){
+      fx.explosion(e.x, e.y, 130, "#ff4fd8", true);
+      for(let i = 0; i < 4; i++)
+        fx.ring(e.x, e.y, 70 + i*55, i%2 ? "#ffd23f" : "#ff9de0", 5 - i, 0.5 + i*0.2);
+      fx.debris(e.x, e.y, 22, "#ff4fd8");
+      fx.shake(22); fx.hitStop(120);
+      fx.text(VW/2, VH*0.4, e.type.named + " IS DOWN!", "#ff9de0", 26, true);
+      audio.play("bossExplode");
+      run.bannerText = e.type.named + " DOWN";
+      run.bannerSub = "you out-flew her, " + pilotName();
+      run.bannerColor = "#ff4fd8";
+      run.bannerUntil = performance.now() + 3200;
+      SF.comms.say("rivalDown");
+    }
 
     // A thief drops everything it lifted. Killing one mid-run is a real save,
     // so it pays back visibly rather than silently.
@@ -1163,6 +1181,23 @@ function announceNewThreats(){
     if(!e.alive || e.y < 0) continue;
     const line = THREAT_LINES[e.typeId];
     if(line) SF.comms.say(line);
+    /*
+     * The rival announces herself. Not the full boss cutscene - she is an
+     * equal, not a fortress, and stopping the game dead would make her a
+     * boss in everything but name. A card, a colour and a taunt is the right
+     * weight for a duel that starts mid-flight.
+     */
+    if(e.type.named && !run.rivalShown){
+      run.rivalShown = true;
+      run.bannerText = e.type.named;
+      run.bannerSub = "she copies you — make her commit";
+      run.bannerColor = "#ff4fd8";
+      run.bannerUntil = performance.now() + 4200;
+      fx.flash(0.3, "255,79,216");
+      fx.shake(10);
+      audio.play("bossAlarm");
+      SF.comms.say("rivalArrives");
+    }
     // A boulder is a set piece, so it gets the full banner treatment once.
     if(e.typeId === "boulder" && !run.boulderShown){
       run.boulderShown = true;

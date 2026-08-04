@@ -1699,6 +1699,42 @@ Probe numbers after the fix: arrives 447 -> 351 smoothly, then travels
 x 328 -> 239 while bobbing, and the player sits at y=332 above a hauler at
 372 with the clamp untouched.
 
+## 8az. The Rival - and the half of the pitch that was wrong
+
+The customer asked, before commissioning it: "would this actually be
+good?" The honest answer was *half of it*. My own pitch had said the ace
+"dodges your shots", and that is precisely the failure pattern this whole
+project keeps designing out: an enemy that evades tells a seven-year-old
+their guns are broken, exactly as the unkillable armoured bosses did. A
+duel is a great idea; unconditional evasion is not.
+
+So the shipped version rests on two rules:
+
+**She mirrors you.** VESPER's lane is your lane reflected across the
+centre line, so she is always on the far side, crossing when you cross. A
+child reads that in a second - "she's copying me!" - and it teaches the
+level's trick: you cannot out-shoot a reflection by standing still, you
+have to make her commit and fire where she is GOING. Which is mission 2's
+lesson, cashed in eleven levels later. Measured in the browser: player at
+x=90 pushes her to 444; player at x=520 pulls her to 82.
+
+**Her dodge has a cooldown.** She jinks away from an incoming round, but
+only once every 1.5s, and she flares and leans for a fifth of a second
+BEFORE she moves. One burst can be slipped; sustained fire always lands.
+That valve is the whole difference between a duel and a tantrum - and the
+tell means being beaten by her is always something you watched happen.
+Both are asserted: the mirror, the jink, the telegraph, and that a second
+round during cooldown does NOT produce a dodge.
+
+She is deliberately not a boss. Ship-sized, no cutscene, no phases, no
+weak points - she arrives mid-flight with a card and a taunt, and the
+mission never stops for her. `toughSeconds` sizes her from your own guns
+like the rocks do, so she lasts about as long at every gear level. Killing
+her pays a boss-sized send-off because beating her IS the level.
+
+Campaign is 23 missions now; `missionsVer` 5 shifts the old 13-22 up one.
+Bosses land at 4, 7, 10, 15, 17, 20, 23 - still none adjacent.
+
 ## 9. What I'd do next
 
 Roughly in value order:

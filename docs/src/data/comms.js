@@ -160,6 +160,18 @@ const COMMS = {
     "Hauler's through! Well flown, {you}.",
     "That's one home safe. Keep it up.",
   ]},
+  rivalStart: { speaker:"control", cooldown:999, lines:[
+    "Vesper is out here somewhere, {you}. She's as good as you are.",
+    "Watch for Vesper, {you}. She'll copy everything you do.",
+  ]},
+  rivalArrives: { speaker:"mate", cooldown:999, lines:[
+    "That's her! She's mirroring you, {you} — make her move first!",
+    "Vesper! Don't chase her, {you} — shoot where she's GOING.",
+  ]},
+  rivalDown: { speaker:"mate", cooldown:999, lines:[
+    "You got Vesper! Nobody has ever done that, {you}.",
+    "She's down! That was proper flying, {you}.",
+  ]},
   silentStart: { speaker:"control", cooldown:999, lines:[
     "Guns are dead, {you}. Don't fight - FLY.",
     "No cannons this run, {you}. Slip through quiet and don't get touched.",

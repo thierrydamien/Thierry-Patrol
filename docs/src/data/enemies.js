@@ -162,6 +162,63 @@ const BEHAVIOURS = {
    * never commits - it keeps correcting, so you have to actually break the
    * lock by moving rather than just sidestepping once.
    */
+  /*
+   * THE RIVAL - the only enemy in the game that duels you.
+   *
+   * It MIRRORS you: its lane is your lane reflected across the centre line,
+   * so it is always on the far side of the screen, crossing when you cross.
+   * A child reads that in one second - "he's copying me!" - and it teaches
+   * the trick the level is built on: you cannot out-shoot a reflection by
+   * standing still, you have to make it commit and fire where it is GOING.
+   * (Which is exactly what mission 2 taught, cashed in.)
+   *
+   * And it jinks away from incoming fire - but on a COOLDOWN. That valve is
+   * the difference between a duel and a tantrum: an enemy that dodges
+   * everything tells a seven-year-old their guns are broken, which is the
+   * one feeling this game keeps having to design out. One burst can be
+   * slipped; sustained fire always lands. It telegraphs the jink first, so
+   * being beaten by it is always something you watched happen.
+   */
+  rival(e, dt, c){
+    const p = c.player;
+    e.dodgeCool = Math.max(0, (e.dodgeCool || 0) - dt);
+    e.tell = Math.max(0, (e.tell || 0) - dt);
+
+    // Hold a high line, opposite the player.
+    const lane = p ? (c.VW - p.x) : c.VW/2;
+    const holdY = 250 + 60 + Math.sin(e.phase + e.life*0.9)*26;
+    e.y += (holdY - e.y) * Math.min(1, dt*1.6);
+
+    // Look for a round about to arrive, and set up a jink with a visible tell.
+    if(!e.dodgeDir && e.dodgeCool <= 0 && c.world){
+      const bs = c.world.bullets.items;
+      for(let i = 0; i < bs.length; i++){
+        const b = bs[i];
+        if(!b.alive || b.vy >= 0) continue;
+        if(Math.abs(b.x - e.x) < e.r + 26 && b.y > e.y && b.y - e.y < 150){
+          e.dodgeDir = b.x < e.x ? 1 : -1;
+          if(e.x < 90) e.dodgeDir = 1;
+          if(e.x > c.VW - 90) e.dodgeDir = -1;
+          e.tell = 0.22;              // lean and flash BEFORE moving
+          e.dodgeTimer = 0.42;
+          e.dodgeCool = 1.5;          // the fairness valve
+          break;
+        }
+      }
+    }
+
+    if(e.dodgeDir){
+      e.dodgeTimer -= dt;
+      // The tell burns off first: for its first fifth of a second it only
+      // leans, so the dodge is something you can see coming and pre-aim.
+      if(e.tell <= 0) e.x += e.dodgeDir * e.speed * 2.1 * dt;
+      if(e.dodgeTimer <= 0) e.dodgeDir = 0;
+    } else {
+      e.x += (lane - e.x) * Math.min(1, dt*1.15);
+    }
+    e.x = clamp(e.x, 40, c.VW - 40);
+  },
+
   intercept(e, dt, c){
     const esc = e.huntsEscort && c.escort;
     const aim = esc || c.player;
@@ -378,6 +435,19 @@ const ENEMY_TYPES = {
     name:"Interceptor", behaviour:"intercept", hp:2, r:14, size:44, speed:150,
     score:16, money:15, tint:"#fb923c",
     fire:{ pattern:"straight", every:[1.6,2.6], speed:270 },
+  },
+  /*
+   * VESPER, the rival ace. Ship-sized on purpose - this is a duel between
+   * equals, not another slab of health. `toughSeconds` sizes it from YOUR
+   * guns like the rocks and the bosses do, so it lasts about as long at
+   * every gear level: long enough to be a fight, never long enough to be a
+   * chore.
+   */
+  rival: {
+    name:"Vesper", behaviour:"rival", hp:60, r:17, size:52, speed:190,
+    score:900, money:420, tint:"#ff4fd8", named:"VESPER",
+    toughSeconds:11,
+    fire:{ pattern:"aimed", every:[0.85,1.35], speed:300 },
   },
   bomber: {
     name:"Minelayer", behaviour:"bomber", hp:9, r:22, size:68, speed:96,

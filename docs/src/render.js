@@ -599,7 +599,41 @@ function drawAsteroid(ctx, e, size){
     ctx.beginPath(); ctx.arc(e.x, e.y, R*0.9, 0, TAU); ctx.fill();
     ctx.restore();
   }
-  if(e.hp < e.maxHp){
+  /*
+   * The rival wears her name and a proper bar - she is a duel, not a mob -
+   * plus the jink TELL: she flares and leans before she moves, so a dodge is
+   * always something you watched coming rather than something that happened
+   * to you. That tell is the whole reason her evasion is fair.
+   */
+  if(e.type.named){
+    if(e.tell > 0){
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,180,240," + (0.5*e.tell/0.22).toFixed(2) + ")";
+      ctx.beginPath(); ctx.arc(e.x, e.y, R*1.5, 0, TAU); ctx.fill();
+      // an arrow the way she is about to break
+      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      const d = e.dodgeDir || 1;
+      ctx.beginPath();
+      ctx.moveTo(e.x + d*R*1.2, e.y);
+      ctx.lineTo(e.x + d*R*2.0, e.y);
+      ctx.moveTo(e.x + d*R*1.7, e.y - 6);
+      ctx.lineTo(e.x + d*R*2.0, e.y);
+      ctx.lineTo(e.x + d*R*1.7, e.y + 6);
+      ctx.stroke();
+      ctx.restore();
+    }
+    const w = size*1.15, pct = clamp(e.hp/e.maxHp, 0, 1);
+    ctx.fillStyle = "rgba(6,10,22,0.8)";
+    ctx.fillRect(e.x-w/2, e.y-R-16, w, 8);
+    ctx.fillStyle = pct > 0.5 ? "#ff4fd8" : pct > 0.22 ? "#ffd23f" : "#ff5d73";
+    ctx.fillRect(e.x-w/2+1, e.y-R-15, (w-2)*pct, 6);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ff9de0";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.fillText(e.type.named, e.x, e.y - R - 22);
+    ctx.textAlign = "left";
+  } else if(e.hp < e.maxHp){
     const w = size*0.7, pct = clamp(e.hp/e.maxHp, 0, 1);
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.fillRect(e.x-w/2, e.y-R-7, w, 3);

@@ -94,6 +94,12 @@ const SKIES = [
             {k:"planet", x:0.16, y:0.76, r:0.104, lit:"#6b7c94", dark:"#0d131f", craters:true},
             {k:"rocks",  x:0.80, y:0.14, r:0.14, n:14} ] },
 
+  { name:"Duelling Ground", clouds:["#9d174d","#f472b6","#4a044e"], dust:"#12030c", star:"#fce7f3",
+    density:0.85, stars:1.1, bright:3,
+    props:[ {k:"planet", x:0.18, y:0.24, r:0.12, lit:"#e879b0", dark:"#4a0d33", crescent:true},
+            {k:"galaxy", x:0.80, y:0.66, r:0.20},
+            {k:"planet", x:0.88, y:0.18, r:0.045, lit:"#f9c9e4", dark:"#54173c", craters:true} ] },
+
   { name:"Hatchery",     clouds:["#4d7c0f","#84cc16","#1a2e05"], dust:"#050b02", star:"#ecfccb",
     density:1.2, stars:0.75, bright:2,
     props:[ {k:"planet", x:0.78, y:0.34, r:0.208, lit:"#7fa83c", dark:"#16250a", bands:true},

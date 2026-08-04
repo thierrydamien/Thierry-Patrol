@@ -547,6 +547,7 @@ function hullShadow(id, S){
 const FACE_KINDS = {
   // objective/flag driven, checked in this order - most distinctive first
   noGuns:  { c0:"#b07be8", c1:"#3a1d5c" },   // Silent Running: guns down
+  duel:    { c0:"#ff4fd8", c1:"#5c0a44" },   // the Rival - personal, not a war
   storm:   { c0:"#67e8f9", c1:"#164e63" },   // the wind is the level
   escort:  { c0:"#7cc4ff", c1:"#123a5c" },   // protect, don't just survive
   dark:    { c0:"#3d477a", c1:"#0b0d24" },   // the Searchlight's blackout
@@ -647,6 +648,7 @@ function missionFace(m){
   // is greedy and would paint half the route the same green. The narrower
   // identities - guns down, a coin run, a rock field - get asked first.
   const kind = m.noGuns ? "noGuns"
+             : m.rival ? "duel"
              : m.storm ? "storm"
              : m.convoy ? "escort"
              : m.blackout ? "dark"

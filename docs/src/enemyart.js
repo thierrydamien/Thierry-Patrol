@@ -252,6 +252,21 @@ const SHAPES = {
     thruster(ctx, -S*0.18, -S*0.24, S*0.06, S*0.14, p);
     thruster(ctx,  S*0.18, -S*0.24, S*0.06, S*0.14, p);
   },
+  /*
+   * VESPER. A swept dart with the game's only forward-raked wings, so the
+   * rival never reads as another interceptor in a new colour - and the shape
+   * points the same way yours does. It should look like a ship somebody
+   * flies, not another thing that spawned.
+   */
+  rival(ctx, S, p){
+    hull(ctx, [0,S*0.46, S*0.13,S*0.16, S*0.44,-S*0.06, S*0.30,-S*0.20,
+               S*0.10,-S*0.12, 0,-S*0.22, -S*0.10,-S*0.12, -S*0.30,-S*0.20,
+               -S*0.44,-S*0.06, -S*0.13,S*0.16], p, S);
+    plate(ctx, [0,S*0.30, S*0.10,0, 0,-S*0.14, -S*0.10,0], p, S, p.trim);
+    cockpit(ctx, 0, S*0.10, S*0.07, S*0.11, p);
+    thruster(ctx, -S*0.13, -S*0.20, S*0.07, S*0.16, p);
+    thruster(ctx,  S*0.13, -S*0.20, S*0.07, S*0.16, p);
+  },
   interceptor(ctx, S, p){
     // A two-prong fork - it flies at you in a way nothing else does.
     hull(ctx, [S*0.10,S*0.44, S*0.22,S*0.10, S*0.34,-S*0.24, S*0.06,-S*0.14,

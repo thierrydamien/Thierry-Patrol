@@ -187,6 +187,18 @@ function migrate(p){
     }
     p.missionsVer = 4;
   }
+  /*
+   * v5: The Rival landed as mission 13, pushing the old 13-22 up one. A
+   * single offset again, but expressed as the same map as v4 so the two read
+   * alike - and descending, so nothing is overwritten before it moves.
+   */
+  if((p.missionsVer || 1) < 5){
+    for(let id = 22; id >= 13; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 13) p.lastMission += 1;
+    p.missionsVer = 5;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

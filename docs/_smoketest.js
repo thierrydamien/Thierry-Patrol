@@ -130,8 +130,8 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("22 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 22 &&
+  check("23 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 23 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   /*
    * The opening card is the only instruction a child actually gets mid-flight,
@@ -379,7 +379,7 @@ async function run(){
     check("no two ordinary stops wear the same face",
       new Set(faces).size === faces.length);
     check("a named face is the one that gets drawn",
-      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 13)).enemy === "hive");
+      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 14)).enemy === "hive");
   }
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
@@ -932,7 +932,7 @@ async function run(){
       M.filter(m => m.storm).length === 1 && M.filter(m => m.convoy).length === 1 &&
       M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 1);
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,14,16,19,22");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,15,17,20,23");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -1055,6 +1055,59 @@ async function run(){
     check("a hauler brought home passes the objective",
       SF.missions.OBJECTIVES.convoy.test({ convoyTotal:1, convoyLost:0 }));
 
+    /* The Rival: a duel that can be won by shooting, not by luck. */
+    {
+      const rv = M.find(m => m.rival);
+      check("the rival level exists and fields exactly one ace",
+        rv && rv.waves.filter(wv => wv.type === "rival")
+                      .reduce((n, wv) => n + wv.n, 0) === 1);
+      check("the ace is named, drawn, and worth beating",
+        SF.enemyData.ENEMY_TYPES.rival.named === "VESPER" &&
+        SF.enemyArt.has("rival") && SF.enemyData.ENEMY_TYPES.rival.score >= 500);
+
+      const W3 = SF.game.world;
+      W3.reset();
+      W3.createPlayer(SF.game.buildLoadout(SF.profile.blank("Duel"),
+                                           SF.config.DIFFICULTY_BY_ID.pilot));
+      const ace = W3.spawnEnemy("rival", 300, 320,
+        { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+      const cR = { player: W3.player, world: W3, VW: SF.entityConst.VW,
+                   VH: SF.entityConst.VH, smart: 0 };
+
+      // It MIRRORS: drive the player left, the ace must head right.
+      W3.player.x = 120;
+      for(let i = 0; i < 180; i++) SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
+      const whenLeft = ace.x;
+      W3.player.x = SF.entityConst.VW - 120;
+      for(let i = 0; i < 180; i++) SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
+      check("the rival mirrors you across the screen",
+        whenLeft > SF.entityConst.VW*0.6 && ace.x < SF.entityConst.VW*0.4);
+
+      // The dodge, and the valve that keeps it fair.
+      ace.dodgeDir = 0; ace.dodgeCool = 0; ace.tell = 0;
+      const shoot = () => { const b = W3.bullets.spawn();
+        b.x = ace.x; b.y = ace.y + 90; b.vx = 0; b.vy = -700; b.r = 5; b.dmg = 1;
+        b.pierce = 0; b.homing = 0; b.tier = 1; b.age = 0; b.alive = true;
+        b.hitBoss = false; b.hitWeak = false; return b; };
+      shoot();
+      SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
+      check("the rival jinks away from an incoming round", ace.dodgeDir !== 0);
+      check("the jink is telegraphed before she moves", ace.tell > 0);
+      check("a dodge on cooldown cannot repeat", (() => {
+        ace.dodgeDir = 0;                       // end that jink
+        W3.bullets.killAll(); shoot();
+        SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
+        return ace.dodgeDir === 0 && ace.dodgeCool > 0;   // sustained fire lands
+      })());
+      check("the rival stays inside the screen while dodging", (() => {
+        ace.x = 45; ace.dodgeCool = 0; ace.dodgeDir = 0;
+        W3.bullets.killAll(); shoot();
+        for(let i = 0; i < 120; i++) SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
+        return ace.x >= 40 && ace.x <= SF.entityConst.VW - 40;
+      })());
+      W3.reset();
+    }
+
     /* The searchlight: the dark pass exists and survives a frame. */
     const black = M.find(m => m.blackout);
     check("the searchlight hides rescues in the dark", black.podDrops >= 3);
@@ -1079,25 +1132,25 @@ async function run(){
     window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
-    // Three inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
-    // then v4's four-level map. Old 8 rides v4 to 10; old 9 rides v2 then v4
-    // to 12; old 14 rides all three to 19. Old 3 never moves.
+    // Four inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+    // v4's four-level map, then v5 (The Rival at 13). Old 8 rides to 10; old
+    // 9 rides to 12; old 14 rides every shift to 20. Old 3 never moves.
     check("pre-insert records ride every shift",
       shifted.missions["10"] && shifted.missions["10"].stars.pilot === 2 &&
       shifted.missions["12"] && shifted.missions["12"].stars.pilot === 3 &&
-      shifted.missions["19"] && shifted.missions["19"].stars.pilot === 1 &&
+      shifted.missions["20"] && shifted.missions["20"].stars.pilot === 1 &&
       !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["14"] &&
       shifted.lastMission === 12);
     check("act-one records stay where they were",
       shifted.missions["3"] && shifted.missions["3"].stars.pilot === 2);
     check("the shifts run exactly once",
       SF.profile.migrate(shifted).missions["12"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["19"].stars.pilot === 1);
+      SF.profile.migrate(shifted).missions["20"].stars.pilot === 1);
     // A v2-era save (Silent Running already counted) gets only v3 then v4.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
     check("a v2-era save shifts only the later inserts",
-      v2era.missions["16"] && !v2era.missions["13"] && v2era.lastMission === 16);
+      v2era.missions["17"] && !v2era.missions["13"] && v2era.lastMission === 17);
   }
 
   /* ---------- settings ---------- */
@@ -1370,7 +1423,7 @@ async function run(){
   {
     check("prison break and cold approach got their bosses",
       SF.missions.MISSIONS.find(m => m.id === 7).boss === "jailer" &&
-      SF.missions.MISSIONS.find(m => m.id === 16).boss === "phantom" &&
+      SF.missions.MISSIONS.find(m => m.id === 17).boss === "phantom" &&
       SF.missions.BOSSES.jailer.rescuePods === true &&
       SF.missions.BOSSES.phantom.cloak === true);
 
@@ -1405,7 +1458,7 @@ async function run(){
 
     // All six bosses queue in campaign order once everything is cleared.
     const prof6 = SF.profile.blank("RushAll");
-    [4, 7, 10, 14, 16, 19].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+    [4, 7, 10, 15, 17, 20].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
     SF.profile.save(prof6);
     SF.game.profile = prof6;
     SF.game.startMission("rush", "pilot");
@@ -1416,10 +1469,10 @@ async function run(){
 
   /* ---------- their treasury (the heist between the bosses) ---------- */
   {
-    const t = SF.missions.MISSIONS.find(m => m.id === 15);
+    const t = SF.missions.MISSIONS.find(m => m.id === 16);
     check("the treasury sits between the wardens and never carries a boss",
       t && t.name === "Their Treasury" && !t.boss &&
-      SF.missions.MISSIONS.find(m => m.id === 14).boss === "warden");
+      SF.missions.MISSIONS.find(m => m.id === 15).boss === "warden");
     check("the heist stars greed and leans on thieves",
       t.objectives.includes("coinRush") &&
       t.waves.filter(wv => wv.type === "thief").reduce((n,wv) => n + wv.n, 0) >= 10);
@@ -1625,9 +1678,9 @@ async function run(){
       D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
     check("the finale mission closes the campaign",
       SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "devourer" &&
-      SF.missions.MISSIONS.find(m => m.id === 21).boss === undefined);
+      SF.missions.MISSIONS.find(m => m.id === 22).boss === undefined);
     check("beating it awards the last tune and the last medal",
-      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 22) &&
+      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 23) &&
       SF.config.ACHIEVEMENTS.some(a => a.id === "devourer" && a.pay > 0));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
@@ -1839,7 +1892,7 @@ async function run(){
       SF.config.TUNES.every(t => t.id === "vanguard" || t.apex ||
         (t.fire > 1 || t.speed < 1)));
     check("every boss mission awards exactly one tune",
-      [4, 7, 10, 14, 16, 19, 22].every(mid =>
+      [4, 7, 10, 15, 17, 20, 23].every(mid =>
         SF.config.TUNES.filter(t => t.unlockMission === mid).length === 1));
     check("every tune states its trade in kid words",
       SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length &&

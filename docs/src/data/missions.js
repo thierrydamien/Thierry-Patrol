@@ -600,7 +600,31 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:13, name:"The Hatchery", subtitle:"It keeps growing",
+    id:13, name:"The Rival", subtitle:"One of them is good",
+    brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
+    rival:true,
+    face:"rival",
+    waves: [
+      w(1,   "grunt",    7, "arc"),
+      w(9,   "weaver",   6, "scatter"),
+      w(17,  "striker",  5, "vee"),
+      w(25,  "carrier",  1, "column"),
+      // She arrives once the escort is thinned out - and again, angrier,
+      // after you have had a taste of it.
+      w(33,  "rival",    1, "column"),
+      w(46,  "kamikaze", 5, "sides"),
+      w(55,  "grunt",    9, "wall"),
+      w(64,  "interceptor", 3, "sides"),
+      w(72,  "carrier",  1, "column"),
+      w(80,  "striker",  6, "arc"),
+      w(90,  "weaver",   7, "pincer"),
+      w(100, "splitter", 3, "line"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+    goal:"VESPER copies you — trick her!",
+  },
+  {
+    id:14, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -630,7 +654,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:14, name:"The Warden", subtitle:"Their jailer",
+    id:15, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -664,7 +688,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:15, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:16, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole! Crack the vaults, grab EVERY coin - and watch the thieves who want them back.",
     goal:"Grab EVERY coin you can see!",
     waves: [
@@ -694,7 +718,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","coinRush"],
   },
   {
-    id:16, name:"Cold Approach", subtitle:"Line up the shot",
+    id:17, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -724,7 +748,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:17, name:"The Trench Run", subtitle:"Thread the walls",
+    id:18, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -751,7 +775,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:18, name:"All Hands", subtitle:"Everyone who is left",
+    id:19, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     goal:"Save every last pilot!",
     waves: [
@@ -782,7 +806,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:19, name:"The Leviathan", subtitle:"The last one",
+    id:20, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -821,7 +845,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:20, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:21, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -846,7 +870,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","kill90"],
   },
   {
-    id:21, name:"The Long Dark", subtitle:"Something is out there",
+    id:22, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     goal:"Something is out there. Watch out!",
     face:"sniper",                    // what is watching you out of the dark
@@ -873,7 +897,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:22, name:"The Devourer", subtitle:"The last star",
+    id:23, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
