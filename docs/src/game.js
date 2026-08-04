@@ -477,31 +477,67 @@ function spawnPowerup(x, y){
   game.world.spawnPickup("power", x, y, def);
 }
 
+/*
+ * Killing a boss is the game's biggest moment, so it gets a two-act death:
+ * killBoss() only STARTS it - the hulk goes dark and a drumroll of chain
+ * detonations runs across it (see bosses.update) - and finalBossBlast()
+ * ends it with the screen-clearing explosion the fight earned.
+ */
 function killBoss(boss){
   const run = game.run;
+  if(boss.dying) return;
+  boss.dying = true;
+  boss.deathT = 0;
+  boss.deathDur = 2.3;
+  boss.deathFx = 0;
+  boss.hp = 0;
   run.score += Math.round(1200 * run.difficulty.pay);
-  game.world.dropCoins(boss.x, boss.y, Math.round(220 * run.difficulty.pay * game.world.player.moneyMult));
   game.profile.bossesDefeated++;
   audio.play("bossExplode");
-  fx.shake(26);
-  fx.flash(0.8, "255,200,120");
-  fx.hitStop(140);
-  // Comes apart in stages rather than vanishing in one puff.
-  const bx = boss.x, by = boss.y, wounds = boss.wounds.slice();
-  fx.explosion(bx, by, boss.size, "#ffb03d", true);
-  wounds.forEach((w, i) => setTimeout(() => {
-    if(game.state !== "playing" && game.state !== "ending") return;
-    fx.explosion(bx + w.x, by + w.y, 36, i%2 ? "#ffffff" : "#ff8a3d", false);
-    fx.shake(7);
-  }, i*70));
-  fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 30, true);
+  fx.shake(18);
+  fx.flash(0.5, "255,200,120");
+  fx.hitStop(110);
+}
+
+function finalBossBlast(boss){
+  const run = game.run;
+  const bx = boss.x, by = boss.y;
+  // The blast itself: white-out, a triple shockwave, a debris storm, and a
+  // long hit-stop so the frame it happens on physically lands.
+  fx.flash(1, "255,230,160");
+  fx.hitStop(200);
+  fx.shake(36);
+  fx.explosion(bx, by, boss.size*1.5, "#ffd23f", true);
+  fx.explosion(bx - boss.size*0.4, by + 14, 48, "#ffffff", true);
+  fx.explosion(bx + boss.size*0.4, by - 10, 48, "#ff8a3d", true);
+  fx.ring(bx, by, boss.size*2.6, "#ffffff", 5, 0.55);
+  fx.ring(bx, by, boss.size*3.6, "#ffd23f", 3, 0.8);
+  fx.ring(bx, by, boss.size*4.6, "#ff8a3d", 2, 1.05);
+  fx.debris(bx, by, 30, "#ff8a3d");
+  fx.embers(bx, by, 26);
+  fx.smoke(bx, by, 14);
+  audio.play("megaBoom");
+
+  // The shockwave clears the sky: every minion and every bullet still flying
+  // goes with the ship that brought them. Causal, and deeply satisfying.
+  const items = game.world.enemies.items;
+  for(let i=0;i<items.length;i++){
+    const e = items[i];
+    if(!e.alive) continue;
+    e.alive = false;
+    fx.explosion(e.x, e.y, e.size || 22, "#ffb03d", false);
+  }
+  game.world.enemyBullets.killAll();
+
+  game.world.dropCoins(bx, by, Math.round(220 * run.difficulty.pay * game.world.player.moneyMult));
+  fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 34, true);
   game.world.boss = null;
   run.bossActive = false;
-  // Hold the results back for a beat so the death animation lands. This is a
+  // Hold the results back for a beat so the blast lands. This is a
   // simulation timer, not a wall-clock setTimeout: a real-time timer would
   // fire behind the pause overlay, and if it were ever dropped the mission
   // could never finish at all.
-  run.finishTimer = 1.3;
+  run.finishTimer = 1.2;
 }
 
 function pilotName(){
@@ -581,6 +617,7 @@ function update(dt, timeMs){
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
   behaviourCtx.onEnemyKilled = callbacks.onEnemyKilled;
   behaviourCtx.onBossHit = callbacks.onBossHit;
+  behaviourCtx.onBossDead = finalBossBlast;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
   behaviourCtx.godMode = game.godMode;
 
@@ -629,8 +666,17 @@ function update(dt, timeMs){
     if(run.phaseTimer <= 0 && !run.ended) beginVictoryLap();
   } else if(run.phase === "lap"){
     // The victory lap: the sky is yours for a few seconds. Free flight, the
-    // last coins still falling, nothing that can hurt you.
+    // last coins still falling, nothing that can hurt you - and fireworks,
+    // because a cleared sky deserves applause.
     run.phaseTimer -= dt;
+    run.fwTimer = (run.fwTimer || 0.001) - dt;
+    if(run.fwTimer <= 0){
+      const FW = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"];
+      fx.firework(rand(70, VW-70), rand(VH*0.12, VH*0.45),
+                  FW[Math.floor(rand(0, FW.length))]);
+      audio.play("firework");
+      run.fwTimer = rand(0.35, 0.7);
+    }
     if(run.phaseTimer <= 0){
       run.phase = "outro";
       run.outroFly = 1.6;          // safety net - the fly-off ends it sooner
@@ -647,9 +693,17 @@ function update(dt, timeMs){
       run.phaseTimer = 1.2;
     }
   } else if(run.phase === "gone"){
-    // The beat after the exit: stars drifting, engine noise fading in your
-    // head, ship long gone - THEN the results.
+    // The beat after the exit: stars drifting, the last fireworks still
+    // popping over an empty sky, ship long gone - THEN the results.
     run.phaseTimer -= dt;
+    run.fwTimer = (run.fwTimer || 0.001) - dt;
+    if(run.fwTimer <= 0){
+      const FW = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"];
+      fx.firework(rand(70, VW-70), rand(VH*0.15, VH*0.5),
+                  FW[Math.floor(rand(0, FW.length))]);
+      audio.play("firework");
+      run.fwTimer = rand(0.5, 0.9);
+    }
     if(run.phaseTimer <= 0 && !run.ended) endMission(true);
   }
 

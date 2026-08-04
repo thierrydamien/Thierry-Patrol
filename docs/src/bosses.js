@@ -185,7 +185,9 @@ function chooseAttack(boss){
 }
 
 function update(boss, dt, world, ctxObj, timeMs){
-  if(!boss.alive) return;
+  // A dying boss is !alive (bullets pass through the wreck) but still very
+  // much on screen - the death sequence below is the whole point.
+  if(!boss.alive && !boss.dying) return;
 
   if(boss.flash > 0) boss.flash -= dt*6;
   boss.weakPoints.forEach(wp => { if(wp.flash > 0) wp.flash -= dt*6; });
@@ -206,6 +208,36 @@ function update(boss, dt, world, ctxObj, timeMs){
   if(boss.entering){
     boss.y += 190*dt;
     if(boss.y >= boss.targetY){ boss.y = boss.targetY; boss.entering = false; }
+    return;
+  }
+
+  /*
+   * The death sequence. A boss that blinks out the frame its HP hits zero
+   * throws away the best moment in the game. Instead the hulk goes dark and
+   * lists, and a drumroll of detonations marches across the hull - starting
+   * slow, accelerating to a blur - until game.js is told to fire the final
+   * blast. No attacks, no aiming, no phases: it is already dead, it just
+   * doesn't know it yet.
+   */
+  if(boss.dying){
+    boss.deathT += dt;
+    boss.y += 24*dt;                                  // engines dead, sinking
+    boss.x += Math.sin(boss.deathT*9) * 30 * dt;      // shuddering
+    boss.wobble = 6;
+    boss.deathFx -= dt;
+    if(boss.deathFx <= 0){
+      const f = Math.min(1, boss.deathT / boss.deathDur);
+      const a = rand(0, Math.PI*2), d = rand(0, boss.size*0.55);
+      fx.explosion(boss.x + Math.cos(a)*d, boss.y + Math.sin(a)*d*0.6,
+                   24 + f*34, f > 0.6 ? "#ffffff" : "#ff8a3d", f > 0.5);
+      fx.shake(4 + f*9);
+      boss.flash = 1;
+      audio.play("enemyExplode", f > 0.5);
+      boss.deathFx = 0.24 - f*0.17;                   // the accelerating drumroll
+    }
+    if(boss.deathT >= boss.deathDur && ctxObj && ctxObj.onBossDead){
+      ctxObj.onBossDead(boss);
+    }
     return;
   }
 

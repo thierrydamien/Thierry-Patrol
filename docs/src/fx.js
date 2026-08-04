@@ -121,6 +121,27 @@ function explosion(x, y, size, color, big){
   if(big) ring(x, y, size*1.9, color, 3, 0.5);
 }
 
+/**
+ * A firework: a spherical burst of glittering embers with gravity, a white
+ * core pop and a soft ring. Fired in salvos over the victory lap - the sky's
+ * way of clapping.
+ */
+function firework(x, y, color){
+  const N = 40;
+  for(let i=0;i<N;i++){
+    const a = (i/N)*TAU + rand(-0.07, 0.07), s = rand(110, 235);
+    const p = particles.spawn();
+    p.x=x; p.y=y; p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s;
+    p.color = Math.random() < 0.2 ? "#ffffff" : color;
+    p.life=0; p.max=rand(0.65, 1.15); p.size=rand(1.5, 2.7);
+    p.kind="ember"; p.drag=0.955; p.gravity=95; p.spin=0; p.angle=rand(0,TAU);
+  }
+  const flash = particles.spawn();
+  flash.x=x; flash.y=y; flash.life=0; flash.max=0.12; flash.size=26;
+  flash.color="#ffffff"; flash.kind="flash"; flash.vx=0; flash.vy=0; flash.drag=1; flash.gravity=0;
+  ring(x, y, 54, color, 2, 0.4);
+}
+
 /** Muzzle flash: a four-point star, rotated a little every shot. */
 function muzzle(x, y, color, scale){
   const p = particles.spawn();
@@ -357,6 +378,7 @@ function drawFlash(ctx, w, h){
 
 SF.fx = {
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
+  firework,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },

@@ -857,7 +857,7 @@ bossBuf.width = bossBuf.height = 220;
 const bossBufCtx = bossBuf.getContext("2d");
 
 function drawBoss(ctx, boss, timeMs){
-  if(!boss || !boss.alive) return;
+  if(!boss || (!boss.alive && !boss.dying)) return;
   const pct = clamp(boss.hp/boss.maxHp, 0, 1);
   const damage = 1 - pct;
   const bx = boss.x + (boss.wobble ? rand(-boss.wobble, boss.wobble) : 0);

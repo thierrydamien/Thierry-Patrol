@@ -151,6 +151,21 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.megaBoom = { minGap: 1500, fn: () => {
+  // The final boss blast: a sub-bass swell under a long roar of air - felt
+  // as much as heard, and bigger than anything else in the game.
+  tone(45, 1.1, "sine", 0.22, 28);
+  tone(90, 0.7, "sawtooth", 0.09, 40);
+  noise(1.3, 0.5, 2600, 40);
+  [523, 659, 784].forEach((f,i) => tone(f, 0.2, "triangle", 0.05, null, 0.5 + i*0.12));
+} };
+
+SOUNDS.firework = { minGap: 90, fn: () => {
+  // A pop and a fizz of glitter, quiet enough to salvo.
+  noise(0.1, 0.09, 4200, 500);
+  tone(rand(680, 980), 0.24, "sine", 0.018, 220, 0.03);
+} };
+
 SOUNDS.victory = { minGap: 2000, fn: () => {
   // The AREA CLEAR fanfare: a rising major arpeggio with a sparkle on top -
   // brighter than waveClear, smaller than missionWin.

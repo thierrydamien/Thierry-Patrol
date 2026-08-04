@@ -1065,6 +1065,29 @@ Two closures of old loops, one grace note:
 - The victory lap opens with its own fanfare (rising major arpeggio with a
   sparkle) instead of borrowing the wave-clear chime.
 
+## 8ae. The boss death, and the sky that claps
+
+A boss that blinked out the frame its HP hit zero was throwing away the best
+moment in the game. It's a two-act death now: killBoss() only STARTS it -
+the hulk goes dark, lists, sinks, and a drumroll of chain detonations
+marches across the hull, starting slow and accelerating to a blur (2.3s,
+scripted in simulation time inside bosses.update, so pause behaves) - then
+finalBossBlast() ends it: white-out, a triple shockwave, a debris storm, a
+long hit-stop, and a sub-bass megaBoom. The shockwave also clears the sky -
+every minion and every bullet still flying dies with the ship that brought
+them, which reads as causal and feels tremendous.
+
+The bug worth writing down: applyDamage marks a dead boss `!alive` so
+bullets pass through the wreck - and both bosses.update and drawBoss bailed
+on `!alive`, so the whole death sequence froze invisibly at frame one. The
+jsdom unit test passed because it staged `dying` by hand without going
+through applyDamage; only the browser probe caught it. Guards are now
+`!alive && !dying`, and the unit test mirrors the real kill path.
+
+And when any mission ends, the victory lap now fires fireworks - spherical
+glitter bursts with gravity, a pop sound quiet enough to salvo - every half
+second or so until the results land. A cleared sky deserves applause.
+
 ## 9. What I'd do next
 
 Roughly in value order:

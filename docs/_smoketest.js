@@ -691,12 +691,24 @@ async function run(){
   }
 
   /* ---------- abilities ---------- */
-  const before = SF.game.world.player ? SF.game.world.player.bombs : 0;
-  if(SF.game.world.player && SF.game.state === "playing"){
+  // Deterministic: this used to piggyback on whatever state the boss run left
+  // behind, so timing shifts silently skipped it. Stage a fresh flight if
+  // needed, grant the charges, then prove the buttons spend them.
+  if(!(SF.game.world.player && SF.game.state === "playing")){
+    SF.game.startMission(0, "rookie");
+    await runFrames(10);
+  }
+  {
+    const pl = SF.game.world.player;
+    pl.bombs = Math.max(pl.bombs, 1);
+    pl.overdrives = Math.max(pl.overdrives, 1);
+    pl.overdriveUntil = 0;
+    const before = pl.bombs;
     SF.game.useBomb();
-    check("smart bomb consumes a charge", SF.game.world.player.bombs === before - 1);
+    check("smart bomb consumes a charge", pl.bombs === before - 1);
     SF.game.useOverdrive();
-    check("overdrive activates", SF.game.world.player.overdriveUntil > fakeNow);
+    check("overdrive activates", pl.overdriveUntil > fakeNow);
+    SF.game.state = "idle";
   }
 
   /* ---------- pooling / performance ---------- */
@@ -1015,6 +1027,36 @@ async function run(){
     try { SF.audio.play("victory"); } catch(e){ return false; }
     return /SOUNDS\.victory/.test(fs.readFileSync(path.join(__dirname, "src/audio.js"), "utf8"));
   })());
+
+  /* ---------- the boss death sequence + fireworks ---------- */
+  {
+    // A dead boss doesn't vanish: it runs a dying drumroll, then hands the
+    // final blast back to the game.
+    const boss = SF.bosses.create("marauder", SF.config.DIFFICULTY_BY_ID.pilot, 60);
+    boss.entering = false;
+    // Mirror the real kill: applyDamage marks the boss !alive (bullets pass
+    // through the wreck), and the dying sequence must still run and draw.
+    boss.alive = false;
+    boss.dying = true; boss.deathT = 0; boss.deathDur = 0.3; boss.deathFx = 0;
+    let blown = null;
+    SF.bosses.update(boss, 0.16, SF.game.world, { onBossDead: b => { blown = b; } }, 0);
+    check("a dying boss detonates along the hull instead of vanishing",
+      blown === null && boss.dying === true);
+    SF.bosses.update(boss, 0.2, SF.game.world, { onBossDead: b => { blown = b; } }, 0);
+    check("the drumroll ends by handing over the final blast", blown === boss);
+    check("the big sounds exist", (() => {
+      try { SF.audio.play("megaBoom"); SF.audio.play("firework"); } catch(e){ return false; }
+      const src = fs.readFileSync(path.join(__dirname, "src/audio.js"), "utf8");
+      return /SOUNDS\.megaBoom/.test(src) && /SOUNDS\.firework/.test(src);
+    })());
+    check("the final blast clears every enemy bullet from the sky",
+      /enemyBullets\.killAll\(\)/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+
+    const alive0 = SF.fx._pools.particles.items.filter(q => q.alive).length;
+    SF.fx.firework(300, 200, "#ffd23f");
+    check("a firework is a real burst, not a puff",
+      SF.fx._pools.particles.items.filter(q => q.alive).length >= alive0 + 30);
+  }
 
   /* ---------- the director's-pass moments ---------- */
   check("music can be asked for without an AudioContext", (() => {
