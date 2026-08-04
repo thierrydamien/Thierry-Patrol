@@ -130,8 +130,8 @@ async function run(){
   /* ---------- data sanity ---------- */
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("18 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 18 &&
+  check("22 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 22 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
@@ -356,7 +356,7 @@ async function run(){
     check("no two ordinary stops wear the same face",
       new Set(faces).size === faces.length);
     check("a named face is the one that gets drawn",
-      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 11)).enemy === "hive");
+      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 13)).enemy === "hive");
   }
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
@@ -902,32 +902,117 @@ async function run(){
     SF.missions.rescueCount(SF.missions.MISSIONS.find(m => m.noGuns)) ===
       SF.missions.MISSIONS.find(m => m.noGuns).podDrops);
 
+  /* ---------- the four new rules: storm, convoy, trench, searchlight ---------- */
+  {
+    const M = SF.missions.MISSIONS;
+    check("each new rule appears exactly once",
+      M.filter(m => m.storm).length === 1 && M.filter(m => m.convoy).length === 1 &&
+      M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 1);
+    check("the campaign bosses sit at their remapped stops",
+      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,14,16,19,22");
+
+    /* The trench gate: a wall with exactly one two-slot hole in it. The gap
+       can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
+    check("a gate is a wall with one gap a ship fits through", (() => {
+      const slotW = 600/7;
+      for(let round = 0; round < 12; round++){
+        const g = SF.enemyData.FORMATIONS.gate(5, 600);
+        if(g.length !== 5) return false;
+        const occupied = new Set(g.map(o => Math.round(o.x/slotW - 0.5)));
+        if(occupied.size !== 5) return false;
+        const missing = [];
+        for(let s = 0; s < 7; s++) if(!occupied.has(s)) missing.push(s);
+        if(missing.length !== 2 || missing[1] - missing[0] !== 1) return false;
+      }
+      return true;
+    })());
+    check("the trench is built from gates",
+      M.find(m => m.trench).waves.filter(wv => wv.form === "gate").length >= 6);
+
+    /* The storm: gusts cycle, and the wind moves things that can't resist. */
+    SF.game.profile = SF.profile.load("Marc");
+    SF.ui.show("screen-game");
+    SF.game.startMission(M.findIndex(m => m.storm), "pilot");
+    await runFrames(200);
+    const runS = SF.game.run;
+    check("the storm mission carries live weather", !!runS.storm);
+    runS.storm.mode = "calm"; runS.storm.timer = 0;
+    await runFrames(3);
+    check("a calm sky turns to warning streaks", runS.storm.mode === "warn");
+    runS.storm.timer = 0;
+    await runFrames(3);
+    check("the warning becomes a gust", runS.storm.mode === "blow");
+    const es = SF.game.world.enemies.items.filter(e => e.alive);
+    const ex0 = es.length ? es[0].x : null;
+    await runFrames(6);
+    check("the gust shoves whatever is flying",
+      ex0 === null || Math.abs(SF.game.world.enemies.items[0].x - ex0) > 2);
+
+    /* The convoy: haulers cross, take fire, and are mourned or celebrated. */
+    SF.game.startMission(M.findIndex(m => m.convoy), "pilot");
+    await runFrames(60);
+    const runC = SF.game.run;
+    check("the convoy mission tracks three haulers",
+      runC.stats.convoyTotal === 3 && runC.convoy.spawnAt.length === 3);
+    await runFrames(240);   // past the first spawn at t=4
+    const W2 = SF.game.world;
+    check("a hauler is on the wing", W2.haulers.some(h => h.alive));
+    const h0 = W2.haulers.find(h => h.alive);
+    const hpBefore = h0.hp;
+    W2.spawnEnemyBullet(h0.x, h0.y - 2, 0, 60, "bolt", 5);
+    await runFrames(3);
+    check("enemy fire hurts the convoy", h0.hp < hpBefore);
+    h0.hp = 0;
+    await runFrames(3);
+    check("a lost hauler is counted against the objective",
+      runC.stats.convoyLost === 1 &&
+      !SF.missions.OBJECTIVES.convoy.test(runC.stats));
+    check("a full convoy passes the objective",
+      SF.missions.OBJECTIVES.convoy.test({ convoyTotal:3, convoyLost:0 }));
+
+    /* The searchlight: the dark pass exists and survives a frame. */
+    const black = M.find(m => m.blackout);
+    check("the searchlight hides rescues in the dark", black.podDrops >= 3);
+    let darkOk = true;
+    try {
+      const cv = window.document.createElement("canvas");
+      SF.render.drawBlackout(cv.getContext("2d"), SF.game.world, 500);
+    } catch(e){ darkOk = false; }
+    check("the blackout veil draws without errors", darkOk);
+
+    SF.game.run.ended = true; SF.game.state = "idle";   // leave no live run behind
+  }
+
   /* ---------- act-two records shift around the new mission ---------- */
   {
     const oldSave = { name:"Shift", callsign:"Shift",
-      missions: { "8": { cleared:true, stars:{pilot:2}, best:{pilot:1000} },
+      missions: { "3": { cleared:true, stars:{pilot:2}, best:{pilot:500} },
+                  "8": { cleared:true, stars:{pilot:2}, best:{pilot:1000} },
                   "9": { cleared:true, stars:{pilot:3}, best:{pilot:2000} },
                   "14": { cleared:true, stars:{pilot:1}, best:{pilot:3000} } },
       lastMission: 9 };
     window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
-    // Two inserts deep now: v2 (Silent Running at 9) then v3 (Treasury at
-    // 13). Old mission 9 lands on 10; old mission 14 rides both shifts to 16.
+    // Three inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+    // then v4's four-level map. Old 8 rides v4 to 10; old 9 rides v2 then v4
+    // to 12; old 14 rides all three to 19. Old 3 never moves.
     check("pre-insert records ride every shift",
-      shifted.missions["10"] && shifted.missions["10"].stars.pilot === 3 &&
-      shifted.missions["16"] && shifted.missions["16"].stars.pilot === 1 &&
-      !shifted.missions["14"] && !shifted.missions["15"] && shifted.lastMission === 10);
+      shifted.missions["10"] && shifted.missions["10"].stars.pilot === 2 &&
+      shifted.missions["12"] && shifted.missions["12"].stars.pilot === 3 &&
+      shifted.missions["19"] && shifted.missions["19"].stars.pilot === 1 &&
+      !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["14"] &&
+      shifted.lastMission === 12);
     check("act-one records stay where they were",
-      shifted.missions["8"] && shifted.missions["8"].stars.pilot === 2);
+      shifted.missions["3"] && shifted.missions["3"].stars.pilot === 2);
     check("the shifts run exactly once",
-      SF.profile.migrate(shifted).missions["10"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["16"].stars.pilot === 1);
-    // A v2-era save (Silent Running already counted) only gets the v3 shift.
+      SF.profile.migrate(shifted).missions["12"].stars.pilot === 3 &&
+      SF.profile.migrate(shifted).missions["19"].stars.pilot === 1);
+    // A v2-era save (Silent Running already counted) gets only v3 then v4.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
-    check("a v2-era save shifts only the treasury insert",
-      v2era.missions["14"] && !v2era.missions["13"] && v2era.lastMission === 14);
+    check("a v2-era save shifts only the later inserts",
+      v2era.missions["16"] && !v2era.missions["13"] && v2era.lastMission === 16);
   }
 
   /* ---------- settings ---------- */
@@ -1151,7 +1236,7 @@ async function run(){
   {
     const prof = SF.profile.blank("Rush"); prof.callsign = "Rush";
     prof.upgrades = { damage:5, rapid:4, spread:3, shield:2 };
-    [4, 8].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    [4, 10].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
     SF.profile.save(prof);
     SF.game.profile = prof;
     SF.ui.show("screen-game");
@@ -1199,8 +1284,8 @@ async function run(){
   /* ---------- the new bosses: the Jailer and the Phantom ---------- */
   {
     check("prison break and cold approach got their bosses",
-      SF.missions.MISSIONS.find(m => m.id === 6).boss === "jailer" &&
-      SF.missions.MISSIONS.find(m => m.id === 14).boss === "phantom" &&
+      SF.missions.MISSIONS.find(m => m.id === 7).boss === "jailer" &&
+      SF.missions.MISSIONS.find(m => m.id === 16).boss === "phantom" &&
       SF.missions.BOSSES.jailer.rescuePods === true &&
       SF.missions.BOSSES.phantom.cloak === true);
 
@@ -1235,7 +1320,7 @@ async function run(){
 
     // All six bosses queue in campaign order once everything is cleared.
     const prof6 = SF.profile.blank("RushAll");
-    [4, 6, 8, 12, 14, 16].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+    [4, 7, 10, 14, 16, 19].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
     SF.profile.save(prof6);
     SF.game.profile = prof6;
     SF.game.startMission("rush", "pilot");
@@ -1246,10 +1331,10 @@ async function run(){
 
   /* ---------- their treasury (the heist between the bosses) ---------- */
   {
-    const t = SF.missions.MISSIONS.find(m => m.id === 13);
+    const t = SF.missions.MISSIONS.find(m => m.id === 15);
     check("the treasury sits between the wardens and never carries a boss",
       t && t.name === "Their Treasury" && !t.boss &&
-      SF.missions.MISSIONS.find(m => m.id === 12).boss === "warden");
+      SF.missions.MISSIONS.find(m => m.id === 14).boss === "warden");
     check("the heist stars greed and leans on thieves",
       t.objectives.includes("coinRush") &&
       t.waves.filter(wv => wv.type === "thief").reduce((n,wv) => n + wv.n, 0) >= 10);
@@ -1455,9 +1540,9 @@ async function run(){
       D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
     check("the finale mission closes the campaign",
       SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "devourer" &&
-      SF.missions.MISSIONS.find(m => m.id === 17).boss === undefined);
+      SF.missions.MISSIONS.find(m => m.id === 21).boss === undefined);
     check("beating it awards the last tune and the last medal",
-      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 18) &&
+      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 22) &&
       SF.config.ACHIEVEMENTS.some(a => a.id === "devourer" && a.pay > 0));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
@@ -1669,7 +1754,7 @@ async function run(){
       SF.config.TUNES.every(t => t.id === "vanguard" || t.apex ||
         (t.fire > 1 || t.speed < 1)));
     check("every boss mission awards exactly one tune",
-      [4, 6, 8, 12, 14, 16, 18].every(mid =>
+      [4, 7, 10, 14, 16, 19, 22].every(mid =>
         SF.config.TUNES.filter(t => t.unlockMission === mid).length === 1));
     check("every tune states its trade in kid words",
       SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length &&
@@ -1744,7 +1829,7 @@ async function run(){
       Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
     check("locked tunes say which boss to beat, and refuse to fit", (() => {
       const viperCard = Array.from(qa(".tune-card")).find(c => /VIPER/.test(c.textContent));
-      if(!viperCard || !/beat Mission 8/.test(viperCard.textContent)) return false;
+      if(!viperCard || !/beat Mission 10/.test(viperCard.textContent)) return false;
       clickEl(viperCard);
       return SF.profile.load("Tuner").tune === "falcon";   // unchanged
     })());
@@ -1758,14 +1843,14 @@ async function run(){
     let payload = null;
     const prevEnd = SF.game.onMissionEnd;
     SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
-    SF.game.startMission(5, "pilot");     // mission 6, the Jailer
+    SF.game.startMission(6, "pilot");     // mission 7, the Jailer
     SF.game.endMission(true);
     SF.game.onMissionEnd = prevEnd;
     check("a first boss clear flags the tune it won",
       payload && payload.firstClear === true &&
       payload.run.mission.boss === "jailer" &&
       SF.config.TUNES.some(t => t.unlockMission === payload.run.mission.id));
-    SF.game.startMission(5, "pilot");
+    SF.game.startMission(6, "pilot");
     payload = null;
     SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
     SF.game.endMission(true);

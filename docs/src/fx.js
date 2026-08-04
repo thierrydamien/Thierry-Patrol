@@ -377,6 +377,9 @@ function drawFlash(ctx, w, h){
 }
 
 SF.fx = {
+  // `spark` (singular) is the directional primitive - the Storm streaks its
+  // wind with it, where the omnidirectional `sparks` puff would read as rain.
+  spark,
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
   firework,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,

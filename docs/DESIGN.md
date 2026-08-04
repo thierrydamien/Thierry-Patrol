@@ -1571,6 +1571,41 @@ engine flare at the tail), because a squadron of people should never move
 like a formation of drones. Verified in the browser: four named planes
 climbing out with the player, sky empty two seconds later.
 
+## 8aw. Four new rules: the campaign grows to 22
+
+"Ideas for additional levels that would feel different?" The levels that
+already felt different - Silent Running, the Treasury - all changed a RULE,
+not an enemy mix. So each of the four new missions changes exactly one:
+
+- **The Storm (6)** - the wind is the level. Gusts cycle calm -> warn ->
+  blow, and the warn beat is the design: 0.9s of streaks with NO push, so
+  you read the direction and lean before the shove. The gust moves the
+  SHIP, not the target - under a finger the ship visibly drags off your
+  line. Enemies drift at half strength so the whole sky agrees about the
+  weather.
+- **The Convoy (9)** - protect, don't just survive. Three unarmed haulers
+  cross bottom-to-top on rails; enemy fire and rammers hurt THEM, and the
+  star objective is bringing every one home. Their collision pass runs
+  before the player's early-return, because the convoy doesn't get a
+  breather while you respawn.
+- **The Trench Run (17)** - walls. A new `gate` formation builds a
+  wall-to-wall rank of boulders with ONE two-slot hole, rolled fresh per
+  wave: read the wall, find the gap, commit - or blast your own door, both
+  work. Zero new entities: the whole level is a formation.
+- **The Searchlight (20)** - your glow is the only lamp. A darkness veil
+  with holes punched where things glow: your ship, every pickup (rescues
+  call to you across the dark), and BOTH sides' fire - fairness is the
+  fixed rule the level bends everything else around. Drifting pilots in
+  the dark make the flashlight fantasy the objective.
+
+Structural cost: 18 -> 22 shifts mission ids, so `missionsVer` 4 is the
+first migration that's a MAP rather than an offset - four inserts at once.
+Highest old id first, every new id above its old one, so nothing
+overwrites. Tune trophies, the rush queue, the sector labels and the sky
+list all follow the new numbering; the smoke test pins the boss stops at
+4, 7, 10, 14, 16, 19, 22 and walks a three-era save through all three
+migrations.
+
 ## 9. What I'd do next
 
 Roughly in value order:

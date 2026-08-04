@@ -453,6 +453,26 @@ const FORMATIONS = {
       y: -40 - Math.floor(i/2)*64, delay: i*0.09,
     }));
   },
+  /*
+   * A trench gate: a rank of blocks wall-to-wall with ONE gap two slots
+   * wide, sized so a ship fits through with room to be imperfect. The gap
+   * placement is the whole level - "gate" rolls it fresh each wave, so the
+   * player reads the wall, finds the hole, and commits. Built from boulders,
+   * so a maxed ship can BLAST a second hole instead: weave or dig, both work.
+   */
+  gate(n, VW){
+    const slots = n + 2;                        // n blocks + a 2-slot gap
+    const gapAt = randInt(0, slots - 2);        // gap can hug an edge
+    const gap = VW / slots;
+    const out = [];
+    let placed = 0;
+    for(let s = 0; s < slots; s++){
+      if(s === gapAt || s === gapAt + 1) continue;
+      out.push({ x: gap*(s + 0.5), y: -70, delay: placed*0.02 });
+      placed++;
+    }
+    return out;
+  },
   /** Three lanes - only possible now there's width for it. */
   tripleColumns(n, VW){
     const lanes = [VW*0.18, VW*0.5, VW*0.82];

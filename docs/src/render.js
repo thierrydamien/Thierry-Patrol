@@ -762,6 +762,91 @@ function coinSprite(phase){
   return coinPhases[phase % coinPhases.length];
 }
 
+/*
+ * THE CONVOY's haulers: the carrier silhouette flipped to face UP - it's one
+ * of ours - in friendly blue, with engine glow at the tail and a health bar
+ * that only appears once it has been hurt. Unhurt ships with permanent bars
+ * read as "damaged already", which is backwards.
+ */
+function drawHaulers(ctx, world, timeMs){
+  if(!world.haulers || !world.haulers.length) return;
+  const art = SF.enemyArt.spriteFor("carrier", "#3fc9ff", false);
+  for(let i = 0; i < world.haulers.length; i++){
+    const h = world.haulers[i];
+    if(!h.alive) continue;
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    // engine glow, pulsing - the thing is straining
+    const th = 0.5 + Math.sin(timeMs/120 + i)*0.25;
+    const g = ctx.createRadialGradient(0, h.r + 6, 2, 0, h.r + 6, 26);
+    g.addColorStop(0, "rgba(124,196,255," + (0.5*th).toFixed(2) + ")");
+    g.addColorStop(1, "rgba(124,196,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, h.r + 6, 26, 0, TAU); ctx.fill();
+    ctx.rotate(Math.PI);                       // carrier art faces down; ours faces up
+    if(art) ctx.drawImage(art, -46, -46, 92, 92);
+    ctx.rotate(-Math.PI);
+    if(h.hitFlash > 0){
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = h.hitFlash*0.45;
+      if(art){ ctx.rotate(Math.PI); ctx.drawImage(art, -46, -46, 92, 92); ctx.rotate(-Math.PI); }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+    if(h.hp < h.maxHp){
+      const w = 56, k = Math.max(0, h.hp/h.maxHp);
+      ctx.fillStyle = "rgba(6,10,22,0.75)";
+      ctx.fillRect(-w/2, -h.r - 16, w, 7);
+      ctx.fillStyle = k > 0.5 ? "#4ade80" : k > 0.25 ? "#ffd23f" : "#ff5d73";
+      ctx.fillRect(-w/2 + 1, -h.r - 15, (w - 2)*k, 5);
+    }
+    ctx.restore();
+  }
+}
+
+/*
+ * THE SEARCHLIGHT's dark: a black veil with holes punched where things glow -
+ * your ship (the lamp), every pickup (so rescues call to you across the
+ * dark), and both sides' fire (so danger is always visible; fairness is the
+ * fixed rule the level bends everything else around).
+ */
+let darkCv = null, darkCtx = null;
+function drawBlackout(ctx, world, timeMs){
+  if(!darkCv){
+    darkCv = document.createElement("canvas");
+    darkCv.width = VW; darkCv.height = VH;
+    darkCtx = darkCv.getContext("2d");
+  }
+  const c = darkCtx;
+  if(!c) return;
+  c.globalCompositeOperation = "source-over";
+  c.clearRect(0, 0, VW, VH);
+  c.fillStyle = "rgba(2,4,13,0.92)";
+  c.fillRect(0, 0, VW, VH);
+  c.globalCompositeOperation = "destination-out";
+  const hole = (x, y, r, a) => {
+    const g = c.createRadialGradient(x, y, r*0.3, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0," + a + ")");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, r*2, r*2);
+  };
+  const p = world.player;
+  if(p && p.alive) hole(p.x, p.y, 205 + Math.sin(timeMs/160)*9, 1);
+  const pk = world.pickups.items;
+  for(let i = 0; i < pk.length; i++)
+    if(pk[i].alive) hole(pk[i].x, pk[i].y, pk[i].kind === "rescue" ? 84 : 58, 0.9);
+  let lit = 0;
+  const ebs = world.enemyBullets.items;
+  for(let i = 0; i < ebs.length && lit < 44; i++)
+    if(ebs[i].alive){ hole(ebs[i].x, ebs[i].y, 34, 0.85); lit++; }
+  lit = 0;
+  const pbs = world.bullets.items;
+  for(let i = 0; i < pbs.length && lit < 44; i++)
+    if(pbs[i].alive){ hole(pbs[i].x, pbs[i].y, 26, 0.6); lit++; }
+  ctx.drawImage(darkCv, 0, 0);
+}
+
 function drawPickups(ctx, world, timeMs){
   const items = world.pickups.items;
   for(let i=0;i<items.length;i++){
@@ -2115,7 +2200,7 @@ SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
-  drawArena, drawFleet, drawFinaleIntro, drawBossIntro,
+  drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,

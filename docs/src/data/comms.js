@@ -132,6 +132,30 @@ const COMMS = {
     "Halfway, {you}. Holding up well.",
     "That's the midpoint - keep it together.",
   ]},
+  stormStart: { speaker:"control", cooldown:999, lines:[
+    "Squall ahead, {you}. Watch the streaks - the wind hits right after them.",
+    "It's blowing hard out there. Lean AGAINST the gusts, {you}.",
+  ]},
+  convoyStart: { speaker:"control", cooldown:999, lines:[
+    "Those haulers can't dodge and can't shoot, {you}. You're their shield.",
+    "The convoy is counting on you, {you}. Every hauler home.",
+  ]},
+  trenchStart: { speaker:"control", cooldown:999, lines:[
+    "Walls ahead, {you}. Read each gate, find the gap, thread it.",
+    "It's a trench, {you} - weave the gaps or blast your own door.",
+  ]},
+  blackoutStart: { speaker:"control", cooldown:999, lines:[
+    "The lights are gone, {you}. Your glow is the only lamp out here.",
+    "Fly by your own light, {you} - and look for the ones drifting in the dark.",
+  ]},
+  haulerDown: { speaker:"mate", cooldown:8, lines:[
+    "We lost a hauler! Guard the others, {you}!",
+    "Hauler's gone... don't let that happen again.",
+  ]},
+  haulerSafe: { speaker:"control", cooldown:8, lines:[
+    "Hauler's through! Well flown, {you}.",
+    "That's one home safe. Keep it up.",
+  ]},
   silentStart: { speaker:"control", cooldown:999, lines:[
     "Guns are dead, {you}. Don't fight - FLY.",
     "No cannons this run, {you}. Slip through quiet and don't get touched.",

@@ -169,6 +169,24 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 13) p.lastMission += 1;
     p.missionsVer = 3;
   }
+  /*
+   * v4: four new levels landed at once - The Storm (6), The Convoy (9), The
+   * Trench Run (17) and The Searchlight (20) - so this shift is a map, not a
+   * single offset. Highest old id first, and every new id is above its old
+   * one, so nothing is ever overwritten before it moves.
+   */
+  if((p.missionsVer || 1) < 4){
+    const SHIFT = [[18,22],[17,21],[16,19],[15,18],[14,16],[13,15],[12,14],
+                   [11,13],[10,12],[9,11],[8,10],[7,8],[6,7]];
+    SHIFT.forEach(([oldId, newId]) => {
+      if(p.missions[oldId]){ p.missions[newId] = p.missions[oldId]; delete p.missions[oldId]; }
+    });
+    if(typeof p.lastMission === "number"){
+      const hit = SHIFT.find(([oldId]) => oldId === p.lastMission);
+      if(hit) p.lastMission = hit[1];
+    }
+    p.missionsVer = 4;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

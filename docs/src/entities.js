@@ -76,6 +76,7 @@ class World {
     this.grid         = new SpatialGrid(VW, VH, 60);
     this.player       = null;
     this.boss         = null;
+    this.haulers      = [];
   }
 
   reset(){
@@ -84,8 +85,37 @@ class World {
     this.enemies.killAll();
     this.pickups.killAll();
     this.boss = null;
+    this.haulers = [];     // the Convoy's escort targets
     this.silent = false;   // set per mission by startMission (noGuns runs)
     this.silentClock = 0; this.lastSilentShot = -99;
+  }
+
+  /* ---------------- HAULERS (the Convoy) ----------------
+     Big, slow, unarmed, and yours to keep alive. They cross bottom-to-top
+     on rails: they can't dodge, which is the whole point of the level. */
+  spawnHauler(x, hp){
+    const h = { x, y: VH + 70, vy: -(VH + 160)/34, r: 34,
+                hp, maxHp: hp, sway: rand(0, 6.28), alive: true, hitFlash: 0 };
+    this.haulers.push(h);
+    return h;
+  }
+  updateHaulers(dt, hooks){
+    for(let i = 0; i < this.haulers.length; i++){
+      const h = this.haulers[i];
+      if(!h.alive) continue;
+      h.sway += dt;
+      h.y += h.vy*dt;
+      h.x += Math.sin(h.sway*0.7)*6*dt;
+      h.hitFlash = Math.max(0, h.hitFlash - dt*4);
+      if(h.hp <= 0){
+        h.alive = false;
+        if(hooks && hooks.onHaulerDown) hooks.onHaulerDown(h);
+      } else if(h.y < -80){
+        h.alive = false;
+        h.safe = true;
+        if(hooks && hooks.onHaulerSafe) hooks.onHaulerSafe(h);
+      }
+    }
   }
 
   /* ---------------- PLAYER ---------------- */

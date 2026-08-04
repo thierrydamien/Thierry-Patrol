@@ -43,6 +43,9 @@ const OBJECTIVES = {
   keepLives: { label:"Don't lose a single life", icon:"❤️",
                test: s => s.livesLost === 0,
                progress: s => s.livesLost === 0 ? "clean" : (s.livesLost + " lost") },
+  convoy:    { label:"Every hauler survives", icon:"🛡️",
+               test: s => s.convoyTotal > 0 && s.convoyLost === 0,
+               progress: s => (s.convoyTotal || 0) - (s.convoyLost || 0) + "/" + (s.convoyTotal || 0) },
 };
 
 /* ---------------------------------------------------------
@@ -356,7 +359,31 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:6, name:"Prison Break", subtitle:"Rescue mission",
+    id:6, name:"The Storm", subtitle:"Fly the wind",
+    brief:"A nebula squall is tearing through the Belt. The wind comes in gusts - watch for the streaks, lean against the push, and don't let it shove you into a rock.",
+    storm:true,
+    face:"splitter",                  // the wind takes them apart; it wants you too
+    waves: [
+      w(1,   "grunt",    8, "wall"),
+      w(9,   "weaver",   7, "arc"),
+      w(17,  "asteroid", 5, "scatter"),
+      w(24,  "carrier",  1, "column"),
+      w(30,  "kamikaze", 4, "sides"),
+      w(38,  "striker",  6, "vee"),
+      w(46,  "asteroid", 6, "scatter"),
+      w(53,  "carrier",  1, "column"),
+      w(59,  "weaver",   8, "pincer"),
+      w(68,  "boulder",  2, "twinColumns"),
+      w(76,  "grunt",   10, "arc"),
+      w(84,  "kamikaze", 5, "scatter"),
+      w(92,  "splitter", 3, "line"),
+      w(100, "carrier",  1, "column"),
+      w(106, "striker",  7, "wall"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:7, name:"Prison Break", subtitle:"Rescue mission",
     brief:"Those big ships have our friends locked inside. Blast them before they get away!",
     waves: [
       w(1,   "carrier", 1, "column"),
@@ -385,7 +412,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:7, name:"The Gauntlet", subtitle:"Elites inbound",
+    id:8, name:"The Gauntlet", subtitle:"Elites inbound",
     brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
     face:"brute", faceElite:true,     // the gold glowing ones ARE the level
     waves: [
@@ -417,7 +444,30 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:8, name:"Sky Sentinel", subtitle:"Their flagship",
+    id:9, name:"The Convoy", subtitle:"Bring them home",
+    brief:"Three supply haulers are crossing to the front with everything the squadron needs. They can't dodge and they can't shoot back - YOU are their shield. Every hauler home, pilot.",
+    convoy:true,
+    face:"interceptor",               // the hunters the haulers can't outrun
+    waves: [
+      w(2,   "grunt",       6, "sides"),
+      w(10,  "kamikaze",    4, "scatter"),
+      w(18,  "striker",     5, "vee"),
+      w(26,  "interceptor", 3, "sides"),
+      w(34,  "weaver",      7, "arc"),
+      w(44,  "kamikaze",    5, "sides"),
+      w(52,  "bomber",      2, "twinColumns"),
+      w(60,  "striker",     6, "pincer"),
+      w(68,  "grunt",       9, "wall"),
+      w(76,  "splitter",    3, "line"),
+      w(86,  "kamikaze",    6, "scatter"),
+      w(94,  "striker",     7, "vee"),
+      w(102, "interceptor", 4, "sides"),
+      w(110, "brute",       3, "tripleColumns"),
+    ],
+    objectives: ["complete","convoy","kill90"],
+  },
+  {
+    id:10, name:"Sky Sentinel", subtitle:"Their flagship",
     brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
     waves: [
       w(1,   "grunt",   10, "arc"),
@@ -471,7 +521,7 @@ const MISSIONS = [
    * objective even on the mission where you can't fire a shot.
    */
   {
-    id:9, name:"Silent Running", subtitle:"Guns down. Just fly.",
+    id:11, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
     face:"swooper",                   // the thing you spend the level dodging
     noGuns:true, coinRain:true, podDrops:5,
@@ -509,7 +559,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:10, name:"The Wreck Line", subtitle:"Through the debris",
+    id:12, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
     face:"asteroid",                  // the debris is the level, not its escorts
     waves: [
@@ -538,7 +588,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:11, name:"The Hatchery", subtitle:"It keeps growing",
+    id:13, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     face:"hive",                      // kill the hive first - so show the hive
     waves: [
@@ -567,7 +617,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:12, name:"The Warden", subtitle:"Their jailer",
+    id:14, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     waves: [
       w(1,   "striker",  7, "arc"),
@@ -600,7 +650,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:13, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:15, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole! Crack the vaults, grab EVERY coin - and watch the thieves who want them back.",
     waves: [
       w(1,   "grunt",   10, "arc"),
@@ -629,7 +679,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","coinRush"],
   },
   {
-    id:14, name:"Cold Approach", subtitle:"Line up the shot",
+    id:16, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     waves: [
       w(1,   "sniper",   4, "sides"),
@@ -658,7 +708,33 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:15, name:"All Hands", subtitle:"Everyone who is left",
+    id:17, name:"The Trench Run", subtitle:"Thread the walls",
+    brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
+    trench:true,
+    face:"turret",                    // the guns bolted to the walls
+    waves: [
+      w(1,   "grunt",   6, "line"),
+      w(8,   "boulder", 4, "gate"),
+      w(16,  "striker", 4, "vee"),
+      w(22,  "boulder", 4, "gate"),
+      w(29,  "turret",  3, "tripleColumns"),
+      w(36,  "boulder", 5, "gate"),
+      w(43,  "carrier", 1, "column"),
+      w(49,  "boulder", 5, "gate"),
+      w(56,  "kamikaze",4, "sides"),
+      w(62,  "boulder", 5, "gate"),
+      w(69,  "sniper",  2, "sides"),
+      w(76,  "boulder", 5, "gate"),
+      w(83,  "carrier", 1, "column"),
+      w(89,  "boulder", 6, "gate"),
+      w(96,  "striker", 6, "wall"),
+      w(104, "boulder", 6, "gate"),
+      w(112, "weaver",  6, "arc"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:18, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     waves: [
       w(1,   "carrier",  3, "tripleColumns"),
@@ -688,7 +764,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:16, name:"The Leviathan", subtitle:"The last one",
+    id:19, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     waves: [
       w(1,   "grunt",   12, "wall"),
@@ -726,7 +802,31 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:17, name:"The Long Dark", subtitle:"Something is out there",
+    id:20, name:"The Searchlight", subtitle:"Your glow is the only light",
+    brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
+    blackout:true, podDrops:4,
+    face:"mender",                    // the green glow drifting through the dark
+    waves: [
+      w(1,   "grunt",    7, "arc"),
+      w(10,  "weaver",   6, "scatter"),
+      w(18,  "swooper",  4, "sides"),
+      w(26,  "carrier",  1, "column"),
+      w(33,  "striker",  5, "vee"),
+      w(41,  "asteroid", 4, "scatter"),
+      w(49,  "kamikaze", 4, "scatter"),
+      w(57,  "carrier",  1, "column"),
+      w(64,  "grunt",    9, "wall"),
+      w(72,  "sniper",   2, "sides"),
+      w(80,  "splitter", 3, "line"),
+      w(84,  "mender",   2, "sides"),
+      w(88,  "weaver",   7, "pincer"),
+      w(96,  "carrier",  1, "column"),
+      w(103, "striker",  6, "arc"),
+    ],
+    objectives: ["complete","rescueAll","kill90"],
+  },
+  {
+    id:21, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     face:"sniper",                    // what is watching you out of the dark
     waves: [
@@ -752,7 +852,7 @@ const MISSIONS = [
     objectives: ["complete","kill90","rescueAll"],
   },
   {
-    id:18, name:"The Devourer", subtitle:"The last star",
+    id:22, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     // A short escort screen, then the only thing that matters. The waves are
     // brief by design: nobody wants a chore between them and the finale.

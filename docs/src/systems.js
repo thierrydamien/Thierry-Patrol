@@ -195,6 +195,39 @@ function resolve(world, ctxObj, dt){
     }
   }
 
+  /* --- everything that can hurt the CONVOY ---
+     Before the player block, because haulers must keep taking fire while the
+     player is respawning - the convoy doesn't get a breather when you do. */
+  for(let k = 0; k < world.haulers.length; k++){
+    const h = world.haulers[k];
+    if(!h.alive) continue;
+    const ebs2 = world.enemyBullets.items;
+    for(let i = 0; i < ebs2.length; i++){
+      const b = ebs2[i];
+      if(!b.alive) continue;
+      const rr = b.r + h.r;
+      if((b.x-h.x)*(b.x-h.x) + (b.y-h.y)*(b.y-h.y) < rr*rr){
+        b.alive = false;
+        h.hp -= 3; h.hitFlash = 1;
+        fx.sparks(b.x, b.y, 6, "#7cc4ff", 160);
+      }
+    }
+    for(let i = 0; i < enemies.length; i++){
+      const e = enemies[i];
+      if(!e.alive || e.hazard) continue;
+      const rr = e.r + h.r;
+      if((e.x-h.x)*(e.x-h.x) + (e.y-h.y)*(e.y-h.y) < rr*rr){
+        // A rammer trades itself for a chunk of hauler - loud, so the player
+        // learns that kamikazes are the convoy's real enemy.
+        e.hp = 0;
+        ctxObj.onEnemyKilled(e, null, true);
+        h.hp -= 8; h.hitFlash = 1;
+        fx.explosion(e.x, e.y, 40, "#ff8a3d", false);
+        fx.shake(6);
+      }
+    }
+  }
+
   /* --- everything that can hurt the player --- */
   const p = world.player;
   if(!p || !p.alive) return;

@@ -163,12 +163,12 @@ function buildTestRange(){
  */
 const RUSH_ORDER = [
   { missionId: 4,  boss: "marauder"  },
-  { missionId: 6,  boss: "jailer"    },
-  { missionId: 8,  boss: "sentinel"  },
-  { missionId: 12, boss: "warden"    },
-  { missionId: 14, boss: "phantom"   },
-  { missionId: 16, boss: "leviathan" },
-  { missionId: 18, boss: "devourer"  },
+  { missionId: 7,  boss: "jailer"    },
+  { missionId: 10, boss: "sentinel"  },
+  { missionId: 14, boss: "warden"    },
+  { missionId: 16, boss: "phantom"   },
+  { missionId: 19, boss: "leviathan" },
+  { missionId: 22, boss: "devourer"  },
 ];
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
@@ -241,6 +241,7 @@ function startMission(missionIndex, difficultyId){
     spawned: 0, kills: 0, escaped: 0, killRatio: 0, coins: 0,
     rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
     damageTaken: 0, livesLost: 0, completed: false,
+    convoyTotal: mission.convoy ? 3 : 0, convoyLost: 0,
   };
 
   // Free-drifting pilots (no carrier to open): their entry times are fixed up
@@ -288,6 +289,10 @@ function startMission(missionIndex, difficultyId){
     coinTimer: 2.0,
     podTimes,
     supplyTimes,
+    // The Storm: gusts cycle calm -> warn (streaks, no push) -> blow.
+    storm: mission.storm ? { mode:"calm", timer: 5, dir: 1, str: 0 } : null,
+    // The Convoy: three haulers cross the sky; you are their shield.
+    convoy: mission.convoy ? { spawnAt: [4, 46, 88], spawned: 0 } : null,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -319,7 +324,12 @@ function startMission(missionIndex, difficultyId){
   game.state = "playing";
   audio.setMusic("combat");
   SF.comms.begin(profile, loadout.crew);
-  SF.comms.say(mission.noGuns ? "silentStart" : "missionStart");
+  SF.comms.say(mission.noGuns ? "silentStart"
+             : mission.storm ? "stormStart"
+             : mission.convoy ? "convoyStart"
+             : mission.trench ? "trenchStart"
+             : mission.blackout ? "blackoutStart"
+             : "missionStart");
   SF.input.clearMovement();
   audio.init();
   resize();
@@ -995,6 +1005,71 @@ function update(dt, timeMs){
     fx.text(VW/2, VH*0.2, "PILOT ADRIFT — CATCH THEM!", "#ffd23f", 17, true);
   }
 
+  /*
+   * THE STORM. Gusts cycle calm -> warn -> blow. The warn beat is the game
+   * design: 0.9s of wind streaks with NO push, so the player reads the
+   * direction and leans before the shove arrives. The blow moves the SHIP,
+   * not the target - under a finger the ship visibly drags off your line,
+   * which is what wind should feel like. Enemies drift at half strength so
+   * the whole sky agrees about the weather.
+   */
+  if(run.storm && !run.ended && run.phase !== "intro"){
+    const st = run.storm;
+    st.timer -= dt;
+    if(st.mode === "calm"){
+      if(st.timer <= 0){
+        st.mode = "warn"; st.timer = 0.9;
+        st.dir = chance(0.5) ? -1 : 1;
+        st.str = rand(200, 300);
+        audio.play("telegraph");
+      }
+    } else if(st.mode === "warn"){
+      if(chance(0.55))
+        fx.spark(st.dir < 0 ? VW + 10 : -10, rand(50, VH - 80),
+                 st.dir*rand(600, 850), rand(-25, 25), "#9fd8ff", 0.32, 1.6);
+      if(st.timer <= 0){ st.mode = "blow"; st.timer = rand(1.4, 2.2); audio.play("gust"); }
+    } else if(st.mode === "blow"){
+      const pl = game.world.player;
+      if(pl && pl.alive) pl.x = clamp(pl.x + st.dir*st.str*dt, 24, VW - 24);
+      const es = game.world.enemies.items;
+      for(let i = 0; i < es.length; i++)
+        if(es[i].alive) es[i].x = clamp(es[i].x + st.dir*st.str*0.5*dt, -60, VW + 60);
+      if(chance(0.9))
+        fx.spark(st.dir < 0 ? VW + 10 : -10, rand(50, VH - 80),
+                 st.dir*rand(500, 800), rand(-30, 30), "#bfe3ff", 0.3, 2.1);
+      if(st.timer <= 0){ st.mode = "calm"; st.timer = rand(3.5, 6.5); }
+    }
+  }
+
+  /*
+   * THE CONVOY. Three haulers cross bottom-to-top over ~34s each, staggered
+   * so there is nearly always someone to protect. They can't dodge and they
+   * can't shoot - the mission is what the player does about that.
+   */
+  if(run.convoy && run.phase === "waves" && run.convoy.spawned < run.convoy.spawnAt.length &&
+     run.director.time >= run.convoy.spawnAt[run.convoy.spawned]){
+    const lane = [0.30, 0.70, 0.50][run.convoy.spawned];
+    game.world.spawnHauler(VW*lane, Math.round(24 * run.difficulty.hpMult));
+    run.convoy.spawned++;
+    fx.text(VW/2, VH*0.22, "HAULER CROSSING — COVER IT!", "#7cc4ff", 17, true);
+    audio.play("supplyDrop");
+  }
+  game.world.updateHaulers(dt, {
+    onHaulerDown: (h) => {
+      run.stats.convoyLost++;
+      fx.explosion(h.x, h.y, 90, "#ff8a3d", true);
+      fx.shake(18);
+      audio.play("enemyExplode", true);
+      SF.comms.say("haulerDown");
+    },
+    onHaulerSafe: (h) => {
+      run.score += 400;
+      fx.text(h.x, 60, "HAULER THROUGH!", "#4ade80", 16, true);
+      audio.play("rescue");
+      SF.comms.say("haulerSafe");
+    },
+  });
+
   // Silent running: coins rain down a random lane every few seconds. With the
   // guns cold this IS the game - greed pulls you into traffic, and the coin
   // objective is scored on how much of the temptation you survive taking.
@@ -1163,6 +1238,7 @@ function draw(timeMs){
   ctx.translate(shakeVec.x, shakeVec.y);
   ctx.clearRect(-30, -30, VW+60, VH+60);
   SF.render.drawBackground(ctx);
+  SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
@@ -1172,6 +1248,10 @@ function draw(timeMs){
   SF.render.drawPlayer(ctx, world.player, timeMs);
   fx.drawParticles(ctx);
   SF.render.drawForeground(ctx);
+  // The Searchlight: the world above is finished, now the dark eats all of it
+  // except what glows. HUD and texts draw after - instruments still work.
+  if(game.run && game.run.mission.blackout && !game.run.ended)
+    SF.render.drawBlackout(ctx, world, timeMs);
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&

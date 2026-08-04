@@ -547,6 +547,9 @@ function hullShadow(id, S){
 const FACE_KINDS = {
   // objective/flag driven, checked in this order - most distinctive first
   noGuns:  { c0:"#b07be8", c1:"#3a1d5c" },   // Silent Running: guns down
+  storm:   { c0:"#67e8f9", c1:"#164e63" },   // the wind is the level
+  escort:  { c0:"#7cc4ff", c1:"#123a5c" },   // protect, don't just survive
+  dark:    { c0:"#3d477a", c1:"#0b0d24" },   // the Searchlight's blackout
   coins:   { c0:"#ffc451", c1:"#6b4a09" },   // a coin run
   rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
   rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
@@ -644,6 +647,9 @@ function missionFace(m){
   // is greedy and would paint half the route the same green. The narrower
   // identities - guns down, a coin run, a rock field - get asked first.
   const kind = m.noGuns ? "noGuns"
+             : m.storm ? "storm"
+             : m.convoy ? "escort"
+             : m.blackout ? "dark"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : (totalN > 0 && rockN/totalN >= 0.3) ? "rocks"
              : (obj.includes("rescueAll") && rescueCount(m) >= 4) ? "rescue"
@@ -688,13 +694,14 @@ function campaignLayout(){
 
 /* Named stretches, so the route reads as a journey rather than fourteen dots. */
 const SECTORS = [
-  { at:0,  name:"HOME PATROL" },
-  { at:2,  name:"THE BELT" },
-  { at:4,  name:"DEEP RUN" },
-  { at:6,  name:"ENEMY SPACE" },
-  { at:8,  name:"THE CHASE" },
-  { at:10, name:"WARDEN SPACE" },
-  { at:12, name:"THEIR STAR" },
+  { at:0,  name:"HOME PATROL" },     // 1-3: learning the ropes
+  { at:2,  name:"THE BELT" },        // 3-5: rocks and raiders
+  { at:5,  name:"THE STORM" },       // 6: the squall
+  { at:7,  name:"DEEP RUN" },        // 8-9: the gauntlet and the convoy
+  { at:10, name:"ENEMY SPACE" },     // 11-13: behind their lines
+  { at:13, name:"WARDEN SPACE" },    // 14-15: the jailer's ground
+  { at:16, name:"THE TRENCHES" },    // 17-18: their fortress
+  { at:19, name:"THEIR STAR" },      // 20-22: the dark, and the end
 ];
 
 function renderMissions(){

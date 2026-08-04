@@ -171,6 +171,12 @@ SOUNDS.bossAlarm = { minGap: 2500, fn: () => {
   tone(320, 0.42, "sawtooth", 0.11, -140, 0.5);
 } };
 
+SOUNDS.gust = { minGap: 1200, fn: () => {
+  // The Storm's shove: a broadband whoosh that sweeps down as it passes.
+  noise(1.6, 0.14, 2600, 300);
+  tone(90, 1.2, "sine", 0.05, 60);
+} };
+
 SOUNDS.supplyDrop = { minGap: 1500, fn: () => {
   // The "look up!" ping: two bright descending chimes, like something
   // valuable falling into the level.

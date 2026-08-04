@@ -51,6 +51,11 @@ const SKIES = [
 
   { name:"Ice Fields",   photo:"backAlt" },
 
+  { name:"Squall Line",  clouds:["#0891b2","#67e8f9","#164e63"], dust:"#03090c", star:"#cffafe",
+    density:1.5, stars:0.7, bright:2,
+    props:[ {k:"planet", x:0.16, y:0.22, r:0.09, lit:"#5eead4", dark:"#134e4a", bands:true},
+            {k:"rocks",  x:0.78, y:0.66, r:0.14, n:10} ] },
+
   { name:"Crimson Run",  clouds:["#be123c","#f43f5e","#881337"], dust:"#12030a", star:"#ffe4e6",
     density:1.05, stars:0.85, bright:2,
     props:[ {k:"sun",    x:0.78, y:0.22, r:0.083, color:"#ff8a6b"},
@@ -62,6 +67,12 @@ const SKIES = [
     props:[ {k:"planet", x:0.26, y:0.26, r:0.198, lit:"#e0a13e", dark:"#3a1f04", bands:true, rings:true},
             {k:"planet", x:0.80, y:0.74, r:0.068, lit:"#f2d79a", dark:"#4a3410", craters:true},
             {k:"rocks",  x:0.72, y:0.34, r:0.114, n:12} ] },
+
+  { name:"The Trade Lane", clouds:["#a16207","#fcd34d","#713f12"], dust:"#0e0a02", star:"#fef9c3",
+    density:0.9, stars:1.0, bright:3,
+    props:[ {k:"planet", x:0.82, y:0.30, r:0.13, lit:"#e8b45a", dark:"#4a2c08", rings:true},
+            {k:"planet", x:0.14, y:0.72, r:0.05, lit:"#f5deb0", dark:"#5c4318", craters:true},
+            {k:"galaxy", x:0.24, y:0.14, r:0.18} ] },
 
   { name:"The Deep",     clouds:["#6d28d9","#db2777","#1e1b4b"], dust:"#05030f", star:"#ede9fe",
     density:1.3, stars:1.0, bright:4,
@@ -106,6 +117,11 @@ const SKIES = [
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
             {k:"planet", x:0.22, y:0.20, r:0.057, lit:"#93b8f5", dark:"#152540", craters:true} ] },
 
+  { name:"The Fortress Wall", clouds:["#7f1d1d","#57534e","#1c1917"], dust:"#0a0505", star:"#e7e5e4",
+    density:1.3, stars:0.5, bright:1,
+    props:[ {k:"rocks", x:0.12, y:0.30, r:0.17, n:18},
+            {k:"rocks", x:0.88, y:0.62, r:0.17, n:18} ] },
+
   { name:"Last Harbour", clouds:["#7e22ce","#e879f9","#2e1065"], dust:"#0a0316", star:"#fae8ff",
     density:1.15, stars:0.95, bright:3,
     props:[ {k:"galaxy", x:0.30, y:0.30, r:0.28},
@@ -121,6 +137,11 @@ const SKIES = [
   /* --- Act 3. Their star is out. The first of these two skies is the
      approach: near-black, almost starless, and the Devourer itself sitting
      in it. The second is the fight - the dead star's last embers. --- */
+  { name:"Lights Out",   clouds:["#111827","#1e2a4a","#05070f"], dust:"#010207", star:"#7d8bb0",
+    density:0.7, stars:0.45, bright:1,
+    props:[ {k:"planet", x:0.80, y:0.20, r:0.10, lit:"#26324e", dark:"#0a0e1c", crescent:true},
+            {k:"rocks",  x:0.18, y:0.68, r:0.12, n:8} ] },
+
   { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
     density:0.4, stars:0.45, bright:1,
     props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
