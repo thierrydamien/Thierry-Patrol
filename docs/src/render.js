@@ -1124,6 +1124,37 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.closePath();
 }
 
+/** A filled heart - the universal "lives" glyph, no caption required. */
+function drawHeart(ctx, x, y, r, color){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, r*0.85);
+  ctx.bezierCurveTo(-r*1.25, 0, -r*0.7, -r, 0, -r*0.35);
+  ctx.bezierCurveTo(r*0.7, -r, r*1.25, 0, 0, r*0.85);
+  ctx.fill();
+  ctx.restore();
+}
+/** A shield outline; filled while the charge is up, hollow once spent. */
+function drawShieldPip(ctx, x, y, r, up){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.lineTo(r*0.9, -r*0.45);
+  ctx.lineTo(r*0.9, r*0.2);
+  ctx.quadraticCurveTo(r*0.9, r*0.75, 0, r);
+  ctx.quadraticCurveTo(-r*0.9, r*0.75, -r*0.9, r*0.2);
+  ctx.lineTo(-r*0.9, -r*0.45);
+  ctx.closePath();
+  if(up){ ctx.fillStyle = "rgba(120,200,255,0.9)"; ctx.fill(); }
+  ctx.strokeStyle = "rgba(120,200,255,0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
 /* Combo pop: the multiplier physically bumps when it climbs. */
 let hudLastCombo = 0, hudComboPop = 0, hudLastMs = 0;
 let hudPanelGrad = null;   // identical every frame - built once
@@ -1187,21 +1218,23 @@ function drawHud(ctx, game){
   ctx.shadowBlur = 0;
   ctx.textAlign = "left";
 
-  // Lives and shield charges, second row left
+  // Lives and shields, labelled like every other readout. These were bare
+  // triangles and circles - the game's own designer had to be told what they
+  // meant, which settles whether they were readable.
   if(p){
+    ctx.font = "bold 8px Rajdhani, Arial, sans-serif";
+    ctx.fillStyle = "rgba(255,120,140,0.7)";
+    ctx.fillText("LIVES", PAD + CLEAR, 40);
     for(let i=0;i<p.lives;i++){
-      ctx.save();
-      ctx.translate(PAD + CLEAR + 7 + i*20, 50);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.moveTo(0,-8); ctx.lineTo(7,8); ctx.lineTo(0,4); ctx.lineTo(-7,8);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
+      drawHeart(ctx, PAD + CLEAR + 7 + i*19, 56, 7, "#ff5d73");
     }
-    for(let i=0;i<p.shield;i++){
-      ctx.strokeStyle = "rgba(120,200,255,0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(PAD + CLEAR + 7 + p.lives*20 + 10 + i*17, 50, 6.5, 0, TAU); ctx.stroke();
+    const sx = PAD + CLEAR + Math.max(p.lives, 3)*19 + 18;
+    if(p.shieldMax > 0){
+      ctx.fillStyle = "rgba(120,200,255,0.7)";
+      ctx.fillText("SHIELD", sx, 40);
+      for(let i=0;i<p.shieldMax;i++){
+        drawShieldPip(ctx, sx + 7 + i*17, 56, 6.5, i < p.shield);
+      }
     }
   }
 
@@ -1218,28 +1251,22 @@ function drawHud(ctx, game){
   ctx.fillText(run.bossActive ? "BOSS FIGHT" : "MISSION " + Math.round(prog*100) + "%", VW-PAD, 58);
   ctx.textAlign = "left";
 
-  // Live objective tracker: spelled out at the start of a mission (and for a
-  // moment whenever one is completed), then shrunk to a compact strip so it
-  // stops eating the playfield.
-  const expanded = !run.bossActive && (run.time < 7 || performance.now() < run.objectiveFlashUntil);
-  if(expanded){
-    ctx.font = "12px Rajdhani, Arial, sans-serif";
-    let oy = 92;
-    for(let i=0;i<run.objectiveDefs.length;i++){
-      const def = run.objectiveDefs[i];
-      const met = def.test(run.stats);
-      ctx.fillStyle = met ? "#4ade80" : "rgba(255,255,255,0.6)";
-      ctx.fillText((met ? "★ " : "☆ ") + def.label + "  " + def.progress(run.stats), PAD, oy);
-      oy += 15;
-    }
-  } else {
-    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-    let strip = "";
-    for(let i=0;i<run.objectiveDefs.length;i++){
-      strip += run.objectiveDefs[i].test(run.stats) ? "★" : "☆";
-    }
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fillText(strip + "  " + run.objectiveDefs[1].progress(run.stats), PAD, 92);
+  // Live objective tracker. It used to collapse to a three-star strip after
+  // seven seconds - which meant the one moment you wanted to check "am I
+  // still clean?" the labels were gone. It stays up now: bright and full-size
+  // through the opening, then smaller and quieter, but always legible. During
+  // a boss it steps below the boss bar instead of fighting it.
+  const intro = run.time < 7 || performance.now() < run.objectiveFlashUntil;
+  const oySize = intro ? 12 : 11;
+  ctx.font = oySize + "px Rajdhani, Arial, sans-serif";
+  let oy = run.bossActive ? 152 : 92;
+  for(let i=0;i<run.objectiveDefs.length;i++){
+    const def = run.objectiveDefs[i];
+    const met = def.test(run.stats);
+    ctx.fillStyle = met ? (intro ? "#4ade80" : "rgba(74,222,128,0.85)")
+                        : (intro ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.45)");
+    ctx.fillText((met ? "\u2605 " : "\u2606 ") + def.label + "  " + def.progress(run.stats), PAD, oy);
+    oy += oySize + 3;
   }
 
   // Combo - bumps up in scale for a beat every time it climbs.

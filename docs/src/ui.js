@@ -28,6 +28,7 @@ function show(id){
   if(id === "screen-game") SF.game.resize();
 }
 function $(id){ return document.getElementById(id); }
+function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
 /** Prices run to six figures now, so they need separators to stay readable. */
 function money(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
 function esc(s){
@@ -148,7 +149,12 @@ function renderMenu(){
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
   setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
-  setSub("medalsSub", profile.achievements.length + " of " + ACHIEVEMENTS.length + " earned");
+  {
+    const owed = P.unclaimedMedals(profile);
+    setSub("medalsSub", owed.length
+      ? "Collect $" + owed.reduce((n,a)=>n+a.pay,0).toLocaleString() + "!"
+      : profile.achievements.length + " of " + ACHIEVEMENTS.length + " earned");
+  }
   const rows = P.listNames().map(P.load)
     .sort((a,b) => P.totalStars(b) - P.totalStars(a));
   setSub("champSub", rows.length > 1
@@ -595,6 +601,7 @@ function renderArmory(){
        <span class="hn-how">Nothing left to bolt on</span>`;
   $("hangarCompareBtn").textContent = hangar.compare ? "MY SHIP" : "COMPARE";
   $("hangarCompareLabels").classList.toggle("hidden", !hangar.compare);
+  renderShipSpecs();
 
   const tabs = $("armoryTabs");
   tabs.innerHTML = "";
@@ -758,6 +765,37 @@ function drawHangar(){
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
     });
   }
+}
+
+/*
+ * The bay's spec sheet: what all the bolted-on parts add up to, as four
+ * labelled bars against the best ship this game can build. The bay used to be
+ * pure decoration; this is what makes it the place you check whether a
+ * purchase actually moved anything.
+ */
+function renderShipSpecs(){
+  const el = $("hangarSpecs");
+  if(!el || !profile) return;
+  const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+  const now = SF.game.buildLoadout(profile, diff);
+  const maxed = P.blank("__max");
+  SF.config.UPGRADES.forEach(u => { maxed.upgrades[u.id] = u.max; });
+  const top = SF.game.buildLoadout(maxed, diff);
+
+  const rows = [
+    { label:"FIREPOWER", value: Math.round(now.dps),        max: Math.round(top.dps),        show: Math.round(now.dps) + "/s" },
+    { label:"FIRE RATE", value: 1/now.fireInterval,         max: 1/top.fireInterval,         show: (1/now.fireInterval).toFixed(1) + "/s" },
+    { label:"SPEED",     value: now.speedMult,              max: top.speedMult,              show: "x" + now.speedMult.toFixed(2) },
+    { label:"TOUGHNESS", value: now.lives + now.shieldMax,  max: top.lives + top.shieldMax,  show: now.lives + "\u2665 " + now.shieldMax + "\u26e8" },
+  ];
+  el.innerHTML = rows.map(r => {
+    const pct = Math.max(3, Math.round(Math.min(1, r.value/r.max) * 100));
+    return `<div class="hs-row">
+      <span class="hs-label">${r.label}</span>
+      <div class="hs-bar"><i style="width:${pct}%"></i></div>
+      <span class="hs-value">${r.show}</span>
+    </div>`;
+  }).join("");
 }
 
 /* ---------------------------------------------------------
@@ -1020,26 +1058,50 @@ function buyUpgrade(id){
 function renderAchievements(){
   const owned = profile.achievements;
   const stats = P.achievementStats(profile);
+  const unclaimed = P.unclaimedMedals(profile);
   $("achievementsCount").innerHTML =
-    `<b>${owned.length}</b> of ${ACHIEVEMENTS.length} medals`;
+    `<b>${owned.length}</b> of ${ACHIEVEMENTS.length} medals` +
+    (unclaimed.length
+      ? ` · <b class="mh-owed">$${unclaimed.reduce((n,a)=>n+a.pay,0).toLocaleString()}</b> to collect`
+      : "");
 
   // Name the nearest thing still to win, so the screen is a to-do list rather
   // than a scoreboard of things that already happened.
   const next = ACHIEVEMENTS.find(a => !owned.includes(a.id));
   $("medalNext").innerHTML = next
-    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)}`
+    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)} · <b>$${next.pay.toLocaleString()}</b>`
     : `<span>COMPLETE</span>Every medal earned. Nothing left to win.`;
 
   drawMedalRing(owned.length / ACHIEVEMENTS.length);
 
+  // Every medal names its bounty. Earned-but-unclaimed ones carry a COLLECT
+  // button - pressing it is the ceremony, and the reason to keep coming back.
   $("achievementsList").innerHTML = ACHIEVEMENTS.map(a => {
     const has = owned.includes(a.id);
-    return `<div class="medal${has ? " won" : ""}">
+    const claimed = !!profile.medalsClaimed[a.id];
+    return `<div class="medal${has ? " won" : ""}${has && !claimed ? " owed" : ""}">
       <div class="medal-disc"><span>${has ? a.icon : "🔒"}</span></div>
       <div class="medal-name">${esc(a.name)}</div>
       <div class="medal-desc">${esc(a.desc)}</div>
+      ${has
+        ? (claimed
+            ? `<div class="medal-pay done">$${a.pay.toLocaleString()} collected</div>`
+            : `<button class="medal-claim" data-medal="${a.id}">COLLECT $${a.pay.toLocaleString()}</button>`)
+        : `<div class="medal-pay">worth $${a.pay.toLocaleString()}</div>`}
     </div>`;
   }).join("");
+
+  qa("#achievementsList .medal-claim").forEach(btn => {
+    click(btn, () => {
+      const paid = P.claimMedal(profile, btn.dataset.medal);
+      if(paid > 0){
+        audio.play("buy");
+        queueToast({ icon:"💰", name: "+$" + paid.toLocaleString() + " collected" });
+        renderAchievements();
+        renderMenu();
+      }
+    });
+  });
 }
 
 /** A progress ring - the one number that says how far through you are. */

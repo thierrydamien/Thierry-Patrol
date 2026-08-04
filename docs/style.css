@@ -731,3 +731,38 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .cloud-status.error { color:#ff7a6b; }
 .cloud-actions { display:flex; flex-direction:column; gap:9px; width:100%; align-items:center; }
 .cloud-actions .main-btn { width:100%; max-width:280px; }
+
+/* ===================== MEDAL BOUNTIES ===================== */
+.mh-owed { color: var(--accent); }
+.medal.owed { border-color: rgba(255,210,63,0.7); box-shadow: 0 0 16px -4px rgba(255,210,63,0.5); }
+.medal-pay { font-size:10px; color: var(--ink-faint); margin-top:6px; letter-spacing:0.5px; }
+.medal-pay.done { color: rgba(74,222,128,0.75); }
+.medal-claim {
+  margin-top:6px; font-family:inherit; font-weight:700; letter-spacing:1px;
+  font-size:11px; padding:6px 10px; border:none; border-radius:9px; cursor:pointer;
+  background: linear-gradient(160deg, #ffd777, var(--accent)); color:#241a00;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+  animation: buyPulse 1.6s ease-in-out infinite;
+}
+.medal-claim:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+
+/* ===================== SHIP SPEC SHEET ===================== */
+.hangar-specs {
+  display:flex; flex-direction:column; gap:3px;
+  width:100%; padding: 8px 12px 2px;
+}
+.hs-row { display:flex; align-items:center; gap:8px; }
+.hs-label {
+  flex:0 0 76px; font-size:9px; font-weight:700; letter-spacing:1.5px;
+  color: var(--ink-faint); text-align:right;
+}
+.hs-bar {
+  flex:1; height:7px; border-radius:4px; overflow:hidden;
+  background: rgba(255,255,255,0.08);
+}
+.hs-bar i {
+  display:block; height:100%; border-radius:4px;
+  background: linear-gradient(90deg, #3fc9ff, #7c9bff);
+  transition: width .45s var(--ease-pop);
+}
+.hs-value { flex:0 0 58px; font-size:10px; font-weight:700; color: var(--ink-dim); }

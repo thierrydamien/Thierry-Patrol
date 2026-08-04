@@ -227,6 +227,21 @@ const ACHIEVEMENTS = [
   { id:"campaign",     icon:"🏆", name:"Thierry Patrol", desc:"Complete every mission",              check:p=>p.campaignComplete },
 ];
 
+/*
+ * Every medal pays a one-time cash reward, claimed by hand on the Medals
+ * screen. Two reasons it is a claim rather than an automatic credit: pressing
+ * the button IS the reward ceremony, and an unclaimed medal is a concrete
+ * reason to visit a screen that used to be a scoreboard of things that had
+ * already happened.
+ */
+const MEDAL_PAY_DEFAULT = 500;
+const MEDAL_PAY = {
+  first_blood: 200, sharpshooter: 400, boss_slayer: 800,
+  maxed_one: 1500, quartermaster: 2000, big_spender: 6000,
+  ace_pilot: 1200, veteran_wings: 2500, nightmare: 5000, campaign: 5000,
+};
+ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });
+
 SF.config = {
   SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS,

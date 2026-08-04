@@ -733,6 +733,23 @@ async function run(){
   SF.profile.adoptOldSaves();
   check("the newest pre-rename save wins", SF.profile.load("Renamed").money === 5678);
 
+  /* ---------- medal bounties ---------- */
+  {
+    const p2 = SF.profile.blank("Medals"); p2.callsign = "Medals";
+    p2.achievements = ["first_blood"];
+    SF.profile.save(p2);
+    check("every medal names a positive bounty",
+      SF.config.ACHIEVEMENTS.every(a => a.pay > 0));
+    const before = p2.money;
+    const paid = SF.profile.claimMedal(p2, "first_blood");
+    check("collecting a medal pays its bounty", paid > 0 && p2.money === before + paid);
+    check("a medal collects exactly once", SF.profile.claimMedal(p2, "first_blood") === 0);
+    check("an unearned medal pays nothing", SF.profile.claimMedal(p2, "nightmare") === 0);
+    check("unclaimed medals are listed as owed",
+      SF.profile.unclaimedMedals(p2).length === 0 &&
+      (p2.achievements.push("boss_slayer"), SF.profile.unclaimedMedals(p2).length === 1));
+  }
+
   /* ---------- squad sync merge ---------- */
   const C = SF.cloud;
   // Squad Sync is deployed for this game (see worker/), so configured() is

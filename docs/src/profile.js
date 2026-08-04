@@ -80,6 +80,8 @@ function blank(name){
     totalKills: 0, bossesDefeated: 0, maxCombo: 0, lifetimeMoney: 0,
     rescues: 0, missionsCompleted: 0, flawlessMissions: 0, powerupsCollected: 0,
     achievements: [],
+    // Medal cash rewards collected (see the Medals screen). Absent = owed.
+    medalsClaimed: {},
     // Story beats already seen, so a chapter close only lands once.
     stories: {},
   };
@@ -132,6 +134,7 @@ function migrate(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.missions || typeof p.missions !== "object") p.missions = {};
   if(!Array.isArray(p.achievements)) p.achievements = [];
+  if(!p.medalsClaimed || typeof p.medalsClaimed !== "object") p.medalsClaimed = {};
 
   if(p.hasSpread && !p.upgrades.spread) p.upgrades.spread = 2; // old Spread was 3-way
   if(p.hasRapid  && !p.upgrades.rapid)  p.upgrades.rapid  = 4; // old Rapid halved the gap
@@ -263,6 +266,22 @@ function achievementStats(p){
   };
 }
 
+/** Earned medals whose cash reward hasn't been collected yet. */
+function unclaimedMedals(p){
+  return ACHIEVEMENTS.filter(a => p.achievements.includes(a.id) && !p.medalsClaimed[a.id]);
+}
+
+/** Collects one medal's reward. Returns the payout, or 0 if not collectable. */
+function claimMedal(p, id){
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if(!a || !p.achievements.includes(id) || p.medalsClaimed[id]) return 0;
+  p.medalsClaimed[id] = true;
+  p.money += a.pay || 0;
+  p.lifetimeMoney += a.pay || 0;
+  save(p);
+  return a.pay || 0;
+}
+
 /** Unlocks anything newly earned and returns the list, for the toast queue. */
 function checkAchievements(p){
   const stats = achievementStats(p);
@@ -294,6 +313,6 @@ SF.profile = {
   upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,
-  checkAchievements, recordMission, achievementStats,
+  checkAchievements, recordMission, achievementStats, unclaimedMedals, claimMedal,
 };
 })();
