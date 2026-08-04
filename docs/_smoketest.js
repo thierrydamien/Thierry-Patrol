@@ -1364,6 +1364,38 @@ async function run(){
     });
   })());
 
+  check("every weak point on every boss can actually be shot", (() => {
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const W = SF.game.world;
+    const ctxc = { difficulty: diff, onBossHit: (bo, bu) => SF.bosses.damage(bo, 40, bu.x, bu.y),
+                   onEnemyKilled(){}, onPlayerHit(){}, godMode:true };
+    return Object.keys(SF.missions.BOSSES).every(id => {
+      const def = SF.missions.BOSSES[id];
+      return def.weakPoints.every((wpDef, ix) => {
+        W.reset();
+        W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Aim"), diff));
+        const boss = W.boss = SF.bosses.create(id, diff, 60);
+        boss.entering = false; boss.x = 300; boss.y = 260; boss.vx = 0;
+        const wp = boss.weakPoints[ix];
+        // Isolate the target: on a big boss another part can sit in the same
+        // column and absorb the round first, which is correct behaviour (a
+        // nearer part shields a farther one) but not what this measures.
+        boss.weakPoints.forEach((o, k) => { if(k !== ix){ o.destroyed = true; o.hp = 0; } });
+        const before = wp.hp;
+        // One round, straight up, dead under the part.
+        const bu = W.bullets.spawn();
+        bu.x = boss.x + wp.ox; bu.y = boss.y + wp.oy + 220;
+        bu.vx = 0; bu.vy = -700; bu.r = 5; bu.dmg = 40; bu.pierce = 0;
+        bu.homing = 0; bu.tier = 2; bu.age = 0; bu.fromDrone = false; bu.hitBoss = false;
+        for(let f = 0; f < 40 && bu.alive; f++){
+          W.updateBullets(1/60);
+          SF.systems.resolve(W, ctxc, 1/60);
+        }
+        return wp.hp < before || wp.destroyed;
+      });
+    });
+  })());
+
   /* ---------- THE FINALE: the Devourer ---------- */
   {
     const { VW, VH } = SF.entityConst;

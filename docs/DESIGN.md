@@ -1365,8 +1365,11 @@ Fair, and the hulls being hand-drawn didn't save them: every one was a wide
 slab with two round parts on its flanks. Drawing them separately isn't the
 same as designing them separately. They are now four different SHAPES, and
 the weak point layouts moved to suit: the Marauder is a dart with its
-cannons out on forward-swept arms, the Jailer is an H of two upright barred
-cell towers, the Sentinel is a carrier deck with pods on the wingtips and
+cannons out on forward-swept arms, the Jailer is a GRABBER - a narrow body
+with two long arms hanging down and out, a barred cell clamped in each claw,
+the only thing in the game that hangs below itself and the only one that
+puts the parts you must shoot down at your own altitude rather than up on a
+deck - the Sentinel is a carrier deck with pods on the wingtips and
 the command tower high on the spine, and the Warden is a RING - the only
 circular thing in the game. The Marauder also stopped being a generic
 shooter and got the game's only ram: it rears up, marks your column, and
@@ -1387,6 +1390,55 @@ the Leviathan's four parts were close enough to the middle that spraying the
 centre hit them anyway, so nobody had to aim. It is 250 now, with its parts
 pushed to the corners, and the Devourer went to 360 to stay unmistakably the
 largest thing in the game.
+
+## 8ar. The weak point that was never a hitbox
+
+**"Sky Sentinel can't be killed."** Then, an hour later: **"last boss also
+can't be killed"**, with a photo of ARMOURED - 4 PARTS LEFT over a health bar
+that had barely moved. Two reports, one cause, and it was not the one I had
+just fixed.
+
+Weak points were never hitboxes. Bullets were tested against the boss's BODY
+circle and consumed there; `damage()` was then handed the point of impact and
+asked which part, if any, was under it. So a round aimed at a part died on the
+hull's perimeter and got scored at the perimeter - which is nowhere near the
+part. I stopped guessing and computed it for all seven bosses: **every weak
+point on every boss was unhittable by an aimed shot.** Parts only ever came
+off by luck, clipped by angled spread rounds that happened to enter the body
+circle near one. Armour gating turned that from an annoyance into a wall: a
+sealed boss cannot die with parts attached, and the parts could not be
+removed, so the Sentinel and the Devourer were unkillable exactly as
+reported. The Warden and Marauder survived only because they aren't sealed.
+
+Two changes, both in the collision layer where the bug actually lived:
+
+- **Parts are tested first, on their own geometry.** A part outside the body
+  circle (the Sentinel's wingtip pods) or buried deep inside it (its command
+  tower) is now hit by a shot pointed at it, because the shot is checked
+  against the part, not against the hull that happens to contain it.
+- **While any part still stands, the hull is POROUS.** A round chips it once
+  and keeps flying to look for a seam. Otherwise a big boss's body simply
+  eats every shot before it can reach the thing you were aiming at, which was
+  the whole problem restated. Strip the last part and the body goes solid.
+
+`damage()` also tested the bare part radius while the collision layer tested
+`bullet.r + part.r` - so a shot could be consumed as a part hit and then
+scored as a hull hit. It vanished and the part took nothing. Both sides agree
+on `wp.r + 6` now.
+
+The lesson worth keeping: two systems each held half of "did that hit?", and
+each was individually reasonable. No unit test failed, because every test
+asked one of them in isolation. What caught it was writing down what the
+player does - point at the pod, fire straight up - and computing whether that
+can ever land. It couldn't, for any boss, and hadn't for the whole life of
+the feature. That test now exists, per boss, per part.
+
+Then the numbers moved under me. Aiming suddenly WORKED, and a part hit is
+double damage, so effective output roughly doubled and every fight halved -
+the Devourer fell in 32s against a 58s design. `ACCURACY` went 0.46 -> 0.8,
+re-measured with the bot rather than guessed. Final: Sentinel 33s against 33,
+Leviathan 50 against 50, Devourer killed at 51s having cost a life. Bosses
+are hard again, and now they're hard for the reason they're supposed to be.
 
 ## 9. What I'd do next
 

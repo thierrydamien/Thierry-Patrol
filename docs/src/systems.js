@@ -155,17 +155,42 @@ function resolve(world, ctxObj, dt){
 
     if(!b.alive) continue;
     const boss = world.boss;
-    if(boss && boss.alive && !boss.entering && !b.hitBoss){
-      const rr = b.r + boss.r;
-      if((b.x-boss.x)*(b.x-boss.x) + (b.y-boss.y)*(b.y-boss.y) < rr*rr){
-        // One hit per bullet, always. `pierceLeft` is recomputed every frame,
-        // so without this flag a piercing round that survived the hit stayed
-        // alive *inside* the boss hitbox and re-damaged it every frame it took
-        // to fly through - up to 48 hits from a single bullet. That, not the
-        // HP number, is why bosses were evaporating.
-        b.hitBoss = true;
-        ctxObj.onBossHit(boss, b);
-        if(pierceLeft <= 0) b.alive = false;
+    if(boss && boss.alive && !boss.entering){
+      /*
+       * Weak points are their own hitboxes - and until now they were not.
+       * A bullet was consumed on the boss's BODY circle, so a part outside
+       * that circle (the Sentinel's wingtip pods) or deep inside it (its
+       * command tower) could never be struck by an aimed shot: measured,
+       * EVERY weak point on EVERY boss was unhittable head-on, and only ever
+       * clipped by luck from angled spread rounds. An armoured Sky Sentinel
+       * was therefore unkillable.
+       *
+       * So: parts are tested first and on their own, and while any part still
+       * stands the hull is POROUS - a round chips it once and keeps flying to
+       * look for a seam. Strip every part and the body goes solid again.
+       */
+      if(!b.hitWeak){
+        for(let k = 0; k < boss.weakPoints.length; k++){
+          const wp = boss.weakPoints[k];
+          if(wp.destroyed) continue;
+          const wx = boss.x + wp.ox, wy = boss.y + wp.oy;
+          const wr = b.r + wp.r;
+          if((b.x-wx)*(b.x-wx) + (b.y-wy)*(b.y-wy) < wr*wr){
+            b.hitWeak = true;
+            ctxObj.onBossHit(boss, b);
+            if(pierceLeft <= 0) b.alive = false;
+            break;
+          }
+        }
+      }
+      if(b.alive && !b.hitBoss){
+        const rr = b.r + boss.r;
+        if((b.x-boss.x)*(b.x-boss.x) + (b.y-boss.y)*(b.y-boss.y) < rr*rr){
+          b.hitBoss = true;
+          ctxObj.onBossHit(boss, b);
+          const partsLeft = boss.weakPoints.some(w => !w.destroyed);
+          if(pierceLeft <= 0 && !partsLeft) b.alive = false;
+        }
       }
     }
   }

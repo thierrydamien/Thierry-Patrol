@@ -30,10 +30,15 @@ const audio = SF.audio;
  * current roster (bigger hulls, and players who park under them), a competent
  * run lands far more than the old 0.32: the Marauder was dying in 15s against
  * a 26s design, the Warden in 37s against 50. Bosses were, as the customer
- * put it, too easy to kill. 0.46 is the measured middle. Because the pool is
+ * put it, too easy to kill.
+ *
+ * Re-measured again after weak points became real hitboxes: once aiming at a
+ * part actually lands (and lands for DOUBLE damage), effective output roughly
+ * doubled and every fight halved - the Devourer fell in 32s against a 58s
+ * design. 0.8 is the measured value for a pilot who aims. Because the pool is
  * derived from dps, this one number moves every boss fight at once.
  */
-const ACCURACY = 0.46;
+const ACCURACY = 0.8;
 function bossHpFor(def, difficulty, dps){
   const target = def.fightSeconds || 30;
   // The dps floor only guards against a divide-by-nothing loadout; it is
@@ -515,7 +520,12 @@ function damage(boss, amount, x, y){
     const wp = boss.weakPoints[i];
     if(wp.destroyed) continue;
     const wx = boss.x + wp.ox, wy = boss.y + wp.oy;
-    if((x-wx)*(x-wx) + (y-wy)*(y-wy) < wp.r*wp.r){ onWeak = wp; break; }
+    // Matches the collision layer's radius, which includes the round itself.
+    // Testing the bare part radius here meant a shot could be CONSUMED as a
+    // part hit and then scored as a hull hit - the shot vanished and the part
+    // took nothing.
+    const hitR = wp.r + 6;
+    if((x-wx)*(x-wx) + (y-wy)*(y-wy) < hitR*hitR){ onWeak = wp; break; }
   }
 
   // Armoured bosses are SEALED: hull hits chip but can never finish them while

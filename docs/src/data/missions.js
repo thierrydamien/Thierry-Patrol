@@ -95,8 +95,8 @@ const BOSSES = {
     armoured: true,
     rescuePods: true,
     weakPoints: [
-      { id:"leftCell",  x:-56, y: 2, r:20, hp:95, disables:"callMinions" },
-      { id:"rightCell", x: 56, y: 2, r:20, hp:95, disables:"tractorPull" },
+      { id:"leftCell",  x:-58, y: 52, r:20, hp:95, disables:"callMinions" },
+      { id:"rightCell", x: 58, y: 52, r:20, hp:95, disables:"tractorPull" },
     ],
     phases: [
       { at:1.00, speed: 75, telegraph:0.60, gap:[1.5,2.0], attacks:["tractorPull","spreadVolley"] },

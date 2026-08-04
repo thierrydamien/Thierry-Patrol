@@ -235,7 +235,7 @@ class World {
       const b = this.bullets.spawn();
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
-      b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false;
+      b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
     }
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
@@ -245,7 +245,7 @@ class World {
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
-      b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false;
+      b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
     }
     audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));

@@ -127,36 +127,56 @@ const HULLS = {
   },
 
   /*
-   * THE JAILER - an H. Two tall cell towers standing upright, joined by a
-   * bridge, with the tractor emitter hanging under the middle. Nothing else
-   * in the game is built vertically like this.
+   * THE JAILER - a grabber. A narrow body up top with two long arms hanging
+   * down and out, a holding cell clamped in each claw. Bottom-heavy and
+   * spidery: nothing else in the game hangs BELOW itself like this, and it
+   * puts the parts you must shoot down close to you rather than up on a deck.
    */
   jailer(ctx, boss, S, damage, timeMs){
     const A = S/140;
-    // connecting bridge
-    slab(ctx, 0, 2*A, 96*A, 30*A, 6*A, "#0d2418", "#2f7d55", 3*A);
-    panels(ctx, -40*A, 40*A, -10*A, 14*A, 4, 0.35);
-    // the two cell towers at (+-56, 2)
+    const sway = Math.sin(timeMs/700)*3*A;
+    // compact upper body
+    poly(ctx, [[-40*A,-42*A],[40*A,-42*A],[52*A,-8*A],[30*A,16*A],[-30*A,16*A],[-52*A,-8*A]],
+         "#0d2418", "#2f7d55", 3.4*A);
+    panels(ctx, -32*A, 32*A, -34*A, 12*A, 4, 0.35);
+    slab(ctx, 0, -30*A, 34*A, 16*A, 4*A, "#13351f", "#3f9c68", 2.2*A);
+    lights(ctx, -26*A, 26*A, -38*A, 5, "160,255,200", timeMs, 2.2*A);
+
+    // the two arms, reaching down and out to the cells at (+-58, 52)
     [-1, 1].forEach(sd => {
-      slab(ctx, sd*56*A, 2*A, 44*A, 96*A, 8*A, "#08170f", "#4ade80", 3.2*A);
-      // barred windows, stacked - three cells per tower
-      [-30, 0, 30].forEach(oy => {
-        slab(ctx, sd*56*A, oy*A, 30*A, 22*A, 3*A, "#03120a", "#1f6b45", 2*A);
-        ctx.strokeStyle = "rgba(140,255,190,0.6)"; ctx.lineWidth = 2*A;
-        for(let i = -1; i <= 1; i++){
-          ctx.beginPath();
-          ctx.moveTo(sd*56*A + i*9*A, (oy-9)*A);
-          ctx.lineTo(sd*56*A + i*9*A, (oy+9)*A);
-          ctx.stroke();
-        }
+      ctx.strokeStyle = "#1b4a30"; ctx.lineWidth = 15*A; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(sd*30*A, 4*A);
+      ctx.quadraticCurveTo(sd*62*A, 18*A, sd*58*A + sway*sd, 44*A);
+      ctx.stroke();
+      ctx.strokeStyle = "#3f9c68"; ctx.lineWidth = 7*A;
+      ctx.stroke();
+      // elbow joint
+      ctx.fillStyle = "#2f7d55";
+      ctx.beginPath(); ctx.arc(sd*52*A, 18*A, 8*A, 0, TAU); ctx.fill();
+
+      // the cell, clamped in a claw
+      const cx = sd*58*A + sway*sd, cy = 52*A;
+      ctx.fillStyle = "#2f7d55";
+      [-1, 1].forEach(k => {
+        poly(ctx, [[cx + k*20*A, cy - 24*A],[cx + k*30*A, cy - 4*A],
+                   [cx + k*24*A, cy + 22*A],[cx + k*14*A, cy + 10*A]],
+             "#2f7d55", null);
       });
-      bloom(ctx, sd*56*A, 2*A, 40*A, "74,222,128", 0.28);
+      slab(ctx, cx, cy, 34*A, 40*A, 5*A, "#08170f", "#4ade80", 3*A);
+      ctx.strokeStyle = "rgba(140,255,190,0.65)"; ctx.lineWidth = 2.4*A;
+      for(let i = -1; i <= 1; i++){
+        ctx.beginPath();
+        ctx.moveTo(cx + i*10*A, cy - 15*A); ctx.lineTo(cx + i*10*A, cy + 15*A);
+        ctx.stroke();
+      }
+      bloom(ctx, cx, cy, 30*A, "74,222,128", 0.3);
     });
-    // tractor emitter under the bridge
-    poly(ctx, [[-20*A,18*A],[20*A,18*A],[12*A,44*A],[-12*A,44*A]],
-         "#12402a", "#4ade80", 2.6*A);
-    bloom(ctx, 0, 44*A, 26*A, "120,255,180", 0.3 + Math.sin(timeMs/240)*0.15);
-    lights(ctx, -30*A, 30*A, -14*A, 5, "160,255,200", timeMs, 2.2*A);
+
+    // tractor emitter, slung under the body between the arms
+    poly(ctx, [[-16*A,14*A],[16*A,14*A],[10*A,36*A],[-10*A,36*A]],
+         "#12402a", "#4ade80", 2.4*A);
+    bloom(ctx, 0, 36*A, 24*A, "120,255,180", 0.28 + Math.sin(timeMs/240)*0.14);
     cracks(ctx, boss, S, damage, timeMs);
   },
 
