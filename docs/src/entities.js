@@ -210,7 +210,8 @@ class World {
     // Guns are automatic - except on a silent-running mission, where the
     // whole point is that they never speak.
     if(run && run.mission && run.mission.noGuns) return;
-    if(run && run.phase === "finaleIntro") return;   // guns cold through the cutscene
+    if(run && (run.phase === "finaleIntro" || run.phase === "bossIntro"))
+      return;                                        // guns cold through the cutscene
     p.cooldown -= dt;
     if(p.cooldown <= 0){
       this.fireWeapons(timeMs);

@@ -185,6 +185,32 @@ SOUNDS.supplyGet = { minGap: 400, fn: () => {
 } };
 
 /* ---------------------------------------------------------
+   BOSS ARRIVALS
+   Every boss enters with a three-beat cinematic (bossintro.js).
+   These are its cues - deliberately shorter and pitched a full
+   octave or two above the Devourer's, so when the finale drops
+   into sub-bass the player FEELS that this one is different.
+   --------------------------------------------------------- */
+SOUNDS.bossWake = { minGap: 3000, fn: () => {
+  // The dimming: a low swell with an uneasy minor second on top.
+  tone(55, 1.4, "sine", 0.16, 45);
+  tone(116, 1.2, "sawtooth", 0.04, 62);
+  noise(1.2, 0.05, 500, 90);
+} };
+SOUNDS.bossRise = { minGap: 2500, fn: () => {
+  // Machinery coming down: a grinding descent, lighter than the finale's.
+  tone(68, 2.0, "sawtooth", 0.09, 90);
+  tone(104, 1.8, "square", 0.035, 130);
+  noise(1.8, 0.09, 380, 1200);
+} };
+SOUNDS.bossRoar = { minGap: 2500, fn: () => {
+  // The name card hit: a two-octave blare, over in a second.
+  [82, 164].forEach(f => tone(f, 1.0, "sawtooth", 0.11, f*0.94));
+  tone(76, 1.1, "square", 0.06, 58);
+  noise(0.8, 0.2, 1500, 80);
+} };
+
+/* ---------------------------------------------------------
    THE DEVOURER
    Exclusive cues. Everything here sits lower and longer than
    the rest of the game's palette - the finale should sound

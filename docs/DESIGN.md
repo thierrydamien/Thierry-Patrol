@@ -1518,6 +1518,36 @@ disc glows elite-gold behind its brute, the same tell elites wear in play.
 The smoke test asserts no two ordinary stops share a face, because the
 face is picked by a heuristic that a new level could quietly collide with.
 
+## 8au. Every boss arrives like the finale
+
+The customer, on the Devourer's entrance: "it puts the player on edge and
+it's super cool - can every single boss be introduced like that?" Yes,
+and the general engine is a fifth the code of the bespoke one, because the
+finale had already discovered the grammar: guns cold, HUD away, letterbox,
+the dark, the descent, the NAME.
+
+`bossintro.js` runs three beats in about six seconds - alarm (klaxon in
+the boss's own tint, "ALL WINGS — CONTACT"), rise (the hull comes down
+slow and heavy, the room trembling), name (the card slams in: THE
+MARAUDER, *first of the raiders*, hairlines flying apart in its colour).
+Because the card is driven entirely by the boss's own identity - name,
+epithet, tint, hull - seven bosses get seven different arrivals from one
+timeline. Boss Rush gets the cinematic on every stage; its "BOSS n OF m"
+score line waits until the fight starts.
+
+Two rules kept the finale on its throne: the general arrival is shorter
+(6.1s vs 10.6s), never fully black, and its three cues sit an octave or
+two ABOVE the Devourer's - so when the last boss drops into sub-bass and
+total dark, even a player who has seen seven arrivals feels the floor
+shift. And the smoke test pins the hierarchy: `bossintro.TOTAL <
+finale.INTRO_TOTAL` is an assertion, not a hope.
+
+The browser probe caught a script error no unit test would: control's
+fight-start line was "that's their flagship" - fine when it was written
+against one boss, wrong over the Marauder now that the cinematic has just
+named who it actually is. Comms lines that follow a naming card can't
+claim identities; the line is now about the fight, not the enemy.
+
 ## 9. What I'd do next
 
 Roughly in value order:

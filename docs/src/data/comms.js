@@ -109,9 +109,12 @@ const COMMS = {
     "That's one of ours home safe.",
     "Rescue confirmed - thank you, {you}.",
   ]},
+  // Said as the fight starts, right after the arrival cinematic has already
+  // NAMED the boss - so no line here may claim what the boss is. "Flagship"
+  // used to play over the Marauder.
   bossIncoming: { speaker:"control", cooldown:999, lines:[
-    "Something big on the scope, {you}.",
-    "Heads up - that's their flagship.",
+    "Watch its wind-ups, {you} - it always tells you first.",
+    "Steady, {you}. You've got this.",
   ]},
   armoured: { speaker:"control", cooldown:999, lines:[
     "Your shots are bouncing off, {you} - shoot the PARTS, not the middle!",

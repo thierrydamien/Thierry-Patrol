@@ -192,10 +192,13 @@ function spawnRushBoss(){
     p.shield = p.shieldMax;                    // the breather between rounds
     fx.text(p.x, p.y - 40, "SHIELDS RESTORED", "#7cc4ff", 16, true);
   }
-  run.phase = "boss";
+  // Rush bosses arrive with the full cinematic too - seven names, seven
+  // cards. The "BOSS n OF m" score line waits until the fight starts.
+  run.phase = "bossIntro";
   run.bossActive = true;
   run.bossSpawned = true;
   game.world.boss = SF.bosses.create(id, run.difficulty, p ? p.dps : 60);
+  game.world.enemyBullets.killAll();
   // The queue escalates: each stage is tougher and attacks faster than the
   // campaign version, so a deep rush is earned, not endured.
   const stage = run.rushIndex - 1;
@@ -204,14 +207,8 @@ function spawnRushBoss(){
     b.hp = b.maxHp = Math.round(b.maxHp * (1 + 0.15*stage));
     b.hurry = 1 + 0.10*stage;
   }
-  audio.play("bossAlarm");
-  audio.setMusic("boss");
-  run.bannerText = "⚠ BOSS " + run.rushIndex + " OF " + run.rushList.length + " ⚠";
-  run.bannerSub = BOSSES[id].name + " INCOMING";
-  run.bannerColor = "#ff5d73";
-  run.bannerUntil = performance.now() + 2400;
-  audio.play("alarm");
-  SF.comms.say("bossIncoming");
+  SF.bossintro.begin();
+  audio.setMusic(null);
 }
 
 function startMission(missionIndex, difficultyId){
@@ -232,6 +229,7 @@ function startMission(missionIndex, difficultyId){
   game.world.reset();
   fx.reset();
   SF.finale.reset();                      // no intro/fleet/death left running
+  SF.bossintro.reset();
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7 : missionIndex);
   const loadout = buildLoadout(profile, difficulty);
@@ -821,19 +819,33 @@ function update(dt, timeMs){
           SF.finale.beginIntro();
           audio.setMusic(null);          // silence is the loudest cue there is
         } else {
-          run.phase = "boss";
-          audio.play("bossAlarm");
-          audio.setMusic("boss");
-          run.bannerText = "⚠ WARNING ⚠";
-          run.bannerSub = BOSSES[run.mission.boss].name + " INCOMING";
-          run.bannerColor = "#ff5d73";
-          run.bannerUntil = performance.now() + 2400;
-          audio.play("alarm");
-          SF.comms.say("bossIncoming");
+          // Every other boss arrives the same way, scaled down: the sky
+          // dims, it descends, it is named. bossintro.js owns the timeline.
+          run.phase = "bossIntro";
+          game.world.enemyBullets.killAll();
+          SF.bossintro.begin();
+          audio.setMusic(null);
         }
       } else {
         run.phase = "clearing";
         run.phaseTimer = 1.2;
+      }
+    }
+  } else if(run.phase === "bossIntro"){
+    // Theatre, the everyday size: guns cold, HUD away, the boss flies its
+    // entrance - then the alarm and the fight.
+    document.body.classList.add("cinema");
+    if(SF.bossintro.update(dt, game.world.boss)){
+      document.body.classList.remove("cinema");
+      run.phase = "boss";
+      audio.play("bossAlarm");
+      audio.setMusic("boss");
+      SF.comms.say("bossIncoming");    // after the cutscene - comms are hidden during it
+      if(run.mission.bossRush){
+        run.bannerText = "⚠ BOSS " + run.rushIndex + " OF " + run.rushList.length + " ⚠";
+        run.bannerSub = game.world.boss ? game.world.boss.name : "";
+        run.bannerColor = "#ff5d73";
+        run.bannerUntil = performance.now() + 2000;
       }
     }
   } else if(run.phase === "finaleIntro"){
@@ -938,7 +950,7 @@ function update(dt, timeMs){
   // The Devourer's arrival and its death are choreographed by finale.js; the
   // fight engine only drives it in between.
   const bossNow = game.world.boss;
-  if(bossNow && run.phase !== "finaleIntro" && !bossNow.finaleDeath)
+  if(bossNow && run.phase !== "finaleIntro" && run.phase !== "bossIntro" && !bossNow.finaleDeath)
     SF.bosses.update(bossNow, dt, game.world, behaviourCtx, timeMs);
   if(bossNow && bossNow.finaleDeath && SF.finale.updateDeath(dt, bossNow, game.world))
     finalBossBlast(bossNow);
@@ -1159,9 +1171,11 @@ function draw(timeMs){
   SF.render.drawForeground(ctx);
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
-  const cinema = game.run && game.run.phase === "finaleIntro";
+  const cinema = game.run &&
+    (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
   if(game.run && !cinema){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
+  SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
   ctx.restore();
 }

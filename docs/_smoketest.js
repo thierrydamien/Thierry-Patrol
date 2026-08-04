@@ -107,7 +107,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/finale.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/finale.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -615,7 +615,7 @@ async function run(){
   clickEl(qa("#campaignNodes .map-node")[3]);        // mission 4 - first boss
   clickEl(qa("#briefDifficulties .diff-card")[1]);
   clickEl(id("launchBtn"));
-  await runFrames(6000);   // mission 4 is ~3 minutes with its boss
+  await runFrames(6300);   // ~3 minutes of mission, boss arrival cinematic, boss
   await sleep(1600);   // the boss death animation holds the results back ~1.2s
   await runFrames(30);
   check("boss mission spawned its boss", !!(SF.game.run && SF.game.run.bossSpawned));
@@ -628,6 +628,35 @@ async function run(){
   check("boss fight resolved or is still running cleanly",
     !!(SF.game.world.boss || SF.game.run.stats.completed || SF.game.state === "ending" || SF.game.run.ended));
   check("no runtime errors during the boss mission", errors.length === 0);
+
+  /* ---------- the boss arrival: every boss introduced like the finale ---------- */
+  {
+    const BI = SF.bossintro;
+    check("every boss arrival is shorter than the finale's",
+      BI.TOTAL < SF.finale.INTRO_TOTAL);
+    const fake = { size: 132, targetY: 150, y: 0, tint: "#ff2d55",
+                   entering: true, def: {} };
+    BI.begin();
+    check("a begun arrival is active", BI.active());
+    let steps = 0, done = false;
+    while(!done && steps < 400){ done = BI.update(1/30, fake); steps++; }
+    check("the arrival finishes on its own clock",
+      done && Math.abs(steps/30 - BI.TOTAL) < 0.2);
+    check("the arrival delivers the boss to its station",
+      Math.abs(fake.y - fake.targetY) < 2 && fake.entering === false);
+    check("a finished arrival is inert", !BI.active() && BI.progress() === 1);
+    check("every boss has the name and epithet its card needs",
+      Object.keys(SF.missions.BOSSES).every(k =>
+        SF.missions.BOSSES[k].name && SF.missions.BOSSES[k].epithet));
+    // The wiring, asserted at the source level like the other guard rails:
+    // both spawn paths must hand the arrival to bossintro, and the guns must
+    // stay cold through it.
+    const gsrc = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    check("both boss spawn paths use the cinematic arrival",
+      (gsrc.match(/SF\.bossintro\.begin\(\)/g) || []).length >= 2);
+    check("guns stay cold through the arrival",
+      /bossIntro/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
+  }
 
   /* A piercing bullet used to sit inside the boss hitbox and re-damage it
      every frame it took to fly through - dozens of hits from one bullet, and

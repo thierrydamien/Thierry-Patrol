@@ -1432,6 +1432,86 @@ function drawFleet(ctx, timeMs){
 }
 
 /** The arrival: black, letterbox, and the name of the thing. */
+/*
+ * The everyday boss arrival: same grammar as the finale's - letterbox, the
+ * dark, the descent, the name card - but driven by the boss's OWN identity,
+ * so seven bosses get seven different cards from one function. Kept shorter
+ * and less black than the Devourer's so the finale still out-arrives it.
+ */
+function drawBossIntro(ctx, timeMs){
+  if(!SF.bossintro || !SF.bossintro.active()) return;
+  const beat = SF.bossintro.beat();
+  const boss = SF.game.world.boss;
+  if(!beat || !boss) return;
+  const tint = boss.tint || "#ff2d55";
+  const rgb = SF.bossintro.hexToRgbStr(tint);
+
+  const bar = Math.min(1, beat.i >= 1 ? 1 : beat.k) * VH*0.09;
+  ctx.save();
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, VW, bar);
+  ctx.fillRect(0, VH - bar, VW, bar);
+
+  // The dark falls fast, lifts as the hull comes down. Never fully black -
+  // that much dark belongs to the Devourer alone.
+  let dark = 0;
+  if(beat.id === "alarm") dark = beat.k * 0.62;
+  else if(beat.id === "rise") dark = 0.62 - beat.k*0.34;
+  else dark = 0.28;
+  ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.textAlign = "center";
+  if(beat.id === "alarm"){
+    // Klaxon light in the boss's colour, and one spare line.
+    const pulse = 0.5 + Math.sin(timeMs/110)*0.5;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "rgba(" + rgb + "," + (pulse*0.13).toFixed(2) + ")";
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = clamp(beat.k*2.2, 0, 1);
+    ctx.fillStyle = "#ffd9de";
+    ctx.font = "600 17px Rajdhani, Arial, sans-serif";
+    ctx.fillText("ALL WINGS — CONTACT", VW/2, VH*0.45);
+    ctx.globalAlpha = 1;
+  }
+  if(beat.id === "rise"){
+    ctx.globalAlpha = clamp(beat.k*1.8, 0, 1);
+    ctx.fillStyle = tint;
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.fillText("MASS: LARGE   ·   POWER: RISING", VW/2, VH - bar - 24);
+    ctx.globalAlpha = 1;
+  }
+  if(beat.id === "name"){
+    const k = beat.k;
+    const grow = 1 + (1 - Math.min(1, k*3))*0.5;
+    const a = clamp(k < 0.8 ? k*4 : (1-k)*5, 0, 1);
+    ctx.globalAlpha = a;
+    ctx.save();
+    ctx.translate(VW/2, VH*0.44);
+    ctx.scale(grow, grow);
+    ctx.shadowColor = tint; ctx.shadowBlur = 30;
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 40px Rajdhani, Arial, sans-serif";
+    ctx.fillText(boss.name, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(" + rgb + ",0.9)";
+    ctx.font = "italic 16px Rajdhani, Arial, sans-serif";
+    if(boss.def.epithet) ctx.fillText(boss.def.epithet, 0, 28);
+    ctx.restore();
+    ctx.strokeStyle = "rgba(" + rgb + "," + a.toFixed(2) + ")";
+    ctx.lineWidth = 2;
+    const spread = VW*0.10 + k*VW*0.38;
+    ctx.beginPath();
+    ctx.moveTo(VW/2 - spread, VH*0.44 - 38); ctx.lineTo(VW/2 + spread, VH*0.44 - 38);
+    ctx.moveTo(VW/2 - spread, VH*0.44 + 42); ctx.lineTo(VW/2 + spread, VH*0.44 + 42);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "left";
+  ctx.restore();
+}
+
 function drawFinaleIntro(ctx, timeMs){
   if(!SF.finale || !SF.finale.introActive()) return;
   const beat = SF.finale.introBeat();
@@ -2035,7 +2115,7 @@ SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
-  drawArena, drawFleet, drawFinaleIntro,
+  drawArena, drawFleet, drawFinaleIntro, drawBossIntro,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,
