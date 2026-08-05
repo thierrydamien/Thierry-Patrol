@@ -627,6 +627,10 @@ async function run(){
       W.enemyBullets.items.filter(b => b.alive).length > shots0);
   }
 
+  // The customer's logic, now law: the ship full of friends you're saving
+  // must never shoot at the person saving them.
+  check("a rescue hauler never shoots its rescuer",
+    SF.enemyData.ENEMY_TYPES.carrier.fire === null);
   check("the game has a wide roster of enemies",
     Object.keys(SF.enemyData.ENEMY_TYPES).length >= 18);
 
@@ -1338,7 +1342,22 @@ async function run(){
     tapSun(); tapSun(); tapSun();
     check("five taps on the red giant open the star vault",
       SF.game.run && SF.game.run.mission.vault === true && SF.game.state === "playing");
-    await runFrames(30);
+    check("the vault is a star shower with the family joke at the end",
+      SF.game.run.mission.starRain === true && SF.game.run.mission.boss === "papa" &&
+      SF.missions.BOSSES.papa.photo === true &&
+      SF.missions.BOSSES.papa.weakPoints.length === 0);
+    await runFrames(90);
+    check("the sky rains stars in the vault",
+      SF.game.world.pickups.items.some(pk => pk.alive && pk.kind === "star"));
+    const plv = SF.game.world.player;
+    const moneyB4 = SF.game.run.money;
+    const starPk = SF.game.world.spawnPickup("star", plv.x, plv.y - 4);
+    await runFrames(3);
+    check("a caught star pays in score and treasure",
+      !starPk.alive && SF.game.run.stats.stars >= 1 && SF.game.run.money > moneyB4);
+    check("king papa pops into a star ring, not a normal blast",
+      /PAPA GOES KA-BOOM/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
+      /drawPapaBoss/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     SF.game.endMission(true);
     await runFrames(5);
     const rich = SF.profile.load(activeName);
@@ -1775,6 +1794,7 @@ async function run(){
     const c = cv.getContext("2d");
     return ids.every(id => {
       if(id === "devourer") return true;          // the finale draws its own
+      if(SF.missions.BOSSES[id].photo) return true;  // KING PAPA is a photograph
       if(!SF.bossart.has(id)) return false;
       const b = SF.bosses.create(id, SF.config.DIFFICULTY_BY_ID.pilot, 60);
       try { SF.bossart.draw(c, b, b.size, 0.5, 900); } catch(e){ return false; }

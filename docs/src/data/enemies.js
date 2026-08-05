@@ -389,7 +389,10 @@ const ENEMY_TYPES = {
     name:"Prison Hauler", behaviour:"carrier", hp:8, r:23, size:72, speed:76,
     score:40, money:42, tint:"#facc15", carriesRescue:true,
     toughSeconds:1.2,          // a hauler should cross real sky before it pops
-    fire:{ pattern:"straight", every:[2.6,3.6], speed:220 },
+    // Unarmed, on purpose: the customer's point exactly - "it doesn't make
+    // sense that the ship you rescue shoots at you." It's a transport full
+    // of our own people; the escorts around it do the shooting.
+    fire: null,
   },
 
   /* --- the ones that change how you play, not just what you shoot --- */

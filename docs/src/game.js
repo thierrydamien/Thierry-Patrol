@@ -221,22 +221,25 @@ function spawnRushBoss(){
  * is the SOLAR GOLD paint, which the Paint Shop refuses to sell.
  */
 function buildStarVault(){
+  /*
+   * v2, after playtest: "just a normal level with enemies" missed the point
+   * of a secret. Now it is pure delight - the sky RAINS golden stars and
+   * almost nothing shoots back - and then the punchline arrives: KING PAPA,
+   * a giant photograph of their actual dad on a tiny gold rocket, who pops
+   * like a pinata into fireworks and even more stars. The level is a joke
+   * the family is in on; nobody else will ever find the door.
+   */
   return {
     id:"vault", vault:true,
     name:"The Star Vault", subtitle:"Nobody was supposed to find this",
-    brief:"You found it. Take everything.",
-    goal:"Take EVERYTHING!",
-    coinRain:true,
+    brief:"You found it. Catch every star you can!",
+    goal:"Catch the STARS!",
+    starRain:true,
+    boss: "papa",
     waves: [
-      { t:1,  type:"grunt",   n:6, form:"arc" },
-      { t:8,  type:"thief",   n:2, form:"sides" },
-      { t:14, type:"boulder", n:2, form:"twinColumns" },
-      { t:20, type:"weaver",  n:7, form:"scatter" },
-      { t:27, type:"thief",   n:2, form:"sides" },
-      { t:33, type:"grunt",   n:8, form:"wall" },
-      { t:40, type:"boulder", n:2, form:"twinColumns" },
-      { t:47, type:"striker", n:5, form:"vee" },
-      { t:54, type:"thief",   n:3, form:"sides" },
+      { t:2,  type:"asteroid", n:4, form:"scatter" },
+      { t:14, type:"asteroid", n:5, form:"scatter" },
+      { t:26, type:"asteroid", n:4, form:"scatter" },
     ],
     objectives: [],
   };
@@ -277,6 +280,7 @@ function startMission(missionIndex, difficultyId){
     rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
     damageTaken: 0, livesLost: 0, completed: false,
     convoyTotal: mission.convoy ? 1 : 0, convoyLost: 0,
+    stars: 0,
   };
 
   // Free-drifting pilots (no carrier to open): their entry times are fixed up
@@ -739,6 +743,42 @@ function finalBossBlast(boss){
     run.finishTimer = 1.4;
     return;
   }
+  /*
+   * KING PAPA pops like a pinata: fireworks in every colour, a storm of
+   * collectable stars flung in a ring, and the silliest text in the game.
+   * Over-the-top is the specification - this one exists to make two kids
+   * laugh, and then hand them the loot.
+   */
+  if(boss.def && boss.def.photo){
+    fx.flash(1, "255,220,120");
+    fx.hitStop(260);
+    fx.shake(44);
+    fx.explosion(bx, by, boss.size*1.7, "#ffd23f", true);
+    for(let r = 0; r < 6; r++)
+      fx.ring(bx, by, boss.size*(1.2 + r*0.8), r%2 ? "#ffd23f" : "#ffffff", 6 - r*0.7, 0.5 + r*0.2);
+    const FWC = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ff4fd8"];
+    for(let i = 0; i < 8; i++)
+      fx.firework(bx + rand(-140, 140), by + rand(-90, 90), FWC[i % FWC.length]);
+    fx.debris(bx, by, 40, "#ffd23f");
+    fx.embers(bx, by, 50);
+    audio.play("megaBoom");
+    audio.play("firework");
+    for(let i = 0; i < 34; i++){
+      const a = (i/34)*Math.PI*2;
+      const st = game.world.spawnPickup("star",
+        clamp(bx + Math.cos(a)*rand(30, 170), 20, VW - 20),
+        clamp(by + Math.sin(a)*rand(20, 120), 40, VH*0.6));
+      st.vx = Math.cos(a)*rand(60, 160);
+      st.vy = Math.sin(a)*rand(30, 90);
+    }
+    fx.text(VW/2, VH*0.34, "PAPA GOES KA-BOOM!", "#ffd23f", 32, true);
+    fx.text(VW/2, VH*0.42, "grab the stars!!", "#ffffff", 20, true);
+    game.world.enemyBullets.killAll();
+    game.world.boss = null;
+    run.bossActive = false;
+    run.finishTimer = 3.2;             // longer: let them scoop the star ring
+    return;
+  }
   // The blast itself: white-out, a triple shockwave, a debris storm, and a
   // long hit-stop so the frame it happens on physically lands.
   fx.flash(1, "255,230,160");
@@ -1187,6 +1227,19 @@ function update(dt, timeMs){
     },
   });
 
+  // The Star Vault: the sky rains golden stars, thick during the free-fly
+  // and still falling (thinner) through the KING PAPA fight, so the whole
+  // level glitters end to end.
+  if(run.mission.starRain && run.phase !== "intro" && !run.ended){
+    run.starTimer = (run.starTimer == null ? 0.5 : run.starTimer) - dt;
+    if(run.starTimer <= 0){
+      run.starTimer = run.bossActive ? rand(0.8, 1.3) : rand(0.28, 0.5);
+      const n = run.bossActive ? 1 : randInt(2, 3);
+      for(let i = 0; i < n; i++)
+        game.world.spawnPickup("star", rand(30, VW - 30), rand(-40, -12));
+    }
+  }
+
   // Silent running: coins rain down a random lane every few seconds. With the
   // guns cold this IS the game - greed pulls you into traffic, and the coin
   // objective is scored on how much of the temptation you survive taking.
@@ -1338,6 +1391,13 @@ function onPickupCollected(item, lost){
     fx.sparks(item.x, item.y, 20, def.color, 240);
     fx.text(p.x, p.y - 40, def.label + "!", def.color, 21, true);
     fx.flash(0.35, "255,255,255");
+  } else if(item.kind === "star"){
+    run.stats.stars = (run.stats.stars || 0) + 1;
+    run.score += 150;
+    run.money += Math.round(25 * p.moneyMult);
+    audio.play("star", run.stats.stars % 5);
+    fx.sparks(item.x, item.y, 10, "#ffd23f", 190);
+    fx.text(item.x, item.y - 14, "★", "#ffd23f", 20, true);
   } else if(item.kind === "rescue"){
     run.stats.rescues++;
     run.score += Math.round(150 * run.difficulty.pay);

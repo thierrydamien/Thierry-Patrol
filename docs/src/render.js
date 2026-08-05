@@ -926,6 +926,28 @@ function drawPickups(ctx, world, timeMs){
         ctx.fillStyle = "#ffd23f";
         ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
       }
+    } else if(it.kind === "star"){
+      // The Star Vault's treasure: a spinning gold star in a warm halo.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const hg = ctx.createRadialGradient(0, 0, 2, 0, 0, 20);
+      hg.addColorStop(0, "rgba(255,220,90,0.55)");
+      hg.addColorStop(1, "rgba(255,220,90,0)");
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.rotate(it.angle*0.7);
+      ctx.fillStyle = "#ffd23f";
+      ctx.strokeStyle = "#fff3c4";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for(let k = 0; k < 10; k++){
+        const a = -Math.PI/2 + k*Math.PI/5;
+        const r = k % 2 === 0 ? 11 : 4.6;
+        ctx[k === 0 ? "moveTo" : "lineTo"](Math.cos(a)*r, Math.sin(a)*r);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
     } else if(it.kind === "supply"){
       // The rare crate: a glowing hex canister in its prize's colour with the
       // prize drawn on the lid - big pulsing halo so it reads from anywhere.
@@ -1098,6 +1120,12 @@ function drawBoss(ctx, boss, timeMs){
   // The finale gets hull art of its own: the scaled-up enemy silhouettes that
   // serve every other boss read as a coloured blob at this size, and the last
   // boss in the game cannot be a blob.
+  // KING PAPA: the Star Vault's photographed head on a little gold rocket.
+  if(boss.def.photo){
+    drawPapaBoss(ctx, boss, bx, by, size, damage, timeMs);
+    ctx.restore();   // cloak alpha off
+    return;
+  }
   if(boss.def.finale){
     drawDevourerHull(ctx, boss, bx, by, size, damage, timeMs);
     drawWeakPoints(ctx, boss, bx, by, timeMs);
@@ -1734,6 +1762,123 @@ function drawFinaleIntro(ctx, timeMs){
   }
   ctx.textAlign = "left";
   ctx.restore();
+}
+
+/*
+ * KING PAPA. A giant photographed head (assets/papa.png - the family drops
+ * the picture in themselves; it ships with a placeholder) wearing a pixel
+ * crown, riding a comically small gold rocket. The head bobs, the rocket
+ * flame flickers, and stars orbit him, because he is the treasure. Drawn
+ * with love and zero dignity - the point is two children laughing.
+ */
+let papaImg = null, papaImgReady = false;
+function papaPhoto(){
+  if(papaImg) return papaImgReady ? papaImg : null;
+  try {
+    papaImg = new Image();
+    papaImg.onload = () => { papaImgReady = true; };
+    papaImg.src = "assets/papa.png";
+  } catch(e){ papaImg = { failed: true }; }
+  return null;
+}
+function drawPapaBoss(ctx, boss, bx, by, S, damage, timeMs){
+  const bob = Math.sin(timeMs/420)*7;
+  const tilt = Math.sin(timeMs/700)*0.06;
+  const R = S*0.42;                       // the head's radius
+  ctx.save();
+  ctx.translate(bx, by + bob);
+  ctx.rotate(tilt);
+
+  // The comically small rocket he rides: gold slab, fins, flame.
+  ctx.fillStyle = "#b8860b";
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(-S*0.16, R*0.72, S*0.32, S*0.20, 8);
+  else ctx.rect(-S*0.16, R*0.72, S*0.32, S*0.20);
+  ctx.fill();
+  ctx.fillStyle = "#ffd23f";
+  [-1, 1].forEach(sd => {
+    ctx.beginPath();
+    ctx.moveTo(sd*S*0.16, R*0.74);
+    ctx.lineTo(sd*S*0.30, R*0.94);
+    ctx.lineTo(sd*S*0.16, R*0.90);
+    ctx.closePath(); ctx.fill();
+  });
+  const flick = 0.7 + Math.sin(timeMs/60)*0.3;
+  const fg = ctx.createLinearGradient(0, R*0.92, 0, R*0.92 + S*0.3*flick);
+  fg.addColorStop(0, "rgba(255,190,90,0.9)");
+  fg.addColorStop(1, "rgba(255,90,40,0)");
+  ctx.fillStyle = fg;
+  ctx.beginPath();
+  ctx.moveTo(-S*0.09, R*0.92); ctx.lineTo(S*0.09, R*0.92);
+  ctx.lineTo(0, R*0.92 + S*0.3*flick); ctx.closePath(); ctx.fill();
+
+  // The head: the photo in a gold ring, or a winking placeholder medallion
+  // until the family installs the picture.
+  const img = papaPhoto();
+  ctx.beginPath(); ctx.arc(0, 0, R + 6, 0, TAU);
+  ctx.fillStyle = "#ffd23f"; ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.clip();
+  if(img){
+    ctx.drawImage(img, -R, -R, R*2, R*2);
+  } else {
+    ctx.fillStyle = "#f5c518";
+    ctx.fillRect(-R, -R, R*2, R*2);
+    ctx.fillStyle = "#7a5200";
+    ctx.textAlign = "center";
+    ctx.font = "bold " + Math.round(R*1.1) + "px Rajdhani, Arial, sans-serif";
+    ctx.fillText("?", 0, R*0.38);
+    ctx.font = "bold " + Math.round(R*0.22) + "px Rajdhani, Arial, sans-serif";
+    ctx.fillText("add assets/papa.png", 0, R*0.72);
+  }
+  // Damage reads as a slow blush: the more you bop him, the pinker he gets.
+  if(damage > 0.05){
+    ctx.fillStyle = "rgba(255,90,90," + (damage*0.30).toFixed(2) + ")";
+    ctx.fillRect(-R, -R, R*2, R*2);
+  }
+  ctx.restore();
+
+  // The crown: five gold spikes with jewel tips, slightly askew. Always askew.
+  ctx.save();
+  ctx.rotate(-0.08);
+  ctx.fillStyle = "#ffd23f";
+  ctx.strokeStyle = "#b8860b";
+  ctx.lineWidth = 2;
+  const cw = R*0.9, ch = R*0.42, cy = -R - 4;
+  ctx.beginPath();
+  ctx.moveTo(-cw/2, cy);
+  for(let k = 0; k < 5; k++){
+    ctx.lineTo(-cw/2 + cw*(k + 0.5)/5, cy - ch);
+    ctx.lineTo(-cw/2 + cw*(k + 1)/5, cy);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ["#ff5d73","#4ade80","#3fc9ff","#c084fc","#ff8a3d"].forEach((col, k) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(-cw/2 + cw*(k + 0.5)/5, cy - ch, 4, 0, TAU);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  // Stars orbit him. He is the treasure.
+  for(let k = 0; k < 5; k++){
+    const a = timeMs/900 + k*(TAU/5);
+    const ox = Math.cos(a)*(R + 26), oy = Math.sin(a)*(R + 18)*0.6;
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.rotate(timeMs/300 + k);
+    ctx.fillStyle = "rgba(255,210,63," + (0.55 + Math.sin(timeMs/200 + k)*0.25).toFixed(2) + ")";
+    ctx.beginPath();
+    for(let q = 0; q < 10; q++){
+      const qa = -Math.PI/2 + q*Math.PI/5;
+      const qr = q % 2 === 0 ? 7 : 3;
+      ctx[q === 0 ? "moveTo" : "lineTo"](Math.cos(qa)*qr, Math.sin(qa)*qr);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  drawWeakPoints(ctx, boss, bx, by, timeMs);
 }
 
 /** The Jailer's tractor beam: a rippling green cone locked onto the ship. */

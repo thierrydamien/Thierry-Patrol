@@ -1813,6 +1813,35 @@ into peering through a letterbox. The bay unpins on those two tabs.
   Classic is free and fitted from birth; Gold Rain, Emerald Sky and
   Rainbow Salute are bought once and fire on every victory lap after.
 
+## 8bc. Unarmed haulers, and the Star Vault becomes a joke worth keeping
+
+**"It doesn't make sense that the ship you rescue shoots at you."** It
+doesn't. The Prison Hauler had a gun because every enemy got one by
+default, and nobody had read the fiction back: it is a transport full of
+OUR people. It is unarmed now - the escorts around it do the shooting -
+and the roster test pins `carrier.fire === null` so it stays that way.
+
+**The Star Vault v2.** The first cut was "a normal level with enemies",
+which missed the point of a secret. Now: the sky RAINS collectable golden
+stars (a new pickup - spinning, haloed, £25 and 150 points each, magnet
+applies) over a nearly empty sky - three lazy asteroid drifts are the only
+company. And then the punchline: **KING PAPA**, "the greatest dad in the
+galaxy" - a giant photographed head in a gold ring, pixel crown always
+slightly askew, riding a comically small rocket, with stars orbiting him
+because he IS the treasure. He has no weak points and no armour: he is a
+pinata, and the fight is the joke. When he pops: white-out, six rings,
+eight fireworks, "PAPA GOES KA-BOOM!", and a RING OF 34 STARS flung
+outward with a long finish timer so the kids can scoop the loot.
+
+The photograph is never committed by anyone but the family: the renderer
+loads `assets/papa.png` at runtime (the pilot-portrait pattern), and until
+it exists the boss wears a gold "?" medallion that says where to put it.
+
+One real fix fell out: `patrolMargin` derived only from weak-point reach,
+and a boss with NO weak points (papa) got the bare floor of 78 - half his
+head patrolled off-screen. The margin is now also floored by the hull's
+own half-width, which protects every future big boss too.
+
 ## 9. What I'd do next
 
 Roughly in value order:

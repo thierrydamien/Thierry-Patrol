@@ -63,7 +63,9 @@ function create(defId, difficulty, dps){
   // x=24 - the part was UNREACHABLE and the fight unwinnable. Never let a
   // weak point go somewhere the guns cannot follow.
   const reach = def.weakPoints.reduce((m, wp) => Math.max(m, Math.abs(wp.x) + wp.r), 0);
-  const patrolMargin = Math.max(78, reach + 34);
+  // Also floored by the hull's own half-width: KING PAPA has no weak points
+  // at all, and a margin derived only from parts let his head clip the edge.
+  const patrolMargin = Math.max(78, reach + 34, (def.size || 0)*0.45);
 
   const boss = {
     alive: true, def, defId, name: def.name, tint: def.tint, patrolMargin,

@@ -57,6 +57,24 @@ const OBJECTIVES = {
    the attack they power is disabled for the rest of the fight.
    --------------------------------------------------------- */
 const BOSSES = {
+  /*
+   * The Star Vault's secret boss, and the one entry here whose job is a
+   * LAUGH. `photo:true` makes the renderer draw him as a giant photographed
+   * head on a little gold rocket (assets/papa.png, dropped in by the family -
+   * never committed by anyone else). No weak points, no armour: he is a
+   * pinata, and the fight is the joke.
+   */
+  papa: {
+    name: "KING PAPA", epithet: "the greatest dad in the galaxy",
+    hp: 500, fightSeconds: 22, size: 210, tint: "#ffd23f", entryY: 178,
+    photo: true,
+    weakPoints: [],
+    phases: [
+      { at:1.00, speed: 90, telegraph:0.60, gap:[1.2,1.8], attacks:["spreadVolley"] },
+      { at:0.55, speed:130, telegraph:0.50, gap:[0.9,1.4], attacks:["spreadVolley","ringBurst"] },
+      { at:0.22, speed:170, telegraph:0.40, gap:[0.7,1.1], attacks:["ringBurst","aimedBurst"], enrage:true },
+    ],
+  },
   marauder: {
     name: "THE MARAUDER", epithet: "first of the raiders",
     hp: 380, fightSeconds: 26, size: 132, tint: "#ff2d55", entryY: 150,
