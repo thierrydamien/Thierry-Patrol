@@ -317,7 +317,7 @@ function startMission(missionIndex, difficultyId){
     payScale: difficulty.pay / Math.sqrt(difficulty.density || 1),
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
-    bossActive: false, bossSpawned: false, progress: 0,
+    bossActive: false, bossSpawned: false, bossCleared: false, progress: 0,
     objectiveFlashUntil: 0, objectivesMet: 0, finishTimer: 0,
     powerupTimer: rand(12, 20),
     /*
@@ -753,6 +753,7 @@ function finalBossBlast(boss){
     fx.text(VW/2, VH*0.34, "THE SKY IS OURS", "#ffd23f", 34, true);
     game.world.boss = null;
     run.bossActive = false;
+    run.bossCleared = true;
     run.finishTimer = 1.4;
     return;
   }
@@ -772,6 +773,7 @@ function finalBossBlast(boss){
     game.world.enemyBullets.killAll();
     game.world.boss = null;
     run.bossActive = false;
+    run.bossCleared = true;
     // Long on purpose: after twelve seconds of routine there is still a
     // skyful of stars and souvenirs to hoover up, and the victory lap comes
     // after THIS. Rushing the payoff would waste the joke.
@@ -812,6 +814,7 @@ function finalBossBlast(boss){
   fx.text(bx, by, "BOSS DOWN!", "#ffd23f", 34, true);
   game.world.boss = null;
   run.bossActive = false;
+  run.bossCleared = true;
   // Hold the results back for a beat so the blast lands. This is a
   // simulation timer, not a wall-clock setTimeout: a real-time timer would
   // fire behind the pause overlay, and if it were ever dropped the mission
@@ -1044,9 +1047,22 @@ function update(dt, timeMs){
     }
   }
 
-  // Progress readout: waves spawned, then boss health.
+  /*
+   * Progress readout: waves spawned, then boss health, then done. The bug
+   * report was exact - "sometime I end a level and it's not 100%" - and the
+   * cause was that the "multiply by 0.65 because this mission HAS a boss"
+   * rule kept firing after the boss was already dead: bossActive drops to
+   * false the instant it dies, so the readout fell straight back to ~65%
+   * for the whole victory lap. `bossCleared` remembers that the boss for
+   * THIS mission is done, so the number holds at 100% from the kill onward
+   * - and in a Boss Rush, a fresh boss spawning flips bossActive back to
+   * true, which still wins the first branch and resumes the health-based
+   * readout for the next fight.
+   */
   if(run.bossActive && game.world.boss){
     run.progress = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
+  } else if(run.bossCleared){
+    run.progress = 1;
   } else {
     const timeline = clamp(run.director.time / run.wavesEndT, 0, 1);
     const cleared = run.director.totalPlanned

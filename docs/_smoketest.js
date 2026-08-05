@@ -672,6 +672,16 @@ async function run(){
                            SF.game.run.phase === "gone") : true);
   check("no enemy can linger on the field forever",
     SF.game.world.enemies.items.every(e => !e.alive || e.life <= 40));
+  /*
+   * "Sometime I end a level and it's not 100%." The bug: the progress
+   * readout multiplied by 0.65 whenever the MISSION has a boss, not
+   * whenever a boss is currently ALIVE - so the moment the boss died and
+   * bossActive dropped to false, the number fell back to ~65% and stayed
+   * there through the whole victory lap. Once a boss mission's boss is
+   * dead, the readout must hold at 100% from then on.
+   */
+  check("the mission percent reaches and holds 100% once the boss is dead",
+    SF.game.run.bossCleared === true && SF.game.run.progress === 1);
   check("boss fight resolved or is still running cleanly",
     !!(SF.game.world.boss || SF.game.run.stats.completed || SF.game.state === "ending" || SF.game.run.ended));
   check("no runtime errors during the boss mission", errors.length === 0);
@@ -1359,6 +1369,20 @@ async function run(){
     check("the accent line is gone from the shelves",
       !/border-left:5px solid var\(--cat/.test(
         fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
+    /*
+     * At desktop widths .shop-group becomes a 2-column CSS grid for the
+     * plain upgrade shelves - but the Style Shop reuses .shop-group as an
+     * outer WRAPPER around several headings and card grids, and that same
+     * 2-column split tore it apart: a heading landed alone in column 1
+     * while its own card grid was squeezed into column 2, leaving a blank
+     * column-wide gap under every heading (the customer's screenshot).
+     * The wrapper must opt back out to a single flowing column.
+     */
+    check("the style shop wrapper opts out of the 2-column shelf grid", (() => {
+      const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+      const m = css.match(/@media \(min-width: 700px\) \{[\s\S]*?\n\}/);
+      return !!m && /\.shop-group\.paint-shop\s*\{\s*display:\s*block/.test(m[0]);
+    })());
 
     /* The vault door: five quick taps on the red giant, nothing less. */
     SF.ui.show("screen-missions");
@@ -1672,6 +1696,10 @@ async function run(){
       SF.game.world.boss && SF.game.world.boss.name === "SKY SENTINEL");
     check("later rush stages come harder",
       SF.game.world.boss.hurry > 1 && SF.game.world.boss.maxHp > 0);
+    // A fresh rush boss must resume the health-based readout, not stick at
+    // the 100% the previous kill left behind.
+    check("the readout tracks the NEW boss, not the last one's victory",
+      SF.game.run.bossActive && SF.game.run.progress < 1);
     strip();
     await runFrames(560);
     check("an emptied queue ends in the victory lap",

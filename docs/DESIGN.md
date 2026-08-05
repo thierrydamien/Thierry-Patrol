@@ -1988,6 +1988,37 @@ won, because that prize stays a genuine one-off. Everything else - the
 star rain, KING PAPA, all five acts of his death, his French goodbye -
 plays in full on every single visit.
 
+## 8bi. The blank column, and a percent that lied
+
+Two bugs from one screenshot.
+
+**The blank space on the left.** `.shop-group` at desktop widths becomes a
+2-column CSS grid - built for the plain upgrade shelves, a flat list of
+`.shop-item` rows that fill two columns nicely. The Style Shop reuses
+`.shop-group` as an outer WRAPPER around several headings and their own
+card grids, and the 2-column split tore that structure apart: a heading
+landed alone in column 1, its actual card grid got squeezed into column
+2, and the screenshot's big blank rectangle was column 1 sitting empty
+under a heading three words long. Fixed with one override
+(`.shop-group.paint-shop { display:block }`) so the wrapper stays a single
+flowing column; the cards inside it already have their own responsive
+grid and were never the problem.
+
+**"Sometime I end a level and it's not 100%."** Exact, and traceable to
+one line: `progress = max(timeline, cleared) * (mission.boss ? 0.65 : 1)`.
+That 0.65 was meant to mean "a boss is still ahead, save some of the bar
+for the fight" - but it tested whether the MISSION has a boss, not
+whether the boss is still ALIVE. The instant a boss died, `bossActive`
+dropped to `false`, the formula fell into the same branch a boss-less
+mission uses, and the 0.65 penalty applied anyway - so the readout
+dropped back to roughly two-thirds through the entire victory lap. A new
+`run.bossCleared` flag, set the moment any boss-death path finishes and
+checked before the old formula, pins the number at 100% from the kill
+onward. In a Boss Rush, a fresh boss spawning flips `bossActive` back to
+true and wins the first branch regardless, so the readout correctly
+resumes tracking the NEW fight's health instead of sticking at 100%
+between stages - covered by its own test.
+
 ## 9. What I'd do next
 
 Roughly in value order:

@@ -65,6 +65,15 @@ html, body {
   .shop-group { display:grid; grid-template-columns: 1fr 1fr; gap:9px; align-items:start; }
   .group-head { grid-column: 1 / -1; }
   .shop-item { margin-bottom:0; }
+  /*
+   * The Style Shop reuses .shop-group as an outer wrapper (headings + several
+   * card grids stacked inside it), not a row of .shop-item cards - so the
+   * 2-column split above tore it apart: a heading landed alone in column 1
+   * while its own card grid got squeezed into column 2, leaving a blank
+   * column-wide gap under every heading. It needs to stay a single flowing
+   * column; the CARDS inside it (.paint-grid) do their own responsive grid.
+   */
+  .shop-group.paint-shop { display:block; }
 }
 
 /* ---------------- shared bits ---------------- */
