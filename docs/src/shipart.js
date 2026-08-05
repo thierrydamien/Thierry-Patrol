@@ -435,54 +435,99 @@ const TUNE_ART = {
 };
 
 /*
- * Style Shop nose art. Drawn in hull space (origin at ship centre, S = ship
- * size), always last so no bought part can bury the thing they paid for.
- * Shapes stay chunky: at flight size a fussy decal is a smudge.
+ * Style Shop LIVERIES.
+ *
+ * v1 was "nose art" - a little bolt, a small star, five teeth - and the
+ * customer was right that it was pointless: at flight size the whole ship
+ * is about fifty pixels, so a decal drawn at five percent of the hull is
+ * three pixels of mush. Nobody could tell them apart, which makes it a
+ * thing you pay for and cannot see.
+ *
+ * So they were scrapped for LIVERIES: paint that covers the whole hull.
+ * Every one of these is a big, simple, high-contrast shape spanning most
+ * of the ship, because the only thing that survives being fifty pixels
+ * tall is a big simple shape. Drawn last, over every bought part, and
+ * clipped to a hull-ish silhouette so paint never floats off the metal.
  */
-const DECAL_ART = {
-  bolt(ctx, S){
-    ctx.fillStyle = "#ffd23f";
-    ctx.strokeStyle = "rgba(120,70,0,0.8)";
-    ctx.lineWidth = S*0.014;
-    ctx.beginPath();
-    ctx.moveTo(-S*0.015, -S*0.30);
-    ctx.lineTo( S*0.05,  -S*0.12);
-    ctx.lineTo( S*0.005, -S*0.12);
-    ctx.lineTo( S*0.045,  S*0.06);
-    ctx.lineTo(-S*0.05,  -S*0.08);
-    ctx.lineTo( 0,       -S*0.08);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
+function hullClip(ctx, S){
+  ctx.beginPath();
+  ctx.moveTo(0, -S*0.50);
+  ctx.lineTo(S*0.17, -S*0.14);
+  ctx.lineTo(S*0.30, S*0.16);
+  ctx.lineTo(S*0.16, S*0.44);
+  ctx.lineTo(-S*0.16, S*0.44);
+  ctx.lineTo(-S*0.30, S*0.16);
+  ctx.lineTo(-S*0.17, -S*0.14);
+  ctx.closePath();
+  ctx.clip();
+}
+const LIVERY_ART = {
+  /*
+   * Two fat racing stripes, nose to tail - each with a dark border, because
+   * the stock hull already has white panels and a plain white stripe simply
+   * disappeared into them at flight size. The border is what makes it read
+   * on ANY paint colour.
+   */
+  stripes(ctx, S){
+    ctx.save(); hullClip(ctx, S);
+    [-S*0.145, S*0.020].forEach(x => {
+      ctx.fillStyle = "#10131c";
+      ctx.fillRect(x - S*0.022, -S*0.52, S*0.169, S*1.04);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x, -S*0.52, S*0.125, S*1.04);
+    });
+    ctx.restore();
   },
-  star(ctx, S){
-    ctx.save();
-    ctx.translate(-S*0.21, S*0.05);
-    ctx.rotate(-0.1);
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "rgba(30,40,80,0.7)";
-    ctx.lineWidth = S*0.012;
+  /** Flames licking up from the tail - orange over red over yellow. */
+  flames(ctx, S){
+    ctx.save(); hullClip(ctx, S);
+    const tongue = (col, w, h, dy) => {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(-w, S*0.46 + dy);
+      for(let i = 0; i <= 6; i++){
+        const t = i/6;
+        const x = -w + t*w*2;
+        const y = S*0.46 + dy - h*(1 - Math.abs(t - 0.5)*1.6) - (i % 2 ? h*0.18 : 0);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, S*0.46 + dy);
+      ctx.closePath(); ctx.fill();
+    };
+    tongue("#c2410c", S*0.34, S*0.86, 0);
+    tongue("#f97316", S*0.27, S*0.66, 0);
+    tongue("#fbbf24", S*0.18, S*0.44, 0);
+    ctx.restore();
+  },
+  /** One enormous lightning bolt across the entire hull. */
+  bolt(ctx, S){
+    ctx.save(); hullClip(ctx, S);
+    ctx.fillStyle = "#ffd23f";
+    ctx.strokeStyle = "rgba(90,50,0,0.75)";
+    ctx.lineWidth = S*0.022;
     ctx.beginPath();
-    for(let i = 0; i < 10; i++){
-      const a = -Math.PI/2 + i*Math.PI/5;
-      const r = (i % 2 === 0 ? 0.085 : 0.036)*S;
-      ctx[i === 0 ? "moveTo" : "lineTo"](Math.cos(a)*r, Math.sin(a)*r);
-    }
+    ctx.moveTo( S*0.02, -S*0.50);
+    ctx.lineTo(-S*0.26,  S*0.04);
+    ctx.lineTo(-S*0.04,  S*0.04);
+    ctx.lineTo(-S*0.14,  S*0.50);
+    ctx.lineTo( S*0.26, -S*0.10);
+    ctx.lineTo( S*0.03, -S*0.10);
+    ctx.lineTo( S*0.22, -S*0.50);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
     ctx.restore();
   },
-  fangs(ctx, S){
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "rgba(30,40,80,0.65)";
-    ctx.lineWidth = S*0.01;
-    [-2, -1, 0, 1, 2].forEach(i => {
-      ctx.beginPath();
-      ctx.moveTo(i*S*0.052 - S*0.024, -S*0.20);
-      ctx.lineTo(i*S*0.052 + S*0.024, -S*0.20);
-      ctx.lineTo(i*S*0.052,           -S*0.09);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    });
+  /** A chequered flag band right across the middle. */
+  checkers(ctx, S){
+    ctx.save(); hullClip(ctx, S);
+    const cell = S*0.088, y0 = -S*0.10;
+    for(let r = 0; r < 3; r++){
+      for(let c = 0; c < 8; c++){
+        ctx.fillStyle = (r + c) % 2 ? "#ffffff" : "#12161f";
+        ctx.fillRect(-S*0.35 + c*cell, y0 + r*cell, cell, cell);
+      }
+    }
+    ctx.restore();
   },
 };
 
@@ -522,10 +567,10 @@ function drawShip(ctx, cx, cy, size, opts){
   drawHull(ctx, S, o.color);
   front.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
   if(tuneArt && tuneArt.front){ ctx.save(); tuneArt.front(ctx, S, o); ctx.restore(); }
-  // Style Shop nose art rides on TOP of everything - a decal that a wing
-  // part could cover wouldn't be worth buying.
-  if(opts.decal && DECAL_ART[opts.decal]){
-    ctx.save(); DECAL_ART[opts.decal](ctx, S); ctx.restore();
+  // The livery goes on over every bought part: paint you can't see under a
+  // wing is paint that wasn't worth buying.
+  if(opts.decal && LIVERY_ART[opts.decal]){
+    ctx.save(); LIVERY_ART[opts.decal](ctx, S); ctx.restore();
   }
 
   // The grey silhouette of what's next: always something to want.

@@ -251,25 +251,43 @@ const MISSIONS = [
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
     brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves.",
     goal:"Fly with your finger. Shoot!",
+    /*
+     * The most important ninety seconds in the game: if a seven-year-old
+     * doesn't love THIS, there is no mission two. The first version was
+     * twelve waves of nothing but grunts and a "take no damage" star, so a
+     * child's first flight was repetitive AND ended by telling them they
+     * had failed. Both fixed:
+     *
+     *  - Something HAPPENS every twenty seconds. The first prison hauler
+     *    arrives at 0:22, not 0:47, so the thing the whole game is about -
+     *    flying into a drifting person and hearing "PILOT RESCUED" - lands
+     *    inside the first half-minute.
+     *  - Three haulers, so a missed one is not a failed run.
+     *  - Every star is something you EARN by doing, not something you lose
+     *    by being touched. `noDamage` moved out to mission 3, where being
+     *    shot at is the lesson.
+     */
     waves: [
-      // Act 1 - one shape at a time, with room to breathe
+      // Easy first kills, immediately - the guns fire themselves, so this is
+      // "point the ship and things explode" within two seconds.
       w(1,   "grunt", 5, "line"),
       w(8,   "grunt", 6, "vee"),
-      w(16,  "grunt", 6, "arc"),
-      // Act 2 - two lanes, then three
-      w(24,  "grunt", 6, "twinColumns"),
-      w(32,  "grunt", 8, "tripleColumns"),
-      w(40,  "grunt", 7, "arc"),
-      // Act 3 - first taste of density
-      w(48,  "grunt", 8, "wall"),
-      w(56,  "grunt", 8, "pincer"),
-      w(64,  "grunt", 9, "line"),
-      w(72,  "grunt", 9, "scatter"),
-      // Finale
-      w(81,  "grunt", 10, "vee"),
-      w(89,  "grunt", 12, "wall"),
+      w(15,  "grunt", 6, "arc"),
+      // The first rescue. The heart of the game, in the first half-minute.
+      w(22,  "carrier", 1, "column"),
+      w(28,  "grunt", 6, "twinColumns"),
+      w(36,  "grunt", 8, "tripleColumns"),
+      w(44,  "carrier", 1, "column"),
+      w(50,  "grunt", 8, "wall"),
+      w(58,  "grunt", 8, "pincer"),
+      w(66,  "grunt", 9, "scatter"),
+      w(74,  "carrier", 1, "column"),
+      // Finale: the biggest crowd yet, and still only grunts, so it reads as
+      // "look how good I've got" rather than "this got hard".
+      w(80,  "grunt", 10, "vee"),
+      w(88,  "grunt", 12, "wall"),
     ],
-    objectives: ["complete","kill90","noDamage"],
+    objectives: ["complete","kill90","rescueAll"],
   },
   {
     id:2, name:"Weaving Through", subtitle:"Moving targets",
@@ -799,6 +817,7 @@ const MISSIONS = [
   {
     id:19, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
+    face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
     waves: [
       w(1,   "carrier",  3, "tripleColumns"),

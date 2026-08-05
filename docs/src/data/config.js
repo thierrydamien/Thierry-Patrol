@@ -52,14 +52,20 @@ const TRAILS = [
 ];
 const TRAIL_BY_ID = Object.fromEntries(TRAILS.map(t => [t.id, t]));
 /*
- * Nose art, painted on the hull by shipart. Small in flight, huge in the
- * hangar, on the map ship, the pilot card and the finale fleet - and it's
- * THEIRS, which is the entire product.
+ * Liveries: whole-hull paint jobs drawn by shipart. Deliberately big and
+ * simple - see LIVERY_ART for why the small version was scrapped - so the
+ * difference is obvious in flight, in the hangar, on the map and in the
+ * finale fleet.
  */
 const DECALS = [
-  { id:"bolt",  name:"THUNDERBOLT", cost:3200, desc:"A gold lightning strike down the nose." },
-  { id:"star",  name:"ACE STAR",    cost:3200, desc:"A white ace's star on your wing." },
-  { id:"fangs", name:"SHARK FANGS", cost:3800, desc:"Teeth on the nose. The classics are classics." },
+  { id:"stripes",  name:"RACING STRIPES", cost:3200,
+    desc:"Two fat white stripes, nose to tail." },
+  { id:"flames",   name:"FLAME JOB",      cost:3600,
+    desc:"Fire pouring up the hull from the engines." },
+  { id:"bolt",     name:"LIGHTNING",      cost:3600,
+    desc:"One giant gold bolt across the whole ship." },
+  { id:"checkers", name:"CHEQUERED",      cost:4200,
+    desc:"A racing flag painted round the middle." },
 ];
 const DECAL_BY_ID = Object.fromEntries(DECALS.map(d => [d.id, d]));
 /*

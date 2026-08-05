@@ -766,11 +766,14 @@ function finalBossBlast(boss){
    * kids can hoover up the stars and the tiny papa heads.
    */
   if(boss.def && boss.def.photo){
-    fx.text(VW/2, VH*0.46, "grab it all!", "#ffd23f", 24, true);
+    fx.text(VW/2, VH*0.46, "ramasse tout !", "#ffd23f", 24, true);
     game.world.enemyBullets.killAll();
     game.world.boss = null;
     run.bossActive = false;
-    run.finishTimer = 4.0;
+    // Long on purpose: after twelve seconds of routine there is still a
+    // skyful of stars and souvenirs to hoover up, and the victory lap comes
+    // after THIS. Rushing the payoff would waste the joke.
+    run.finishTimer = 7.0;
     return;
   }
   // The blast itself: white-out, a triple shockwave, a debris storm, and a
@@ -1395,7 +1398,9 @@ function onPickupCollected(item, lost){
     run.money += Math.round(60 * p.moneyMult);
     audio.play("papaBoing");
     fx.sparks(item.x, item.y, 12, "#ffd23f", 200);
-    fx.text(item.x, item.y - 16, ["HI KIDS!","LOVE YOU!","BE GOOD!","BYE!"][run.stats.papaHeads % 4],
+    // Same voice as the send-off: Papa talks to his kids in French.
+    fx.text(item.x, item.y - 16,
+            ["Bien joué !","Amuse-toi bien !","Je t'aime !","Bravo !"][run.stats.papaHeads % 4],
             "#ffd23f", 17, true);
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;

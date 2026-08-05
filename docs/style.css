@@ -992,4 +992,5 @@ body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s
 /* Browsing tabs (STYLE SHOP, MY SHIP) don't need the ship bay glued to the
    top - it made long lists feel like scrolling through a letterbox. */
 #screen-armory.unpinned .armory-top { position: static; box-shadow: none; }
-.shop-swatches { margin: 6px 0 18px; }
+/* A free paint still gets a button, just not a price-shaped one. */
+.paint-card .free-btn { background: #4ade80; color:#08260f; }

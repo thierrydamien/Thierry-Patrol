@@ -1880,6 +1880,71 @@ worse than no joke. One probe lesson worth keeping: calling
 only runs when the COLLISION layer consumes the result - the honest way to
 test a death is to let the player's own guns land the last round.
 
+## 8be. The first ninety seconds, and paint you can actually see
+
+**"Make sure the first levels - special attention to the first one - will
+make my kids like the game. They are the most important ones."** Missions
+two and three were already right: something new every eight seconds -
+weavers, a rescue, a thief, strikers, rocks, a sniper, a boulder. Mission
+ONE was the outlier and, read honestly, the worst level in the game:
+twelve waves of nothing but grunts for ninety-seven seconds, no rescue at
+all, and a third star of "take no damage" - so a seven-year-old's very
+first flight was repetitive AND ended by telling them they had failed.
+
+Rebuilt around two rules. Something HAPPENS every twenty seconds: the
+first prison hauler now arrives at 0:22 instead of 0:47, so the thing the
+whole game is about - flying into a drifting person and hearing PILOT
+RESCUED - lands inside the first half-minute, and there are three of them
+so a miss isn't a ruined run. And every star is something you EARN by
+doing, never something you lose by being touched: `noDamage` is gone from
+mission one entirely. It didn't move to mission three either, because
+mission three has people to free and the older rule - every mission with
+prisoners stars their rescue - outranks it. `noDamage` already lives at
+Cold Approach, which is where a no-hit run belongs.
+
+The suite now guards the funnel directly: the first wave inside two
+seconds, a hauler inside thirty, three haulers minimum, no star lost by
+contact, and nothing but grunts and haulers in the whole level.
+
+**Nose art was scrapped.** "The difference is too small, it's impossible
+to see any difference between them - if you can't make it good, scrap it."
+Correct: at flight size the whole ship is about fifty pixels, so a decal
+drawn at five percent of the hull was three pixels of mush. Something you
+pay for and cannot see is worse than nothing. Replaced with LIVERIES -
+whole-hull paint jobs, each a big simple high-contrast shape spanning most
+of the ship: racing stripes nose to tail, a flame job pouring up from the
+engines, one enormous lightning bolt, a chequered racing band. Verified
+the only way that counts: all five rendered side by side at 52px, the size
+they actually fly at. The first stripes attempt failed that test - plain
+white vanished into the hull's own white panels - so they gained a dark
+border, which is what makes them read on any paint colour.
+
+**Free colours joined the grid.** They were a row of little dots above the
+paid cards, which made them look like a different, lesser thing. They are
+full cards now - same ship, same size, same button - just marked FREE.
+
+## 8bf. Papa says goodbye in French
+
+"When the papa boss is defeated I want it to speak French (since that's
+the language I speak with my kids)" - Bien joué ! / Amuse-toi bien ! /
+Je t'aime ! - "and make sure the ending is long enough so they can enjoy
+it and have a good laugh."
+
+The whole game is in English. This one moment isn't, and shouldn't be:
+it is a father talking to his own children, so it is in the language he
+actually says those words in, and it is never getting translated. The
+three lines land one at a time through the punchline, each with its own
+firework salvo so the sky punctuates them, and the souvenir Papa heads
+say the same things as the kids catch them.
+
+Length was the other half. The kaboom act went 2.6s -> 6.2s so the lines
+have air between them instead of being crammed over the blast, and the
+finish afterwards went 4s -> 7s, because after twelve seconds of routine
+there is still a skyful of stars and souvenirs to hoover up - and the
+victory lap comes after THAT. The routine is 15.7 seconds now, the
+longest thing in the game bar the finale, and the suite pins both the
+minimum length and the exact French.
+
 ## 9. What I'd do next
 
 Roughly in value order:

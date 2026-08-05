@@ -1264,52 +1264,41 @@ function renderPaintTab(panel){
     return g;
   };
 
-  /*
-   * The free squadron colours live here too, because two colour pickers was
-   * genuinely confusing: the PILOT tab used to have its own. One home for
-   * every way your ship can look, and everything applies instantly.
-   */
-  head("SQUADRON COLOURS — free, tap to wear");
-  const swRow = document.createElement("div");
-  swRow.className = "color-row shop-swatches";
-  SHIP_COLORS.forEach(hex => {
-    const sw = document.createElement("div");
-    sw.className = "swatch" + (hex === profile.shipColor ? " selected" : "");
-    sw.style.background = hex;
-    click(sw, () => { profile.shipColor = hex; P.save(profile); audio.play("uiClick");
-                      renderArmory(); renderMenu(); });
-    swRow.appendChild(sw);
-  });
-  wrap.appendChild(swRow);
-
   head("PAINT JOBS — your whole ship, everywhere, instantly");
   const pg = grid();
-  PAINTS.forEach(pt => {
-    const has = owned.paints.includes(pt.id);
-    if(pt.secret && !has) return;               // the shop doesn't know about it
-    const on = profile.shipColor === pt.hex;
+  /*
+   * One shelf, one kind of card. The free squadron colours go in the SAME
+   * grid as the paid paints - same ship, same size, same button - just
+   * marked FREE. A colour is a colour; keeping the free ones in a separate
+   * row of little dots made them read as a different, lesser thing.
+   */
+  const paintCard = (name, hex, cost, id) => {
+    const free = cost == null;
+    const has = free || owned.paints.includes(id);
+    const on = profile.shipColor === hex;
     const card = document.createElement("div");
     card.className = "paint-card" + (on ? " on" : "");
     const cv = document.createElement("canvas");
     cv.width = 120; cv.height = 84;
     card.appendChild(cv);
     const c = cv.getContext("2d");
-    if(c) SF.shipart.drawShip(c, 60, 46, 66, { color: pt.hex, levels, t: 0.6, tune: profile.tune, decal: profile.decal });
+    if(c) SF.shipart.drawShip(c, 60, 46, 66,
+      { color: hex, levels, t: 0.6, tune: profile.tune, decal: profile.decal });
     const nm = document.createElement("div");
     nm.className = "paint-name";
-    nm.textContent = pt.name;
+    nm.textContent = name;
     card.appendChild(nm);
     const btn = document.createElement("button");
-    btn.className = "small-btn";
-    btn.textContent = on ? "WEARING IT" : has ? "WEAR IT" : money(pt.cost);
-    btn.disabled = on || (!has && profile.money < pt.cost);
+    btn.className = "small-btn" + (free && !on ? " free-btn" : "");
+    btn.textContent = on ? "WEARING IT" : has ? (free ? "FREE — WEAR IT" : "WEAR IT") : money(cost);
+    btn.disabled = on || (!has && profile.money < cost);
     click(btn, () => {
       if(!has){
-        profile.money -= pt.cost;
-        owned.paints.push(pt.id);
+        profile.money -= cost;
+        owned.paints.push(id);
         audio.play("uiBuy");
       } else audio.play("uiClick");
-      profile.shipColor = pt.hex;
+      profile.shipColor = hex;
       P.save(profile);
       // Purchase TIMESTAMP, not a deadline - the hangar loop derives its
       // flash from (now - celebrate), and a future stamp turns the radius
@@ -1319,6 +1308,13 @@ function renderPaintTab(panel){
     });
     card.appendChild(btn);
     pg.appendChild(card);
+  };
+  const FREE_NAMES = ["SQUADRON BLUE","SQUADRON RED","SQUADRON GREEN",
+                      "SQUADRON PURPLE","SQUADRON AMBER","SQUADRON PINK"];
+  SHIP_COLORS.forEach((hex, i) => paintCard(FREE_NAMES[i] || "SQUADRON", hex, null, null));
+  PAINTS.forEach(pt => {
+    if(pt.secret && !owned.paints.includes(pt.id)) return;   // the shop hides the secret
+    paintCard(pt.name, pt.hex, pt.secret ? null : pt.cost, pt.id);
   });
 
   head("ENGINE TRAILS — burns behind you in every fight");
@@ -1380,7 +1376,7 @@ function renderPaintTab(panel){
     tg.appendChild(card);
   });
 
-  head("NOSE ART — painted on, part of the ship");
+  head("PAINT PATTERNS — over the whole hull, impossible to miss");
   const dg = grid();
   SF.config.DECALS.forEach(dc => {
     const has = owned.decals.includes(dc.id);
@@ -1401,7 +1397,7 @@ function renderPaintTab(panel){
     card.appendChild(ds);
     const btn = document.createElement("button");
     btn.className = "small-btn";
-    btn.textContent = on ? "PAINTED ON" : has ? "PAINT IT" : money(dc.cost);
+    btn.textContent = on ? "WEARING IT" : has ? "PAINT IT" : money(dc.cost);
     btn.disabled = on || (!has && profile.money < dc.cost);
     click(btn, () => {
       if(!has){ profile.money -= dc.cost; owned.decals.push(dc.id); audio.play("uiBuy"); }
@@ -1417,10 +1413,10 @@ function renderPaintTab(panel){
   // Bare metal: nose art can always come off again.
   const plain = document.createElement("div");
   plain.className = "paint-card" + (!profile.decal ? " on" : "");
-  plain.innerHTML = `<div class="trail-strip"></div><div class="paint-name">NO ART</div>`;
+  plain.innerHTML = `<div class="trail-strip"></div><div class="paint-name">PLAIN HULL</div>`;
   const plainBtn = document.createElement("button");
   plainBtn.className = "small-btn";
-  plainBtn.textContent = !profile.decal ? "CLEAN HULL" : "SCRUB IT OFF";
+  plainBtn.textContent = !profile.decal ? "WEARING IT" : "STRIP IT OFF";
   plainBtn.disabled = !profile.decal;
   click(plainBtn, () => { profile.decal = null; P.save(profile); audio.play("uiClick"); renderArmory(); });
   plain.appendChild(plainBtn);

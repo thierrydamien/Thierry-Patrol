@@ -30,12 +30,23 @@ const { VW, VH } = SF.entityConst;
 const fx = SF.fx;
 const audio = SF.audio;
 
+/*
+ * What Papa actually says to his kids, in the language he says it in. The
+ * game is English everywhere else; this one moment is theirs, so it is not
+ * translated and never will be.
+ */
+const FRENCH = ["Bien joué !", "Amuse-toi bien !", "Je t'aime !"];
+
 const ACTS = [
   { id:"ow",     dur: 2.0 },
   { id:"back",   dur: 3.0 },
   { id:"split",  dur: 2.6 },
   { id:"merge",  dur: 1.9 },
-  { id:"kaboom", dur: 2.6 },
+  // Kaboom got longer on request: "make sure the ending is long enough so
+  // they can enjoy it and have a good laugh." It now carries three spoken
+  // lines (see FRENCH below) with real air between them, not a blast that
+  // is over before the joke lands.
+  { id:"kaboom", dur: 6.2 },
 ];
 const TOTAL = ACTS.reduce((n, a) => n + a.dur, 0);
 
@@ -210,11 +221,25 @@ function update(dt, boss, world){
     show.crownV += 200*dt;
     show.crownY += show.crownV*dt;
     show.crownX += Math.sin(show.t*3)*40*dt;
+    // Papa's own goodbye, spoken the way he actually talks to his kids: in
+    // French, one line at a time, with room to breathe between them rather
+    // than crammed in over the blast. Each line gets its own firework salvo
+    // so the sky punctuates it.
+    FRENCH.forEach((line, i) => {
+      const at = 0.20 + i*0.27;
+      if(a.k > at) once("fr" + i, () => {
+        fx.text(VW/2, VH*(0.52 + i*0.06), line, "#ffe9a8", 26, true);
+        audio.play("papaWink");
+        for(let f = 0; f < 3; f++)
+          fx.firework(VW*(0.25 + i*0.25) + rand(-30,30), VH*(0.20 + (i%2)*0.1),
+                      ["#ffd23f","#ff4fd8","#4ade80"][i]);
+      });
+    });
   }
 
   if(show.t >= TOTAL){ show = null; return true; }
   return false;
 }
 
-SF.papadeath = { reset, begin, active, act, state, update, TOTAL, ACTS };
+SF.papadeath = { reset, begin, active, act, state, update, TOTAL, ACTS, FRENCH };
 })();

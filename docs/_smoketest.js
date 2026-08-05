@@ -156,6 +156,23 @@ async function run(){
     !/bannerSub = /.test(
       fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")
         .split("function startMission")[1].split("function ")[0]));
+  /*
+   * Mission one is the entire funnel: if a seven-year-old doesn't love it,
+   * there is no mission two. So it gets its own rules, asserted.
+   */
+  {
+    const m1 = SF.missions.MISSIONS[0];
+    check("the first flight starts shooting in the first two seconds",
+      m1.waves[0].t <= 2);
+    check("the first rescue lands inside the first half-minute",
+      m1.waves.some(w => w.type === "carrier" && w.t <= 30));
+    check("the first flight has something to save, more than once",
+      m1.waves.filter(w => w.type === "carrier").length >= 3);
+    check("no star on the first flight is lost by being touched",
+      !m1.objectives.includes("noDamage") && !m1.objectives.includes("keepLives"));
+    check("the first flight only ever sends the gentlest enemy",
+      m1.waves.every(w => w.type === "grunt" || w.type === "carrier"));
+  }
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
   check("every wave references a real enemy type",
@@ -1257,7 +1274,9 @@ async function run(){
 
     const firstPaint = SF.config.PAINTS[0];
     const moneyBefore = SF.profile.load(activeName).money;
-    clickEl(qa(".paint-card")[0].querySelector("button"));
+    // Free squadron colours lead the grid now, so target the paid card by name.
+    clickEl(Array.from(qa(".paint-card"))
+      .find(c => c.textContent.indexOf(firstPaint.name) >= 0).querySelector("button"));
     const afterPaint = SF.profile.load(activeName);
     check("buying a paint costs money and repaints the ship on the spot",
       afterPaint.money === moneyBefore - firstPaint.cost &&
@@ -1290,17 +1309,26 @@ async function run(){
 
     /* One colour home: the free squadron colours live in the shop now. */
     clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
-    check("the free squadron colours live in the style shop",
-      qa(".shop-swatches .swatch").length === SF.config.SHIP_COLORS.length);
-    check("nose art and firework shows are on the shelves",
-      Array.from(qa(".paint-name")).some(x => /THUNDERBOLT/.test(x.textContent)) &&
+    // Free colours are CARDS in the same grid now, not a lesser row of dots.
+    check("the free squadron colours are full cards, marked free",
+      Array.from(qa(".paint-name")).filter(x => /SQUADRON/.test(x.textContent)).length
+        === SF.config.SHIP_COLORS.length &&
+      Array.from(qa(".paint-card button")).some(b => /FREE/.test(b.textContent)) &&
+      qa(".shop-swatches").length === 0);
+    check("patterns and firework shows are on the shelves",
+      Array.from(qa(".paint-name")).some(x => /RACING STRIPES/.test(x.textContent)) &&
       Array.from(qa(".paint-name")).some(x => /GOLD RAIN/.test(x.textContent)));
+    // The whole point of v2: a pattern must cover enough hull to SEE.
+    check("every pattern paints the whole hull, not a speck",
+      SF.config.DECALS.length >= 4 &&
+      /function hullClip/.test(fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8")) &&
+      !/DECAL_ART/.test(fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8")));
 
-    const bolt = Array.from(qa(".paint-card")).find(c => /THUNDERBOLT/.test(c.textContent));
+    const bolt = Array.from(qa(".paint-card")).find(c => /RACING STRIPES/.test(c.textContent));
     clickEl(bolt.querySelector("button"));
     const afterDecal = SF.profile.load(activeName);
-    check("a bought decal is painted on and remembered",
-      afterDecal.decal === "bolt" && afterDecal.cosmetics.decals.includes("bolt"));
+    check("a bought pattern is painted on and remembered",
+      afterDecal.decal === "stripes" && afterDecal.cosmetics.decals.includes("stripes"));
     clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
     const gold = Array.from(qa(".paint-card")).find(c => /GOLD RAIN/.test(c.textContent));
     clickEl(gold.querySelector("button"));
@@ -1314,7 +1342,7 @@ async function run(){
     check("classic is free and every other show is priced",
       SF.config.FIREWORKS.filter(f => !f.free).every(f => f.cost > 0 && f.colors.length >= 4) &&
       SF.config.FIREWORKS.some(f => f.free && f.id === "classic"));
-    check("a decal draws without touching the hull code", (() => {
+    check("every pattern draws without touching the hull code", (() => {
       try {
         const cv = window.document.createElement("canvas");
         SF.config.DECALS.forEach(d =>
@@ -1365,6 +1393,17 @@ async function run(){
       check("papa's send-off is a five-act routine, not a bang",
         D.ACTS.length === 5 && D.TOTAL > 10 &&
         D.ACTS.map(x => x.id).join(",") === "ow,back,split,merge,kaboom");
+      // Long enough to enjoy: the punchline alone outlasts a normal boss
+      // death, and the finish after it is longer still.
+      check("the ending is long enough to laugh at",
+        D.ACTS.find(x => x.id === "kaboom").dur >= 5 && D.TOTAL >= 15 &&
+        /run\.finishTimer = 7\.0/.test(
+          fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+      check("papa says goodbye in French, the way he talks to his kids",
+        D.FRENCH.length === 3 &&
+        D.FRENCH[0] === "Bien joué !" && D.FRENCH[1] === "Amuse-toi bien !" &&
+        D.FRENCH[2] === "Je t'aime !" &&
+        /Je t'aime/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
       const fake = { x: 300, y: 300, def: SF.missions.BOSSES.papa, wobble: 0 };
       D.begin(fake);
       check("the routine starts on the first fake-out", D.active() && D.act().id === "ow");
