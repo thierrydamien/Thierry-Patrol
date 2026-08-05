@@ -2042,6 +2042,40 @@ final legitimate bullet of the fight as a failure. Waiting on
 `bossCleared` before judging turned "1 bullet" into the correct 0. When a
 probe measures a transition, it has to wait for the transition.
 
+## 8bk. The five little Papas fight back
+
+"When it becomes 5 little faces, shouldn't they need to be killed instead
+of disappearing automatically?" Yes - and the question exposed the weakest
+moment in the best gag in the game: the funniest thing on screen was the
+one thing the player wasn't allowed to touch. It was a cutscene wearing a
+boss fight's clothes.
+
+They are shootable now. Two hits each, they flash pinker on the last one
+so you can see which still need a tap, and popping one gives a bang, a
+squeak, a taunt ("OI!", "NOT THE FACE!", "RUDE!") and a star.
+
+The valve is the same one this project keeps reaching for: **pop all five
+and it cuts straight to the punchline; ignore them and they merge anyway.**
+Comic timing must never depend on a seven-year-old's aim - a kid who can't
+hit a bouncing head still gets the whole routine on schedule, and a kid who
+empties the magazine into all five is rewarded with a faster, louder
+finish. And if you DO wipe them out, he reassembles regardless, which turns
+the reward into a better joke than sparing them ever was: "YOU CAN'T GET
+RID OF ME!"
+
+One real bug fell out of the test. Jumping to the merge by summing the act
+durations - `2.0 + 3.0 + 2.6` - lands one ULP BELOW the boundary, so `act()`
+reported "split at 100%" instead of "merge at 0%". In the running game it
+self-corrected on the next frame and would never have been noticed; the
+test noticed. Act jumps now go through `actStart(id)`, which nudges past
+the boundary rather than trusting float addition to hit it exactly.
+
+Process note: two edits in this round silently did nothing because the
+shell had been left inside `docs/` by an earlier `cd`, so relative paths
+resolved to `docs/docs/...`. The heredocs printed their success messages
+regardless. Absolute paths for file surgery, always - and verify the edit
+landed rather than trusting the script's own report.
+
 ## 9. What I'd do next
 
 Roughly in value order:

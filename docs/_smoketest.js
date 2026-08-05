@@ -1488,6 +1488,80 @@ async function run(){
       check("every act runs, in order, and it finishes",
         done && seen.size === 5 && seen.has("split") && seen.has("kaboom"));
       check("he really does split into five of himself", minisSeen === 5);
+
+      /*
+       * The five are SHOOTABLE - watching the best gag in the game happen to
+       * you is not as good as being in it. With the usual valve: popping all
+       * five cuts to the punchline, running out of time merges them anyway,
+       * so comic timing never depends on a seven-year-old's aim.
+       */
+      const runToSplit = () => {
+        D.reset(); W4.pickups.killAll(); W4.bullets.killAll();
+        D.begin(fake);
+        let g = 0;
+        while(g++ < 3000){
+          const a = D.act();
+          if(a && a.id === "split" && D.state().minis.length) break;
+          D.update(1/60, fake, W4);
+        }
+        return D.state();
+      };
+      check("a mini papa can be shot down", (() => {
+        const st = runToSplit();
+        const m = st.minis[0];
+        const starsWas = W4.pickups.items.filter(p => p.alive && p.kind === "star").length;
+        // Two taps each: park rounds on it until it pops.
+        for(let i = 0; i < 6 && m.alive; i++){
+          const b = W4.bullets.spawn();
+          b.x = m.x; b.y = m.y; b.vx = 0; b.vy = -700; b.r = 5; b.dmg = 1;
+          b.pierce = 0; b.homing = 0; b.tier = 1; b.age = 0; b.alive = true;
+          b.hitBoss = false; b.hitWeak = false;
+          D.update(1/60, fake, W4);
+        }
+        const starsNow = W4.pickups.items.filter(p => p.alive && p.kind === "star").length;
+        return !m.alive && starsNow > starsWas;      // popped, and it paid
+      })());
+      check("popping all five cuts straight to the punchline", (() => {
+        const st = runToSplit();
+        st.minis.forEach(m => {
+          for(let i = 0; i < 6 && m.alive; i++){
+            const b = W4.bullets.spawn();
+            b.x = m.x; b.y = m.y; b.vx = 0; b.vy = -700; b.r = 5; b.dmg = 1;
+            b.pierce = 0; b.homing = 0; b.tier = 1; b.age = 0; b.alive = true;
+            b.hitBoss = false; b.hitWeak = false;
+            D.update(1/60, fake, W4);
+          }
+        });
+        // Read the state BEFORE stepping again: the merge deliberately
+        // revives them ("YOU CAN'T GET RID OF ME!"), so one extra update
+        // would undo exactly what this is checking.
+        const allDead = st.minis.every(m => !m.alive);
+        const a = D.act();
+        return allDead && !!a && a.id === "merge";
+      })());
+      check("ignoring them merges them anyway - the joke never stalls", (() => {
+        const st = runToSplit();
+        let g = 0, a = D.act();
+        while(g++ < 3000 && a && a.id === "split"){    // never fire a shot
+          D.update(1/60, fake, W4);
+          a = D.act();
+        }
+        return st.minis.every(m => m.alive) && !!a && a.id === "merge";
+      })());
+      check("he reassembles even if you popped every one", (() => {
+        const st = runToSplit();
+        st.minis.forEach(m => { m.alive = false; });
+        D.update(1/60, fake, W4);                       // triggers the early jump
+        let g = 0, a = D.act();
+        while(g++ < 600 && a && a.id !== "merge"){ D.update(1/60, fake, W4); a = D.act(); }
+        D.update(1/60, fake, W4);                       // merge's once() fires
+        return st.minis.every(m => m.alive);            // pulled himself back together
+      })());
+      D.reset(); W4.bullets.killAll(); W4.pickups.killAll();
+      // Re-run the full routine so the shower checks below see a real finish.
+      D.begin(fake);
+      { let g = 0, fin = false;
+        while(!fin && g++ < 3000) fin = D.update(1/60, fake, W4); }
       const after = W4.pickups.items.filter(p => p.alive);
       check("the punchline showers stars AND souvenir papas",
         after.filter(p => p.kind === "star").length >= 30 &&

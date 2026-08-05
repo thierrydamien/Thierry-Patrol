@@ -1902,13 +1902,17 @@ function drawPapaDeath(ctx, boss, bx, by, S, timeMs){
 
   } else if(a.id === "split" || a.id === "merge"){
     st.minis.forEach((m, i) => {
+      if(!m.alive) return;          // popped: it is gone until he reassembles
       ctx.save();
       ctx.translate(m.x, m.y);
       ctx.rotate(m.rot);
+      // A mini on its last hit wears the damage, so you can see which ones
+      // still need a tap.
+      const hurt = m.hp <= 1 ? 0.55 : 0.25;
       // On the merge they swell together into one enormous head.
       const grow = a.id === "merge" ? 1 + a.k*a.k*4.2 : 1;
       ctx.scale(grow, grow);
-      papaHead(ctx, m.r, { blush: 0.25, crown: i === 0 });
+      papaHead(ctx, m.r, { blush: hurt, crown: i === 0 });
       ctx.restore();
     });
     if(a.id === "merge" && a.k > 0.82){

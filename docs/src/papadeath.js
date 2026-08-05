@@ -73,6 +73,36 @@ function act(){
   return null;
 }
 
+/*
+ * Where a named act begins, nudged a hair past the boundary. Summing the
+ * durations by hand looks equivalent and isn't: 2.0 + 3.0 + 2.6 lands one
+ * ULP BELOW the merge boundary, so act() reported "split at 100%" instead
+ * of "merge at 0%". Anything that jumps between acts goes through here.
+ */
+function actStart(id){
+  let t = 0;
+  for(let i = 0; i < ACTS.length; i++){
+    if(ACTS[i].id === id) return t + 1e-4;
+    t += ACTS[i].dur;
+  }
+  return t;
+}
+
+/** One mini popped: a small bang, a squeak, a taunt and a star. */
+function popMini(m, world){
+  fx.explosion(m.x, m.y, 70, "#ffd23f", true);
+  fx.ring(m.x, m.y, 90, "#ffffff", 3, 0.35);
+  fx.shake(8);
+  audio.play("papaPop");
+  fx.text(m.x, m.y - 20,
+          ["OI!","NOT THE FACE!","OW!","RUDE!","HEY!"][Math.floor(rand(0, 5))],
+          "#ffd23f", 18, true);
+  if(world && world.spawnPickup){
+    const st = world.spawnPickup("star", m.x, m.y);
+    st.vx = rand(-60, 60); st.vy = rand(-40, 20);
+  }
+}
+
 /** Fires once per act, whatever the frame rate. */
 function once(key, fn){
   if(show.said[key]) return;
@@ -143,19 +173,50 @@ function update(dt, boss, world){
           x: show.puffX, y: show.puffY,
           vx: Math.cos(ang)*rand(180, 340), vy: Math.sin(ang)*rand(120, 260),
           spin: rand(-6, 6), rot: rand(0, TAU), r: 34,
+          hp: 2, alive: true,        // two taps each: shootable, never a chore
         });
       }
     });
-    // Bouncy-ball physics, and they bonk off each other with a squeak.
+    /*
+     * They are SHOOTABLE. Watching the best gag in the game happen to you is
+     * not as good as being in it - so the five bounce, and you pop them.
+     *
+     * The valve, same as everywhere else in this project: popping all five
+     * cuts straight to the punchline, but running out of time merges them
+     * anyway. The comedy timing never depends on a seven-year-old's aim, and
+     * a kid who empties the magazine into all five gets rewarded with a
+     * faster, louder finish rather than the same wait.
+     */
+    const bs = world && world.bullets ? world.bullets.items : null;
     show.minis.forEach((m, i) => {
+      if(!m.alive) return;
       m.vy += 260*dt;
       m.x += m.vx*dt; m.y += m.vy*dt;
       m.rot += m.spin*dt;
       if(m.x < m.r || m.x > VW-m.r){ m.vx *= -0.92; m.x = clamp(m.x, m.r, VW-m.r); audio.play("papaBoing"); }
       if(m.y > VH-m.r-40){ m.y = VH-m.r-40; m.vy *= -0.86; audio.play("papaBoing"); }
       if(m.y < m.r+70){ m.y = m.r+70; m.vy *= -0.86; }
+      // Player rounds pop them.
+      if(bs){
+        for(let k = 0; k < bs.length; k++){
+          const b = bs[k];
+          if(!b.alive) continue;
+          const rr = b.r + m.r;
+          if((b.x-m.x)*(b.x-m.x) + (b.y-m.y)*(b.y-m.y) < rr*rr){
+            b.alive = false;
+            if(--m.hp <= 0){
+              m.alive = false;
+              popMini(m, world);
+              break;
+            }
+            fx.sparks(b.x, b.y, 6, "#ffd23f", 150);
+            audio.play("papaBoing");
+          }
+        }
+      }
       for(let j = i+1; j < show.minis.length; j++){
         const o = show.minis[j];
+        if(!o.alive) continue;
         const dx = o.x-m.x, dy = o.y-m.y, d = Math.hypot(dx, dy);
         if(d > 0.01 && d < m.r + o.r){
           const nx = dx/d, ny = dy/d, push = (m.r + o.r - d)/2;
@@ -165,11 +226,23 @@ function update(dt, boss, world){
         }
       }
     });
+    // All five popped: skip the rest of the bouncing and get to the joke.
+    if(show.minis.length && show.minis.every(m => !m.alive)){
+      once("allpopped", () => {
+        fx.text(VW/2, VH*0.34, "GOT THEM ALL!", "#4ade80", 30, true);
+        show.t = actStart("merge");
+      });
+    }
 
   } else if(a.id === "merge"){
     once("merge", () => {
       audio.play("papaMerge");
-      fx.text(VW/2, VH*0.24, "UH OH", "#ffffff", 30, true);
+      // If the player popped them all, he pulls himself back together anyway -
+      // which is a better punchline than sparing them ever was.
+      const wiped = show.minis.length && show.minis.every(m => !m.alive);
+      fx.text(VW/2, VH*0.24, wiped ? "YOU CAN'T GET RID OF ME!" : "UH OH",
+              "#ffffff", wiped ? 26 : 30, true);
+      show.minis.forEach(m => { m.alive = true; });   // reassembling
     });
     // They rush back to the middle and become one enormous head.
     show.minis.forEach(m => {
