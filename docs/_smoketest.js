@@ -1310,11 +1310,14 @@ async function run(){
     /* One colour home: the free squadron colours live in the shop now. */
     clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
     // Free colours are CARDS in the same grid now, not a lesser row of dots.
-    check("the free squadron colours are full cards, marked free",
-      Array.from(qa(".paint-name")).filter(x => /SQUADRON/.test(x.textContent)).length
-        === SF.config.SHIP_COLORS.length &&
-      Array.from(qa(".paint-card button")).some(b => /FREE/.test(b.textContent)) &&
-      qa(".shop-swatches").length === 0);
+    // One list of colours, free and paid intermixed under a single heading -
+    // no separate section, no separate naming family, no row of dots.
+    check("free and paid colours share one grid and one heading",
+      qa(".shop-swatches").length === 0 &&
+      Array.from(qa(".paint-name")).filter(x => /SQUADRON/.test(x.textContent)).length === 0 &&
+      Array.from(qa(".paint-card button")).filter(b => /FREE/.test(b.textContent)).length >= 5 &&
+      Array.from(qa("#armoryPanel .panel-label"))
+        .filter(h => /COLOUR|PAINT JOBS/.test(h.textContent)).length === 1);
     check("patterns and firework shows are on the shelves",
       Array.from(qa(".paint-name")).some(x => /RACING STRIPES/.test(x.textContent)) &&
       Array.from(qa(".paint-name")).some(x => /GOLD RAIN/.test(x.textContent)));
@@ -1444,11 +1447,21 @@ async function run(){
     SF.game.state = "idle";
     SF.ui.show("screen-missions");
     tapSun(); tapSun(); tapSun(); tapSun(); tapSun();
-    check("the door is gone for good",
-      !(SF.game.run && SF.game.run.mission && SF.game.run.mission.vault && !SF.game.run.ended));
-    check("a sealed vault also refuses the back door", (() => {
+    check("the vault is replayable - tapping again opens it again", (() => {
+      SF.game.run.ended = true; SF.game.state = "idle";
+      tapSun(); tapSun(); tapSun(); tapSun(); tapSun();
+      return SF.game.run && SF.game.run.mission.vault === true && SF.game.state === "playing";
+    })());
+    check("the back door works too, on a pilot who already won the paint", (() => {
+      SF.game.run.ended = true; SF.game.state = "idle";
       SF.game.startMission("vault", "pilot");
-      return !(SF.game.run && SF.game.run.mission.vault && !SF.game.run.ended);
+      return SF.game.run && SF.game.run.mission.vault === true && SF.game.state === "playing";
+    })());
+    check("but the paint prize is only ever granted once", (() => {
+      SF.game.endMission(true);
+      const twice = SF.profile.load(activeName);
+      return twice.vaultDone === true &&
+             twice.cosmetics.paints.filter(p => p === "solar").length === 1;
     })());
   }
 

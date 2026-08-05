@@ -1945,6 +1945,49 @@ victory lap comes after THAT. The routine is 15.7 seconds now, the
 longest thing in the game bar the finale, and the suite pins both the
 minimum length and the exact French.
 
+## 8bg. The changes WERE shipped - the cache was lying
+
+"Nose art is still the same" and "there are still squadron colours and
+paint jobs even though I asked you to merge them." Both had already been
+fixed on `main` - checked directly against the deployed commit, liveries
+present, the old swatch row gone, one PAINT JOBS heading. The bug was not
+in the game. It was that the customer's device was still running
+yesterday's code.
+
+The service worker's `networkFirst` called plain `fetch(req)`, which is
+NOT actually network-first: it still consults the browser's own HTTP
+cache, and GitHub Pages serves JavaScript with a ten-minute max-age. A
+deploy could be live, the worker could be doing exactly what its own
+comment claimed, and the player would still be handed old code - which is
+precisely what happened, twice, invisibly. Fixed with `cache: "reload"`,
+which forces a real round-trip to the server instead of trusting a cache
+entry that has no idea a deploy happened.
+
+Two things now exist so this can never again be a silent, undiagnosable
+gap: the cache name bumped (`patrol-v2`), which purges every stale entry
+on activate, and a build stamp in Settings - `build 2026-08-05.3 · tap to
+refresh` - that wipes every cache, unregisters the worker, and hard-
+reloads. "Is the new version actually on this device?" now has an answer
+a parent can read and a button that fixes it without a laptop.
+
+Separately, while re-verifying: the free colours WERE already merged into
+one grid under one heading, but they were still named "SQUADRON BLUE" etc
+- a family name that read as a separate, lesser set even sharing a shelf
+with LASER LIME and DEEP AQUA. Renamed into the same register (SKY BLUE,
+CRIMSON, JADE...) so nothing marks them as a different kind of thing
+except the green FREE button.
+
+## 8bh. The Star Vault, made replayable
+
+"I want to be able to re-do the secret level. Make it so you can do it as
+many times as you want." The five-tap door on the map used to lock itself
+after one win (`profile.vaultDone`) - both the tap ritual and the direct
+mission start refused a second visit. Both gates are gone. `vaultDone`
+still means exactly one thing now: whether the SOLAR GOLD paint has been
+won, because that prize stays a genuine one-off. Everything else - the
+star rain, KING PAPA, all five acts of his death, his French goodbye -
+plays in full on every single visit.
+
 ## 9. What I'd do next
 
 Roughly in value order:

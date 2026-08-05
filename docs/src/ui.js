@@ -1309,9 +1309,14 @@ function renderPaintTab(panel){
     card.appendChild(btn);
     pg.appendChild(card);
   };
-  const FREE_NAMES = ["SQUADRON BLUE","SQUADRON RED","SQUADRON GREEN",
-                      "SQUADRON PURPLE","SQUADRON AMBER","SQUADRON PINK"];
-  SHIP_COLORS.forEach((hex, i) => paintCard(FREE_NAMES[i] || "SQUADRON", hex, null, null));
+  /*
+   * Named in the same register as the paid paints (LASER LIME, DEEP AQUA...)
+   * rather than "SQUADRON BLUE". Calling the free ones by a family name made
+   * them read as a separate, lesser set even once they shared the grid - the
+   * shelf is one list of colours, some of which happen to cost nothing.
+   */
+  const FREE_NAMES = ["SKY BLUE","CRIMSON","JADE","VIOLET","AMBER","ROSE"];
+  SHIP_COLORS.forEach((hex, i) => paintCard(FREE_NAMES[i] || "CLASSIC", hex, null, null));
   PAINTS.forEach(pt => {
     if(pt.secret && !owned.paints.includes(pt.id)) return;   // the shop hides the secret
     paintCard(pt.name, pt.hex, pt.secret ? null : pt.cost, pt.id);
@@ -2544,6 +2549,31 @@ function openSettings(){
 }
 click($("settingsBtnPicker"), openSettings);
 click($("settingsBtnMenu"), openSettings);
+/*
+ * THE BUILD STAMP. A shipped change was invisible on the device for two
+ * rounds because the browser was serving cached JavaScript, and there was
+ * no way to tell from the iPad what version was actually running. Now
+ * there is - and tapping it wipes every cache and hard-reloads, which is
+ * the fix a parent can apply without a laptop.
+ */
+const BUILD = "2026-08-05.3";
+(function buildStamp(){
+  const el = $("setBuild");
+  if(!el) return;
+  el.textContent = "build " + BUILD + " · tap to refresh";
+  click(el, async () => {
+    el.textContent = "refreshing…";
+    try {
+      if(window.caches) (await caches.keys()).forEach(k => caches.delete(k));
+      if(navigator.serviceWorker){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+    } catch(e){ /* a refresh must never be blocked by cleanup failing */ }
+    location.reload(true);
+  });
+})();
+
 click($("settingsCloseBtn"), () => {
   $("settingsOverlay").classList.add("hidden");
   // The in-game mute button shows the same master switch - keep it honest.
@@ -2582,15 +2612,18 @@ click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
  * THE STAR VAULT's front door. Five quick taps on the red giant at the top
  * of the campaign map - the sun painted into the sky, not a button, not a
  * node, no glow, no hint anywhere in the game. Deliberately undiscoverable
- * by accident: the customer hands the ritual out personally. Once a pilot
- * has won the vault, the door is gone for good on that profile.
+ * by accident: the customer hands the ritual out personally. Replayable on
+ * request - "I want to be able to re-do the secret level, as many times as
+ * I want" - so the door never locks. Only the SOLAR GOLD paint is a
+ * one-time prize; the star rain, KING PAPA and his French goodbye happen
+ * in full every single time.
  */
 (function starVaultDoor(){
   const pad = $("campaignNodes");
   if(!pad) return;
   let taps = [];
   pad.addEventListener("pointerdown", ev => {
-    if(!profile || profile.vaultDone) return;
+    if(!profile) return;
     const cv = $("campaignCanvas");
     if(!cv) return;
     const r = pad.getBoundingClientRect();

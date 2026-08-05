@@ -8,7 +8,12 @@
  * So: first visit online caches everything it touches, and after that the
  * game works in the car, on a plane, anywhere.
  */
-const CACHE = "patrol-v1";
+/*
+ * Bumping this name purges every older cache on activate. Bump it whenever
+ * a deploy MUST be picked up - it is the blunt instrument that guarantees a
+ * clean slate.
+ */
+const CACHE = "patrol-v2";
 
 self.addEventListener("install", e => { self.skipWaiting(); });
 
@@ -33,7 +38,20 @@ self.addEventListener("fetch", e => {
 async function networkFirst(req){
   const cache = await caches.open(CACHE);
   try {
-    const fresh = await fetch(req);
+    /*
+     * `fetch(req)` alone is NOT network-first in practice: it still consults
+     * the browser's own HTTP cache, and GitHub Pages serves code with a
+     * ten-minute max-age. So a deploy could be live, this worker could be
+     * doing exactly what it says, and the player would still be handed
+     * yesterday's JavaScript - which is precisely what happened: a shipped
+     * change was invisible on the device for want of one option.
+     *
+     * `cache: "reload"` forces a real revalidation against the server, which
+     * is the only thing that makes "code is network-first" true.
+     */
+    const fresh = await fetch(new Request(req.url, {
+      cache: "reload", credentials: "same-origin", mode: "same-origin",
+    }));
     if(fresh && fresh.ok) cache.put(req, fresh.clone());
     return fresh;
   } catch(err){

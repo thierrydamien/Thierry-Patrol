@@ -254,7 +254,9 @@ function startMission(missionIndex, difficultyId){
   const test = missionIndex === "test";
   const rush = missionIndex === "rush";
   const vault = missionIndex === "vault";
-  if(vault && profile.vaultDone) return;   // the vault opens exactly once
+  // Replayable on request: the door never locks. Only the SOLAR GOLD paint
+  // is one-time (see endMission) - `vaultDone` still gates that, it just no
+  // longer gates the mission itself.
   const mission = daily ? SF.daily.build()
                 : test  ? buildTestRange()
                 : rush  ? buildBossRush()

@@ -994,3 +994,12 @@ body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s
 #screen-armory.unpinned .armory-top { position: static; box-shadow: none; }
 /* A free paint still gets a button, just not a price-shaped one. */
 .paint-card .free-btn { background: #4ade80; color:#08260f; }
+
+/* The build stamp: quiet, but always there when you need to know what is
+   actually running on the device. */
+.settings-build {
+  background:none; border:none; cursor:pointer;
+  font-family:inherit; font-size:11px; letter-spacing:1px;
+  color: rgba(255,255,255,0.35); padding:6px 10px; margin-top:2px;
+}
+.settings-build:active { color: var(--accent); }

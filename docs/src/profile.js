@@ -80,7 +80,7 @@ function blank(name){
     trail: null,
     decal: null,
     fireworks: "classic",
-    vaultDone: false,   // the Star Vault opens exactly once
+    vaultDone: false,   // true once SOLAR GOLD is won - the mission itself replays freely
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
     lastMission: 1, lastDifficulty: "pilot",
