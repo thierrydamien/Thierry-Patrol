@@ -181,7 +181,8 @@ class World {
       homingLvl: loadout.homingLvl, magnetRange: loadout.magnetRange,
       moneyMult: loadout.moneyMult, drones: loadout.drones, dps: loadout.dps || 0,
       crew: loadout.crew || [],
-      trailFx: loadout.trail || null,   // Paint Shop trail (`trail` is the engine afterimage)
+      trailFx: loadout.trail || null,   // Style Shop trail (`trail` is the engine afterimage)
+      decal: loadout.decal || null,
       bombs: loadout.bombs, bombsMax: loadout.bombs,
       overdrives: loadout.overdrives, overdrivesMax: loadout.overdrives,
       overdriveTime: loadout.overdriveTime, overdriveUntil: 0,

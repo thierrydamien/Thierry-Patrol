@@ -98,7 +98,8 @@ function buildLoadout(profile, difficulty){
     overdrives: lv("overdrive"),
     overdriveTime: 4 + lv("overdrive"),
     color: profile.shipColor,
-    trail: profile.trail || null,     // Paint Shop engine trail, burns in flight
+    trail: profile.trail || null,     // Style Shop engine trail, burns in flight
+    decal: profile.decal || null,     // Style Shop nose art, painted on the hull
     // The same levels object the hangar draws from, so the ship you fly is
     // the ship you built - every bought part visible in combat.
     levels: SF.shipart.levelsOf(profile),
@@ -955,7 +956,8 @@ function update(dt, timeMs){
     run.phaseTimer -= dt;
     run.fwTimer = (run.fwTimer || 0.001) - dt;
     if(run.fwTimer <= 0){
-      const FW = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"];
+      const FW = (SF.config.FIREWORK_BY_ID[game.profile.fireworks] ||
+                  SF.config.FIREWORKS[0]).colors;   // their bought show, or classic
       fx.firework(rand(70, VW-70), rand(VH*0.12, VH*0.45),
                   FW[Math.floor(rand(0, FW.length))]);
       audio.play("firework");
@@ -983,7 +985,8 @@ function update(dt, timeMs){
     run.phaseTimer -= dt;
     run.fwTimer = (run.fwTimer || 0.001) - dt;
     if(run.fwTimer <= 0){
-      const FW = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"];
+      const FW = (SF.config.FIREWORK_BY_ID[game.profile.fireworks] ||
+                  SF.config.FIREWORKS[0]).colors;   // their bought show, or classic
       fx.firework(rand(70, VW-70), rand(VH*0.15, VH*0.5),
                   FW[Math.floor(rand(0, FW.length))]);
       audio.play("firework");

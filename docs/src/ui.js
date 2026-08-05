@@ -154,7 +154,8 @@ function renderProfiles(){
     const ctx = card.querySelector("canvas").getContext("2d");
     if(ctx){
       SF.shipart.drawShip(ctx, 66, 68, 108,
-        { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false, tune: p.tune });
+        { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false,
+          tune: p.tune, decal: p.decal });
       // With an installed portrait, the pilot rides their card's corner.
       SF.pilotart.paint(ctx, 24, 24, 44, p);
     }
@@ -1117,6 +1118,7 @@ function drawCampaign(){
   const bob = Math.sin(t*1.4)*3;
   SF.shipart.drawShip(ctx, px(here) + side*84, py(here) + 30 + bob, 52, {
     color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t, tune: profile.tune,
+    decal: profile.decal,
   });
   ctx.textAlign = "left";
 }
@@ -1135,7 +1137,7 @@ let armoryTab = "guns";
 /** Tabs: the four shelves, then the parts ladder, then everything about you. */
 function armoryTabs(){
   return CATEGORIES.map(c => ({ id:c.id, icon:c.icon, name:c.name, color:c.color }))
-    .concat([{ id:"paint", icon:"🎨", name:"PAINT SHOP", color:"#ff4fd8" },
+    .concat([{ id:"paint", icon:"🎨", name:"STYLE SHOP", color:"#ff4fd8" },
              { id:"parts", icon:"🔧", name:"MY SHIP", color:"#8fd3a7" },
              { id:"pilot", icon:"👤", name:"PILOT",   color:"#c9a7ff" }]);
 }
@@ -1176,6 +1178,11 @@ function renderArmory(){
     click(el, () => { armoryTab = t.id; renderArmory(); });
     tabs.appendChild(el);
   });
+
+  // Browsing tabs don't pin the ship bay: on STYLE SHOP and MY SHIP the
+  // cards already show the ship, and a sticky bay turned scrolling into
+  // peering through a letterbox.
+  $("screen-armory").classList.toggle("unpinned", armoryTab === "paint" || armoryTab === "parts");
 
   const panel = $("armoryPanel");
   panel.innerHTML = "";
@@ -1257,6 +1264,24 @@ function renderPaintTab(panel){
     return g;
   };
 
+  /*
+   * The free squadron colours live here too, because two colour pickers was
+   * genuinely confusing: the PILOT tab used to have its own. One home for
+   * every way your ship can look, and everything applies instantly.
+   */
+  head("SQUADRON COLOURS — free, tap to wear");
+  const swRow = document.createElement("div");
+  swRow.className = "color-row shop-swatches";
+  SHIP_COLORS.forEach(hex => {
+    const sw = document.createElement("div");
+    sw.className = "swatch" + (hex === profile.shipColor ? " selected" : "");
+    sw.style.background = hex;
+    click(sw, () => { profile.shipColor = hex; P.save(profile); audio.play("uiClick");
+                      renderArmory(); renderMenu(); });
+    swRow.appendChild(sw);
+  });
+  wrap.appendChild(swRow);
+
   head("PAINT JOBS — your whole ship, everywhere, instantly");
   const pg = grid();
   PAINTS.forEach(pt => {
@@ -1269,7 +1294,7 @@ function renderPaintTab(panel){
     cv.width = 120; cv.height = 84;
     card.appendChild(cv);
     const c = cv.getContext("2d");
-    if(c) SF.shipart.drawShip(c, 60, 46, 66, { color: pt.hex, levels, t: 0.6, tune: profile.tune });
+    if(c) SF.shipart.drawShip(c, 60, 46, 66, { color: pt.hex, levels, t: 0.6, tune: profile.tune, decal: profile.decal });
     const nm = document.createElement("div");
     nm.className = "paint-name";
     nm.textContent = pt.name;
@@ -1355,6 +1380,95 @@ function renderPaintTab(panel){
     tg.appendChild(card);
   });
 
+  head("NOSE ART — painted on, part of the ship");
+  const dg = grid();
+  SF.config.DECALS.forEach(dc => {
+    const has = owned.decals.includes(dc.id);
+    const on = profile.decal === dc.id;
+    const card = document.createElement("div");
+    card.className = "paint-card" + (on ? " on" : "");
+    const cv = document.createElement("canvas");
+    cv.width = 120; cv.height = 84;
+    card.appendChild(cv);
+    const c = cv.getContext("2d");
+    if(c) SF.shipart.drawShip(c, 60, 46, 66,
+      { color: profile.shipColor, levels, t: 0.6, tune: profile.tune, decal: dc.id });
+    const nm = document.createElement("div");
+    nm.className = "paint-name"; nm.textContent = dc.name;
+    card.appendChild(nm);
+    const ds = document.createElement("div");
+    ds.className = "paint-desc"; ds.textContent = dc.desc;
+    card.appendChild(ds);
+    const btn = document.createElement("button");
+    btn.className = "small-btn";
+    btn.textContent = on ? "PAINTED ON" : has ? "PAINT IT" : money(dc.cost);
+    btn.disabled = on || (!has && profile.money < dc.cost);
+    click(btn, () => {
+      if(!has){ profile.money -= dc.cost; owned.decals.push(dc.id); audio.play("uiBuy"); }
+      else audio.play("uiClick");
+      profile.decal = dc.id;
+      P.save(profile);
+      hangar.celebrate = performance.now();
+      renderArmory(); renderMenu();
+    });
+    card.appendChild(btn);
+    dg.appendChild(card);
+  });
+  // Bare metal: nose art can always come off again.
+  const plain = document.createElement("div");
+  plain.className = "paint-card" + (!profile.decal ? " on" : "");
+  plain.innerHTML = `<div class="trail-strip"></div><div class="paint-name">NO ART</div>`;
+  const plainBtn = document.createElement("button");
+  plainBtn.className = "small-btn";
+  plainBtn.textContent = !profile.decal ? "CLEAN HULL" : "SCRUB IT OFF";
+  plainBtn.disabled = !profile.decal;
+  click(plainBtn, () => { profile.decal = null; P.save(profile); audio.play("uiClick"); renderArmory(); });
+  plain.appendChild(plainBtn);
+  dg.appendChild(plain);
+
+  head("VICTORY FIREWORKS — the sky claps in your colours");
+  const fg = grid();
+  SF.config.FIREWORKS.forEach(fw => {
+    const has = fw.free || owned.fireworks.includes(fw.id);
+    const on = (profile.fireworks || "classic") === fw.id;
+    const card = document.createElement("div");
+    card.className = "paint-card" + (on ? " on" : "");
+    const cv = document.createElement("canvas");
+    cv.width = 120; cv.height = 54;
+    card.appendChild(cv);
+    const c = cv.getContext("2d");
+    if(c){
+      // a little frozen firework in this show's palette
+      fw.colors.forEach((col, i) => {
+        const a = (i/fw.colors.length)*Math.PI*2;
+        for(let k = 1; k <= 3; k++){
+          c.fillStyle = col;
+          c.globalAlpha = 1.1 - k*0.3;
+          c.beginPath();
+          c.arc(60 + Math.cos(a)*k*7.5, 27 + Math.sin(a)*k*6, 2.2, 0, Math.PI*2);
+          c.fill();
+        }
+      });
+      c.globalAlpha = 1;
+    }
+    const nm = document.createElement("div");
+    nm.className = "paint-name"; nm.textContent = fw.name;
+    card.appendChild(nm);
+    const btn = document.createElement("button");
+    btn.className = "small-btn";
+    btn.textContent = on ? "YOUR SHOW" : has ? "USE IT" : money(fw.cost);
+    btn.disabled = on || (!has && profile.money < fw.cost);
+    click(btn, () => {
+      if(!has){ profile.money -= fw.cost; owned.fireworks.push(fw.id); audio.play("uiBuy"); }
+      else audio.play("uiClick");
+      profile.fireworks = fw.id;
+      P.save(profile);
+      renderArmory();
+    });
+    card.appendChild(btn);
+    fg.appendChild(card);
+  });
+
   const note = document.createElement("p");
   note.className = "paint-note";
   note.textContent = "Trails show off best on the Test Range — try yours!";
@@ -1436,15 +1550,6 @@ function renderPilotTab(panel){
   });
   renderPilotCard();
 
-  const colorRow = $("colorRow");
-  SHIP_COLORS.forEach(hex => {
-    const sw = document.createElement("div");
-    sw.className = "swatch" + (hex === profile.shipColor ? " selected" : "");
-    sw.style.background = hex;
-    click(sw, () => { profile.shipColor = hex; P.save(profile); renderArmory(); renderMenu(); });
-    colorRow.appendChild(sw);
-  });
-
   const badgeRow = $("badgeRow");
   BADGES.forEach(b => {
     const el = document.createElement("div");
@@ -1496,7 +1601,8 @@ function drawHangar(){
     A.drawShip(ctx, W*0.28, H*0.52, Math.min(W*0.30, H*0.62), {
       color: profile.shipColor, levels: {}, t: hangar.t });
     A.drawShip(ctx, W*0.72, H*0.52, Math.min(W*0.30, H*0.62), {
-      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune });
+      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
+      decal: profile.decal });
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(W/2, H*0.10); ctx.lineTo(W/2, H*0.90); ctx.stroke();
@@ -1506,6 +1612,7 @@ function drawHangar(){
     const S = Math.min(W*0.40, H*0.66);
     A.drawShip(ctx, W/2, H*0.50, S, {
       color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
+      decal: profile.decal,
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
     });

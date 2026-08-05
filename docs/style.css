@@ -370,7 +370,7 @@ html, body {
 
 .shop-group {
   background: rgba(0,0,0,0.22); border:1px solid var(--panel-border);
-  border-left:5px solid var(--cat, var(--accent)); border-radius:14px; padding:12px;
+  border-radius:14px; padding:12px;
 }
 .group-head {
   display:flex; align-items:center; gap:8px; font-weight:900; font-size:13px; letter-spacing:2px;
@@ -988,3 +988,8 @@ body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s
 .paint-card .small-btn { width:100%; }
 .trail-strip { height:30px; width:100%; }
 .paint-note { font-size:12px; color: rgba(255,255,255,0.6); text-align:center; margin-top:2px; }
+
+/* Browsing tabs (STYLE SHOP, MY SHIP) don't need the ship bay glued to the
+   top - it made long lists feel like scrolling through a letterbox. */
+#screen-armory.unpinned .armory-top { position: static; box-shadow: none; }
+.shop-swatches { margin: 6px 0 18px; }

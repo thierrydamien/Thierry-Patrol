@@ -274,8 +274,11 @@ async function run(){
     qa("#armoryPanel .part-chip").length === 0);
   clickEl(tabByName("PILOT"));
   check("pilot card shows gear progress", /Gear 0\/53/.test(id("pcGear").textContent));
-  check("pilot tab carries callsign, colour and badge",
-    !!id("callsignInput") && qa("#colorRow .swatch").length > 0 && qa("#badgeRow .badge-pick").length > 0);
+  // Colour moved to the STYLE SHOP - two colour pickers was genuinely
+  // confusing, so the pilot tab must NOT grow one back.
+  check("pilot tab carries callsign and badge, and no colour picker",
+    !!id("callsignInput") && qa("#badgeRow .badge-pick").length > 0 &&
+    !id("colorRow"));
   check("every upgrade is reachable across the shelves",
     SF.config.CATEGORIES.reduce((n,c) =>
       n + SF.config.UPGRADES.filter(u => u.cat === c.id).length, 0) === 14);
@@ -1243,7 +1246,7 @@ async function run(){
     live.money = 50000;
     SF.profile.save(live);
     clickEl(id("armoryBtn"));
-    clickEl(Array.from(qa(".armory-tab")).find(t => /PAINT/.test(t.textContent)));
+    clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
     check("the paint shop is on the shelf wall", qa(".paint-card").length >= 8);
     check("the secret paint is not on display",
       !Array.from(qa(".paint-name")).some(n => /SOLAR GOLD/.test(n.textContent)));
@@ -1276,8 +1279,51 @@ async function run(){
       SF.config.PAINTS.some(p => p.id === "solar" && p.secret && !p.cost));
     check("old saves get a garage", (() => {
       const old = SF.profile.migrate({ name:"Old", missions:{} });
-      return Array.isArray(old.cosmetics.paints) && Array.isArray(old.cosmetics.trails);
+      return Array.isArray(old.cosmetics.paints) && Array.isArray(old.cosmetics.trails) &&
+             Array.isArray(old.cosmetics.decals) && Array.isArray(old.cosmetics.fireworks) &&
+             old.fireworks === "classic";
     })());
+
+    /* One colour home: the free squadron colours live in the shop now. */
+    clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
+    check("the free squadron colours live in the style shop",
+      qa(".shop-swatches .swatch").length === SF.config.SHIP_COLORS.length);
+    check("nose art and firework shows are on the shelves",
+      Array.from(qa(".paint-name")).some(x => /THUNDERBOLT/.test(x.textContent)) &&
+      Array.from(qa(".paint-name")).some(x => /GOLD RAIN/.test(x.textContent)));
+
+    const bolt = Array.from(qa(".paint-card")).find(c => /THUNDERBOLT/.test(c.textContent));
+    clickEl(bolt.querySelector("button"));
+    const afterDecal = SF.profile.load(activeName);
+    check("a bought decal is painted on and remembered",
+      afterDecal.decal === "bolt" && afterDecal.cosmetics.decals.includes("bolt"));
+    clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
+    const gold = Array.from(qa(".paint-card")).find(c => /GOLD RAIN/.test(c.textContent));
+    clickEl(gold.querySelector("button"));
+    const afterShow = SF.profile.load(activeName);
+    check("a bought firework show becomes your show",
+      afterShow.fireworks === "goldrain" && afterShow.cosmetics.fireworks.includes("goldrain"));
+
+    check("the victory lap fires the show you bought",
+      /FIREWORK_BY_ID\[game\.profile\.fireworks\]/.test(
+        fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+    check("classic is free and every other show is priced",
+      SF.config.FIREWORKS.filter(f => !f.free).every(f => f.cost > 0 && f.colors.length >= 4) &&
+      SF.config.FIREWORKS.some(f => f.free && f.id === "classic"));
+    check("a decal draws without touching the hull code", (() => {
+      try {
+        const cv = window.document.createElement("canvas");
+        SF.config.DECALS.forEach(d =>
+          SF.shipart.drawShip(cv.getContext("2d"), 50, 50, 80,
+            { color:"#3399ff", levels:{}, t:0, decal: d.id }));
+        return true;
+      } catch(e){ return false; }
+    })());
+    check("the ship bay unpins on the browsing tabs",
+      id("screen-armory").classList.contains("unpinned"));
+    check("the accent line is gone from the shelves",
+      !/border-left:5px solid var\(--cat/.test(
+        fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
 
     /* The vault door: five quick taps on the red giant, nothing less. */
     SF.ui.show("screen-missions");

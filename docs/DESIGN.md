@@ -1784,6 +1784,35 @@ afterimage array), silently swallowing the cosmetic until it was renamed
 `trailFx`. Name collisions inside a flat record don't throw - they just
 eat your feature.
 
+## 8bb. The Style Shop: one home for every look
+
+Four notes on the shop, a day after it opened.
+
+**"You can change colour in PILOT and also in the paint shop - confusing."**
+Right: two pickers for the same property is a bug in the information
+architecture, not a convenience. The PILOT tab's colour row is gone; the
+six free squadron colours moved into the shop as a tap-to-wear swatch row
+above the paid paints. One home for every way the ship can look - and the
+test now asserts the pilot tab must NOT grow a picker back.
+
+**The pink line.** `.shop-group` carried a 5px category-coloured left
+border. Removed everywhere - the tab colour and the cards already carry
+the identity, and a giant vertical stripe was just furniture.
+
+**The pinned ship bay.** Sticky is right for the shelves, where buying a
+part changes the ship you're looking at. On browsing tabs (STYLE SHOP, MY
+SHIP) the cards already show the ship, and a sticky bay turned scrolling
+into peering through a letterbox. The bay unpins on those two tabs.
+
+**"Anything else?" - renamed to STYLE SHOP, and two shelves added:**
+- **Nose art**: three decals (thunderbolt, ace star, shark fangs) painted
+  by shipart on TOP of every part layer - a decal a bought wing could
+  bury wouldn't be worth buying. It rides everywhere the ship does:
+  flight, hangar, map, pilot card, the finale fleet.
+- **Victory fireworks**: the palette the sky claps in after every win.
+  Classic is free and fitted from birth; Gold Rain, Emerald Sky and
+  Rainbow Salute are bought once and fire on every victory lap after.
+
 ## 9. What I'd do next
 
 Roughly in value order:

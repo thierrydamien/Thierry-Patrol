@@ -434,6 +434,58 @@ const TUNE_ART = {
   },
 };
 
+/*
+ * Style Shop nose art. Drawn in hull space (origin at ship centre, S = ship
+ * size), always last so no bought part can bury the thing they paid for.
+ * Shapes stay chunky: at flight size a fussy decal is a smudge.
+ */
+const DECAL_ART = {
+  bolt(ctx, S){
+    ctx.fillStyle = "#ffd23f";
+    ctx.strokeStyle = "rgba(120,70,0,0.8)";
+    ctx.lineWidth = S*0.014;
+    ctx.beginPath();
+    ctx.moveTo(-S*0.015, -S*0.30);
+    ctx.lineTo( S*0.05,  -S*0.12);
+    ctx.lineTo( S*0.005, -S*0.12);
+    ctx.lineTo( S*0.045,  S*0.06);
+    ctx.lineTo(-S*0.05,  -S*0.08);
+    ctx.lineTo( 0,       -S*0.08);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  },
+  star(ctx, S){
+    ctx.save();
+    ctx.translate(-S*0.21, S*0.05);
+    ctx.rotate(-0.1);
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(30,40,80,0.7)";
+    ctx.lineWidth = S*0.012;
+    ctx.beginPath();
+    for(let i = 0; i < 10; i++){
+      const a = -Math.PI/2 + i*Math.PI/5;
+      const r = (i % 2 === 0 ? 0.085 : 0.036)*S;
+      ctx[i === 0 ? "moveTo" : "lineTo"](Math.cos(a)*r, Math.sin(a)*r);
+    }
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  },
+  fangs(ctx, S){
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(30,40,80,0.65)";
+    ctx.lineWidth = S*0.01;
+    [-2, -1, 0, 1, 2].forEach(i => {
+      ctx.beginPath();
+      ctx.moveTo(i*S*0.052 - S*0.024, -S*0.20);
+      ctx.lineTo(i*S*0.052 + S*0.024, -S*0.20);
+      ctx.lineTo(i*S*0.052,           -S*0.09);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    });
+  },
+};
+
 function drawShip(ctx, cx, cy, size, opts){
   const o = {
     color: opts.color || "#f5a623",
@@ -470,6 +522,11 @@ function drawShip(ctx, cx, cy, size, opts){
   drawHull(ctx, S, o.color);
   front.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
   if(tuneArt && tuneArt.front){ ctx.save(); tuneArt.front(ctx, S, o); ctx.restore(); }
+  // Style Shop nose art rides on TOP of everything - a decal that a wing
+  // part could cover wouldn't be worth buying.
+  if(opts.decal && DECAL_ART[opts.decal]){
+    ctx.save(); DECAL_ART[opts.decal](ctx, S); ctx.restore();
+  }
 
   // The grey silhouette of what's next: always something to want.
   if(opts.ghost){

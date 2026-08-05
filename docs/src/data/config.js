@@ -51,6 +51,32 @@ const TRAILS = [
     desc:"Every colour at once. The whole sky watches." },
 ];
 const TRAIL_BY_ID = Object.fromEntries(TRAILS.map(t => [t.id, t]));
+/*
+ * Nose art, painted on the hull by shipart. Small in flight, huge in the
+ * hangar, on the map ship, the pilot card and the finale fleet - and it's
+ * THEIRS, which is the entire product.
+ */
+const DECALS = [
+  { id:"bolt",  name:"THUNDERBOLT", cost:3200, desc:"A gold lightning strike down the nose." },
+  { id:"star",  name:"ACE STAR",    cost:3200, desc:"A white ace's star on your wing." },
+  { id:"fangs", name:"SHARK FANGS", cost:3800, desc:"Teeth on the nose. The classics are classics." },
+];
+const DECAL_BY_ID = Object.fromEntries(DECALS.map(d => [d.id, d]));
+/*
+ * Victory firework shows: the palette the sky claps in after every win.
+ * Classic is free and fitted from birth; the rest are bought once.
+ */
+const FIREWORKS = [
+  { id:"classic",  name:"CLASSIC",        free:true,
+    colors:["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"] },
+  { id:"goldrain", name:"GOLD RAIN",      cost:3400,
+    colors:["#ffd23f","#ffe9a8","#f5c518","#ff8a3d"] },
+  { id:"emerald",  name:"EMERALD SKY",    cost:3400,
+    colors:["#4ade80","#a3e635","#2dd4bf","#d1fae5"] },
+  { id:"rainbow",  name:"RAINBOW SALUTE", cost:5200,
+    colors:["#ff4fd8","#ffd23f","#4ade80","#3fc9ff","#c084fc","#ff8a3d"] },
+];
+const FIREWORK_BY_ID = Object.fromEntries(FIREWORKS.map(f => [f.id, f]));
 
 /* ---------------------------------------------------------
    UPGRADES
@@ -345,6 +371,7 @@ TUNES.forEach(t => TUNE_BY_ID[t.id] = t);
 
 SF.config = {
   SHIP_COLORS, PAINTS, PAINT_BY_ID, TRAILS, TRAIL_BY_ID,
+  DECALS, DECAL_BY_ID, FIREWORKS, FIREWORK_BY_ID,
   BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
   spreadPattern, fireRateMult,

@@ -363,6 +363,7 @@ function drawPlayer(ctx, p, timeMs){
   // bought part bolted on and visible in combat.
   SF.shipart.drawShip(ctx, 0, 0, size, {
     color: p.color, levels: p.levels, t: timeMs/1000, idle: false, tune: p.tune,
+    decal: p.decal,
   });
   ctx.restore();
 
@@ -1567,7 +1568,7 @@ function drawFleet(ctx, timeMs){
     ctx.translate(f.x, f.y);
     ctx.rotate(f.bank*0.35);
     SF.shipart.drawShip(ctx, 0, 0, 46,
-      { color: f.color, levels: f.levels, t: timeMs/1000 + i, idle:false });
+      { color: f.color, levels: f.levels, t: timeMs/1000 + i, idle:false, decal: f.decal });
     ctx.restore();
     ctx.save();
     ctx.font = "bold 9px Rajdhani, Arial, sans-serif";

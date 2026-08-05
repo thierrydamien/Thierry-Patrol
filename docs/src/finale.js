@@ -119,14 +119,14 @@ function summonFleet(world, profile){
   const roster = P.listNames().map(P.load)
     .filter(q => q.name !== (profile && profile.name))
     .map(q => ({ name: (q.callsign || q.name).toUpperCase(), color: q.shipColor,
-                 levels: SF.shipart.levelsOf(q) }))
+                 levels: SF.shipart.levelsOf(q), decal: q.decal || null }))
     .slice(0, 6);
   if(!roster.length) return fleet;   // an empty seat is honest; no fanfare
 
   fleet = roster.map((r, i) => {
     const lane = (i - (roster.length-1)/2);
     return {
-      name: r.name, color: r.color, levels: r.levels,
+      name: r.name, color: r.color, levels: r.levels, decal: r.decal,
       x: VW/2 + lane*74 + rand(-10, 10), y: VH + 90 + Math.abs(lane)*40,
       homeX: clamp(VW/2 + lane*74, 46, VW-46),
       homeY: VH*0.62 + Math.abs(lane)*16 + rand(-8, 8),
