@@ -742,6 +742,28 @@ function onBossPhase(boss){
   spawnSupply(clamp(boss.x + rand(-90, 90), 60, VW - 60), boss.y + 60);
 }
 
+/*
+ * Is the squadron due? "The last stretch of the fight" - but a stretch long
+ * enough to actually see.
+ *
+ * A fight can name its own moment with `lastLight` on a phase, and the
+ * Devourer does: its finale is hand-choreographed down to the beat and the
+ * flag keeps it exactly where it has always been. Every other boss gets the
+ * default, which is the earlier of its final phase and 40% health.
+ *
+ * The 40% floor is not decoration. The family roughly doubles your damage
+ * while they are out there, so a trigger on the final phase alone - the
+ * Marauder's starts at 20% - would put them on screen for barely two seconds
+ * after a three-second arrival: banner, stagger in, boss already dead. Firing
+ * at 40% of a 26-second fight buys them a real five seconds of flying beside
+ * you, which is the whole point of them turning up.
+ */
+function squadronDue(boss){
+  const phases = boss.def.phases;
+  if(phases.some(ph => ph.lastLight)) return !!boss.phase.lastLight;
+  return boss.phaseIndex === phases.length - 1 || boss.hp <= boss.maxHp*0.40;
+}
+
 function finalBossBlast(boss){
   const run = game.run;
   const bx = boss.x, by = boss.y;
@@ -1121,9 +1143,27 @@ function update(dt, timeMs){
     finalBossBlast(bossNow);
   if(bossNow && bossNow.papaDeath && SF.papadeath.update(dt, bossNow, game.world))
     finalBossBlast(bossNow);
-  // Phase five: the rest of the family arrives, and they fight with you.
-  // No fanfare on a device with a single pilot - nobody invented shows up.
-  if(bossNow && bossNow.phase && bossNow.phase.lastLight && !SF.finale.fleetSize()){
+  /*
+   * THE SQUADRON. The rest of the family arrives and fights the last stretch
+   * of the boss with you, then leaves the sky alongside you at the fly-off.
+   *
+   * This used to be a one-off flag on the Devourer's final phase. It is now
+   * every boss in the campaign: when a fight enters its LAST phase - the same
+   * moment the old flag marked, so the finale is beat-for-beat unchanged -
+   * the household shows up. Seven bosses, seven arrivals, and the first one
+   * lands at mission 4 instead of mission 23.
+   *
+   * Boss Rush is the deliberate exception. Seven fights back to back with a
+   * squadron arrival in each would turn the moment into wallpaper, so there
+   * the family only comes for the LAST boss in the queue, exactly as it does
+   * today. rushIndex is incremented when a boss SPAWNS, so while the final
+   * one is on screen it already equals the queue length.
+   *
+   * No fanfare on a device with a single pilot - nobody invented shows up.
+   */
+  if(bossNow && bossNow.alive && !bossNow.entering && !bossNow.dying &&
+     bossNow.def && !SF.finale.fleetSize() && squadronDue(bossNow) &&
+     (!run.mission.bossRush || run.rushIndex >= run.rushList.length)){
     if(SF.finale.summonFleet(game.world, game.profile).length){
       run.bannerText = "THE SQUADRON IS WITH YOU";
       run.bannerSub = "the whole family came";
@@ -1519,6 +1559,6 @@ function start(){
 SF.game = game;
 Object.assign(game, {
   attach, resize, start, startMission, endMission, useBomb, useOverdrive,
-  buildLoadout, callbacks,
+  buildLoadout, squadronDue, callbacks,
 });
 })();

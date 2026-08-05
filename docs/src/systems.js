@@ -110,6 +110,37 @@ class WaveDirector {
    test their own neighbourhood. Player-vs-world is a handful
    of circle checks and stays brute force.
    ========================================================= */
+/*
+ * Swept hit test: the closest point on the segment the bullet actually
+ * travelled this frame, against a circle.
+ *
+ * Testing only the bullet's END position - which is what this did - misses
+ * anything it stepped clean over. Player rounds fly at 660px/s, so at a
+ * steady 60fps a step is 11px and a Grunt (r13 + bullet r5 = 18px of overlap
+ * to catch) is safe. But the frame budget is not a promise: on a tired iPad
+ * mid-explosion the step doubles to 22px, past the tab-switch clamp it is
+ * 33px, and the round teleports from just-in-front-of to just-behind the
+ * enemy without ever registering. That is exactly the report - "the missiles
+ * go through it" - and it got worse the busier the screen, which is when it
+ * is least forgivable. Sweeping the path costs one dot product and cannot
+ * miss at any framerate.
+ */
+function sweep(b, px, py, cx, cy, rr){
+  const sx = b.x - px, sy = b.y - py;
+  const len2 = sx*sx + sy*sy;
+  let t = 0;
+  if(len2 > 0.0001){
+    t = ((cx - px)*sx + (cy - py)*sy) / len2;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+  }
+  const hx = px + sx*t, hy = py + sy*t;
+  const dx = cx - hx, dy = cy - hy;
+  if(dx*dx + dy*dy > rr*rr) return null;
+  HIT.x = hx; HIT.y = hy;
+  return HIT;
+}
+const HIT = { x:0, y:0 };   // one scratch object; the hot loop stays allocation-free
+
 function resolve(world, ctxObj, dt){
   const grid = world.grid;
   grid.clear();
@@ -125,34 +156,58 @@ function resolve(world, ctxObj, dt){
     const b = bullets[i];
     if(!b.alive) continue;
     let pierceLeft = b.pierce;
+    const px = b.x - b.vx*dt, py = b.y - b.vy*dt;   // where it was a frame ago
 
     grid.query(b.x, b.y, (e) => {
       if(!e.alive || !b.alive) return false;
-      const rr = (b.r + e.r);
-      if((b.x-e.x)*(b.x-e.x) + (b.y-e.y)*(b.y-e.y) > rr*rr) return false;
+      const at = sweep(b, px, py, e.x, e.y, b.r + e.r);
+      if(!at) return false;
+      const hx = at.x, hy = at.y;
 
       // Inside a Guardian's bubble nothing gets through - the shot splashes
       // off and the player is told, loudly, to shoot the Guardian instead.
       if(e.shielded){
-        fx.sparks(b.x, b.y, 5, "#22d3ee", 150);
-        fx.ring(b.x, b.y, 16, "#22d3ee", 2, 0.2);
+        fx.sparks(hx, hy, 5, "#22d3ee", 150);
+        fx.ring(hx, hy, 16, "#22d3ee", 2, 0.2);
         audio.play("hitArmour");
-        b.alive = false;
+        b.x = hx; b.y = hy; b.alive = false;
         return true;
       }
 
       e.hp -= b.dmg;
       e.flash = 1;
-      // Sparks spray back along the shot - metal behaving like metal.
-      fx.impact(b.x, b.y, b.vx, b.vy, "#ffe9a8", 4);
+      /*
+       * Landing a hit has to be unmissable from the sofa. Sparks spray back
+       * along the shot, a hard white ring pops at the contact point, and the
+       * enemy is shoved a little - the shot has weight, and a seven-year-old
+       * can tell a hit from a near miss without reading a number.
+       */
+      fx.impact(hx, hy, b.vx, b.vy, "#ffe9a8", 6);
+      fx.ring(hx, hy, 13, "#ffffff", 2.5, 0.14);
+      const bs = Math.sqrt(b.vx*b.vx + b.vy*b.vy) || 1;   // direction, not speed
+      const kick = Math.min(9, 2 + b.dmg*0.9) / Math.max(1, e.r/13);
+      e.x += (b.vx/bs) * kick; e.y += (b.vy/bs) * kick;
+
       if(e.hp > 0){
         fx.damageNumber(e.x, e.y - e.r, b.dmg, false);
         audio.play("hitArmour");
-      } else {
-        ctxObj.onEnemyKilled(e, b);
+        /*
+         * A round that only WOUNDS is always absorbed, however much Piercing
+         * Rounds you own. The old rule spent a pierce charge on any contact,
+         * so an upgraded shot sailed straight on through a wounded enemy and
+         * read - correctly - as a miss: "the missiles go through it, it
+         * should hit the enemy and stop so you know it has hit them".
+         * Piercing now means what it looks like: your rounds punch clean
+         * through anything they DESTROY and carry on to the next target.
+         * Every shot that fails to kill stops dead, right on the hull.
+         */
+        b.x = hx; b.y = hy; b.alive = false;
+        return true;
       }
+
+      ctxObj.onEnemyKilled(e, b);
       if(pierceLeft > 0){ pierceLeft--; return false; }
-      b.alive = false;
+      b.x = hx; b.y = hy; b.alive = false;
       return true;
     });
 
@@ -177,8 +232,9 @@ function resolve(world, ctxObj, dt){
           const wp = boss.weakPoints[k];
           if(wp.destroyed) continue;
           const wx = boss.x + wp.ox, wy = boss.y + wp.oy;
-          const wr = b.r + wp.r;
-          if((b.x-wx)*(b.x-wx) + (b.y-wy)*(b.y-wy) < wr*wr){
+          // Swept, like the enemy test: a weak point is small (r17-26) and a
+          // dropped frame is enough to step a round straight over one.
+          if(sweep(b, px, py, wx, wy, b.r + wp.r)){
             b.hitWeak = true;
             ctxObj.onBossHit(boss, b);
             if(pierceLeft <= 0) b.alive = false;
@@ -187,8 +243,7 @@ function resolve(world, ctxObj, dt){
         }
       }
       if(b.alive && !b.hitBoss){
-        const rr = b.r + boss.r;
-        if((b.x-boss.x)*(b.x-boss.x) + (b.y-boss.y)*(b.y-boss.y) < rr*rr){
+        if(sweep(b, px, py, boss.x, boss.y, b.r + boss.r)){
           b.hitBoss = true;
           ctxObj.onBossHit(boss, b);
           const partsLeft = boss.weakPoints.some(w => !w.destroyed);

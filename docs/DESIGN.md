@@ -2076,6 +2076,95 @@ resolved to `docs/docs/...`. The heredocs printed their success messages
 regardless. Absolute paths for file surgery, always - and verify the edit
 landed rather than trusting the script's own report.
 
+## 8bl. Two ways a hit can look like a miss
+
+"When you shoot an enemy the missiles go through it. It should hit the
+enemy and stop so you know it has hit them."
+
+One complaint, two unrelated causes, and the second one only became
+findable because fixing the first didn't make the report go away.
+
+**Tunnelling.** Collision tested the bullet's END position only. A player
+round flies at 660px/s, so a steady 60fps step is 11px and a Grunt - r13,
+plus the round's r5, so 18px of overlap to catch - is safe. But the frame
+budget is not a promise. On a tired iPad mid-explosion the step doubles to
+22px; past the loop's own tab-switch clamp it is 33px. The round teleports
+from just-in-front-of the enemy to just-behind it and never registers.
+Worst of all it got worse the busier the screen, which is exactly when it
+is least forgivable. Collision now sweeps the segment the bullet actually
+travelled - one dot product, `sweep()` in systems.js - and cannot miss at
+any framerate. Boss weak points (r17-26) got the same treatment for the
+same reason.
+
+**Piercing Rounds.** The upgrade spent a pierce charge on ANY contact, so
+an upgraded shot sailed straight on through a wounded enemy. It was doing
+precisely what the shop advertised - "bullets go straight through enemies
+and keep flying" - and it read as a miss every single time, because the
+only feedback distinguishing "passed through after hitting" from "passed
+through without hitting" was a two-frame spark.
+
+The fix is a rule rather than a nerf: **your rounds punch clean through
+anything they DESTROY, and stop dead on anything they don't.** A shot that
+only wounds is always absorbed, whatever you own. A shot that kills carries
+on to the next target, and the kill is its own loud feedback, so there is
+no ambiguity left to have. The upgrade is arguably better now - "blasts
+through 3 enemies and keeps going" is a clearer promise than "hits 4
+enemies per bullet" ever was - and the shop copy was rewritten to match,
+because a description that lies about the mechanic is how this started.
+
+On top of both: the impact itself is louder. Sparks spray back along the
+shot, a hard white ring pops at the contact point, and the enemy takes a
+small shove along the round's direction so the shot has weight. The bullet
+is also parked ON the hull it struck rather than wherever the frame's step
+happened to end, so the effects land on the enemy instead of behind it.
+
+Measured in Chromium with pierce at max against a pinned, unkillable
+target: 135 approach frames, zero rounds past it. The jsdom suite covers
+the invariants (steady frame, dropped frame, wound-vs-kill, weak points),
+but the thing worth writing down is that **the browser probe is what made
+the second cause visible** - the unit tests were happy with pierce all
+along, because pierce was working exactly as designed. Designed wrong.
+
+## 8bm. The squadron comes out for everyone
+
+"I want the other friendly planes to come help at the end of each boss like
+in the final boss. That said, don't have this happen in the boss rush mode
+where only the very last boss should have the planes like it currently is."
+
+The family arriving mid-fight was a one-off flag - `lastLight` - sitting on
+a single phase of a single boss, twenty-three missions deep. It is the best
+three seconds in the game and almost nobody was ever going to see it.
+
+Now every campaign boss earns it, and the first one lands at mission 4
+instead of mission 23. The predicate is `squadronDue()` in game.js:
+
+- A fight can name its own moment, and the Devourer still does. Its finale
+  is choreographed to the beat, so `lastLight` is honoured as an override
+  and that arrival is unchanged, frame for frame.
+- Everything else gets the default: the earlier of its final phase and 40%
+  health.
+
+The 40% floor is the part that took measuring. Triggering on the final
+phase alone looked right on paper, but the Marauder's last phase starts at
+20% - and the family roughly doubles your damage while they are out there.
+Banner, three-second staggered arrival, boss dead. They would have been on
+screen for barely two seconds. Firing at 40% of a 26-second fight buys them
+a real five seconds of flying beside you, which is the entire point of them
+turning up.
+
+**Boss Rush is held back deliberately.** Seven fights back to back with an
+arrival in each turns the moment into wallpaper, so there it stays exactly
+as it was: the last boss only. `rushIndex` counts bosses as they spawn, so
+it already equals the queue length while the final one is on screen - the
+gate is one clause, and the test drives a real two-boss rush to prove both
+halves of it.
+
+The fly-off needed no work at all. `beginFlyoff()` was already called on
+every mission's lap-to-outro transition, so any squadron present speeds off
+the screen alongside you at the end of any boss mission. The best beat in
+the finale turned out to be three lines of trigger away from being the best
+beat in seven fights.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2088,6 +2177,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~45 checks.
+  migration. ~460 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

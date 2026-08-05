@@ -787,6 +787,77 @@ async function run(){
     W.boss = null;
   }
 
+  /* "When you shoot an enemy the missiles go through it. It should hit the
+     enemy and stop so you know it has hit them." Two separate causes, both
+     fixed here, both of which genuinely read as a shot that missed. */
+  {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const ctxc = { onBossHit(){}, onEnemyKilled(e){ e.alive = false; },
+                   onPlayerHit(){}, godMode:true };
+    /* `reach` is how far past the enemy's centre each end of the frame's
+       travel sits. Small = an ordinary hit with the round still overlapping
+       at the end of the step. Large = the round started clear in front and
+       finished clear behind, having crossed the enemy in between - which is
+       what a dropped frame does, and what used to register as nothing. */
+    const shootAt = (type, hp, dmg, pierce, reach) => {
+      W.reset();
+      W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Hit"), diff));
+      const e = W.spawnEnemy(type, 300, 300, { difficulty: diff });
+      e.vx = 0; e.vy = 0; e.hp = e.maxHp = hp;      // no dps scaling in the way
+      const b = W.bullets.spawn();
+      b.x = 300; b.y = 300 - reach; b.vx = 0; b.vy = -reach*2*60;
+      b.r = 5; b.dmg = dmg; b.pierce = pierce; b.homing = 0;
+      b.tier = 0; b.age = 0; b.hitBoss = false; b.hitWeak = false;
+      SF.systems.resolve(W, ctxc, 1/60);
+      return { hit: e.hp < hp || !e.alive, dead: !e.alive, bullet: b, enemy: e };
+    };
+
+    // A grunt is r13, the round r5: anything under 18px of separation is an
+    // overlap the old end-point test would also have caught. 40px is not.
+    check("a shot at a steady framerate hits", shootAt("grunt", 1, 1, 0, 6).hit);
+    check("a shot on a dropped frame still hits - no tunnelling",
+      shootAt("grunt", 1, 1, 0, 40).hit);
+    check("a boss weak point can't be stepped over either", (() => {
+      W.reset();
+      W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Hit"), diff));
+      W.boss = SF.bosses.create("sentinel", diff, 40);
+      W.boss.entering = false;
+      const wp = W.boss.weakPoints[0];
+      const wx = W.boss.x + wp.ox, wy = W.boss.y + wp.oy;
+      const b = W.bullets.spawn();
+      b.x = wx; b.y = wy - 44; b.vx = 0; b.vy = -88*60; b.r = 5;
+      b.dmg = 5; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+      b.hitBoss = false; b.hitWeak = false;
+      SF.systems.resolve(W, ctxc, 1/60);
+      W.boss = null;
+      return b.hitWeak === true;
+    })());
+
+    /* Piercing Rounds used to spend a charge on ANY contact, so an upgraded
+       shot sailed on through a wounded enemy - which looks exactly like a
+       miss. It now means what it says: through what it destroys, nothing else. */
+    const wounded = shootAt("brute", 6, 1, 3, 6);
+    check("a piercing round that only wounds still stops dead on the hull",
+      wounded.hit && !wounded.dead && wounded.bullet.alive === false);
+    const killed = shootAt("grunt", 1, 40, 3, 6);
+    check("a piercing round punches on through anything it destroys",
+      killed.dead && killed.bullet.alive === true);
+    const noPierce = shootAt("grunt", 1, 40, 0, 6);
+    check("without the upgrade a killing round is spent on the kill",
+      noPierce.dead && noPierce.bullet.alive === false);
+
+    /* The bullet is parked on the hull it hit, not wherever the frame's step
+       happened to end - so the sparks and the ring land ON the enemy. */
+    const landed = shootAt("brute", 6, 1, 0, 40);
+    check("the impact is drawn where the shot connected, not past it",
+      Math.abs(landed.bullet.y - landed.enemy.y) <= landed.enemy.r + 6);
+
+    check("the shop promises what the guns actually do",
+      /destroy|blow/i.test(SF.config.UPGRADES.find(u => u.id === "pierce").desc));
+    W.reset();
+  }
+
   /* Act 2's bosses introduce the first new attacks since launch (spiralArms,
      mineField). Drive each boss through every phase to the death, forcing an
      attack every frame it will accept one, so a typo in a new pattern shows up
@@ -1797,6 +1868,20 @@ async function run(){
     check("the first boss arrives immediately - no waves",
       SF.game.run.bossActive && SF.game.world.boss &&
       SF.game.world.boss.name === "THE MARAUDER" && SF.game.run.stats.spawned === 0);
+
+    /* The squadron comes out for every campaign boss now - but a rush is
+       seven of them back to back, and seven arrivals would flatten the one
+       that counts. Here it stays exactly as it was: the last fight only. */
+    const origList = SF.profile.listNames, origLoad = SF.profile.load;
+    SF.profile.listNames = () => ["Papa", "Wenwen", "Rush"];
+    SF.profile.load = n => SF.profile.blank(n);
+    SF.finale.reset();
+    SF.game.world.boss.hp = SF.game.world.boss.maxHp * 0.08;
+    await runFrames(6);
+    check("a rush holds the family back while bosses remain in the queue",
+      SF.game.run.rushIndex < SF.game.run.rushList.length &&
+      SF.finale.fleetSize() === 0);
+
     // Sentinel is armoured now: strip its plates before the hull can be killed.
     const strip = () => {
       const bb = SF.game.world.boss;
@@ -1815,6 +1900,12 @@ async function run(){
     // the 100% the previous kill left behind.
     check("the readout tracks the NEW boss, not the last one's victory",
       SF.game.run.bossActive && SF.game.run.progress < 1);
+    SF.game.world.boss.hp = SF.game.world.boss.maxHp * 0.08;
+    await runFrames(6);
+    check("the last boss of a rush still brings the whole family out",
+      SF.game.run.rushIndex === SF.game.run.rushList.length &&
+      SF.finale.fleetSize() > 0);
+    SF.profile.listNames = origList; SF.profile.load = origLoad;
     strip();
     await runFrames(560);
     check("an emptied queue ends in the victory lap",
@@ -2239,6 +2330,37 @@ async function run(){
           return SF.finale.summonFleet(W, SF.profile.blank("Fin")).length === 0; })());
       SF.profile.listNames = origList; SF.profile.load = origLoad;
       SF.finale.reset();
+    }
+
+    /* The squadron used to be a one-off on the Devourer. It is now every boss
+       in the campaign - "I want the other friendly planes to come help at the
+       end of each boss like in the final boss" - with Boss Rush held back to
+       the last fight only, because seven arrivals in a row is wallpaper. */
+    {
+      const due = (id, frac) => {
+        const bs = SF.bosses.create(id, diff, 60);
+        bs.entering = false;
+        bs.hp = bs.maxHp * frac;
+        // Walk the phases forward the way a real fight does.
+        while(bs.def.phases[bs.phaseIndex + 1] &&
+              frac <= bs.def.phases[bs.phaseIndex + 1].at){
+          bs.phaseIndex++; bs.phase = bs.def.phases[bs.phaseIndex];
+        }
+        return SF.game.squadronDue(bs);
+      };
+      const bossIds = Object.keys(SF.missions.BOSSES);
+      const tuned = id => SF.missions.BOSSES[id].phases.some(ph => ph.lastLight);
+      check("every boss earns a squadron before it dies",
+        bossIds.every(id => due(id, 0.05)));
+      check("nobody gets help while the fight is still young",
+        bossIds.every(id => !due(id, 0.95)));
+      check("the squadron arrives with real time left to fly beside you",
+        bossIds.filter(id => !tuned(id)).every(id => due(id, 0.35)));
+      /* The finale is hand-choreographed and keeps its own cue: the Devourer
+         still holds out to its last light, exactly as it always has. */
+      check("the Devourer's finale cue is untouched",
+        !due("devourer", 0.35) && due("devourer", 0.10) &&
+        SF.missions.BOSSES.devourer.phases.some(ph => ph.lastLight));
     }
 
     /* The death: five stages, and it clears the sky when it goes. */
