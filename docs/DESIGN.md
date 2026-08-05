@@ -2019,6 +2019,29 @@ true and wins the first branch regardless, so the readout correctly
 resumes tracking the NEW fight's health instead of sticking at 100%
 between stages - covered by its own test.
 
+## 8bj. The guns stop when the fight does
+
+"After a boss is killed and the level is won, the plane should stop
+shooting." It didn't: the auto-guns are gated on the mission being a
+silent-running one and on the two cutscene phases, and nothing else - so
+once the boss died the ship kept hammering an empty sky through the
+celebration, the whole five-second victory lap, the fly-off and the beat
+after it. It read as a ship that hadn't noticed it had won, and the shot
+loop talked over the music at exactly the moment the win is meant to land.
+
+The gate now also covers every won state: `finishTimer > 0` (the beat
+right after a boss dies), `clearing`, `lap`, `outro`, `gone`, and
+`run.ended`. Boss Rush is untouched by construction - `finishTimer` runs
+down to zero before the next boss spawns, so the guns come straight back
+for the following round, which the test asserts explicitly rather than
+assuming.
+
+Worth noting how the browser probe nearly lied: sampling began the instant
+the last shot landed, while `phase` was still `boss`, and counted the
+final legitimate bullet of the fight as a failure. Waiting on
+`bossCleared` before judging turned "1 bullet" into the correct 0. When a
+probe measures a transition, it has to wait for the transition.
+
 ## 9. What I'd do next
 
 Roughly in value order:

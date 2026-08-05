@@ -290,6 +290,20 @@ class World {
     if(run && run.mission && run.mission.noGuns) return;
     if(run && (run.phase === "finaleIntro" || run.phase === "bossIntro"))
       return;                                        // guns cold through the cutscene
+    /*
+     * The fight is won: the guns go quiet. Firing into an empty sky through
+     * the boss celebration and the whole victory lap read as a ship that
+     * hadn't noticed it had won - and the shot loop drowned the music at
+     * exactly the moment the win is supposed to land.
+     *
+     * `finishTimer` covers the beat right after a boss dies, which is also
+     * why Boss Rush still works: that timer runs out before the next boss
+     * spawns, so the guns come straight back for the following round.
+     */
+    if(run && (run.ended || run.finishTimer > 0 ||
+               run.phase === "clearing" || run.phase === "lap" ||
+               run.phase === "outro"    || run.phase === "gone"))
+      return;
     p.cooldown -= dt;
     if(p.cooldown <= 0){
       this.fireWeapons(timeMs);

@@ -686,6 +686,47 @@ async function run(){
     !!(SF.game.world.boss || SF.game.run.stats.completed || SF.game.state === "ending" || SF.game.run.ended));
   check("no runtime errors during the boss mission", errors.length === 0);
 
+  /*
+   * "After a boss is killed and the level is won, the plane should stop
+   * shooting." The auto-guns kept hammering an empty sky through the boss
+   * celebration and the entire victory lap. Driven directly here so every
+   * winning state is covered, not just whichever one a timed run lands in.
+   */
+  check("the guns go quiet the moment the fight is won", (() => {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const realRun = SF.game.run;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Quiet"), diff));
+    const fake = { mission:{}, introFly:0, phase:"waves", finishTimer:0, ended:false };
+    SF.game.run = fake;
+    const fireFor = (frames) => {
+      W.bullets.killAll();
+      W.player.cooldown = 0;
+      for(let i = 0; i < (frames || 60); i++) W.updatePlayer(1/60, i*16);
+      return W.bullets.items.filter(b => b.alive).length;
+    };
+    // Baseline: mid-mission the guns MUST fire, or this test proves nothing.
+    const firingInFight = fireFor() > 0;
+    // Every won state silences them.
+    const quiet = ["clearing","lap","outro","gone"].every(ph => {
+      fake.phase = ph;
+      return fireFor() === 0;
+    });
+    // ...including the beat right after a boss dies, before the lap starts.
+    fake.phase = "boss"; fake.finishTimer = 2;
+    const quietAfterBoss = fireFor() === 0;
+    // ...and once the run is over.
+    fake.phase = "boss"; fake.finishTimer = 0; fake.ended = true;
+    const quietWhenEnded = fireFor() === 0;
+    // But a fresh Boss Rush round brings them straight back.
+    fake.ended = false;
+    const backForNextBoss = fireFor() > 0;
+    SF.game.run = realRun;
+    W.reset();
+    return firingInFight && quiet && quietAfterBoss && quietWhenEnded && backForNextBoss;
+  })());
+
   /* ---------- the boss arrival: every boss introduced like the finale ---------- */
   {
     const BI = SF.bossintro;
