@@ -1772,13 +1772,25 @@ function drawFinaleIntro(ctx, timeMs){
  * with love and zero dignity - the point is two children laughing.
  */
 let papaImg = null, papaImgReady = false;
+/*
+ * Tries each spelling in turn and keeps the first that loads, so whatever
+ * the family actually uploads works: no renaming, no converting, no coming
+ * back to ask which extension the code wanted. A 404 just falls through to
+ * the next candidate; running out of candidates leaves the "?" medallion up.
+ */
+const PAPA_SRCS = ["assets/papa.png", "assets/papa.jpg", "assets/papa.jpeg",
+                   "assets/papa.webp", "assets/papa.PNG", "assets/papa.JPG"];
+let papaTry = 0;
 function papaPhoto(){
-  if(papaImg) return papaImgReady ? papaImg : null;
+  if(papaImgReady) return papaImg;
+  if(papaImg || papaTry >= PAPA_SRCS.length) return null;
   try {
-    papaImg = new Image();
-    papaImg.onload = () => { papaImgReady = true; };
-    papaImg.src = "assets/papa.png";
-  } catch(e){ papaImg = { failed: true }; }
+    const img = new Image();
+    papaImg = img;
+    img.onload = () => { papaImgReady = true; };
+    img.onerror = () => { papaImg = null; papaTry++; };   // next spelling
+    img.src = PAPA_SRCS[papaTry];
+  } catch(e){ papaTry = PAPA_SRCS.length; }
   return null;
 }
 function drawPapaBoss(ctx, boss, bx, by, S, damage, timeMs){
@@ -1828,8 +1840,8 @@ function drawPapaBoss(ctx, boss, bx, by, S, damage, timeMs){
     ctx.textAlign = "center";
     ctx.font = "bold " + Math.round(R*1.1) + "px Rajdhani, Arial, sans-serif";
     ctx.fillText("?", 0, R*0.38);
-    ctx.font = "bold " + Math.round(R*0.22) + "px Rajdhani, Arial, sans-serif";
-    ctx.fillText("add assets/papa.png", 0, R*0.72);
+    ctx.font = "bold " + Math.round(R*0.20) + "px Rajdhani, Arial, sans-serif";
+    ctx.fillText("upload docs/assets/papa.png", 0, R*0.72);
   }
   // Damage reads as a slow blush: the more you bop him, the pinker he gets.
   if(damage > 0.05){
