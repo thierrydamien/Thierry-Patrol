@@ -689,8 +689,12 @@ const MISSIONS = [
    */
   {
     id:16, name:"Their Treasury", subtitle:"Rob the robbers",
-    brief:"This is where they keep everything they stole! Crack the vaults, grab EVERY coin - and watch the thieves who want them back.",
-    goal:"Grab EVERY coin you can see!",
+    brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
+    // The weather remix: the Storm's gusts, six missions later, in a level
+    // that's about CATCHING things - the wind blows the loot around, so the
+    // mechanic reads as chaos-treasure rather than chaos-danger.
+    storm:true,
+    goal:"Coins in the WIND — catch them!",
     waves: [
       w(1,   "grunt",   10, "arc"),
       w(8,   "thief",    2, "sides"),
@@ -792,6 +796,11 @@ const MISSIONS = [
       w(64,  "sniper",   6, "sides"),
       w(72,  "boulder",  3, "twinColumns"),
       w(77,  "kamikaze",11, "pincer"),
+      // THE REMATCH - once in the whole campaign, exactly here. She fell at
+      // 13, she's had six missions to be angry about it, and "everyone they
+      // have left" should include the one with a grudge. Elite: gold-lit,
+      // tougher, and her dodge valve is faster (see the rival behaviour).
+      w(82,  "rival",    1, "column", { elite: 1 }),
       w(85,  "carrier",  3, "twinColumns"),
       w(91,  "mender",   3, "arc"),
       w(93,  "brute",    6, "line", { elite: 2 }),
@@ -872,6 +881,10 @@ const MISSIONS = [
   {
     id:22, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
+    // "soft": the Searchlight's veil at half strength. 21 is the hard black
+    // with a job to do; 22 is dread, so the dark here is thinner but the
+    // level's own name finally means what it says.
+    blackout:"soft",
     goal:"Something is out there. Watch out!",
     face:"sniper",                    // what is watching you out of the dark
     waves: [

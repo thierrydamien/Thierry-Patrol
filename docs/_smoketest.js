@@ -246,8 +246,8 @@ async function run(){
   /* ---------- armory + hangar, one screen ---------- */
   clickEl(id("armoryBtn"));
   check("armory opens from the menu", id("screen-armory").classList.contains("active"));
-  check("armory offers a tab per shelf plus parts and pilot",
-    qa("#armoryTabs .armory-tab").length === SF.config.CATEGORIES.length + 2);
+  check("armory offers a tab per shelf plus paint, parts and pilot",
+    qa("#armoryTabs .armory-tab").length === SF.config.CATEGORIES.length + 3);
   check("only one shelf is on screen at a time", qa("#armoryPanel .shop-group").length === 1);
   check("the open shelf shows only its own upgrades",
     qa("#armoryPanel .shop-item").length ===
@@ -928,9 +928,21 @@ async function run(){
   /* ---------- the four new rules: storm, convoy, trench, searchlight ---------- */
   {
     const M = SF.missions.MISSIONS;
-    check("each new rule appears exactly once",
-      M.filter(m => m.storm).length === 1 && M.filter(m => m.convoy).length === 1 &&
-      M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 1);
+    /* The remix pass reuses a rule at most once, in a level that gives it a
+       new meaning: the Treasury caught the storm (coins in the wind), and
+       The Long Dark got the Searchlight's veil at half strength. Convoy and
+       trench stay singular. */
+    check("each rule appears once, or twice as a deliberate remix",
+      M.filter(m => m.storm).length === 2 && M.filter(m => m.convoy).length === 1 &&
+      M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 2);
+    check("the treasury remix keeps its coin identity on the map",
+      M.find(m => m.id === 16).storm === true &&
+      SF.ui.missionFace(M.find(m => m.id === 16)).kind === "coins");
+    check("the long dark's veil is the soft one",
+      M.find(m => m.id === 22).blackout === "soft" &&
+      M.find(m => m.id === 21).blackout === true &&
+      /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
+        fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
       M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,15,17,20,23");
 
@@ -970,6 +982,14 @@ async function run(){
     await runFrames(6);
     check("the gust shoves whatever is flying",
       ex0 === null || Math.abs(SF.game.world.enemies.items[0].x - ex0) > 2);
+    // The Treasury remix rides on this: loose loot must feel the wind too.
+    const windCoin = SF.game.world.spawnPickup("coin", 300, 300);
+    const cx0 = windCoin.x;
+    await runFrames(6);
+    // Threshold sits above anything the coin's own drift (±30px/s) could do
+    // in these frames, so only the storm can pass this.
+    check("the wind blows the loot around",
+      !windCoin.alive || Math.abs(windCoin.x - cx0) > 12);
 
     /* The convoy: ONE hauler, hunted for real, escorted the whole way. */
     SF.game.startMission(M.findIndex(m => m.convoy), "pilot");
@@ -1105,6 +1125,25 @@ async function run(){
         for(let i = 0; i < 120; i++) SF.enemyData.BEHAVIOURS.rival(ace, 1/60, cR);
         return ace.x >= 40 && ace.x <= SF.entityConst.VW - 40;
       })());
+
+      /* The rematch: once in the whole campaign, elite, sharper but valved. */
+      check("vesper returns exactly once, elite, in All Hands",
+        M.find(m => m.id === 19).waves
+          .filter(wv => wv.type === "rival" && wv.elite).length === 1 &&
+        M.filter(m => m.waves.some(wv => wv.type === "rival")).length === 2);
+      check("the rematch is sharper but still a valve, not a wall", (() => {
+        const ace2 = W3.spawnEnemy("rival", 300, 320,
+          { difficulty: SF.config.DIFFICULTY_BY_ID.pilot, elite: true });
+        const b = W3.bullets.spawn();
+        b.x = ace2.x; b.y = ace2.y + 90; b.vx = 0; b.vy = -700; b.r = 5; b.dmg = 1;
+        b.pierce = 0; b.homing = 0; b.tier = 1; b.age = 0; b.alive = true;
+        b.hitBoss = false; b.hitWeak = false;
+        SF.enemyData.BEHAVIOURS.rival(ace2, 1/60, cR);
+        const ok = ace2.dodgeDir !== 0 && ace2.tell > 0 && ace2.tell < 0.2 &&
+                   ace2.dodgeCool > 0 && ace2.dodgeCool <= 1.0;
+        ace2.alive = false;
+        return ok;
+      })());
       W3.reset();
     }
 
@@ -1193,6 +1232,82 @@ async function run(){
       Object.keys(wiped.missions).length === 0 && wiped.savedAt > 0);
     check("the settings overlay closes after a reset",
       id("settingsOverlay").classList.contains("hidden"));
+  }
+
+  /* ---------- the paint shop, and the star vault's hidden door ---------- */
+  {
+    // Fund whoever the UI genuinely has active - an earlier test may have
+    // left any pilot in the seat, and the shop sells to the one in the seat.
+    const live = SF.game.profile;
+    const activeName = live.name;
+    live.money = 50000;
+    SF.profile.save(live);
+    clickEl(id("armoryBtn"));
+    clickEl(Array.from(qa(".armory-tab")).find(t => /PAINT/.test(t.textContent)));
+    check("the paint shop is on the shelf wall", qa(".paint-card").length >= 8);
+    check("the secret paint is not on display",
+      !Array.from(qa(".paint-name")).some(n => /SOLAR GOLD/.test(n.textContent)));
+
+    const firstPaint = SF.config.PAINTS[0];
+    const moneyBefore = SF.profile.load(activeName).money;
+    clickEl(qa(".paint-card")[0].querySelector("button"));
+    const afterPaint = SF.profile.load(activeName);
+    check("buying a paint costs money and repaints the ship on the spot",
+      afterPaint.money === moneyBefore - firstPaint.cost &&
+      afterPaint.shipColor === firstPaint.hex &&
+      afterPaint.cosmetics.paints.includes(firstPaint.id));
+
+    const ember = Array.from(qa(".paint-card")).find(c => /EMBER TRAIL/.test(c.textContent));
+    clickEl(ember.querySelector("button"));
+    const afterTrail = SF.profile.load(activeName);
+    check("a bought trail lights immediately",
+      afterTrail.trail === "ember" && afterTrail.cosmetics.trails.includes("ember"));
+
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "pilot");
+    await runFrames(30);
+    check("the trail rides into the cockpit",
+      SF.game.world.player && SF.game.world.player.trailFx === "ember");
+    SF.game.run.ended = true; SF.game.state = "idle";
+
+    check("the shop data keeps its promises",
+      SF.config.PAINTS.filter(p => !p.secret).every(p => p.cost > 0 && /^#/.test(p.hex)) &&
+      SF.config.TRAILS.every(t => t.cost > 0 && t.desc.length > 8) &&
+      SF.config.PAINTS.some(p => p.id === "solar" && p.secret && !p.cost));
+    check("old saves get a garage", (() => {
+      const old = SF.profile.migrate({ name:"Old", missions:{} });
+      return Array.isArray(old.cosmetics.paints) && Array.isArray(old.cosmetics.trails);
+    })());
+
+    /* The vault door: five quick taps on the red giant, nothing less. */
+    SF.ui.show("screen-missions");
+    SF.ui.renderMissions();
+    const pad = id("campaignNodes");
+    const cvv = id("campaignCanvas");
+    const tapSun = () => pad.dispatchEvent(new window.MouseEvent("pointerdown",
+      { clientX: Math.round(cvv.width*0.12), clientY: Math.round(cvv.height*0.035), bubbles: true }));
+    tapSun(); tapSun();
+    check("two taps on the sun are just taps",
+      !(SF.game.run && SF.game.run.mission && SF.game.run.mission.vault));
+    tapSun(); tapSun(); tapSun();
+    check("five taps on the red giant open the star vault",
+      SF.game.run && SF.game.run.mission.vault === true && SF.game.state === "playing");
+    await runFrames(30);
+    SF.game.endMission(true);
+    await runFrames(5);
+    const rich = SF.profile.load(activeName);
+    check("the vault pays the star's own paint and seals itself",
+      rich.vaultDone === true && rich.cosmetics.paints.includes("solar") &&
+      rich.shipColor === SF.config.PAINT_BY_ID.solar.hex);
+    SF.game.state = "idle";
+    SF.ui.show("screen-missions");
+    tapSun(); tapSun(); tapSun(); tapSun(); tapSun();
+    check("the door is gone for good",
+      !(SF.game.run && SF.game.run.mission && SF.game.run.mission.vault && !SF.game.run.ended));
+    check("a sealed vault also refuses the back door", (() => {
+      SF.game.startMission("vault", "pilot");
+      return !(SF.game.run && SF.game.run.mission.vault && !SF.game.run.ended);
+    })());
   }
 
   /* ---------- the app layer: icon, offline, focus ---------- */

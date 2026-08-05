@@ -1735,6 +1735,55 @@ her pays a boss-sized send-off because beating her IS the level.
 Campaign is 23 missions now; `missionsVer` 5 shifts the old 13-22 up one.
 Bosses land at 4, 7, 10, 15, 17, 20, 23 - still none adjacent.
 
+## 8ba. Paint, weather, a grudge, and one secret
+
+Four ideas approved in one breath, each with a constraint attached - and
+the constraints were the design brief.
+
+**The remix pass** ("some levels", not all): a rule reappears at most once,
+and only where it means something new. Their Treasury caught the Storm -
+the gusts now blow loose PICKUPS around, so the coin level became "chase
+the money through the gale", chaos-treasure rather than chaos-danger. The
+Long Dark got the Searchlight's veil at half strength (`blackout:"soft"`),
+so the level named The Long Dark is finally, literally, dark - thinner
+veil, wider lamp, same fairness rule that every glow punches through.
+Convoy and trench stay singular. The map keeps identities honest: coins
+outrank weather in the face heuristic, so the Treasury still reads as the
+coin level, not "another windy one".
+
+**The rematch** ("not every boss or it'd get boring"): exactly once.
+Vesper returns in All Hands - six missions after she fell, elite, gold-lit,
+her dodge valve at 0.95s instead of 1.5s and her tell shorter - but still a
+valve: sustained fire beats her both times. VESPER RETURNS gets a card and
+a comms line, not a cutscene, and the suite pins the count: two rival waves
+in the whole campaign, one of them elite.
+
+**The Paint Shop** ("needs to be very visual"): it sells nothing you can't
+see from across the room. Five premium hull paints - each card in the shop
+is the pilot's OWN ship, all bought parts fitted, wearing that colour - and
+applying one repaints the big hangar ship the same instant, plus the map
+ship, the finale fleet and the comms portraits, because paint is just
+shipColor and one pipeline colours everything. Four engine trails burn
+behind the ship every frame of every fight, sized to be seen from a sofa.
+Money finally has somewhere to go after the Armory maxes.
+
+**The Star Vault** ("one time only, hidden well enough that they'd need my
+hints"): five quick taps on the red giant painted at the top of the
+campaign map. Not a button, not a node, no glow, no hint text anywhere in
+the game - a stray tap resets the ritual. It opens a golden one-off
+scramble (coin rain, thieves, boulders), pays the SOLAR GOLD paint the
+shop refuses to sell, applies it on the spot, and seals forever on that
+profile - `vaultDone` guards both the door and the code path behind it.
+Being per-profile means each kid gets their own moment when their dad
+finally leans over and whispers where to tap.
+
+Two bugs the probe caught that no unit test would: the celebration flash
+was handed a deadline where it expected a purchase timestamp, driving a
+canvas arc radius negative; and `player.trail` already existed (the engine
+afterimage array), silently swallowing the cosmetic until it was renamed
+`trailFx`. Name collisions inside a flat record don't throw - they just
+eat your feature.
+
 ## 9. What I'd do next
 
 Roughly in value order:

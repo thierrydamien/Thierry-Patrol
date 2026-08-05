@@ -870,7 +870,12 @@ function drawHaulers(ctx, world, timeMs){
  * fixed rule the level bends everything else around).
  */
 let darkCv = null, darkCtx = null;
-function drawBlackout(ctx, world, timeMs){
+/**
+ * `soft` is The Long Dark's remix: the same veil at roughly half strength
+ * with a wider lamp - dread rather than a job, still every glow punched
+ * through so fairness holds in both darknesses.
+ */
+function drawBlackout(ctx, world, timeMs, soft){
   if(!darkCv){
     darkCv = document.createElement("canvas");
     darkCv.width = VW; darkCv.height = VH;
@@ -880,7 +885,7 @@ function drawBlackout(ctx, world, timeMs){
   if(!c) return;
   c.globalCompositeOperation = "source-over";
   c.clearRect(0, 0, VW, VH);
-  c.fillStyle = "rgba(2,4,13,0.92)";
+  c.fillStyle = soft ? "rgba(3,5,16,0.68)" : "rgba(2,4,13,0.92)";
   c.fillRect(0, 0, VW, VH);
   c.globalCompositeOperation = "destination-out";
   const hole = (x, y, r, a) => {
@@ -891,7 +896,7 @@ function drawBlackout(ctx, world, timeMs){
     c.fillRect(x - r, y - r, r*2, r*2);
   };
   const p = world.player;
-  if(p && p.alive) hole(p.x, p.y, 205 + Math.sin(timeMs/160)*9, 1);
+  if(p && p.alive) hole(p.x, p.y, (soft ? 265 : 205) + Math.sin(timeMs/160)*9, 1);
   const pk = world.pickups.items;
   for(let i = 0; i < pk.length; i++)
     if(pk[i].alive) hole(pk[i].x, pk[i].y, pk[i].kind === "rescue" ? 84 : 58, 0.9);

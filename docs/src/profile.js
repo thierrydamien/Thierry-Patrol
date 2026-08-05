@@ -74,6 +74,11 @@ function blank(name){
     name, callsign: name, shipColor: SHIP_COLORS[0], badge: null,
     money: 0, upgrades: {},
     tune: "vanguard",   // flight tuning (MY SHIP) - stats trade, never art
+    // The Paint Shop: owned cosmetics, and the trail currently burning.
+    // (Applied paint just becomes shipColor - one pipeline colours it all.)
+    cosmetics: { paints: [], trails: [] },
+    trail: null,
+    vaultDone: false,   // the Star Vault opens exactly once
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
     lastMission: 1, lastDifficulty: "pilot",
@@ -207,6 +212,10 @@ function migrate(p){
       p.tune = "vanguard";
   }
   if(!Array.isArray(p.achievements)) p.achievements = [];
+  // Old saves predate the Paint Shop; give them the empty garage.
+  if(!p.cosmetics || typeof p.cosmetics !== "object") p.cosmetics = {};
+  if(!Array.isArray(p.cosmetics.paints)) p.cosmetics.paints = [];
+  if(!Array.isArray(p.cosmetics.trails)) p.cosmetics.trails = [];
   if(!p.medalsClaimed || typeof p.medalsClaimed !== "object") p.medalsClaimed = {};
 
   if(p.hasSpread && !p.upgrades.spread) p.upgrades.spread = 2; // old Spread was 3-way

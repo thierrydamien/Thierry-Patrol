@@ -8,7 +8,8 @@
 "use strict";
 const SF = window.SF;
 const { clamp } = SF.core;
-const { SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS,
+const { SHIP_COLORS, PAINTS, PAINT_BY_ID, TRAILS, TRAIL_BY_ID,
+        BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS,
         DIFFICULTIES, DIFFICULTY_BY_ID, ACHIEVEMENTS } = SF.config;
 const { MISSIONS, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount } = SF.missions;
 const P = SF.profile;
@@ -647,12 +648,14 @@ function missionFace(m){
   // Order matters: nearly every level has pods to collect, so the rescue test
   // is greedy and would paint half the route the same green. The narrower
   // identities - guns down, a coin run, a rock field - get asked first.
+  // Coins outrank weather: the Treasury picked up the storm remix, but its
+  // identity on the map is still "the coin level", not "another windy one".
   const kind = m.noGuns ? "noGuns"
              : m.rival ? "duel"
+             : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
              : m.blackout ? "dark"
-             : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : (totalN > 0 && rockN/totalN >= 0.3) ? "rocks"
              : (obj.includes("rescueAll") && rescueCount(m) >= 4) ? "rescue"
              : "fight";
@@ -1132,7 +1135,8 @@ let armoryTab = "guns";
 /** Tabs: the four shelves, then the parts ladder, then everything about you. */
 function armoryTabs(){
   return CATEGORIES.map(c => ({ id:c.id, icon:c.icon, name:c.name, color:c.color }))
-    .concat([{ id:"parts", icon:"🔧", name:"MY SHIP", color:"#8fd3a7" },
+    .concat([{ id:"paint", icon:"🎨", name:"PAINT SHOP", color:"#ff4fd8" },
+             { id:"parts", icon:"🔧", name:"MY SHIP", color:"#8fd3a7" },
              { id:"pilot", icon:"👤", name:"PILOT",   color:"#c9a7ff" }]);
 }
 
@@ -1177,6 +1181,7 @@ function renderArmory(){
   panel.innerHTML = "";
   if(armoryTab === "parts") renderPartsTab(panel, levels, next);
   else if(armoryTab === "pilot") renderPilotTab(panel);
+  else if(armoryTab === "paint") renderPaintTab(panel);
   else renderShelf(panel, armoryTab);
 
   startHangarLoop();
@@ -1223,6 +1228,138 @@ function renderShelf(panel, catId){
     group.appendChild(row);
   });
   panel.appendChild(group);
+}
+
+/*
+ * THE PAINT SHOP. The customer's one rule: "if kids spend money it needs to
+ * be an obvious difference." So every card IS the difference - the pilot's
+ * actual ship, all their bought parts, painted in the colour on offer - and
+ * applying anything repaints the big hangar ship the same instant, because
+ * the shop and the hangar share the screen. Nothing here is a stat.
+ */
+function renderPaintTab(panel){
+  const wrap = document.createElement("div");
+  wrap.className = "shop-group paint-shop";
+  wrap.style.setProperty("--cat", "#ff4fd8");
+  const levels = SF.shipart.levelsOf(profile);
+  const owned = profile.cosmetics;
+
+  const head = (txt) => {
+    const h = document.createElement("label");
+    h.className = "panel-label";
+    h.textContent = txt;
+    wrap.appendChild(h);
+  };
+  const grid = () => {
+    const g = document.createElement("div");
+    g.className = "paint-grid";
+    wrap.appendChild(g);
+    return g;
+  };
+
+  head("PAINT JOBS — your whole ship, everywhere, instantly");
+  const pg = grid();
+  PAINTS.forEach(pt => {
+    const has = owned.paints.includes(pt.id);
+    if(pt.secret && !has) return;               // the shop doesn't know about it
+    const on = profile.shipColor === pt.hex;
+    const card = document.createElement("div");
+    card.className = "paint-card" + (on ? " on" : "");
+    const cv = document.createElement("canvas");
+    cv.width = 120; cv.height = 84;
+    card.appendChild(cv);
+    const c = cv.getContext("2d");
+    if(c) SF.shipart.drawShip(c, 60, 46, 66, { color: pt.hex, levels, t: 0.6, tune: profile.tune });
+    const nm = document.createElement("div");
+    nm.className = "paint-name";
+    nm.textContent = pt.name;
+    card.appendChild(nm);
+    const btn = document.createElement("button");
+    btn.className = "small-btn";
+    btn.textContent = on ? "WEARING IT" : has ? "WEAR IT" : money(pt.cost);
+    btn.disabled = on || (!has && profile.money < pt.cost);
+    click(btn, () => {
+      if(!has){
+        profile.money -= pt.cost;
+        owned.paints.push(pt.id);
+        audio.play("uiBuy");
+      } else audio.play("uiClick");
+      profile.shipColor = pt.hex;
+      P.save(profile);
+      // Purchase TIMESTAMP, not a deadline - the hangar loop derives its
+      // flash from (now - celebrate), and a future stamp turns the radius
+      // negative. Caught by the browser probe as a canvas arc error.
+      hangar.celebrate = performance.now();
+      renderArmory(); renderMenu();
+    });
+    card.appendChild(btn);
+    pg.appendChild(card);
+  });
+
+  head("ENGINE TRAILS — burns behind you in every fight");
+  const tg = grid();
+  const noneCard = document.createElement("div");
+  noneCard.className = "paint-card" + (!profile.trail ? " on" : "");
+  noneCard.innerHTML = `<div class="trail-strip"></div><div class="paint-name">NO TRAIL</div>`;
+  const noneBtn = document.createElement("button");
+  noneBtn.className = "small-btn";
+  noneBtn.textContent = !profile.trail ? "CLEAN" : "GO CLEAN";
+  noneBtn.disabled = !profile.trail;
+  click(noneBtn, () => { profile.trail = null; P.save(profile); audio.play("uiClick"); renderArmory(); });
+  noneCard.appendChild(noneBtn);
+  tg.appendChild(noneCard);
+
+  TRAILS.forEach(tr => {
+    const has = owned.trails.includes(tr.id);
+    const on = profile.trail === tr.id;
+    const card = document.createElement("div");
+    card.className = "paint-card" + (on ? " on" : "");
+    const strip = document.createElement("canvas");
+    strip.width = 120; strip.height = 30;
+    card.appendChild(strip);
+    const c = strip.getContext("2d");
+    if(c){
+      for(let i = 0; i < 9; i++){
+        const k = i/8;
+        c.fillStyle = tr.id === "rainbow" ? "hsl(" + Math.floor(k*300) + ",95%,60%)" : tr.color;
+        c.globalAlpha = 0.25 + k*0.75;
+        c.beginPath();
+        c.arc(12 + k*96, 15 + Math.sin(k*6)*4, 2 + k*3.4, 0, Math.PI*2);
+        c.fill();
+      }
+      c.globalAlpha = 1;
+    }
+    const nm = document.createElement("div");
+    nm.className = "paint-name";
+    nm.textContent = tr.name;
+    card.appendChild(nm);
+    const ds = document.createElement("div");
+    ds.className = "paint-desc";
+    ds.textContent = tr.desc;
+    card.appendChild(ds);
+    const btn = document.createElement("button");
+    btn.className = "small-btn";
+    btn.textContent = on ? "BURNING" : has ? "LIGHT IT" : money(tr.cost);
+    btn.disabled = on || (!has && profile.money < tr.cost);
+    click(btn, () => {
+      if(!has){
+        profile.money -= tr.cost;
+        owned.trails.push(tr.id);
+        audio.play("uiBuy");
+      } else audio.play("uiClick");
+      profile.trail = tr.id;
+      P.save(profile);
+      renderArmory();
+    });
+    card.appendChild(btn);
+    tg.appendChild(card);
+  });
+
+  const note = document.createElement("p");
+  note.className = "paint-note";
+  note.textContent = "Trails show off best on the Test Range — try yours!";
+  wrap.appendChild(note);
+  panel.appendChild(wrap);
 }
 
 /** The parts ladder: what's on the ship and what's still missing. */
@@ -2067,6 +2204,9 @@ function showResults(result){
     if(wonTune) queueToast({ name: wonTune.name + " tune won! Fit it in MY SHIP",
       label:"TUNE UNLOCKED" });
   }
+  if(result.vaultWon)
+    queueToast({ icon:"🌟", name:"SOLAR GOLD — the star's own paint. Yours alone.",
+      label:"SECRET FOUND" });
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
@@ -2334,6 +2474,43 @@ click($("addProfileBtn"), () => {
 });
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
 click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
+
+/*
+ * THE STAR VAULT's front door. Five quick taps on the red giant at the top
+ * of the campaign map - the sun painted into the sky, not a button, not a
+ * node, no glow, no hint anywhere in the game. Deliberately undiscoverable
+ * by accident: the customer hands the ritual out personally. Once a pilot
+ * has won the vault, the door is gone for good on that profile.
+ */
+(function starVaultDoor(){
+  const pad = $("campaignNodes");
+  if(!pad) return;
+  let taps = [];
+  pad.addEventListener("pointerdown", ev => {
+    if(!profile || profile.vaultDone) return;
+    const cv = $("campaignCanvas");
+    if(!cv) return;
+    const r = pad.getBoundingClientRect();
+    const sx = r.width ? cv.width / r.width : 1;
+    const sy = r.height ? cv.height / r.height : 1;
+    const x = (ev.clientX - (r.left || 0)) * sx;
+    const y = (ev.clientY - (r.top || 0)) * sy;
+    // The sun lives at (0.12, 0.035) of the sky (see buildSky's redGiant).
+    if(Math.hypot(x - cv.width*0.12, y - cv.height*0.035) > 72){
+      taps.length = 0;                 // any stray tap resets the ritual
+      return;
+    }
+    const now = performance.now();
+    taps = taps.filter(t => now - t < 4000);
+    taps.push(now);
+    if(taps.length >= 5){
+      taps.length = 0;
+      audio.play("achievement");
+      show("screen-game");
+      SF.game.startMission("vault", "pilot");
+    }
+  });
+})();
 // The Daily Patrol launches straight in - no briefing, no tier choice. Same
 // sky, same rules, PILOT difficulty for everyone: a fair fight over a score.
 click($("dailyBtn"), () => {

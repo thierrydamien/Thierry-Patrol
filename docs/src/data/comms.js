@@ -168,6 +168,10 @@ const COMMS = {
     "That's her! She's mirroring you, {you} — make her move first!",
     "Vesper! Don't chase her, {you} — shoot where she's GOING.",
   ]},
+  rivalReturns: { speaker:"mate", cooldown:999, lines:[
+    "It's Vesper again! She's faster than last time, {you}!",
+    "She came back for you, {you}. Same trick — make her commit!",
+  ]},
   rivalDown: { speaker:"mate", cooldown:999, lines:[
     "You got Vesper! Nobody has ever done that, {you}.",
     "She's down! That was proper flying, {you}.",

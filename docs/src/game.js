@@ -98,6 +98,7 @@ function buildLoadout(profile, difficulty){
     overdrives: lv("overdrive"),
     overdriveTime: 4 + lv("overdrive"),
     color: profile.shipColor,
+    trail: profile.trail || null,     // Paint Shop engine trail, burns in flight
     // The same levels object the hangar draws from, so the ship you fly is
     // the ship you built - every bought part visible in combat.
     levels: SF.shipart.levelsOf(profile),
@@ -211,17 +212,49 @@ function spawnRushBoss(){
   audio.setMusic(null);
 }
 
+/*
+ * THE STAR VAULT - the game's one secret. Launched only by the hidden tap
+ * ritual on the campaign map (see ui.js); it appears in no list, no menu and
+ * no hint text, and once won it can never be flown again. A short golden
+ * scramble: coins rain, thieves circle, boulders crack open - and the prize
+ * is the SOLAR GOLD paint, which the Paint Shop refuses to sell.
+ */
+function buildStarVault(){
+  return {
+    id:"vault", vault:true,
+    name:"The Star Vault", subtitle:"Nobody was supposed to find this",
+    brief:"You found it. Take everything.",
+    goal:"Take EVERYTHING!",
+    coinRain:true,
+    waves: [
+      { t:1,  type:"grunt",   n:6, form:"arc" },
+      { t:8,  type:"thief",   n:2, form:"sides" },
+      { t:14, type:"boulder", n:2, form:"twinColumns" },
+      { t:20, type:"weaver",  n:7, form:"scatter" },
+      { t:27, type:"thief",   n:2, form:"sides" },
+      { t:33, type:"grunt",   n:8, form:"wall" },
+      { t:40, type:"boulder", n:2, form:"twinColumns" },
+      { t:47, type:"striker", n:5, form:"vee" },
+      { t:54, type:"thief",   n:3, form:"sides" },
+    ],
+    objectives: [],
+  };
+}
+
 function startMission(missionIndex, difficultyId){
   const profile = game.profile;
   // "daily" is the endless Daily Patrol - a generated mission, not a campaign
   // slot. Same day = same seed = same waves on every device. "test" is the
-  // Armory's firing range, "rush" the boss gauntlet.
+  // Armory's firing range, "rush" the boss gauntlet, "vault" the secret.
   const daily = missionIndex === "daily";
   const test = missionIndex === "test";
   const rush = missionIndex === "rush";
+  const vault = missionIndex === "vault";
+  if(vault && profile.vaultDone) return;   // the vault opens exactly once
   const mission = daily ? SF.daily.build()
                 : test  ? buildTestRange()
                 : rush  ? buildBossRush()
+                : vault ? buildStarVault()
                         : MISSIONS[clamp(missionIndex, 0, MISSIONS.length-1)];
   const difficulty = test ? TEST_DIFF
                           : DIFFICULTY_BY_ID[difficultyId] || DIFFICULTY_BY_ID.pilot;
@@ -231,7 +264,8 @@ function startMission(missionIndex, difficultyId){
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.bossintro.reset();
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
-  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7 : missionIndex);
+  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7
+                          : vault ? 8 : missionIndex);   // the vault flies gold
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
 
@@ -387,6 +421,15 @@ function endMission(completed){
     run.completionBonus = 0;
   }
 
+  // The Star Vault pays once, then seals forever: the flag is what stops a
+  // second visit, and the paint is the part they'll actually remember.
+  if(run.mission.vault && completed && !profile.vaultDone){
+    profile.vaultDone = true;
+    if(!profile.cosmetics.paints.includes("solar")) profile.cosmetics.paints.push("solar");
+    profile.shipColor = SF.config.PAINT_BY_ID.solar.hex;   // applied on the spot
+    run.vaultWon = true;
+  }
+
   profile.money += run.money;
   profile.lifetimeMoney += run.money;
   profile.totalKills += run.stats.kills;
@@ -438,6 +481,7 @@ function endMission(completed){
       endless: !!run.mission.endless, endlessNewBest, prevEndlessBest,
       rush: !!run.mission.bossRush, rushBeaten, rushTotal: run.rushList.length,
       firstClear,
+      vaultWon: !!run.vaultWon,
       durationSec: Math.round(run.time),
       prevFamilyBest, prevSelfBest,
       objectives: run.objectiveDefs.map(def => ({
@@ -984,6 +1028,29 @@ function update(dt, timeMs){
   }
 
   game.world.updatePlayer(dt, timeMs);
+  /*
+   * Paint Shop engine trails. The whole point of a trail is that everyone in
+   * the room can see it, so it burns every frame the ship is alive - two
+   * motes a frame, short-lived, from just behind the engines. Rainbow cycles
+   * hue on the clock; stardust twinkles white with an occasional gold fleck.
+   */
+  {
+    const pl = game.world.player;
+    if(pl && pl.alive && pl.trailFx){
+      const def = SF.config.TRAIL_BY_ID[pl.trailFx];
+      if(def){
+        for(let k = 0; k < 3; k++){
+          const col = pl.trailFx === "rainbow"
+            ? "hsl(" + Math.floor((timeMs/6 + k*40) % 360) + ",95%,62%)"
+            : pl.trailFx === "stardust" && chance(0.2) ? "#ffd23f" : def.color;
+          // Sized to be seen from a sofa: this is the thing they paid for.
+          fx.spark(pl.x + rand(-8, 8), pl.y + 20,
+                   rand(-16, 16), rand(50, 110), col,
+                   rand(0.4, 0.6), pl.trailFx === "stardust" ? rand(1.6, 2.8) : rand(2.6, 4.2));
+        }
+      }
+    }
+  }
   game.world.updateBullets(dt);
   game.world.updateEnemies(dt, behaviourCtx);
   // The Devourer's arrival and its death are choreographed by finale.js; the
@@ -1062,6 +1129,11 @@ function update(dt, timeMs){
       const es = game.world.enemies.items;
       for(let i = 0; i < es.length; i++)
         if(es[i].alive) es[i].x = clamp(es[i].x + st.dir*st.str*0.5*dt, -60, VW + 60);
+      // Loose pickups ride the wind hardest of all - coins scatter and the
+      // Treasury remix becomes "chase the money through the gale".
+      const pk = game.world.pickups.items;
+      for(let i = 0; i < pk.length; i++)
+        if(pk[i].alive) pk[i].x = clamp(pk[i].x + st.dir*st.str*0.85*dt, 12, VW - 12);
       if(chance(0.9))
         fx.spark(st.dir < 0 ? VW + 10 : -10, rand(50, VH - 80),
                  st.dir*rand(500, 800), rand(-30, 30), "#bfe3ff", 0.3, 2.1);
@@ -1189,14 +1261,15 @@ function announceNewThreats(){
      */
     if(e.type.named && !run.rivalShown){
       run.rivalShown = true;
-      run.bannerText = e.type.named;
-      run.bannerSub = "she copies you — make her commit";
+      run.bannerText = e.elite ? e.type.named + " RETURNS" : e.type.named;
+      run.bannerSub = e.elite ? "she remembers you — sharper this time"
+                              : "she copies you — make her commit";
       run.bannerColor = "#ff4fd8";
       run.bannerUntil = performance.now() + 4200;
       fx.flash(0.3, "255,79,216");
       fx.shake(10);
       audio.play("bossAlarm");
-      SF.comms.say("rivalArrives");
+      SF.comms.say(e.elite ? "rivalReturns" : "rivalArrives");
     }
     // A boulder is a set piece, so it gets the full banner treatment once.
     if(e.typeId === "boulder" && !run.boulderShown){
@@ -1310,7 +1383,7 @@ function draw(timeMs){
   // The Searchlight: the world above is finished, now the dark eats all of it
   // except what glows. HUD and texts draw after - instruments still work.
   if(game.run && game.run.mission.blackout && !game.run.ended)
-    SF.render.drawBlackout(ctx, world, timeMs);
+    SF.render.drawBlackout(ctx, world, timeMs, game.run.mission.blackout === "soft");
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&

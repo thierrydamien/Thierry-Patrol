@@ -966,3 +966,25 @@ button.part-chip:active { transform: scale(0.96); }
 body.cinema .ability-bar,
 body.cinema #pauseBtn,
 body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+
+/* ---------------- the Paint Shop ---------------- */
+/* Cards are the product: the pilot's own ship wearing each colour. */
+.paint-grid {
+  display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap:10px; margin: 8px 0 18px;
+}
+.paint-card {
+  background: rgba(16,20,40,0.75);
+  border: 1.5px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 10px 10px 12px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  text-align:center;
+}
+.paint-card.on { border-color: var(--cat, #ff4fd8); box-shadow: 0 0 14px rgba(255,79,216,0.35); }
+.paint-card canvas { max-width:100%; }
+.paint-name { font-weight:700; font-size:13px; letter-spacing:1px; }
+.paint-desc { font-size:11px; color: rgba(255,255,255,0.65); min-height: 26px; }
+.paint-card .small-btn { width:100%; }
+.trail-strip { height:30px; width:100%; }
+.paint-note { font-size:12px; color: rgba(255,255,255,0.6); text-align:center; margin-top:2px; }

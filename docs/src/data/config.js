@@ -21,6 +21,38 @@ const BADGES = ["star","chevrons","wings","bolt","comet","trident",
 const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff66b3"];
 
 /* ---------------------------------------------------------
+   THE PAINT SHOP
+   Cosmetics with one hard rule from the customer: "if kids
+   spend money it needs to be an obvious difference." So the
+   shop sells only things you can see from across the room -
+   whole-hull paints (the ship recolours EVERYWHERE: in
+   flight, on the map, in the fleet, on the pilot card) and
+   engine trails that follow you through every fight.
+   The `secret` paint is never sold: it is the Star Vault's
+   prize, and the shop doesn't admit it exists.
+   --------------------------------------------------------- */
+const PAINTS = [
+  { id:"hotpink",  name:"HOT PINK",   hex:"#ff4fd8", cost:2400 },
+  { id:"icewhite", name:"ICE WHITE",  hex:"#e8f4ff", cost:2400 },
+  { id:"lime",     name:"LASER LIME", hex:"#a3e635", cost:2400 },
+  { id:"aqua",     name:"DEEP AQUA",  hex:"#2dd4bf", cost:2400 },
+  { id:"tangerine",name:"TANGERINE",  hex:"#ff7a1a", cost:2400 },
+  { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
+];
+const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
+const TRAILS = [
+  { id:"ember",    name:"EMBER TRAIL", color:"#ff8a3d", cost:5200,
+    desc:"A river of hot sparks behind your engines." },
+  { id:"ion",      name:"ION STREAM",  color:"#3fc9ff", cost:5200,
+    desc:"A cool blue ribbon of charged light." },
+  { id:"stardust", name:"STARDUST",    color:"#ffffff", cost:6800,
+    desc:"Twinkling star-stuff wherever you fly." },
+  { id:"rainbow",  name:"RAINBOW BURN", color:"rainbow", cost:9800,
+    desc:"Every colour at once. The whole sky watches." },
+];
+const TRAIL_BY_ID = Object.fromEntries(TRAILS.map(t => [t.id, t]));
+
+/* ---------------------------------------------------------
    UPGRADES
    Four colour-coded shelves. Every upgrade has several levels
    and each level costs more than the last, so maxing the
@@ -312,7 +344,8 @@ const TUNE_BY_ID = {};
 TUNES.forEach(t => TUNE_BY_ID[t.id] = t);
 
 SF.config = {
-  SHIP_COLORS, BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
+  SHIP_COLORS, PAINTS, PAINT_BY_ID, TRAILS, TRAIL_BY_ID,
+  BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
   spreadPattern, fireRateMult,
 };

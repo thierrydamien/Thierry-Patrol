@@ -199,9 +199,11 @@ const BEHAVIOURS = {
           e.dodgeDir = b.x < e.x ? 1 : -1;
           if(e.x < 90) e.dodgeDir = 1;
           if(e.x > c.VW - 90) e.dodgeDir = -1;
-          e.tell = 0.22;              // lean and flash BEFORE moving
+          // The rematch (elite) is sharper: shorter tell, quicker valve.
+          // Still a valve - sustained fire beats her both times.
+          e.tell = e.elite ? 0.16 : 0.22;   // lean and flash BEFORE moving
           e.dodgeTimer = 0.42;
-          e.dodgeCool = 1.5;          // the fairness valve
+          e.dodgeCool = e.elite ? 0.95 : 1.5;
           break;
         }
       }
