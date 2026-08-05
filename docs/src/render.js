@@ -948,6 +948,10 @@ function drawPickups(ctx, world, timeMs){
       }
       ctx.closePath();
       ctx.fill(); ctx.stroke();
+    } else if(it.kind === "papahead"){
+      // The souvenir: a tiny crowned Papa, tumbling down after the big one.
+      ctx.rotate(it.angle*0.5);
+      papaHead(ctx, 13, { crown: true });
     } else if(it.kind === "supply"){
       // The rare crate: a glowing hex canister in its prize's colour with the
       // prize drawn on the lid - big pulsing halo so it reads from anywhere.
@@ -1120,9 +1124,11 @@ function drawBoss(ctx, boss, timeMs){
   // The finale gets hull art of its own: the scaled-up enemy silhouettes that
   // serve every other boss read as a coloured blob at this size, and the last
   // boss in the game cannot be a blob.
-  // KING PAPA: the Star Vault's photographed head on a little gold rocket.
+  // KING PAPA: the Star Vault's photographed head on a little gold rocket -
+  // and, once he is "dying", a twelve-second cartoon instead of a corpse.
   if(boss.def.photo){
-    drawPapaBoss(ctx, boss, bx, by, size, damage, timeMs);
+    if(boss.papaDeath) drawPapaDeath(ctx, boss, bx, by, size, timeMs);
+    else drawPapaBoss(ctx, boss, bx, by, size, damage, timeMs);
     ctx.restore();   // cloak alpha off
     return;
   }
@@ -1793,6 +1799,138 @@ function papaPhoto(){
   } catch(e){ papaTry = PAPA_SRCS.length; }
   return null;
 }
+/**
+ * Just the head: photo (or placeholder) in a gold ring, optional crown.
+ * Everything that shows Papa - the boss, the five bouncing minis, the
+ * souvenir pickups - draws through here, so his face is consistent.
+ */
+function papaHead(ctx, R, opts){
+  const o = opts || {};
+  const img = papaPhoto();
+  ctx.beginPath(); ctx.arc(0, 0, R + R*0.09, 0, TAU);
+  ctx.fillStyle = "#ffd23f"; ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.clip();
+  if(img){
+    ctx.drawImage(img, -R, -R, R*2, R*2);
+  } else {
+    ctx.fillStyle = "#f5c518";
+    ctx.fillRect(-R, -R, R*2, R*2);
+    ctx.fillStyle = "#7a5200";
+    ctx.textAlign = "center";
+    ctx.font = "bold " + Math.round(R*1.1) + "px Rajdhani, Arial, sans-serif";
+    ctx.fillText("?", 0, R*0.38);
+    if(R > 60){
+      ctx.font = "bold " + Math.round(R*0.20) + "px Rajdhani, Arial, sans-serif";
+      ctx.fillText("upload docs/assets/papa.png", 0, R*0.72);
+    }
+  }
+  if(o.blush > 0.02){
+    ctx.fillStyle = "rgba(255,70,70," + Math.min(0.55, o.blush).toFixed(2) + ")";
+    ctx.fillRect(-R, -R, R*2, R*2);
+  }
+  ctx.restore();
+  if(o.crown !== false) papaCrown(ctx, R);
+}
+function papaCrown(ctx, R){
+  ctx.save();
+  ctx.rotate(-0.08);
+  ctx.fillStyle = "#ffd23f";
+  ctx.strokeStyle = "#b8860b";
+  ctx.lineWidth = Math.max(1, R*0.024);
+  const cw = R*0.9, ch = R*0.42, cy = -R - R*0.05;
+  ctx.beginPath();
+  ctx.moveTo(-cw/2, cy);
+  for(let k = 0; k < 5; k++){
+    ctx.lineTo(-cw/2 + cw*(k + 0.5)/5, cy - ch);
+    ctx.lineTo(-cw/2 + cw*(k + 1)/5, cy);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ["#ff5d73","#4ade80","#3fc9ff","#c084fc","#ff8a3d"].forEach((col, k) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(-cw/2 + cw*(k + 0.5)/5, cy - ch, Math.max(1.5, R*0.048), 0, TAU);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+/*
+ * The five acts, drawn. The comedy is all in the SCALE curve: swell, pop to
+ * nothing, come back bigger, deflate round the room, split, merge, fill the
+ * screen. Nothing here is subtle and nothing here is meant to be.
+ */
+function drawPapaDeath(ctx, boss, bx, by, S, timeMs){
+  const P = SF.papadeath;
+  const a = P.act(), st = P.state();
+  if(!a || !st) return;
+  const R0 = S*0.42;
+
+  if(a.id === "ow"){
+    // Swells like a balloon, wobbling harder, then vanishes on the pop.
+    const k = a.k;
+    const swell = k < 0.72 ? 1 + k*1.15 : Math.max(0, 1 - (k-0.72)/0.28)*2.0;
+    const wob = 1 + Math.sin(timeMs/45)*0.09*k;
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(swell*wob, swell/wob);
+    papaHead(ctx, R0, { blush: k*0.55 });
+    ctx.restore();
+
+  } else if(a.id === "back"){
+    const k = a.k;
+    if(k < 0.45){
+      // BACK, bigger, spinning, indignant.
+      const pop = Math.min(1, k/0.18);
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(Math.sin(k*22)*0.22);
+      ctx.scale(pop*1.45, pop*1.45);
+      papaHead(ctx, R0, { blush: 0.35 });
+      ctx.restore();
+    } else {
+      // Let go: careening round the room, shrinking, crown left behind.
+      const d = (k - 0.45)/0.55;
+      ctx.save();
+      ctx.translate(st.puffX, st.puffY);
+      ctx.rotate(timeMs/90);
+      const sc = Math.max(0.15, 1.45 - d*1.25);
+      ctx.scale(sc, sc);
+      papaHead(ctx, R0, { blush: 0.3, crown: false });
+      ctx.restore();
+    }
+
+  } else if(a.id === "split" || a.id === "merge"){
+    st.minis.forEach((m, i) => {
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rot);
+      // On the merge they swell together into one enormous head.
+      const grow = a.id === "merge" ? 1 + a.k*a.k*4.2 : 1;
+      ctx.scale(grow, grow);
+      papaHead(ctx, m.r, { blush: 0.25, crown: i === 0 });
+      ctx.restore();
+    });
+    if(a.id === "merge" && a.k > 0.82){
+      // The wink: a white flash of a closing eye, right before the bang.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = (a.k - 0.82)/0.18;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(VW/2, VH*0.42, S*1.1, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+  } else if(a.id === "kaboom"){
+    // He's gone. Only the crown is left, tumbling down.
+    ctx.save();
+    ctx.translate(st.crownX, st.crownY);
+    ctx.rotate(Math.sin(timeMs/260)*0.5);
+    papaCrown(ctx, 34);
+    ctx.restore();
+  }
+}
+
 function drawPapaBoss(ctx, boss, bx, by, S, damage, timeMs){
   const bob = Math.sin(timeMs/420)*7;
   const tilt = Math.sin(timeMs/700)*0.06;

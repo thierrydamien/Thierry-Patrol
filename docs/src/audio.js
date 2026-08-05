@@ -191,6 +191,59 @@ SOUNDS.supplyGet = { minGap: 400, fn: () => {
 } };
 
 /* ---------------------------------------------------------
+   KING PAPA
+   The only cartoon sounds in the game. Everything else here
+   is sci-fi; this shelf is boings, raspberries and slide
+   whistles, because the Star Vault is a joke and jokes need
+   the right noises.
+   --------------------------------------------------------- */
+SOUNDS.papaOw = { minGap: 300, fn: () => {
+  // A comedy "ow": a squashed rising honk.
+  tone(300, 0.16, "square", 0.09, 620);
+  tone(180, 0.22, "triangle", 0.06, 420);
+} };
+SOUNDS.papaPop = { minGap: 300, fn: () => {
+  // Balloon pop: a click and a short pitch drop.
+  noise(0.09, 0.34, 6000, 400);
+  tone(900, 0.10, "square", 0.08, 90);
+} };
+SOUNDS.papaBack = { minGap: 300, fn: () => {
+  // The comeback: a rising slide whistle, silly rather than scary.
+  tone(220, 0.6, "sine", 0.10, 1500);
+  tone(330, 0.5, "triangle", 0.05, 1800, 0.05);
+} };
+SOUNDS.papaRaspberry = { minGap: 200, fn: () => {
+  // The let-go balloon. Buzzy, wobbling, descending, undignified.
+  for(let i = 0; i < 9; i++)
+    tone(rand(150, 260) - i*8, 0.12, "sawtooth", 0.055, rand(90, 180), i*0.075);
+  noise(0.75, 0.09, 900, 250);
+} };
+SOUNDS.papaBoing = { minGap: 70, fn: () => {
+  tone(rand(500, 780), 0.13, "sine", 0.055, rand(170, 260));
+} };
+SOUNDS.papaSplit = { minGap: 300, fn: () => {
+  // One becomes five: a bright arpeggio going up.
+  [523, 659, 784, 988, 1318].forEach((f,i) => tone(f, 0.12, "square", 0.055, null, i*0.06));
+} };
+SOUNDS.papaMerge = { minGap: 300, fn: () => {
+  // Sucked back together: a descending swoop.
+  tone(1200, 0.55, "sine", 0.08, 160);
+  noise(0.5, 0.06, 2600, 300);
+} };
+SOUNDS.papaWink = { minGap: 300, fn: () => {
+  // The beat before the bang: two cheeky ticks.
+  tone(1600, 0.05, "square", 0.05, 2000);
+  tone(2000, 0.05, "square", 0.04, 2400, 0.09);
+} };
+SOUNDS.papaKaboom = { minGap: 500, fn: () => {
+  // Enormous and daft at once: sub-bass under a party fanfare.
+  tone(42, 1.5, "sawtooth", 0.16, 26);
+  noise(1.4, 0.4, 3000, 60);
+  [523, 659, 784, 1046, 1318, 1568].forEach((f,i) =>
+    tone(f, 0.30, "triangle", 0.075, null, 0.25 + i*0.09));
+} };
+
+/* ---------------------------------------------------------
    BOSS ARRIVALS
    Every boss enters with a three-beat cinematic (bossintro.js).
    These are its cues - deliberately shorter and pitched a full

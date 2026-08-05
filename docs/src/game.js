@@ -699,6 +699,17 @@ function killBoss(boss){
   boss.deathDur = 2.3;
   boss.deathFx = 0;
   boss.hp = 0;
+  // KING PAPA doesn't die, he does a BIT: twelve seconds, five acts, two
+  // fake-outs (see papadeath.js). The loot lands in the middle of it.
+  if(boss.def.photo){
+    boss.papaDeath = true;
+    SF.papadeath.begin(boss);
+    run.score += Math.round(2500 * run.difficulty.pay);
+    game.profile.bossesDefeated++;
+    fx.hitStop(180);
+    fx.shake(20);
+    return;
+  }
   // The Devourer dies for eight seconds, in five stages, on its own clock.
   if(boss.def.finale){
     boss.finaleDeath = true;
@@ -749,34 +760,17 @@ function finalBossBlast(boss){
    * Over-the-top is the specification - this one exists to make two kids
    * laugh, and then hand them the loot.
    */
+  /*
+   * KING PAPA has already spent twelve seconds exploding in five different
+   * ways (papadeath.js). All that is left is the long, calm finish so the
+   * kids can hoover up the stars and the tiny papa heads.
+   */
   if(boss.def && boss.def.photo){
-    fx.flash(1, "255,220,120");
-    fx.hitStop(260);
-    fx.shake(44);
-    fx.explosion(bx, by, boss.size*1.7, "#ffd23f", true);
-    for(let r = 0; r < 6; r++)
-      fx.ring(bx, by, boss.size*(1.2 + r*0.8), r%2 ? "#ffd23f" : "#ffffff", 6 - r*0.7, 0.5 + r*0.2);
-    const FWC = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ff4fd8"];
-    for(let i = 0; i < 8; i++)
-      fx.firework(bx + rand(-140, 140), by + rand(-90, 90), FWC[i % FWC.length]);
-    fx.debris(bx, by, 40, "#ffd23f");
-    fx.embers(bx, by, 50);
-    audio.play("megaBoom");
-    audio.play("firework");
-    for(let i = 0; i < 34; i++){
-      const a = (i/34)*Math.PI*2;
-      const st = game.world.spawnPickup("star",
-        clamp(bx + Math.cos(a)*rand(30, 170), 20, VW - 20),
-        clamp(by + Math.sin(a)*rand(20, 120), 40, VH*0.6));
-      st.vx = Math.cos(a)*rand(60, 160);
-      st.vy = Math.sin(a)*rand(30, 90);
-    }
-    fx.text(VW/2, VH*0.34, "PAPA GOES KA-BOOM!", "#ffd23f", 32, true);
-    fx.text(VW/2, VH*0.42, "grab the stars!!", "#ffffff", 20, true);
+    fx.text(VW/2, VH*0.46, "grab it all!", "#ffd23f", 24, true);
     game.world.enemyBullets.killAll();
     game.world.boss = null;
     run.bossActive = false;
-    run.finishTimer = 3.2;             // longer: let them scoop the star ring
+    run.finishTimer = 4.0;
     return;
   }
   // The blast itself: white-out, a triple shockwave, a debris storm, and a
@@ -1099,9 +1093,12 @@ function update(dt, timeMs){
   // The Devourer's arrival and its death are choreographed by finale.js; the
   // fight engine only drives it in between.
   const bossNow = game.world.boss;
-  if(bossNow && run.phase !== "finaleIntro" && run.phase !== "bossIntro" && !bossNow.finaleDeath)
+  if(bossNow && run.phase !== "finaleIntro" && run.phase !== "bossIntro" &&
+     !bossNow.finaleDeath && !bossNow.papaDeath)
     SF.bosses.update(bossNow, dt, game.world, behaviourCtx, timeMs);
   if(bossNow && bossNow.finaleDeath && SF.finale.updateDeath(dt, bossNow, game.world))
+    finalBossBlast(bossNow);
+  if(bossNow && bossNow.papaDeath && SF.papadeath.update(dt, bossNow, game.world))
     finalBossBlast(bossNow);
   // Phase five: the rest of the family arrives, and they fight with you.
   // No fanfare on a device with a single pilot - nobody invented shows up.
@@ -1391,6 +1388,15 @@ function onPickupCollected(item, lost){
     fx.sparks(item.x, item.y, 20, def.color, 240);
     fx.text(p.x, p.y - 40, def.label + "!", def.color, 21, true);
     fx.flash(0.35, "255,255,255");
+  } else if(item.kind === "papahead"){
+    // Souvenirs from the Star Vault. Worth real money, and worth a giggle.
+    run.stats.papaHeads = (run.stats.papaHeads || 0) + 1;
+    run.score += 400;
+    run.money += Math.round(60 * p.moneyMult);
+    audio.play("papaBoing");
+    fx.sparks(item.x, item.y, 12, "#ffd23f", 200);
+    fx.text(item.x, item.y - 16, ["HI KIDS!","LOVE YOU!","BE GOOD!","BYE!"][run.stats.papaHeads % 4],
+            "#ffd23f", 17, true);
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;
     run.score += 150;

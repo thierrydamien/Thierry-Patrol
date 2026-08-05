@@ -1,0 +1,220 @@
+/*
+ * KING PAPA'S DEATH — the silliest twelve seconds in the game.
+ *
+ * The first version was "a big explosion", and a big explosion is not a
+ * JOKE. What makes a seven-year-old actually howl is not spectacle, it's
+ * the RUNNER: you think it's over, and it isn't. So this is built like a
+ * cartoon gag rather than a boss death — five acts, two fake-outs, and a
+ * punchline that only lands because you were sure it had already finished.
+ *
+ *   1. OW      — the head swells like a balloon, goes red, and POPS...
+ *                 down to nothing. Silence. Surely that's it?
+ *   2. BACK    — he's back, BIGGER, spinning, crown flying off, going
+ *                 "IS THAT ALL YOU'VE GOT?" - then farts around the screen
+ *                 like a let-go balloon. Surely THAT'S it?
+ *   3. SPLIT   — he bursts into five tiny bouncing Papa heads that bonk
+ *                 off the walls and off each other, squeaking.
+ *   4. MERGE   — the five rush back together and inflate to fill the whole
+ *                 screen. Everything goes quiet. He winks.
+ *   5. KABOOM  — the biggest, dumbest firework in the game, and it rains
+ *                 stars AND tiny papas. The crown parachutes down last.
+ *
+ * Same rules as finale.js: simulation time only, and nothing here can hurt
+ * the player. It is entirely theatre, and it is entirely the point.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp, rand, TAU } = SF.core;
+const { VW, VH } = SF.entityConst;
+const fx = SF.fx;
+const audio = SF.audio;
+
+const ACTS = [
+  { id:"ow",     dur: 2.0 },
+  { id:"back",   dur: 3.0 },
+  { id:"split",  dur: 2.6 },
+  { id:"merge",  dur: 1.9 },
+  { id:"kaboom", dur: 2.6 },
+];
+const TOTAL = ACTS.reduce((n, a) => n + a.dur, 0);
+
+let show = null;     // { t, minis:[...], said:{} }
+
+function reset(){ show = null; }
+function active(){ return !!show; }
+function state(){ return show; }
+
+function begin(boss){
+  show = { t: 0, minis: [], said: {}, crownX: boss.x, crownY: boss.y, crownV: 0,
+           puffX: boss.x, puffY: boss.y, puffVX: 0, puffVY: 0 };
+  audio.play("papaOw");
+  return show;
+}
+
+function act(){
+  if(!show) return null;
+  let t = show.t;
+  for(let i = 0; i < ACTS.length; i++){
+    if(t < ACTS[i].dur) return { id: ACTS[i].id, k: t/ACTS[i].dur, i };
+    t -= ACTS[i].dur;
+  }
+  return null;
+}
+
+/** Fires once per act, whatever the frame rate. */
+function once(key, fn){
+  if(show.said[key]) return;
+  show.said[key] = true;
+  fn();
+}
+
+function update(dt, boss, world){
+  if(!show) return false;
+  show.t += dt;
+  const a = act();
+  if(!a || !boss) { show = null; return true; }
+
+  // The boss holds station through the whole routine - he is not sinking,
+  // he is performing.
+  boss.wobble = 0;
+
+  if(a.id === "ow"){
+    once("ow", () => {
+      fx.text(VW/2, VH*0.30, "OW! MY FACE!", "#ffd23f", 34, true);
+      fx.shake(14);
+    });
+    // The pop at the end of act one: everything stops. The fake-out only
+    // works if the screen genuinely goes quiet.
+    if(a.k > 0.72) once("owpop", () => {
+      fx.explosion(boss.x, boss.y, 150, "#ffd23f", true);
+      fx.ring(boss.x, boss.y, 220, "#ffffff", 5, 0.5);
+      fx.hitStop(160);
+      fx.shake(22);
+      audio.play("papaPop");
+    });
+
+  } else if(a.id === "back"){
+    once("back", () => {
+      fx.flash(0.45, "255,210,63");
+      fx.shake(20);
+      fx.text(VW/2, VH*0.28, "IS THAT ALL YOU'VE GOT?!", "#ff5d73", 30, true);
+      audio.play("papaBack");
+    });
+    // Halfway through he lets go and flies round the room like a balloon.
+    if(a.k > 0.45){
+      once("raspberry", () => {
+        audio.play("papaRaspberry");
+        fx.text(VW/2, VH*0.36, "PFFFFFFFT!", "#ffffff", 26, true);
+        show.puffVX = rand(-420, 420) || 300;
+        show.puffVY = -260;
+      });
+      show.puffVX += Math.sin(show.t*18)*900*dt;
+      show.puffVY += Math.cos(show.t*13)*760*dt;
+      show.puffX += show.puffVX*dt;
+      show.puffY += show.puffVY*dt;
+      if(show.puffX < 40 || show.puffX > VW-40){ show.puffVX *= -1; audio.play("papaBoing"); }
+      if(show.puffY < 90 || show.puffY > VH-140){ show.puffVY *= -1; audio.play("papaBoing"); }
+      show.puffX = clamp(show.puffX, 40, VW-40);
+      show.puffY = clamp(show.puffY, 90, VH-140);
+      if(Math.random() < 0.5)
+        fx.spark(show.puffX, show.puffY, rand(-90,90), rand(-40,90), "#ffd23f", 0.4, 3);
+    }
+
+  } else if(a.id === "split"){
+    once("split", () => {
+      audio.play("papaSplit");
+      fx.explosion(show.puffX, show.puffY, 110, "#ffd23f", true);
+      fx.text(VW/2, VH*0.26, "NOW THERE'S FIVE OF ME!", "#4ade80", 28, true);
+      for(let i = 0; i < 5; i++){
+        const ang = -Math.PI/2 + (i - 2)*0.5;
+        show.minis.push({
+          x: show.puffX, y: show.puffY,
+          vx: Math.cos(ang)*rand(180, 340), vy: Math.sin(ang)*rand(120, 260),
+          spin: rand(-6, 6), rot: rand(0, TAU), r: 34,
+        });
+      }
+    });
+    // Bouncy-ball physics, and they bonk off each other with a squeak.
+    show.minis.forEach((m, i) => {
+      m.vy += 260*dt;
+      m.x += m.vx*dt; m.y += m.vy*dt;
+      m.rot += m.spin*dt;
+      if(m.x < m.r || m.x > VW-m.r){ m.vx *= -0.92; m.x = clamp(m.x, m.r, VW-m.r); audio.play("papaBoing"); }
+      if(m.y > VH-m.r-40){ m.y = VH-m.r-40; m.vy *= -0.86; audio.play("papaBoing"); }
+      if(m.y < m.r+70){ m.y = m.r+70; m.vy *= -0.86; }
+      for(let j = i+1; j < show.minis.length; j++){
+        const o = show.minis[j];
+        const dx = o.x-m.x, dy = o.y-m.y, d = Math.hypot(dx, dy);
+        if(d > 0.01 && d < m.r + o.r){
+          const nx = dx/d, ny = dy/d, push = (m.r + o.r - d)/2;
+          m.x -= nx*push; m.y -= ny*push; o.x += nx*push; o.y += ny*push;
+          m.vx -= nx*90; o.vx += nx*90;
+          if(Math.random() < 0.3) audio.play("papaBoing");
+        }
+      }
+    });
+
+  } else if(a.id === "merge"){
+    once("merge", () => {
+      audio.play("papaMerge");
+      fx.text(VW/2, VH*0.24, "UH OH", "#ffffff", 30, true);
+    });
+    // They rush back to the middle and become one enormous head.
+    show.minis.forEach(m => {
+      const tx = VW/2, ty = VH*0.42;
+      m.x += (tx - m.x) * Math.min(1, dt*4.5);
+      m.y += (ty - m.y) * Math.min(1, dt*4.5);
+      m.rot += 9*dt;
+    });
+    // The held breath before the punchline.
+    if(a.k > 0.82) once("wink", () => { fx.hitStop(320); audio.play("papaWink"); });
+
+  } else if(a.id === "kaboom"){
+    once("kaboom", () => {
+      const cx = VW/2, cy = VH*0.42;
+      fx.flash(1, "255,240,180");
+      fx.hitStop(280);
+      fx.shake(52);
+      audio.play("megaBoom");
+      audio.play("papaKaboom");
+      for(let r = 0; r < 8; r++)
+        fx.ring(cx, cy, 90 + r*95, r%2 ? "#ffd23f" : "#ffffff", 7 - r*0.7, 0.5 + r*0.16);
+      const COLS = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ff4fd8"];
+      for(let i = 0; i < 14; i++)
+        fx.firework(rand(50, VW-50), rand(VH*0.12, VH*0.62), COLS[i % COLS.length]);
+      fx.explosion(cx, cy, 420, "#ffd23f", true);
+      fx.debris(cx, cy, 60, "#ffd23f");
+      fx.embers(cx, cy, 70);
+      fx.text(VW/2, VH*0.32, "PAPA GOES KA-BOOM!!!", "#ffd23f", 38, true);
+      fx.text(VW/2, VH*0.40, "bye bye!", "#ffffff", 24, true);
+      // The loot: a wide shower, plus tiny papa heads raining down as
+      // collectables. Stars are treasure; the heads are the souvenir.
+      for(let i = 0; i < 46; i++){
+        const st = world.spawnPickup("star", rand(26, VW-26), rand(-120, VH*0.35));
+        st.vx = rand(-70, 70);
+      }
+      for(let i = 0; i < 10; i++){
+        const hd = world.spawnPickup("papahead", rand(40, VW-40), rand(-200, -20));
+        hd.vx = rand(-50, 50);
+      }
+      show.minis.length = 0;
+      // The crown outlives him and parachutes down.
+      show.crownX = cx; show.crownY = cy; show.crownV = -120;
+    });
+    // Fireworks keep going off through the whole finish - the sky is still
+    // laughing after the joke lands.
+    if(Math.random() < 0.09)
+      fx.firework(rand(50, VW-50), rand(VH*0.12, VH*0.55),
+                  ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"][Math.floor(rand(0,5))]);
+    show.crownV += 200*dt;
+    show.crownY += show.crownV*dt;
+    show.crownX += Math.sin(show.t*3)*40*dt;
+  }
+
+  if(show.t >= TOTAL){ show = null; return true; }
+  return false;
+}
+
+SF.papadeath = { reset, begin, active, act, state, update, TOTAL, ACTS };
+})();

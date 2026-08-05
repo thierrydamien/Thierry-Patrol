@@ -1842,6 +1842,44 @@ and a boss with NO weak points (papa) got the bare floor of 78 - half his
 head patrolled off-screen. The margin is now also floored by the hull's
 own half-width, which protects every future big boss too.
 
+## 8bd. "Do better" — KING PAPA's death becomes a comedy routine
+
+The verdict on the first version was fair: *"I asked for something super
+crazy and memorable and funny so they laugh like crazy. DO better."* What
+I had shipped was a big explosion, and a big explosion is not a JOKE. It
+was loud, not funny - and I had confused the two.
+
+What actually makes a seven-year-old howl is not spectacle, it is the
+RUNNER: you are certain it is over, and it isn't. So the death was rebuilt
+as a cartoon gag in five acts (`papadeath.js`, twelve seconds, the longest
+thing in the game after the finale) with two deliberate fake-outs:
+
+1. **OW** - the head swells like a balloon, goes red, and POPS to nothing.
+   The screen goes quiet. Surely that's it?
+2. **BACK** - he returns BIGGER, spinning, indignant: "IS THAT ALL YOU'VE
+   GOT?!" - then lets go and farts around the room like a released balloon,
+   boinging off the walls. Surely THAT'S it?
+3. **SPLIT** - he bursts into five tiny crowned Papas that bounce off the
+   floor, the walls and each other, squeaking on every bonk.
+4. **MERGE** - the five rush back to the middle and inflate to fill the
+   screen. Everything stops. He winks.
+5. **KABOOM** - fourteen fireworks, eight rings, and a shower of 46 stars
+   AND 10 collectable tiny Papa heads. The crown outlives him and
+   parachutes down. Catching a head pops "HI KIDS!" / "LOVE YOU!" / "BE
+   GOOD!" / "BYE!"
+
+It has the game's only cartoon audio shelf - a comedy "ow", a balloon pop,
+a slide-whistle comeback, a nine-tone raspberry, boings, and a sub-bass
+kaboom under a party fanfare. Everything else in this game is sci-fi; this
+one boss gets to be a Saturday morning.
+
+The suite drives all five acts end to end (order, the five minis, the star
+AND souvenir shower), because a joke that silently strands the run is
+worse than no joke. One probe lesson worth keeping: calling
+`SF.bosses.damage()` directly never triggers the death, because `killBoss`
+only runs when the COLLISION layer consumes the result - the honest way to
+test a death is to let the player's own guns land the last round.
+
 ## 9. What I'd do next
 
 Roughly in value order:

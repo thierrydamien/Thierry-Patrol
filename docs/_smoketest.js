@@ -107,7 +107,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/finale.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/finale.js","src/papadeath.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -1355,9 +1355,47 @@ async function run(){
     await runFrames(3);
     check("a caught star pays in score and treasure",
       !starPk.alive && SF.game.run.stats.stars >= 1 && SF.game.run.money > moneyB4);
-    check("king papa pops into a star ring, not a normal blast",
-      /PAPA GOES KA-BOOM/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
-      /drawPapaBoss/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
+    /*
+     * The death is a COMEDY ROUTINE, not an explosion: five acts, two
+     * fake-outs, and the joke only works if act one genuinely looks final.
+     * Driven end to end here so a broken act can't silently strand the run.
+     */
+    {
+      const D = SF.papadeath;
+      check("papa's send-off is a five-act routine, not a bang",
+        D.ACTS.length === 5 && D.TOTAL > 10 &&
+        D.ACTS.map(x => x.id).join(",") === "ow,back,split,merge,kaboom");
+      const fake = { x: 300, y: 300, def: SF.missions.BOSSES.papa, wobble: 0 };
+      D.begin(fake);
+      check("the routine starts on the first fake-out", D.active() && D.act().id === "ow");
+      const seen = new Set();
+      const W4 = SF.game.world;
+      let done = false, guard = 0, minisSeen = 0, starsBefore = W4.pickups.items.filter(p => p.alive).length;
+      while(!done && guard++ < 3000){
+        const a = D.act();
+        if(a) seen.add(a.id);
+        const stt = D.state();
+        if(stt) minisSeen = Math.max(minisSeen, stt.minis.length);
+        done = D.update(1/60, fake, W4);
+      }
+      check("every act runs, in order, and it finishes",
+        done && seen.size === 5 && seen.has("split") && seen.has("kaboom"));
+      check("he really does split into five of himself", minisSeen === 5);
+      const after = W4.pickups.items.filter(p => p.alive);
+      check("the punchline showers stars AND souvenir papas",
+        after.filter(p => p.kind === "star").length >= 30 &&
+        after.filter(p => p.kind === "papahead").length >= 8 &&
+        after.length > starsBefore);
+      check("a souvenir papa is worth catching",
+        /kind === "papahead"/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+      check("the routine has its own silly noises", (() => {
+        const src = fs.readFileSync(path.join(__dirname, "src/audio.js"), "utf8");
+        return ["papaOw","papaRaspberry","papaBoing","papaSplit","papaKaboom"]
+          .every(k => src.indexOf("SOUNDS." + k) >= 0);
+      })());
+      D.reset();
+      W4.pickups.killAll();
+    }
     SF.game.endMission(true);
     await runFrames(5);
     const rich = SF.profile.load(activeName);

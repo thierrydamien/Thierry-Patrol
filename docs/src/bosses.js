@@ -383,7 +383,7 @@ function update(boss, dt, world, ctxObj, timeMs){
   if(boss.dying){
     // The finale's death is choreographed by finale.js - the fight engine
     // must not also run its own drumroll on top of it.
-    if(boss.finaleDeath) return;
+    if(boss.finaleDeath || boss.papaDeath) return;   // choreographed elsewhere
     boss.deathT += dt;
     boss.y += 24*dt;                                  // engines dead, sinking
     boss.x += Math.sin(boss.deathT*9) * 30 * dt;      // shuddering
