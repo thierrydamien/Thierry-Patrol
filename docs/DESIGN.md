@@ -2125,6 +2125,54 @@ but the thing worth writing down is that **the browser probe is what made
 the second cause visible** - the unit tests were happy with pierce all
 along, because pierce was working exactly as designed. Designed wrong.
 
+## 8blb. The third cause: the hull was porous on purpose
+
+"It still looks like the missiles are going through the boss. They should
+hit the boss and stop."
+
+Same complaint, third mechanism, and this one was not a bug at all - it was
+a deliberate mechanic doing exactly what it was written to do.
+
+When weak points got their own hitboxes, the hull was made **porous**: while
+any part survived, a round chipped the body once and kept flying "to look
+for a seam". That was belt-and-braces insurance for the real fix, and it
+was invisible in a unit test because nothing about it was wrong. But most
+of a boss fight happens with plates still bolted on, so for most of every
+boss fight the player's entire stream of fire visibly poured straight
+through the thing they were shooting at.
+
+The one case porosity genuinely covered is a part **buried inside the body
+circle**. The Sky Sentinel's core sits 30px above centre inside a 63px
+hull; a plainly solid body would swallow every round aimed at it and make
+an armoured boss unkillable all over again - the exact bug porosity was
+invented to fix.
+
+So the hull is solid, with one narrow exception: a round is allowed through
+only if it is **actually lined up on a surviving part it has not reached
+yet**. `threadsToWeakPoint()` casts the round's heading forward and asks
+whether it passes within striking distance of a part still ahead of it.
+Those rounds thread the seam and visibly burst on the part a frame or two
+later. Everything else - the overwhelming majority, and every round in the
+screenshot - stops dead on the plating where it struck.
+
+**Damage is unchanged, and that was measured rather than argued.** A
+non-threading round always did exactly one hull hit and then flew off
+screen doing nothing more; now it does exactly one hull hit and stops. A
+throwaway harness fought all eight bosses head-on with a fixed sweeping
+pattern of fire, before and after: identical time-to-kill and identical hit
+counts on every single one, to the frame.
+
+The other thing the sweep exposed: `damage()` locates which part was struck
+from the bullet's own coordinates, so a round left at the end of its step -
+which sweeping can put well past a small part - was being scored as a HULL
+hit. The shot vanished and the part took nothing. Rounds are now parked ON
+the part before the hit is scored.
+
+The test that matters most here is not any of the unit checks - it is the
+one that fights every boss in the game to death and fails by name if any of
+them survives. Three of the four things that went wrong in this area were
+reachability, and reachability is not something to take on trust.
+
 ## 8bm. The squadron comes out for everyone
 
 "I want the other friendly planes to come help at the end of each boss like
@@ -2177,6 +2225,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~460 checks.
+  migration. ~465 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

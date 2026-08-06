@@ -141,6 +141,29 @@ function sweep(b, px, py, cx, cy, rr){
 }
 const HIT = { x:0, y:0 };   // one scratch object; the hot loop stays allocation-free
 
+/*
+ * Is this round threading the hull toward a part it has not reached yet?
+ *
+ * Cast the bullet's heading forward and ask whether it passes within striking
+ * distance of any surviving weak point still AHEAD of it. That is the only
+ * reason a shot is ever allowed through a boss's body: a part buried inside
+ * the hull circle has to stay reachable. A round that is merely somewhere
+ * over the boss is not threading anything and stops on the plating.
+ */
+function threadsToWeakPoint(b, boss){
+  const bs = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
+  if(bs < 0.001) return false;
+  const ux = b.vx/bs, uy = b.vy/bs;
+  for(let k = 0; k < boss.weakPoints.length; k++){
+    const wp = boss.weakPoints[k];
+    if(wp.destroyed) continue;
+    const dx = (boss.x + wp.ox) - b.x, dy = (boss.y + wp.oy) - b.y;
+    if(dx*ux + dy*uy <= 0) continue;                  // behind it; already past
+    if(Math.abs(dx*uy - dy*ux) <= b.r + wp.r) return true;
+  }
+  return false;
+}
+
 function resolve(world, ctxObj, dt){
   const grid = world.grid;
   grid.clear();
@@ -215,17 +238,14 @@ function resolve(world, ctxObj, dt){
     const boss = world.boss;
     if(boss && boss.alive && !boss.entering){
       /*
-       * Weak points are their own hitboxes - and until now they were not.
-       * A bullet was consumed on the boss's BODY circle, so a part outside
-       * that circle (the Sentinel's wingtip pods) or deep inside it (its
-       * command tower) could never be struck by an aimed shot: measured,
-       * EVERY weak point on EVERY boss was unhittable head-on, and only ever
+       * Weak points are their own hitboxes, tested first and on their own.
+       * Before that they were not: a bullet was consumed on the boss's BODY
+       * circle, so a part outside that circle (the Sentinel's wingtip pods)
+       * or deep inside it (its command tower, 30px above centre inside a
+       * 63px body) could never be struck by an aimed shot. Measured, EVERY
+       * weak point on EVERY boss was unhittable head-on, and only ever
        * clipped by luck from angled spread rounds. An armoured Sky Sentinel
-       * was therefore unkillable.
-       *
-       * So: parts are tested first and on their own, and while any part still
-       * stands the hull is POROUS - a round chips it once and keeps flying to
-       * look for a seam. Strip every part and the body goes solid again.
+       * was unkillable.
        */
       if(!b.hitWeak){
         for(let k = 0; k < boss.weakPoints.length; k++){
@@ -234,20 +254,59 @@ function resolve(world, ctxObj, dt){
           const wx = boss.x + wp.ox, wy = boss.y + wp.oy;
           // Swept, like the enemy test: a weak point is small (r17-26) and a
           // dropped frame is enough to step a round straight over one.
-          if(sweep(b, px, py, wx, wy, b.r + wp.r)){
+          const at = sweep(b, px, py, wx, wy, b.r + wp.r);
+          if(at){
             b.hitWeak = true;
-            ctxObj.onBossHit(boss, b);
-            if(pierceLeft <= 0) b.alive = false;
+            /*
+             * Park the round ON the part before scoring it. damage() locates
+             * which part was struck from the bullet's own coordinates, so a
+             * round left at the end of its step - which sweeping can put well
+             * past the part - would be scored as a HULL hit: the shot
+             * vanishes and the part takes nothing.
+             */
+            b.x = at.x; b.y = at.y;
+            const res = ctxObj.onBossHit(boss, b);
+            // One rule for the whole game: through what you destroy, and
+            // nothing else. Blow a part off and a piercing round carries on.
+            if(res && res.weakPointDestroyed && pierceLeft > 0) pierceLeft--;
+            else b.alive = false;
             break;
           }
         }
       }
       if(b.alive && !b.hitBoss){
-        if(sweep(b, px, py, boss.x, boss.y, b.r + boss.r)){
+        const at = sweep(b, px, py, boss.x, boss.y, b.r + boss.r);
+        if(at){
+          /*
+           * THE HULL IS SOLID. It used to be porous while any part survived -
+           * a round chipped it once and kept flying to "look for a seam" -
+           * which was belt-and-braces from before parts had their own
+           * hitboxes. It also meant that on every boss with a plate still
+           * bolted on, which is most of a boss fight, your shots visibly
+           * streamed straight through the thing you were shooting: "it still
+           * looks like the missiles are going through the boss. They should
+           * hit the boss and stop."
+           *
+           * The one case porosity really covered is a part BURIED in the body
+           * circle - the Sentinel's core sits 30px above centre inside a 63px
+           * hull, so a solid body would swallow every round aimed at it and
+           * make an armoured boss unkillable all over again. So instead of
+           * letting everything through, only a round actually lined up on a
+           * surviving part threads the hull: it is about to hit that part and
+           * will visibly burst on it a frame or two later. Everything else -
+           * which is the overwhelming majority, and every round in the
+           * screenshot - stops dead on the plating where it struck.
+           *
+           * Damage is unchanged by this. A non-threading round always did
+           * exactly one hull hit and then flew off screen doing nothing more;
+           * now it does exactly one hull hit and stops. Same dps, honest
+           * picture.
+           */
+          const threading = threadsToWeakPoint(b, boss);
+          if(!threading){ b.x = at.x; b.y = at.y; }
           b.hitBoss = true;
           ctxObj.onBossHit(boss, b);
-          const partsLeft = boss.weakPoints.some(w => !w.destroyed);
-          if(pierceLeft <= 0 && !partsLeft) b.alive = false;
+          if(!threading) b.alive = false;
         }
       }
     }

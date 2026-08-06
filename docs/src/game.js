@@ -617,6 +617,7 @@ const callbacks = {
       }
     }
     if(res.killed) killBoss(boss);
+    return res;                 // the collision layer needs to know what fell
   },
 
   onPlayerHit(source){

@@ -858,6 +858,94 @@ async function run(){
     W.reset();
   }
 
+  /* "It still looks like the missiles are going through the boss. They should
+     hit the boss and stop." A different mechanism from the enemy case: the
+     hull was deliberately POROUS while any part survived. It is solid now,
+     and the only rounds still allowed through are the ones threading toward a
+     part buried inside the body - which is what keeps armoured bosses
+     killable. Both halves are load-bearing, so both are tested. */
+  {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    const ctxc = { onEnemyKilled(){}, onPlayerHit(){}, godMode:true,
+                   onBossHit:(bs, bl) => SF.bosses.damage(bs, bl.dmg, bl.x, bl.y) };
+    /** One round fired straight up from below the boss, `ox` off its centre. */
+    const fireUp = (id, ox, frames) => {
+      W.reset();
+      const bs = SF.bosses.create(id, diff, 40);
+      bs.entering = false; bs.vx = 0;
+      W.boss = bs;
+      const b = W.bullets.spawn();
+      b.x = bs.x + ox; b.y = bs.y + bs.r + 120; b.vx = 0; b.vy = -660;
+      b.r = 5; b.dmg = 4; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+      b.hitBoss = false; b.hitWeak = false;
+      const wp0 = {};
+      bs.weakPoints.forEach(w => { wp0[w.id] = w.hp; });
+      let stoppedAt = null;
+      for(let f = 0; f < frames && b.alive; f++){
+        b.x += b.vx/60; b.y += b.vy/60;
+        SF.systems.resolve(W, ctxc, 1/60);
+        if(!b.alive) stoppedAt = b.y;
+      }
+      const out = { bullet: b, boss: bs, stoppedAt, wp0,
+                    escaped: b.alive && b.y < bs.y - bs.r };
+      W.boss = null;
+      return out;
+    };
+
+    // The Marauder's guns sit at ox +-62, well clear of a shot up the middle.
+    const mid = fireUp("marauder", 0, 240);
+    check("a round up the middle stops ON the boss, it does not fly through",
+      !mid.escaped && mid.bullet.alive === false &&
+      mid.stoppedAt >= mid.boss.y - mid.boss.r - 8);
+    check("stopping on the hull still damages the hull",
+      mid.boss.hp < mid.boss.maxHp);
+
+    /* The Sky Sentinel's core is 30px ABOVE centre inside a 63px hull - buried.
+       A solid body would swallow every round aimed at it and make an armoured
+       boss unkillable, which is the exact bug the porous hull once fixed. */
+    const core = fireUp("sentinel", 0, 240);
+    check("a round lined up on a buried core still reaches it",
+      core.bullet.hitWeak === true &&
+      core.boss.weakPoints.find(w => w.id === "core").hp < core.wp0.core);
+
+    /* The one that matters most: nothing became unkillable. Every boss is
+       fought head-on by a sweeping line of fire and has to die. */
+    const dies = id => {
+      W.reset();
+      const bs = SF.bosses.create(id, diff, 40);
+      // create() parks a boss at y=-150 ready to descend; put it on station or
+      // updateBullets culls every round as off-screen before it ever arrives.
+      bs.entering = false; bs.vx = 0; bs.x = SF.entityConst.VW/2; bs.y = bs.targetY;
+      W.boss = bs;
+      // Wide enough to cover parts mounted OUTSIDE the body circle - the
+      // Sentinel's pods sit at ox +-68 on a 63px hull.
+      const span = bs.weakPoints.reduce((m, w) => Math.max(m, Math.abs(w.ox) + w.r),
+                                        bs.r) + 8;
+      for(let f = 0; f < 5400 && bs.alive; f++){
+        if(f % 4 === 0){
+          // Sweep across the whole boss so parts and hull both take fire.
+          const ox = ((f/4) % 41)*(span*2/40) - span;
+          const b = W.bullets.spawn();
+          b.x = bs.x + ox; b.y = bs.y + bs.r + 90; b.vx = 0; b.vy = -660;
+          b.r = 5; b.dmg = 6; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+          b.hitBoss = false; b.hitWeak = false;
+        }
+        W.updateBullets(1/60);
+        SF.systems.resolve(W, ctxc, 1/60);
+      }
+      const ok = !bs.alive;
+      W.boss = null;
+      return ok;
+    };
+    const allBosses = Object.keys(SF.missions.BOSSES);
+    const unkillable = allBosses.filter(id => !dies(id));
+    check("no boss became unkillable when the hull went solid - " +
+          (unkillable.length ? "STUCK: " + unkillable.join(",") : "all " + allBosses.length),
+      unkillable.length === 0);
+    W.reset();
+  }
+
   /* Act 2's bosses introduce the first new attacks since launch (spiralArms,
      mineField). Drive each boss through every phase to the death, forcing an
      attack every frame it will accept one, so a typo in a new pattern shows up
