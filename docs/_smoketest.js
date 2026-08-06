@@ -380,11 +380,30 @@ async function run(){
     qa("#campaignNodes .map-node").length === SF.missions.MISSIONS.length);
   check("only mission 1 is unlocked at the start",
     qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
-  /* The UP NEXT card is gone on request - "a bit useless". Everything it said
-     was already on the map: the next stop is the only unlocked one, it is
-     ringed and haloed, your ship is parked on it, and the record holder's
-     initial rides its rim. This guards against it creeping back. */
-  check("no UP NEXT card - the map speaks for itself", !id("campaignHint"));
+  /* The five-line UP NEXT card is gone - "a bit useless" - because every line
+     of it was already drawn on the map a few pixels above: the next stop is
+     the only unlocked one, ringed and haloed with your ship parked on it, and
+     the record holder's initial rides its rim. What survives is the shortcut,
+     not the paragraph: "a next level button is good but it doesn't need to be
+     a whole card". So it must stay a button, and stay one line. */
+  check("the old UP NEXT card is gone", !id("campaignHint"));
+  {
+    const nb = id("campaignNext");
+    check("there is still a one-tap way into the next mission",
+      !!nb && nb.tagName === "BUTTON");
+    check("the button names the mission you are about to fly",
+      /FLY MISSION 1\b/.test(nb.querySelector("b").textContent) &&
+      nb.querySelector("span").textContent === SF.missions.MISSIONS[0].name);
+    /* A button, not a card: one label and one name, and short enough to sit on
+       a single line of a phone. The card it replaced ran to five lines. */
+    check("it stays a button rather than growing back into a card",
+      nb.children.length === 2 && nb.textContent.length < 44);
+    clickEl(nb);
+    check("tapping it briefs that mission",
+      id("screen-briefing").classList.contains("active") &&
+      id("briefNum").textContent === "MISSION 1");
+    SF.ui.renderMissions(); SF.ui.show("screen-missions");
+  }
 
   /* The campaign is ~2200px of map on an 800px screen and the route runs
      bottom-to-top, so where it opens IS the feature: the bottom for a new

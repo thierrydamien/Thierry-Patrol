@@ -740,16 +740,29 @@ function renderMissions(){
   });
 
   /*
-   * Which stop the map opens on. There used to be an UP NEXT card pinned
-   * along the bottom naming this mission, and it was cut: everything on it
-   * had already migrated onto the map itself. The stop is the only bright
-   * one in a row of locked ones, it is ringed and haloed, your ship is
-   * parked on it, and the record holder's initial rides its rim in their own
-   * colour. The card restated all of that in words a seven-year-old had to
-   * read, and cost 120px of the one thing the screen is actually for.
+   * The stop the map opens on, and the one the bottom button flies.
+   *
+   * This used to be a five-line card: mission number, name, subtitle, enemy
+   * count, record holder, TAP TO FLY. It was cut for restating the picture
+   * directly above it - the stop is already the only bright one in a row of
+   * locked ones, ringed and haloed with your ship parked on it, and the
+   * record holder's initial already rides its rim in their own colour.
+   *
+   * What was worth keeping is the shortcut, not the paragraph: "a next level
+   * button is good but it doesn't need to be a whole card". So it is one
+   * line - a verb, a number, and the name - which is a control rather than a
+   * description of one. The map keeps the storytelling; the button just goes
+   * there.
    */
   let next = 0;
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) next = i;
+  const nextBtn = $("campaignNext");
+  if(nextBtn){
+    const nm = MISSIONS[next];
+    nextBtn.innerHTML = `<b>▶ FLY MISSION ${nm.id}</b>` +
+                        `<span>${esc(nm.name)}</span>`;
+    nextBtn.onclick = () => { audio.play("uiClick"); openBriefing(next); };
+  }
 
   startCampaignLoop();
   scrollToNextStop(next);

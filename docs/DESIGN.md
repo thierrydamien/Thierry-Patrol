@@ -2259,7 +2259,7 @@ frames - and it was checked by reverting the fix and confirming it goes
 red. A test for a bug like this is worth nothing unless you have watched it
 fail.
 
-## 8bo. Cutting the UP NEXT card
+## 8bo. Cutting the UP NEXT card down to a button
 
 "UP NEXT mission is a bit useless in campaign. I think it could be
 removed."
@@ -2286,11 +2286,26 @@ lands dead centre for anyone mid-campaign.
 The map is 136px taller for it, and a check guards against the card
 creeping back.
 
-There is one honest cost. "TAP TO FLY" was the only literal instruction on
-the screen, and it is gone. The judgement is that the highlighted stop with
-a ship parked on it is the more universal affordance - it is the idiom of
-every map-based game these kids have ever touched - and a seven-year-old
-reads the bright thing before they read the sentence.
+**And then half of it came back, correctly.** "I actually think a next
+level button is good but it doesn't need to be a whole card like it used to
+be." That is the right read, and it splits the card cleanly in two: the
+*shortcut* was worth keeping, the *paragraph* was not. Losing the shortcut
+also lost the only literal instruction on the screen - "TAP TO FLY" - and
+while the highlighted stop is a strong affordance, a one-tap way in costs
+almost nothing.
+
+So `#campaignNext` is one sticky line at the bottom edge: `▶ FLY MISSION 10`
+in bold, the mission's name beside it in lighter type. A control, not a
+summary. Where the card was five lines and ~130px, the button is one line
+and ~40px, and it floats over the map while it scrolls rather than taking a
+block out of it. The name is the part that truncates on a narrow phone -
+the number is what the button is FOR, so it never does.
+
+The tests hold the shape as well as the behaviour: the button must name the
+next mission, must brief that mission when tapped, and must stay two child
+elements and under 44 characters. That last check is the interesting one -
+it is a guard against this growing back into a card one useful addition at
+a time, which is exactly how it became a card the first time.
 
 ## 9. What I'd do next
 
@@ -2304,6 +2319,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~471 checks.
+  migration. ~475 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

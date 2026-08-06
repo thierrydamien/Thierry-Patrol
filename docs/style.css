@@ -239,6 +239,31 @@ html, body {
 .map-node:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
 .map-node:not(.locked):active { transform: translate(-50%, -50%) scale(0.92); }
 
+/* The straight-into-the-next-mission button. It rides the bottom edge while
+   the map scrolls behind it, and it is ONE line on purpose: the card it
+   replaced was five, and every one of those lines was already drawn on the
+   map a few pixels above it. A control, not a summary. */
+.campaign-next {
+  position: sticky; bottom: 8px; z-index: 4;
+  display:inline-flex; align-items:baseline; justify-content:center;
+  gap:8px; flex-wrap:nowrap; max-width:100%;
+  margin-top:12px; padding:9px 18px; border:none; border-radius:999px;
+  background: linear-gradient(135deg, #ffc85c, var(--accent));
+  color:#241a00; cursor:pointer;
+  box-shadow: 0 6px 18px -4px rgba(0,0,0,0.65);
+  transition: transform .12s ease, filter .12s ease;
+}
+.campaign-next b { font-size:13px; font-weight:800; letter-spacing:1.4px; white-space:nowrap; }
+/* The name is the first thing to give way on a narrow phone - the number is
+   what the button is FOR, so it never truncates. */
+.campaign-next span {
+  font-size:12px; font-weight:600; opacity:0.72;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.campaign-next:active { transform: scale(0.97); }
+@media (hover:hover){ .campaign-next:hover { filter: brightness(1.07); } }
+.campaign-next:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+
 
 /* ---------------- briefing ---------------- */
 .brief-hero {
