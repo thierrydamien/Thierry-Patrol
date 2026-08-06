@@ -380,7 +380,11 @@ async function run(){
     qa("#campaignNodes .map-node").length === SF.missions.MISSIONS.length);
   check("only mission 1 is unlocked at the start",
     qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
-  check("the map says what you're flying next", /\w/.test(id("campaignHint").textContent));
+  /* The UP NEXT card is gone on request - "a bit useless". Everything it said
+     was already on the map: the next stop is the only unlocked one, it is
+     ringed and haloed, your ship is parked on it, and the record holder's
+     initial rides its rim. This guards against it creeping back. */
+  check("no UP NEXT card - the map speaks for itself", !id("campaignHint"));
 
   /* The campaign is ~2200px of map on an 800px screen and the route runs
      bottom-to-top, so where it opens IS the feature: the bottom for a new
@@ -391,8 +395,15 @@ async function run(){
   {
     const sc = id("screen-missions");
     const holder = id("campaignNodes");
-    const hint = id("campaignHint");
     const VIEW = 620, STOP = 76, GAP = 96;
+    const nextIndex = () => {
+      let n = 0;
+      for(let i = 0; i < SF.missions.MISSIONS.length; i++)
+        if(SF.missions.isMissionUnlocked(SF.ui.getProfile(), i)) n = i;
+      return n;
+    };
+    // Where stop i's centre sits in the scroll container's content.
+    const centreOf = i => (SF.missions.MISSIONS.length - 1 - i)*GAP + STOP/2;
     // jsdom does no layout, so hand it exactly the geometry under test: stops
     // stacked bottom-to-top, mission 1 lowest, all below the fold.
     const geom = (top, height) => () =>
@@ -403,7 +414,6 @@ async function run(){
       get(){ return (SF.missions.MISSIONS.length - 1) * GAP + STOP + 260; } });
     const measure = () => {
       sc.getBoundingClientRect = geom(0, VIEW);
-      hint.getBoundingClientRect = geom(VIEW - 120, 120);
       Array.from(holder.children).forEach((el, i) => {
         const fromTop = (SF.missions.MISSIONS.length - 1 - i) * GAP;
         el.getBoundingClientRect = geom(fromTop - sc.scrollTop, STOP);
@@ -426,18 +436,25 @@ async function run(){
         measure();
       }
       const at = sc.scrollTop;
+      const target = nextIndex();
       p.missions = keep;
-      return { whileHidden, at,
-               upNext: +(hint.textContent.match(/MISSION (\d+)/) || [0,0])[1] };
+      // The stop you are about to fly has to be ON SCREEN. Not necessarily
+      // dead centre: at either end of the route the scroll clamps, which is
+      // exactly why a new pilot gets the bottom and a finished one the top.
+      const c = centreOf(target);
+      return { whileHidden, at, mission: target + 1,
+               onScreen: c >= at && c <= at + VIEW };
     };
 
     const fresh = openOn([]);
     const mid   = openOn([1,2,3,4,5,6,7,8,9]);
     const done  = openOn(SF.missions.MISSIONS.map(m => m.id));
 
-    check("the campaign names the first mission you have not cleared",
-      fresh.upNext === 1 && mid.upNext === 10 &&
-      done.upNext === SF.missions.MISSIONS.length);
+    check("the campaign targets the first mission you have not cleared",
+      fresh.mission === 1 && mid.mission === 10 &&
+      done.mission === SF.missions.MISSIONS.length);
+    check("it opens with that mission on screen, whoever you are",
+      fresh.onScreen && mid.onScreen && done.onScreen);
     /* The regression itself: measuring while the screen is hidden must not be
        mistaken for an answer. It has to wait for the layout. */
     check("a scroll computed while the screen is hidden is not the final word",

@@ -239,23 +239,6 @@ html, body {
 .map-node:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
 .map-node:not(.locked):active { transform: translate(-50%, -50%) scale(0.92); }
 
-/* Sticky: the map is four screens tall and auto-scrolls you to your next
-   stop, so a card that lives under the map was effectively invisible. This
-   one rides the bottom of the viewport while the map scrolls behind it. */
-.campaign-hint {
-  position: sticky; bottom: 6px; z-index: 4;
-  display:flex; flex-direction:column; gap:2px; align-items:center;
-  text-align:center; margin-top:12px; max-width:420px; width:100%;
-  background: rgba(8,12,28,0.88);
-  border: 1px solid var(--line);
-  border-radius: 14px; padding: 9px 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-}
-.campaign-hint b { font-size:16px; }
-.campaign-hint span { font-size:11px; color: rgba(255,255,255,0.55); }
-.campaign-hint .ch-sub { font-size:12px; color: rgba(255,255,255,0.75); letter-spacing:0.5px; }
-.campaign-hint .ch-record { color: var(--accent); font-size:12px; margin-top:2px; }
 
 /* ---------------- briefing ---------------- */
 .brief-hero {
@@ -946,17 +929,6 @@ button.part-chip:active { transform: scale(0.96); }
 .hangar-next.tappable { cursor:pointer; border-radius:10px; }
 @media (hover:hover){ .hangar-next.tappable:hover b { color: var(--accent); } }
 .hangar-next.tappable:active { transform: scale(0.98); }
-
-/* Campaign card: kicker + call to action */
-.campaign-hint { cursor:pointer; transition: transform .12s ease, border-color .12s ease; }
-.campaign-hint:active { transform: scale(0.98); }
-@media (hover:hover){ .campaign-hint:hover { border-color: var(--accent); } }
-.ch-kicker { font-size:9px; font-weight:700; letter-spacing:2px; color: var(--accent); }
-.ch-go {
-  font-size:10px; font-weight:700; letter-spacing:2px; color:#241a00;
-  background: linear-gradient(135deg, #ffc85c, var(--accent));
-  border-radius:7px; padding:3px 12px; margin-top:3px;
-}
 
 /* ===================== CONFETTI (three stars) ===================== */
 .confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:7; }

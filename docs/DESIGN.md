@@ -2259,6 +2259,39 @@ frames - and it was checked by reverting the fix and confirming it goes
 red. A test for a bug like this is worth nothing unless you have watched it
 fail.
 
+## 8bo. Cutting the UP NEXT card
+
+"UP NEXT mission is a bit useless in campaign. I think it could be
+removed."
+
+Correct, and the reason is worth recording because the card was not built
+badly - it was built for a map that no longer needed it. Every job it had
+has been quietly taken over by the map itself, one change at a time:
+
+- **Which mission is next** - the stop is the only unlocked one in a row of
+  locked ones, ringed, haloed, with your ship parked beside it.
+- **Where it is** - the campaign now scrolls to it on open.
+- **Who holds the record** - drawn on the stop's rim as the holder's initial
+  in their own ship colour. The comment next to that code already said it:
+  "it belongs on the map, not buried in a hint card."
+- **Tap to fly** - the stop is a real button, and always was.
+
+So it had become a paragraph describing the picture directly above it, for
+an audience that would rather look at the picture, and it was charging
+120px of a screen whose entire job is the map. Gone: markup, the render
+block, its CSS, and the special case in `scrollToNextStop()` that centred
+the target in the band above it rather than in the viewport - the stop now
+lands dead centre for anyone mid-campaign.
+
+The map is 136px taller for it, and a check guards against the card
+creeping back.
+
+There is one honest cost. "TAP TO FLY" was the only literal instruction on
+the screen, and it is gone. The judgement is that the highlighted stop with
+a ship parked on it is the more universal affordance - it is the idiom of
+every map-based game these kids have ever touched - and a seven-year-old
+reads the bright thing before they read the sentence.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2271,6 +2304,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~470 checks.
+  migration. ~471 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

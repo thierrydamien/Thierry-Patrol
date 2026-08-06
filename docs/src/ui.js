@@ -739,27 +739,17 @@ function renderMissions(){
     holder.appendChild(btn);
   });
 
-  // The hint line carries what the cards used to: what's next, and who holds it.
+  /*
+   * Which stop the map opens on. There used to be an UP NEXT card pinned
+   * along the bottom naming this mission, and it was cut: everything on it
+   * had already migrated onto the map itself. The stop is the only bright
+   * one in a row of locked ones, it is ringed and haloed, your ship is
+   * parked on it, and the record holder's initial rides its rim in their own
+   * colour. The card restated all of that in words a seven-year-old had to
+   * read, and cost 120px of the one thing the screen is actually for.
+   */
   let next = 0;
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) next = i;
-  const m = MISSIONS[next];
-  const best = P.familyBest(m.id);
-  const me = profile.callsign || profile.name;
-  // The card names itself and goes somewhere: it briefs your next mission
-  // and tapping it opens that briefing. Before it had a header it read as an
-  // unexplained box floating over the map.
-  $("campaignHint").innerHTML =
-    `<span class="ch-kicker">\u25b6 UP NEXT \u00b7 MISSION ${m.id}</span>` +
-    `<b>${esc(m.name)}</b>` +
-    `<span class="ch-sub">${esc(m.subtitle)}</span>` +
-    `<span>${enemyCount(m)} enemies${rescueCount(m) ? " · " + rescueCount(m) + " to rescue" : ""}` +
-    `${m.boss ? " · BOSS" : ""}</span>` +
-    `<span class="ch-record">${best
-      ? (best.name === me ? "🏅 You hold this one · " + best.score.toLocaleString()
-                          : "🏅 " + esc(best.name) + " holds this · " + best.score.toLocaleString())
-      : "Nobody has flown this yet - claim it"}</span>` +
-    `<span class="ch-go">TAP TO FLY</span>`;
-  $("campaignHint").onclick = () => { audio.play("uiClick"); openBriefing(next); };
 
   startCampaignLoop();
   scrollToNextStop(next);
@@ -803,14 +793,8 @@ function scrollToNextStop(index){
     const nr = node.getBoundingClientRect(), sr = screen.getBoundingClientRect();
     // The stop's centre, in the scroll container's own content coordinates.
     const y = (nr.top + nr.height/2 - sr.top) + screen.scrollTop;
-    // The hint card is sticky along the bottom edge, so the genuinely visible
-    // band is what is left above it - centre the stop in THAT, or the mission
-    // you came to see sits behind the card telling you to fly it.
-    const hint = $("campaignHint");
-    const clear = Math.max(140, screen.clientHeight -
-                                (hint ? hint.getBoundingClientRect().height : 0));
     const max = Math.max(0, screen.scrollHeight - screen.clientHeight);
-    screen.scrollTop = Math.max(0, Math.min(max, y - clear/2));
+    screen.scrollTop = Math.max(0, Math.min(max, y - screen.clientHeight/2));
   };
   apply();
 }
