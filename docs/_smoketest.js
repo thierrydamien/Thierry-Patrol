@@ -381,6 +381,75 @@ async function run(){
   check("only mission 1 is unlocked at the start",
     qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
   check("the map says what you're flying next", /\w/.test(id("campaignHint").textContent));
+
+  /* The campaign is ~2200px of map on an 800px screen and the route runs
+     bottom-to-top, so where it opens IS the feature: the bottom for a new
+     pilot, the top for one who has finished. It was always opening at the
+     top, because renderMissions() runs while the section is still
+     display:none - every caller renders and THEN shows - so every
+     measurement was 0 and the scroll was a silent no-op. */
+  {
+    const sc = id("screen-missions");
+    const holder = id("campaignNodes");
+    const hint = id("campaignHint");
+    const VIEW = 620, STOP = 76, GAP = 96;
+    // jsdom does no layout, so hand it exactly the geometry under test: stops
+    // stacked bottom-to-top, mission 1 lowest, all below the fold.
+    const geom = (top, height) => () =>
+      ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top });
+    // clientHeight is stubbed globally at 620; scrollHeight is not, and left at
+    // 0 the clamp pins every answer to 0 and the test proves nothing.
+    Object.defineProperty(sc, "scrollHeight", { configurable: true,
+      get(){ return (SF.missions.MISSIONS.length - 1) * GAP + STOP + 260; } });
+    const measure = () => {
+      sc.getBoundingClientRect = geom(0, VIEW);
+      hint.getBoundingClientRect = geom(VIEW - 120, 120);
+      Array.from(holder.children).forEach((el, i) => {
+        const fromTop = (SF.missions.MISSIONS.length - 1 - i) * GAP;
+        el.getBoundingClientRect = geom(fromTop - sc.scrollTop, STOP);
+      });
+    };
+    const openOn = (clearedIds) => {
+      const p = SF.ui.getProfile();
+      const keep = p.missions;
+      p.missions = {};
+      clearedIds.forEach(mid => { p.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+      sc.scrollTop = 0;
+      SF.ui.renderMissions();          // renders while hidden, exactly as the app does
+      const whileHidden = sc.scrollTop;
+      SF.ui.show("screen-missions");
+      measure();
+      // Drain the deferred scroll the way the browser would.
+      for(let f = 0; f < 6; f++){
+        const batch = pendingFrames; pendingFrames = [];
+        batch.forEach(cb => { try { cb(fakeNow); } catch(e){} });
+        measure();
+      }
+      const at = sc.scrollTop;
+      p.missions = keep;
+      return { whileHidden, at,
+               upNext: +(hint.textContent.match(/MISSION (\d+)/) || [0,0])[1] };
+    };
+
+    const fresh = openOn([]);
+    const mid   = openOn([1,2,3,4,5,6,7,8,9]);
+    const done  = openOn(SF.missions.MISSIONS.map(m => m.id));
+
+    check("the campaign names the first mission you have not cleared",
+      fresh.upNext === 1 && mid.upNext === 10 &&
+      done.upNext === SF.missions.MISSIONS.length);
+    /* The regression itself: measuring while the screen is hidden must not be
+       mistaken for an answer. It has to wait for the layout. */
+    check("a scroll computed while the screen is hidden is not the final word",
+      fresh.whileHidden === 0 && fresh.at > 0);
+    check("a new pilot opens at the bottom, on mission 1",
+      fresh.at > mid.at && fresh.at > done.at);
+    check("a finished pilot opens at the top, on the last mission",
+      done.at === 0);
+    check("everyone else opens somewhere in between",
+      mid.at > 0 && mid.at < fresh.at);
+    SF.ui.renderMissions();
+  }
   // The map draws every boss's battle hull at its stop, so every boss the
   // campaign names must have a painter the map can borrow.
   check("the map can borrow a hull painter for every campaign boss",

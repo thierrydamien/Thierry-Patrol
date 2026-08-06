@@ -2213,6 +2213,52 @@ the screen alongside you at the end of any boss mission. The best beat in
 the finale turned out to be three lines of trigger away from being the best
 beat in seven fights.
 
+## 8bn. The campaign opens where you actually are
+
+"When you open the campaign it should open on the next mission. For a new
+account it opens at the bottom since that's where the first mission is. For
+someone who has completed everything, it opens at the top."
+
+The map is about 2200px of route on an 800px screen and it runs bottom to
+top, so where it opens is not a nicety - it is most of the screen's job.
+And there was already a `scrollToNextStop()` doing exactly the right maths.
+It had simply never worked, for a reason worth writing down:
+
+```js
+click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
+```
+
+Render, THEN show. `renderMissions()` calls the scroll at the end of itself,
+while the section is still `display:none`, so `clientHeight`,
+`scrollHeight`, `offsetTop` and `offsetHeight` all came back 0. The maths
+dutifully computed `scrollTop = 0` and the campaign opened at the top of the
+route - on mission 23's empty sky - for everybody, forever. Nothing threw,
+nothing logged, and the function looked correct in review because it *was*
+correct. It ran one frame too early.
+
+It now waits for the screen to be genuinely laid out before measuring, with
+a generation counter so a newer render drops a pending scroll and a try
+budget so a screen that is never opened stops asking after half a second.
+It also measures the stop's own button rather than recomputing the layout
+fractions - the button is the ground truth for where the stop ended up -
+and centres it in the band ABOVE the sticky hint card, because centring it
+in the raw viewport puts the mission you came to see behind the card
+telling you to fly it.
+
+Measured in Chromium at 520x820, driven through the real pilot-picker and
+PLAY path: a fresh pilot opens at scrollTop 1530 of 1530 - the bottom, with
+mission 1 dead centre - a pilot who has cleared 1-9 opens at 920 with
+mission 10 in view, and a finished pilot opens at 0, the top, on The
+Devourer.
+
+The lesson is the one this project keeps relearning: **a UI measurement
+taken before layout does not fail, it lies.** The regression test is
+written against the ordering rather than the arithmetic - it renders while
+hidden, asserts nothing was decided yet, then shows the screen and drains
+frames - and it was checked by reverting the fix and confirming it goes
+red. A test for a bug like this is worth nothing unless you have watched it
+fail.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2225,6 +2271,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~465 checks.
+  migration. ~470 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

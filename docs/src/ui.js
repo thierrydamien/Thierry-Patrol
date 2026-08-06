@@ -766,21 +766,53 @@ function renderMissions(){
 }
 
 /*
- * A fourteen-stop map is taller than the screen, and the stop you want is the
- * furthest one - so opening the campaign used to show you mission 14's empty
- * sky while your actual next mission sat off-screen below. Centre it instead.
+ * A twenty-three stop map is far taller than the screen - about 2200px of it -
+ * and the route runs bottom to top, so mission 1 is at the very bottom and
+ * mission 23 at the very top. Opening the campaign has to land on the stop
+ * you are actually going to fly: the bottom for a new pilot, the top for one
+ * who has finished, wherever you happen to be for everyone in between.
+ *
+ * It did none of that, and the reason is a one-liner: every caller does
+ * `renderMissions(); show("screen-missions")` - render, THEN show - so this
+ * ran while the section was still display:none. Every measurement came back
+ * 0, `scrollTop` was set to 0, and the campaign always opened at the top on
+ * mission 23's empty sky. The code was right; it just ran a frame too early.
+ *
+ * So it waits for the screen to actually be laid out, then measures the
+ * node's own box rather than recomputing the layout fractions - the button is
+ * the ground truth for where the stop ended up. The generation counter drops
+ * a pending scroll if another render supersedes it, and the try budget means
+ * a screen that is never opened stops asking after half a second.
  */
+let campaignScrollGen = 0;
 function scrollToNextStop(index){
   const screen = screens["screen-missions"];
-  const map = $("missionList");
-  if(!screen || !map) return;
-  const nodes = campaignLayout();
-  const node = nodes[index];
-  if(!node) return;
-  const y = map.offsetTop + node.y * map.offsetHeight;
-  const target = y - screen.clientHeight/2;
-  const max = screen.scrollHeight - screen.clientHeight;
-  screen.scrollTop = Math.max(0, Math.min(max, target));
+  const holder = $("campaignNodes");
+  if(!screen || !holder) return;
+  const gen = ++campaignScrollGen;
+  let tries = 0;
+  const apply = () => {
+    if(gen !== campaignScrollGen) return;          // a newer render took over
+    const node = holder.children[index];
+    const ready = screen.classList.contains("active") && screen.clientHeight > 0 &&
+                  node && node.getBoundingClientRect().height > 0;
+    if(!ready){
+      if(++tries < 40) requestAnimationFrame(apply);
+      return;
+    }
+    const nr = node.getBoundingClientRect(), sr = screen.getBoundingClientRect();
+    // The stop's centre, in the scroll container's own content coordinates.
+    const y = (nr.top + nr.height/2 - sr.top) + screen.scrollTop;
+    // The hint card is sticky along the bottom edge, so the genuinely visible
+    // band is what is left above it - centre the stop in THAT, or the mission
+    // you came to see sits behind the card telling you to fly it.
+    const hint = $("campaignHint");
+    const clear = Math.max(140, screen.clientHeight -
+                                (hint ? hint.getBoundingClientRect().height : 0));
+    const max = Math.max(0, screen.scrollHeight - screen.clientHeight);
+    screen.scrollTop = Math.max(0, Math.min(max, y - clear/2));
+  };
+  apply();
 }
 
 function startCampaignLoop(){
