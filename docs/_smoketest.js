@@ -486,6 +486,68 @@ async function run(){
       mid.at > 0 && mid.at < fresh.at);
     SF.ui.renderMissions();
   }
+
+  /* ---------- iPhone ---------- */
+  {
+    const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+
+    /* The menu is bottom-aligned inside a scrolling flex column, and
+       `justify-content: flex-end` there is a trap: overflow spills past the
+       START edge, which a scroll container can never reach. Measured on an
+       iPhone 14 sideways, FLY A MISSION sat at y=-164 with scrollHeight ===
+       clientHeight - the game could not be started at all. */
+    check("the menu cannot strand its own content off the top",
+      !/\.menu-bg\s*\{[^}]*justify-content:\s*flex-end/.test(css) &&
+      /\.menu-bg::before\s*\{[^}]*margin-top:\s*auto/.test(css));
+    check("the pilot picker centres the same safe way",
+      !/#screen-profiles\.menu-bg\s*\{[^}]*justify-content:\s*center/.test(css) &&
+      /#screen-profiles\.menu-bg::after\s*\{[^}]*margin-bottom:\s*auto/.test(css));
+
+    /* 44px is Apple's floor for a touch target, and these hands are seven. */
+    ["\\.ghost-btn", "\\.compare-btn", "\\.campaign-next"].forEach(sel => {
+      const m = css.match(new RegExp(sel + "\\s*\\{[^}]*\\}"));
+      check("tap targets on " + sel.replace(/\\/g, "") + " clear 44px",
+        !!m && /min-height:\s*44px/.test(m[0]));
+    });
+
+    /* iOS Safari ignores the manifest's portrait lock - that only works on
+       Android - so the page asks. Scoped by HEIGHT as well as orientation, or
+       an iPad in landscape gets nagged about a screen it plays fine on. */
+    check("a phone on its side is asked to turn back", !!id("rotateNag"));
+    check("the nag is off unless the viewport is BOTH landscape and short",
+      /\.rotate-nag\s*\{\s*display:\s*none/.test(css) &&
+      /@media\s*\(orientation:\s*landscape\)\s*and\s*\(max-height:\s*500px\)/.test(css));
+    check("the manifest still asks for portrait where that is honoured",
+      JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"))
+        .orientation === "portrait");
+
+    /* And the run has to actually stop, or a child watches their lives drain
+       away behind an overlay telling them to rotate. This failed silently the
+       first time: the nag is position:fixed and offsetParent is null for a
+       fixed element whether it is shown or not, so the visibility check said
+       "hidden" every time and the mission played on underneath. */
+    check("turning the phone sideways pauses a live mission", (() => {
+      const nag = id("rotateNag"), prev = SF.game.state;
+      SF.game.state = "playing";
+      nag.style.display = "none";
+      window.dispatchEvent(new window.Event("resize"));
+      const keptPlaying = SF.game.state === "playing";
+      nag.style.display = "flex";
+      window.dispatchEvent(new window.Event("resize"));
+      const paused = SF.game.state === "paused";
+      nag.style.display = "";
+      id("overlayPause").classList.add("hidden");
+      SF.game.state = prev;
+      return keptPlaying && paused;
+    })());
+
+    /* The field is read once at load and everything derives from it, so
+       reading innerWidth/innerHeight literally left a phone that loaded in
+       landscape stuck with a 640-wide field for the whole session. */
+    check("the playfield is sized from the short edge, whichever way it is held",
+      /Math\.min\(a, b\)/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")) &&
+      SF.entityConst.VW >= 440 && SF.entityConst.VW <= 640);
+  }
   // The map draws every boss's battle hull at its stop, so every boss the
   // campaign names must have a painter the map can borrow.
   check("the map can borrow a hull painter for every campaign boss",

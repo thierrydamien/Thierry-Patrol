@@ -33,7 +33,18 @@ const audio = SF.audio;
  * relative to VW/VH.
  */
 function pickFieldWidth(){
-  const w = (window.innerWidth || 820), h = (window.innerHeight || 1100);
+  /*
+   * The SHORT edge is the width and the long edge the height, whichever way
+   * the device happens to be held right now. This is read once at load and
+   * everything in the game derives from it, so reading innerWidth/innerHeight
+   * literally meant a phone that loaded in landscape was stuck with a 640-wide
+   * field for the whole session: rotate back to portrait and the playfield
+   * fitted to width and used 55% of the screen instead of 77%, for no reason
+   * the player could see. Portrait is the only orientation this game is
+   * played in, so it is the only one worth measuring.
+   */
+  const a = window.innerWidth || 820, b = window.innerHeight || 1100;
+  const w = Math.min(a, b), h = Math.max(a, b);
   // Match the device's own aspect so nothing is letterboxed, but stay inside a
   // range the game is tuned for: never so narrow that formations collapse into
   // a single lane, never so wide that the edges are unreachable.

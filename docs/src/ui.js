@@ -2198,6 +2198,31 @@ function togglePause(){
   }
 }
 
+/*
+ * Turning the phone sideways mid-mission covers the game with TURN YOUR PHONE
+ * (see .rotate-nag) - so the run has to stop, or a child watches their lives
+ * drain away behind a screen telling them to rotate. CSS owns WHEN the nag
+ * shows; this only asks whether it is currently up, which keeps the rule in
+ * one place. It pauses and never un-pauses: coming back to a paused game and
+ * choosing to resume is the safe direction.
+ */
+function pauseIfSideways(){
+  const nag = $("rotateNag");
+  if(!nag) return;
+  /*
+   * getComputedStyle, NOT offsetParent. The nag is position:fixed, and
+   * offsetParent is null for a fixed element whether it is displayed or not -
+   * so the obvious check reported "hidden" every single time and this never
+   * fired once. It looked right, it ran clean, and it did nothing; the
+   * browser probe caught it by rotating a live mission and finding the game
+   * still merrily playing behind the overlay.
+   */
+  if(getComputedStyle(nag).display === "none") return;
+  if(SF.game.state === "playing") togglePause();
+}
+window.addEventListener("resize", pauseIfSideways);
+window.addEventListener("orientationchange", pauseIfSideways);
+
 /** Keeps the two ability buttons in sync with what the ship has left. */
 function syncAbilityButtons(force){
   const p = SF.game.world.player;

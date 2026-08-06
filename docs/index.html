@@ -299,6 +299,15 @@
   </div>
 </div>
 
+<!-- iOS Safari ignores the manifest's "orientation": "portrait" - that lock
+     only works on Android - so a phone turned sideways has to be handled
+     here. Pure CSS decides when this shows; ui.js only pauses a live run. -->
+<div id="rotateNag" class="rotate-nag">
+  <div class="rn-icon">📱</div>
+  <b>TURN YOUR PHONE</b>
+  <span>Patrol flies the tall way up</span>
+</div>
+
 <div id="achievementToast" class="achievement-toast hidden">
   <div id="at-icon" class="at-icon">🏆</div>
   <div>

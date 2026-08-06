@@ -2307,6 +2307,77 @@ elements and under 44 characters. That last check is the interesting one -
 it is a guard against this growing back into a card one useful addition at
 a time, which is exactly how it became a card the first time.
 
+## 8bp. Is it optimised for iPhone? Mostly - and the gaps were measurable
+
+The honest answer before this pass: **the plumbing was right, the layout was
+not.** Everything that usually catches a web game on iOS was already
+handled, and handled deliberately:
+
+- `viewport-fit=cover` plus `env(safe-area-inset-*)` padding, so the notch
+  and the home indicator are respected
+- `apple-mobile-web-app-capable`, a black-translucent status bar, an
+  apple-touch-icon and a manifest, so Add to Home Screen looks native
+- WebAudio unlocked on the first `pointerdown`/`touchstart`/`keydown`, and
+  the music element retried on *every* gesture rather than just the first,
+  because iOS refuses autoplay until it feels like not refusing
+- MP3 for music, because Safari will not play OGG
+- `overscroll-behavior: none`, `touch-action`, `-webkit-user-select: none`
+  and `-webkit-text-size-adjust` - no rubber-banding, no double-tap zoom, no
+  text selection while a thumb is steering
+- `height: 100%` rather than `100vh`, which is the difference between a
+  layout that survives Safari's collapsing URL bar and one that does not
+- the playfield already adapts to the device's aspect instead of letterboxing
+
+Then it was measured, at four viewports, with a real browser: iPhone SE
+(375x667), iPhone 14 (390x844), 14 Pro Max (430x932), and one turned
+sideways. Four findings, three of them fixable in CSS.
+
+**1. Landscape could not start a game.** `.menu-bg` used
+`justify-content: flex-end` on a scrolling flex column. That is a trap:
+when content is taller than the box, flex-end pushes the overflow past the
+START edge, and no scroll container can scroll to a negative offset. The
+menu reported `scrollHeight === clientHeight` with FLY A MISSION at
+y = -164 - the title, the pilot and the first three buttons were simply
+gone, unreachably. Turn the phone and the game was over. An auto margin on
+a zero-size `::before` does the same visual job and cannot strand anything:
+it eats spare room when there is any and collapses to nothing when there is
+not.
+
+**2. Every touch target was under Apple's 44px floor.** Ghost buttons at
+37px, the campaign's next-mission pill at 33, and the hangar's COMPARE and
+TEST RANGE overlays at 25 and 26. The padding was already right; they just
+needed a `min-height`, so nothing looks different and nothing is smaller
+than a fingertip. Zero targets under 44px now, on every screen, at every
+size.
+
+**3. iOS ignores the manifest's orientation lock.** `"orientation":
+"portrait"` is honoured on Android and quietly ignored by Safari, so a
+vertical shooter on a sideways phone got 23% of the screen. There is now a
+TURN YOUR PHONE overlay, scoped by `max-height: 500px` as well as
+orientation so that an iPad in landscape - which plays perfectly well - is
+never nagged. A live mission pauses when it appears, and stays paused when
+you turn back: resuming should be a decision, not a surprise.
+
+**4. The field was sized from the orientation it happened to load in.**
+`pickFieldWidth()` read `innerWidth/innerHeight` literally and runs once,
+so a phone that loaded in landscape was stuck with a 640-wide field for the
+whole session - rotate to portrait and the game used 55% of the screen
+instead of 77%, for no reason a player could see. It now takes the short
+edge as width and the long edge as height, which is orientation-independent
+by construction.
+
+Playfield coverage after the pass: 92% of an iPhone SE, 77-78% of a 14 and
+a Pro Max, zero horizontal overflow anywhere, zero JS errors.
+
+One process note, and it is the same one as always. The pause-on-rotate
+hook was written with `if(!nag.offsetParent) return;` - and `offsetParent`
+is null for a `position: fixed` element whether it is displayed or not. The
+check reported "hidden" every single time, so the function ran clean, threw
+nothing, and did absolutely nothing. It was caught by a probe that rotated
+a live mission and found the game still playing behind the overlay. **A UI
+predicate that is wrong in the always-false direction is invisible to
+everything except actually trying it.**
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2319,6 +2390,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~475 checks.
+  migration. ~485 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

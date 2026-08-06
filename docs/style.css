@@ -94,13 +94,31 @@ html, body {
 /* The home screens paint their own sky (see drawTitleArt). The artwork that
    used to live here was the real Sky Force game's promotional image - its
    logo was literally on our home screen. */
-.menu-bg { position:relative; justify-content: flex-end; padding-bottom: 40px; }
+/*
+ * Bottom-aligned, but never at the cost of being reachable.
+ *
+ * This was `justify-content: flex-end`, and that is a trap on a scrolling
+ * flex column: when the content is TALLER than the box, flex-end pushes the
+ * overflow past the START edge, and a scroll container cannot scroll to a
+ * negative offset. Measured on an iPhone 14 turned sideways, the menu
+ * reported scrollHeight === clientHeight with FLY A MISSION sitting at
+ * y = -164: the title, the pilot and the first three buttons were off the
+ * top of the screen and no amount of scrolling would bring them back. Turn
+ * the phone and you could not start a game.
+ *
+ * An auto margin on a zero-size pseudo-element does the same job safely: it
+ * eats the spare room when there is any, and collapses to nothing when there
+ * is not, so the content simply starts at the top and scrolls.
+ */
+.menu-bg { position:relative; padding-bottom: 40px; }
+.menu-bg::before { content:""; margin-top:auto; flex: 0 0 0; }
 .title-art {
   position:absolute; inset:0; width:100%; height:100%;
   object-fit:cover; z-index:0; pointer-events:none;
 }
 .menu-bg > *:not(.title-art) { position:relative; z-index:1; }
-#screen-profiles.menu-bg { justify-content: center; }
+/* Centred by the same trick, and just as unable to strand its own content. */
+#screen-profiles.menu-bg::after { content:""; margin-bottom:auto; flex: 0 0 0; }
 
 .tagline { color: rgba(255,255,255,0.85); margin: 10px 0 18px; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 .section-title {
@@ -139,9 +157,17 @@ html, body {
 }
 .main-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.3); }
 .main-btn:disabled { opacity:0.4; box-shadow:none; }
+/*
+ * 44px is Apple's floor for a touch target and it is not a suggestion when
+ * the hands are seven years old. Measured on an iPhone, every ghost button
+ * on the game came in at 37px and the hangar's two overlay buttons at 25.
+ * The look is unchanged - the padding was already right - they just stop
+ * being shorter than a fingertip.
+ */
 .ghost-btn {
   background: transparent; color: rgba(255,255,255,0.78);
   border: 1px solid rgba(255,255,255,0.28); padding: 10px 18px; font-size:13px; margin-top:12px;
+  min-height: 44px;
 }
 .ghost-btn:active { transform: scale(0.97); }
 .small-btn { background: var(--accent); color:#241a00; padding: 10px 14px; font-size:13px; }
@@ -248,6 +274,7 @@ html, body {
   display:inline-flex; align-items:baseline; justify-content:center;
   gap:8px; flex-wrap:nowrap; max-width:100%;
   margin-top:12px; padding:9px 18px; border:none; border-radius:999px;
+  min-height:44px;                     /* a fingertip, not a hairline */
   background: linear-gradient(135deg, #ffc85c, var(--accent));
   color:#241a00; cursor:pointer;
   box-shadow: 0 6px 18px -4px rgba(0,0,0,0.65);
@@ -687,6 +714,9 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   padding:6px 10px; border-radius:8px; cursor:pointer;
   border:1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.85);
   background: rgba(0,0,0,0.45);
+  /* These floated over the ship bay at 25px tall - the smallest things on the
+     game. Grown to a fingertip without growing the chrome. */
+  min-height:44px; display:inline-flex; align-items:center;
 }
 .test-btn {
   left:8px; right:auto;
@@ -1009,3 +1039,31 @@ body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s
   color: rgba(255,255,255,0.35); padding:6px 10px; margin-top:2px;
 }
 .settings-build:active { color: var(--accent); }
+
+/* ===================== TURN YOUR PHONE =====================
+   A vertical shooter in landscape is 34% of the screen with the ship
+   squeezed into a stripe - measured on an iPhone 14 sideways: a 299x374
+   playfield on an 844x390 display. The manifest asks for portrait, but
+   iOS Safari ignores manifest orientation locks (Android honours them),
+   so the page has to ask.
+
+   Deliberately scoped by HEIGHT, not just orientation: an iPad in
+   landscape is ~820px tall and plays fine, a desktop window is taller
+   still. Only a phone on its side lands under 500px. */
+.rotate-nag { display:none; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .rotate-nag {
+    display:flex; position:fixed; inset:0; z-index:99;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; text-align:center; padding:24px;
+    background: radial-gradient(ellipse at 50% 40%, #26235a 0%, #14123a 55%, #0a0920 100%);
+  }
+  .rn-icon { font-size:44px; animation: rnTip 1.8s ease-in-out infinite; }
+  .rotate-nag b { font-size:20px; font-weight:800; letter-spacing:3px; }
+  .rotate-nag span { font-size:13px; color: rgba(255,255,255,0.6); letter-spacing:1px; }
+}
+@keyframes rnTip {
+  0%, 100% { transform: rotate(0deg); }
+  45%, 65% { transform: rotate(-90deg); }
+}
+@media (prefers-reduced-motion: reduce) { .rn-icon { animation: none; } }
