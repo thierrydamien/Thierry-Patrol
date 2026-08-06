@@ -546,7 +546,44 @@ async function run(){
        landscape stuck with a 640-wide field for the whole session. */
     check("the playfield is sized from the short edge, whichever way it is held",
       /Math\.min\(a, b\)/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")) &&
-      SF.entityConst.VW >= 440 && SF.entityConst.VW <= 640);
+      SF.entityConst.VW >= 400 && SF.entityConst.VW <= 640);
+
+    /* "The menu is full screen but not when I'm playing a level." The field
+       floor was 440 - a 0.55 shape on a 0.46 phone - so it fitted by width and
+       left a black band top and bottom: 77% of the screen. The box it lands in
+       is the screen MINUS the status bar and home indicator (390x763 on a 14,
+       an aspect of 0.51), so a 0.50 field fills it. */
+    check("a tall phone gets a field shaped like the phone", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+      const m = src.match(/Math\.max\((\d+), Math\.min\((\d+),/);
+      if(!m) return false;
+      const floor = +m[1];
+      // A 390x844 phone asks for 370; the floor must not drag that back above
+      // the aspect of the box the field is actually fitted into.
+      return floor <= 400 && 800 * (390/763) >= floor - 10;
+    })());
+    check("the game screen gives up only the strips iOS reserves", (() => {
+      const m = css.match(/#screen-game\s*\{[^}]*\}/);
+      return !!m && /padding:\s*env\(safe-area-inset-top/.test(m[0]) &&
+             !/padding:\s*8px/.test(m[0]);
+    })());
+
+    /* "The bomb and fire icons are too big on iPhone where space is limited."
+       74px each, stacked, on a ~374px-wide field - a fifth of the sky, sitting
+       exactly where a right thumb needs to dodge. */
+    check("the bomb and overdrive shrink on a phone", (() => {
+      const q = css.match(/@media \(max-width: 500px\), \(max-height: 500px\)[\s\S]*?\n\}/);
+      return !!q && /\.special-btn\s*\{[^}]*width:\s*56px/.test(q[0]);
+    })());
+    check("and still clear the 44px touch floor", (() => {
+      const q = css.match(/@media \(max-width: 500px\), \(max-height: 500px\)[\s\S]*?\n\}/);
+      // Read the declaration, don't pattern-match the block: any regex loose
+      // enough to find `width` here also finds `border-width`.
+      const rule = q && q[0].match(/\.special-btn\s*\{([^}]*)\}/);
+      if(!rule) return false;
+      const decl = rule[1].split(";").map(d => d.trim()).find(d => /^width\s*:/.test(d));
+      return !!decl && parseInt(decl.split(":")[1], 10) >= 44;
+    })());
   }
   // The map draws every boss's battle hull at its stop, so every boss the
   // campaign names must have a painter the map can borrow.

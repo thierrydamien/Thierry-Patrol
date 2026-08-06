@@ -54,10 +54,21 @@ html, body {
    (the hangar's ship bay) gets crushed into a strip instead of scrolling.
    Nothing on a scrolling screen should ever be squashed to fit. */
 .screen:not(#screen-game) > * { flex-shrink: 0; }
-/* The playfield never scrolls, and gets the whole screen on a tablet. */
+/*
+ * The playfield never scrolls, and takes every pixel it is allowed to.
+ *
+ * The padding was a flat 8px all round, which threw away 16px of width on a
+ * phone for nothing - and on a home-screen install it let the field slide
+ * under the status bar and the home indicator, because a flat number knows
+ * nothing about either. Now it is exactly the untouchable strips and no more:
+ * edge to edge horizontally, and vertically the full height BETWEEN the
+ * system furniture, which is the same box the menus fill. That is what makes
+ * both screens read as full screen instead of only one of them.
+ */
 #screen-game {
   overflow:hidden; touch-action:none; justify-content:center;
-  width:100%; max-width:none; padding:8px;
+  width:100%; max-width:none;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 }
 
 @media (min-width: 700px) {
@@ -600,6 +611,23 @@ html, body {
 .special-btn:active { transform: translateY(4px) scale(0.97); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
 .special-btn.empty { opacity:0.3; filter: grayscale(0.8); box-shadow:none; }
 .special-btn.hidden { display:none; }
+/*
+ * Phones: the bomb and the overdrive were 74px each on a playfield only ~374px
+ * wide - a fifth of the sky, stacked, sitting on the exact strip of screen a
+ * right thumb needs for dodging. They were sized on an iPad, where 74px is a
+ * fifth of nothing. 56px is still comfortably past the 44px touch floor and
+ * gives back a third of the area they were covering.
+ */
+@media (max-width: 500px), (max-height: 500px) {
+  /* Filling the width edge to edge, rounded corners read as a rendering
+     glitch against the flat edge of the screen rather than as a frame. */
+  .game-frame { border-radius:0; }
+  .ability-bar { right:10px; gap:9px; }
+  .special-btn { width:56px; height:56px; border-width:2px; }
+  .special-btn .sb-icon { font-size:20px; }
+  .special-btn .sb-count { font-size:10px; }
+  .icon-btn { width:34px; height:34px; }
+}
 
 .overlay {
   position:absolute; inset:0; z-index:6;

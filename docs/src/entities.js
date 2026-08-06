@@ -45,10 +45,28 @@ function pickFieldWidth(){
    */
   const a = window.innerWidth || 820, b = window.innerHeight || 1100;
   const w = Math.min(a, b), h = Math.max(a, b);
-  // Match the device's own aspect so nothing is letterboxed, but stay inside a
-  // range the game is tuned for: never so narrow that formations collapse into
-  // a single lane, never so wide that the edges are unreachable.
-  return Math.round(Math.max(440, Math.min(640, 800 * (w / h))));
+  /*
+   * Match the device's own aspect so nothing is letterboxed, but stay inside a
+   * range the game is tuned for: never so narrow that formations collapse into
+   * a single lane, never so wide that the edges are unreachable.
+   *
+   * The floor was 440, which is a 0.55 field on a phone that is 0.46 - so a
+   * modern iPhone fitted the field by WIDTH and left a fat black band above
+   * and below it. Measured on a 14: 374x680 inside 390x844, 77% of the screen,
+   * and the report was exactly that - "the menu is full screen but not when
+   * I'm playing a level".
+   *
+   * 400 is the number because the box the field lands in is not the screen:
+   * it is the screen minus the status bar and the home indicator, which on a
+   * 14 in standalone is 390x763, an aspect of 0.51. A 0.50 field fills that
+   * top to bottom with 9px to spare either side. Below 400 the gain is
+   * nothing and the play space keeps shrinking, so this is the floor rather
+   * than the 370 the raw screen aspect would ask for.
+   *
+   * Nothing else moves: an iPhone SE already asks for 450 and an iPad for
+   * 600, both above the floor. This only touches tall phones.
+   */
+  return Math.round(Math.max(400, Math.min(640, 800 * (w / h))));
 }
 
 const VH = 800;

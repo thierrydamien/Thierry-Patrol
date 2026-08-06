@@ -2378,6 +2378,57 @@ a live mission and found the game still playing behind the overlay. **A UI
 predicate that is wrong in the always-false direction is invisible to
 everything except actually trying it.**
 
+## 8bq. Full screen means the same box the menus get
+
+Two reports from a home-screen install on an iPhone: "the menu is full
+screen but not when I'm playing a level", and "the bomb and fire icons are
+too big on iPhone where space is limited."
+
+**The letterbox.** The field's width floor was 440, which is a 0.55 shape.
+A modern iPhone is 0.46. So the fit landed on width and left a fat black
+band above and below - measured on a 14, a 374x680 playfield inside a
+390x844 screen, 77% of it. The menus, which are plain flowing DOM, filled
+everything. Side by side, one screen looked like the app and the other
+looked like a picture of the app.
+
+The instinct is to set the floor to whatever the raw screen aspect asks for
+- 370 on a 14 - and that is wrong, because **the box the field lands in is
+not the screen**. It is the screen minus the status bar and the home
+indicator, which in standalone is 390x763, an aspect of 0.51. A 0.50 field
+fills that top to bottom with nine pixels to spare either side. Below 400
+the picture stops improving and the play space keeps shrinking, so 400 is
+the floor. An iPhone SE already asks for 450 and an iPad for 600, so
+nothing else in the range moves at all.
+
+The other half was `#screen-game { padding: 8px }`. A flat number throws
+away 16px of width for nothing and, worse, knows nothing about system
+furniture - on a home-screen install it let the field slide under the
+status bar. It is now exactly `env(safe-area-inset-*)` top and bottom and
+zero at the sides: edge to edge horizontally, and vertically the full
+height between the strips iOS reserves. That is the same box the menus
+fill, which is the whole point. Coverage went from 77% to 92-100%, and the
+frame's rounded corners are squared off on a phone, where a radius against
+the flat edge of the screen reads as a glitch rather than a frame.
+
+Before changing the floor, the narrower field was played: mission 1 and the
+first boss fought end to end by a bot at 440, 400, 380 and 370, plus a check
+that every weak point on every boss stays inside the reachable column. No
+difficulty cliff appeared anywhere in that range - the run-to-run noise was
+larger than the trend - and nothing became unreachable. The 440 floor was a
+conservative guess, not a measured limit.
+
+**The buttons.** The bomb and the overdrive were 74px each, stacked, on a
+field about 374px wide. That is a fifth of the sky, and it sits exactly
+where a right thumb needs to be to dodge. They were sized on an iPad, where
+74px is a fifth of nothing. On phones they are 56px - still comfortably
+past the 44px touch floor, a third less area - along with the pause and
+music buttons.
+
+Process note: the test for "and still clears 44px" failed twice on my own
+regex before it failed on the code, because `width:\s*(\d+)px` matched
+`border-width:2px` under a greedy scan. Read the declaration; do not pattern
+match the block.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2390,6 +2441,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~485 checks.
+  migration. ~489 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).
