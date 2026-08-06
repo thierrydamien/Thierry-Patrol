@@ -2429,6 +2429,53 @@ regex before it failed on the code, because `width:\s*(\d+)px` matched
 `border-width:2px` under a greedy scan. Read the declaration; do not pattern
 match the block.
 
+## 8br. Full screen, third time: measure the box, stop guessing it
+
+"This is a screenshot taken from my phone. It's still not full screen."
+
+Two attempts at this had both been arithmetic on the wrong input. First
+`800 * innerWidth/innerHeight` with a 440 floor - a 0.55 field on a 0.46
+phone, fitted by width, fat bands above and below. Then the floor dropped to
+400 and the padding became safe-area aware, which helped and still left
+bars. Both times the sum was right and the number fed into it was wrong.
+
+**The field does not land in the screen. It lands in the screen minus the
+status bar and minus the home indicator** - on a modern iPhone about 93px of
+difference, which was the entire remaining gap. Every version of this had
+been matching the field to the shape of the glass rather than the shape of
+the hole it gets drawn in.
+
+So it is measured now, not assumed. `--sa-top` / `--sa-bottom` are defined
+once in `:root` from `env(safe-area-inset-*)`; the game screen pads by them,
+and `pickFieldWidth()` reads them back through a hidden probe sized to the
+same variables. One definition, so CSS and JS cannot drift apart - and if
+they ever did, the field would again be matched to a box it is not drawn in,
+which is precisely the failure mode this section exists to record.
+
+Measured in Chromium with the real iOS inset values delivered the way a
+device delivers them:
+
+| device | usable box | playfield | fill |
+|---|---|---|---|
+| iPhone 14 | 390x763 | 390x763 | 100% |
+| iPhone 15 Pro | 393x759 | 393x759 | 100% |
+| 16 Pro Max | 440x860 | 440x860 | 100% |
+| iPhone SE | 375x647 | 375x647 | 100% |
+| iPad | 768x980 | 768x980 | 100% |
+
+Zero gap in both directions on all five, where before it was 77% with a
+band top and bottom. The clamp survives only as a safety net - a phone asks
+for ~409 and an iPad for ~627, both comfortably inside 380-640 - rather than
+being the thing that decides the shape.
+
+Two process notes, both about the harness rather than the game. The probe
+initially read `env()` directly, which Chromium resolves to 0, so the test
+rig could not tell a working fix from a broken one - the shared variable
+made the behaviour testable as well as correct. And injecting those
+variables from an init script lands too late: the scripts at the end of
+`<body>` have already read the probe. The stylesheet has to carry them,
+because that is what a real device does.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2441,6 +2488,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~489 checks.
+  migration. ~491 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

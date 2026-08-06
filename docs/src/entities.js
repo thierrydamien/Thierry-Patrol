@@ -34,39 +34,65 @@ const audio = SF.audio;
  */
 function pickFieldWidth(){
   /*
-   * The SHORT edge is the width and the long edge the height, whichever way
-   * the device happens to be held right now. This is read once at load and
-   * everything in the game derives from it, so reading innerWidth/innerHeight
-   * literally meant a phone that loaded in landscape was stuck with a 640-wide
-   * field for the whole session: rotate back to portrait and the playfield
-   * fitted to width and used 55% of the screen instead of 77%, for no reason
-   * the player could see. Portrait is the only orientation this game is
-   * played in, so it is the only one worth measuring.
+   * Match the field to the box it will actually be drawn in, measured - not
+   * to a guess at the shape of the screen.
+   *
+   * This has now been wrong twice in the same way. It started as
+   * `800 * innerWidth/innerHeight` with a 440 floor: a 0.55 field on a 0.46
+   * phone, fitted by width, with a fat black band above and below. Dropping
+   * the floor to 400 helped and still left bars, because the arithmetic was
+   * never the problem - the INPUT was. The field does not land in the screen.
+   * It lands in the screen minus the status bar and minus the home indicator,
+   * and on a modern iPhone that is ~93px of difference, which is the whole
+   * discrepancy.
+   *
+   * So the insets are measured rather than assumed: a hidden probe sized to
+   * `env(safe-area-inset-*)` reports what the system is really reserving on
+   * THIS device, whatever it turns out to be. Match that box and the field
+   * fills it exactly, on every phone, with no number in here to keep guessing.
    */
-  const a = window.innerWidth || 820, b = window.innerHeight || 1100;
-  const w = Math.min(a, b), h = Math.max(a, b);
+  const doc = document.documentElement;
+  const vw = doc.clientWidth  || window.innerWidth  || 820;
+  const vh = doc.clientHeight || window.innerHeight || 1100;
+
+  const inset = side => {
+    try {
+      /*
+       * Read --sa-<side>, not env() directly. The stylesheet defines those
+       * from env() in one place, so CSS and this agree by construction - and
+       * a browser that does not implement env() (or a test standing in for a
+       * device) can set the variable and have both follow it together.
+       */
+      const probe = document.createElement("div");
+      probe.style.cssText = "position:fixed;top:0;left:0;width:1px;visibility:hidden;" +
+                            "pointer-events:none;height:var(--sa-" + side + ",0px)";
+      document.body.appendChild(probe);
+      const px = probe.getBoundingClientRect().height;
+      probe.remove();
+      // A sane inset is tens of pixels. Anything else means the variable did
+      // not resolve, and zero is the safe answer.
+      return px > 0 && px < vh/3 ? px : 0;
+    } catch(e){ return 0; }
+  };
+
+  // The short edge is the width and the long edge the height, whichever way
+  // the device is being held: portrait is the only orientation this is played
+  // in, and reading innerWidth/innerHeight literally left a phone that loaded
+  // sideways stuck with a landscape-shaped field for the whole session.
+  const portrait = vh >= vw;
+  const w = Math.min(vw, vh);
+  const h = Math.max(vw, vh) -
+            (portrait ? inset("top") + inset("bottom")
+                      : inset("left") + inset("right"));
+
   /*
-   * Match the device's own aspect so nothing is letterboxed, but stay inside a
-   * range the game is tuned for: never so narrow that formations collapse into
-   * a single lane, never so wide that the edges are unreachable.
-   *
-   * The floor was 440, which is a 0.55 field on a phone that is 0.46 - so a
-   * modern iPhone fitted the field by WIDTH and left a fat black band above
-   * and below it. Measured on a 14: 374x680 inside 390x844, 77% of the screen,
-   * and the report was exactly that - "the menu is full screen but not when
-   * I'm playing a level".
-   *
-   * 400 is the number because the box the field lands in is not the screen:
-   * it is the screen minus the status bar and the home indicator, which on a
-   * 14 in standalone is 390x763, an aspect of 0.51. A 0.50 field fills that
-   * top to bottom with 9px to spare either side. Below 400 the gain is
-   * nothing and the play space keeps shrinking, so this is the floor rather
-   * than the 370 the raw screen aspect would ask for.
-   *
-   * Nothing else moves: an iPhone SE already asks for 450 and an iPad for
-   * 600, both above the floor. This only touches tall phones.
+   * The clamp is now only a safety net for something pathological, not the
+   * shape-defining decision it used to be: a 390x844 iPhone asks for ~411 and
+   * an iPad for 600, both comfortably inside it. Measured, nothing breaks down
+   * to 370 - formations stay readable and every boss weak point stays
+   * reachable - so 380 is a floor with room to spare rather than a guess.
    */
-  return Math.round(Math.max(400, Math.min(640, 800 * (w / h))));
+  return Math.round(Math.max(380, Math.min(640, 800 * (w / Math.max(1, h)))));
 }
 
 const VH = 800;

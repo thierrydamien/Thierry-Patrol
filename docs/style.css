@@ -1,4 +1,17 @@
 :root {
+  /*
+   * The strips iOS reserves - the status bar / Dynamic Island above, the home
+   * indicator below - as variables rather than raw env() calls at each use
+   * site. ONE source of truth, because both the CSS that pads the game screen
+   * and the JS that shapes the playfield have to agree about them exactly: if
+   * they ever disagree, the field is matched to a box it is not drawn in, and
+   * the result is the black bands this went round twice on.
+   */
+  --sa-top: env(safe-area-inset-top, 0px);
+  --sa-bottom: env(safe-area-inset-bottom, 0px);
+  --sa-left: env(safe-area-inset-left, 0px);
+  --sa-right: env(safe-area-inset-right, 0px);
+
   --accent: #f5a623;
   --accent2: #c0392b;
   --hud: #6ec8ff;                      /* the HUD's cyan hairline, everywhere */
@@ -68,7 +81,7 @@ html, body {
 #screen-game {
   overflow:hidden; touch-action:none; justify-content:center;
   width:100%; max-width:none;
-  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  padding: var(--sa-top) 0 var(--sa-bottom);
 }
 
 @media (min-width: 700px) {

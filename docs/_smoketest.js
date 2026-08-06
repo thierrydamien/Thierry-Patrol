@@ -545,8 +545,13 @@ async function run(){
        reading innerWidth/innerHeight literally left a phone that loaded in
        landscape stuck with a 640-wide field for the whole session. */
     check("the playfield is sized from the short edge, whichever way it is held",
-      /Math\.min\(a, b\)/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")) &&
-      SF.entityConst.VW >= 400 && SF.entityConst.VW <= 640);
+      /Math\.min\(vw, vh\)/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")) &&
+      SF.entityConst.VW >= 380 && SF.entityConst.VW <= 640);
+    /* The field lands in the screen MINUS the status bar and home indicator -
+       ~93px of difference on an iPhone, which was the entire remaining gap.
+       Measure the reserved strips rather than assuming them. */
+    check("the field is matched to the measured box, not a guess at the screen",
+      /env\(safe-area-inset-/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
 
     /* "The menu is full screen but not when I'm playing a level." The field
        floor was 440 - a 0.55 shape on a 0.46 phone - so it fitted by width and
@@ -558,15 +563,23 @@ async function run(){
       const m = src.match(/Math\.max\((\d+), Math\.min\((\d+),/);
       if(!m) return false;
       const floor = +m[1];
-      // A 390x844 phone asks for 370; the floor must not drag that back above
-      // the aspect of the box the field is actually fitted into.
-      return floor <= 400 && 800 * (390/763) >= floor - 10;
+      // An iPhone 14's real box is 390x763, which asks for ~409. The clamp has
+      // to be a safety net well clear of that, not the thing deciding the shape.
+      return floor <= 390 && 800 * (390/763) > floor;
     })());
     check("the game screen gives up only the strips iOS reserves", (() => {
       const m = css.match(/#screen-game\s*\{[^}]*\}/);
-      return !!m && /padding:\s*env\(safe-area-inset-top/.test(m[0]) &&
+      return !!m && /padding:\s*var\(--sa-top\)\s*0\s*var\(--sa-bottom\)/.test(m[0]) &&
              !/padding:\s*8px/.test(m[0]);
     })());
+    /* Both halves of the chain, or they can silently drift apart: the CSS pads
+       the game screen by these and the JS shapes the field to them, so if the
+       variables ever stop coming from env() the field is matched to a box it
+       is not drawn in - which is the bug this went round twice on. */
+    check("the safe-area strips have one definition, from env()",
+      /--sa-top:\s*env\(safe-area-inset-top/.test(css) &&
+      /--sa-bottom:\s*env\(safe-area-inset-bottom/.test(css) &&
+      /height:var\(--sa-/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
 
     /* "The bomb and fire icons are too big on iPhone where space is limited."
        74px each, stacked, on a ~374px-wide field - a fifth of the sky, sitting
