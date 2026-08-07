@@ -96,7 +96,47 @@ function pickFieldWidth(){
 }
 
 const VH = 800;
-const VW = pickFieldWidth();
+/*
+ * NOT a constant, and this is the fourth thing to go wrong with the playfield.
+ *
+ * Measuring is right, but measuring ONCE at script load is only right if the
+ * insets are already known by then - and in an iOS home-screen app they are
+ * not. Safari lays a TAB out inside a viewport that already has its insets, so
+ * a browser gets the right answer; a standalone launch runs the scripts while
+ * the splash is still up and `env(safe-area-inset-*)` still reads 0. The field
+ * is then sized for a screen with no status bar and no home indicator, comes
+ * out ~30px too narrow, and stays pillarboxed for the whole session - which is
+ * exactly the "full screen in the browser but not as an app" report.
+ *
+ * So the measurement is repeatable, and `refreshField()` runs it again at a
+ * point where the answer can be trusted. Mid-mission it cannot be: every
+ * entity on the field holds coordinates in the old space. The only safe moment
+ * is while a world is being built, so `startMission()` calls it before reset().
+ */
+let VW = pickFieldWidth();
+const fieldSubs = [];
+
+/**
+ * Re-measures the field. Returns the current width, and notifies subscribers
+ * only when it actually moved.
+ */
+function refreshField(){
+  const w = pickFieldWidth();
+  if(w === VW) return VW;
+  VW = w;
+  SF.entityConst.VW = w;
+  for(let i = 0; i < fieldSubs.length; i++){
+    try { fieldSubs[i](w); } catch(e){ /* one bad listener must not strand the rest */ }
+  }
+  return w;
+}
+/*
+ * Every module that took `VW` out of `SF.entityConst` at load holds its own
+ * copy of the number, so each has to be told. That is the price of destructured
+ * constants, and it is worth paying: the alternative is a property lookup in
+ * every hot loop in the game.
+ */
+function onFieldChange(fn){ fieldSubs.push(fn); }
 // The ship's ceiling has to sit *below* where bosses park (their entryY is
 // ~150 and they're ~130 across), otherwise bullets spawn above the boss and
 // sail past it without ever colliding - which made boss fights unwinnable from
@@ -129,12 +169,20 @@ class World {
     this.enemies      = new Pool(() => ({ alive:false }), 140);
     this.pickups      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,kind:"coin",value:0,life:0,angle:0,data:null }), 160);
     this.grid         = new SpatialGrid(VW, VH, 60);
+    this.gridWidth    = VW;   // so a field change can be noticed in reset()
     this.player       = null;
     this.boss         = null;
     this.haulers      = [];
   }
 
   reset(){
+    // The World is built once at load, so a field measured later would leave
+    // the broadphase sized to the old width - anything in the new right-hand
+    // strip would land in no bucket and collide with nothing.
+    if(this.gridWidth !== VW){
+      this.grid = new SpatialGrid(VW, VH, 60);
+      this.gridWidth = VW;
+    }
     this.bullets.killAll();
     this.enemyBullets.killAll();
     this.enemies.killAll();
@@ -698,4 +746,5 @@ class World {
 
 SF.World = World;
 SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS };
+SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();

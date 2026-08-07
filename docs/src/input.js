@@ -46,6 +46,14 @@ function pointerToVirtual(clientX, clientY){
   state.dragY = clamp((clientY - rect.top) / rect.height * VH - TOUCH_LIFT, 0, VH);
 }
 
+/**
+ * The field can be re-measured after attach() (an iOS home-screen app only
+ * learns its safe-area insets after the scripts have run), and a stale width
+ * here maps a thumb to the wrong place - the ship would stop short of one edge
+ * and overshoot the other.
+ */
+function setField(vw, vh){ VW = vw; VH = vh; }
+
 function attach(canvasEl, vw, vh){
   canvas = canvasEl; VW = vw; VH = vh;
   window.addEventListener("keydown", keyDown);
@@ -67,5 +75,5 @@ function consumeOverdrive(){ const v = state.overdrivePressed; state.overdrivePr
 function consumePause(){ const v = state.pausePressed; state.pausePressed = false; return v; }
 function clearMovement(){ state.up = state.down = state.left = state.right = false; state.dragging = false; }
 
-SF.input = { state, attach, consumeBomb, consumeOverdrive, consumePause, clearMovement };
+SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement };
 })();

@@ -11,7 +11,18 @@
 "use strict";
 const SF = window.SF;
 const { clamp, rand, randInt, chance, pick } = SF.core;
-const { VW, VH } = SF.entityConst;
+let { VW, VH } = SF.entityConst;
+/*
+ * The field is measured once at load and can be wrong then - an iOS
+ * home-screen app runs its scripts before it knows its own safe-area insets.
+ * When it is re-measured (only ever at the start of a mission, see
+ * startMission), the touch mapping and the canvas both have to follow it.
+ */
+SF.field.onChange(w => {
+  VW = w;
+  SF.input.setField(VW, VH);
+  resize();
+});
 const { MISSIONS, BOSSES, OBJECTIVES } = SF.missions;
 const { DIFFICULTY_BY_ID, POWERUPS, SUPPLIES } = SF.config;
 const fx = SF.fx;
@@ -246,6 +257,15 @@ function buildStarVault(){
 }
 
 function startMission(missionIndex, difficultyId){
+  /*
+   * The one safe moment to re-measure the playfield: nothing is on it yet.
+   * Mid-mission every entity holds coordinates in the old space, and at load
+   * the answer can't be trusted on iOS - a standalone app's insets aren't
+   * known until after its scripts have run. Everything below builds the world
+   * from VW, so this has to come first.
+   */
+  SF.field.refresh();
+
   const profile = game.profile;
   // "daily" is the endless Daily Patrol - a generated mission, not a campaign
   // slot. Same day = same seed = same waves on every device. "test" is the

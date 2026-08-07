@@ -875,6 +875,12 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 .settings-row:active { background: rgba(255,255,255,0.12); }
 .settings-row.danger { color:#ff8a80; border-color: rgba(255,90,90,0.35); }
+.settings-row:disabled { opacity:0.45; cursor:default; }
+.settings-row:disabled:active { background: rgba(255,255,255,0.055); }
+.settings-note {
+  width:100%; margin:-6px 0 14px; padding:0 4px;
+  font-size:11px; line-height:1.5; color: rgba(255,255,255,0.45);
+}
 .set-pill {
   font-size:11px; font-weight:700; letter-spacing:1.5px;
   padding:4px 12px; border-radius:999px;

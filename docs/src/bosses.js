@@ -15,7 +15,8 @@
 const SF = window.SF;
 const { clamp, rand, randInt, pick, TAU } = SF.core;
 const { BOSSES } = SF.missions;
-const { VW, VH } = SF.entityConst;
+let { VW, VH } = SF.entityConst;
+SF.field.onChange(w => { VW = w; });
 const fx = SF.fx;
 const audio = SF.audio;
 

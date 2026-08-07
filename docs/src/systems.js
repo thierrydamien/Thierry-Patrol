@@ -9,7 +9,8 @@
 const SF = window.SF;
 const { clamp, rand, randInt, chance } = SF.core;
 const { FORMATIONS, ENEMY_TYPES } = SF.enemyData;
-const { VW, VH } = SF.entityConst;
+let { VW, VH } = SF.entityConst;
+SF.field.onChange(w => { VW = w; });
 const fx = SF.fx;
 const audio = SF.audio;
 
