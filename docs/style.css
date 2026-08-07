@@ -29,6 +29,10 @@
 
 html, body {
   height:100%;
+  /* A solid floor under the gradient. Anything the page box does not cover -
+     an iOS home-screen app can come up short of the glass at the bottom -
+     paints white without this. */
+  background-color: #0a0920;
   background: radial-gradient(ellipse at 50% 0%, #26235a 0%, #14123a 45%, #0a0920 100%);
   color: white;
   /* Rajdhani carries the sci-fi identity; the stack behind it keeps the game
@@ -134,7 +138,26 @@ html, body {
  * eats the spare room when there is any, and collapses to nothing when there
  * is not, so the content simply starts at the top and scrolls.
  */
-.menu-bg { position:relative; padding-bottom: 40px; }
+.menu-bg {
+  position:relative;
+  /*
+   * Guaranteed clearance under the status bar, rather than whatever happens to
+   * be left over.
+   *
+   * The title screens centre themselves with an auto margin (see ::before
+   * below), so the gap above the title was free space - and free space runs
+   * out. On a full menu - a maxed pilot card, every mode unlocked - there is
+   * none left, the content sits flush against the safe-area edge and the title
+   * ends up jammed under the clock and the Dynamic Island. Measured on a
+   * cramped viewport: clearance 0px, with 77px of overflow.
+   *
+   * So the inset is a floor with room added on top of it, not the whole
+   * budget. The extra comes back off the bottom, which was a flat 40px that
+   * ignored the home indicator anyway.
+   */
+  padding-top: calc(max(20px, env(safe-area-inset-top, 0px)) + 16px);
+  padding-bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + 6px);
+}
 .menu-bg::before { content:""; margin-top:auto; flex: 0 0 0; }
 .title-art {
   position:absolute; inset:0; width:100%; height:100%;
