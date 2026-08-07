@@ -2648,6 +2648,45 @@ borrowed and put back). This is the third time this file has recorded a test
 perturbing the stream and breaking something far away, which is really an
 argument for the seeded RNG in `core.js` reaching the simulation one day.
 
+## 8bt3. The briefing lost its prose, and LAUNCH stopped moving
+
+"When you open a level on phone you need to scroll to access the launch button.
+I want to remove the level description... my kids don't care about the story.
+It's more important they can see the launch button without needing to scroll."
+
+Measured before cutting anything, on three phone sizes with real iOS insets,
+opening both an early stop and mission 23 (the longest roster in the game):
+
+| | content | box | overflow |
+|---|---|---|---|
+| iPhone SE, mission 23 | 855 | 667 | **188px** |
+| iPhone 14, mission 23 | 862 | 844 | 18px |
+
+The description is 43-65px of that, so removing it - which was the request -
+would have left an iPhone SE still scrolling by more than 100px. Doing only
+the literal ask would have left the actual problem in place.
+
+So the paragraph went **and** the button was pinned: `.brief-actions` is
+`position:sticky; bottom:0` inside the screen's own scroll box. That makes
+"can they see LAUNCH without scrolling" true by construction rather than by
+arithmetic, on any device, however long a future mission's roster gets. All
+three phones now show it at rest, including the SE where 137px still overflows.
+
+Two details that took a second and third pass. The bar has to be **opaque
+where the button is** - at 0.97 alpha the difficulty blurb was still legible
+either side of LAUNCH and read as a rendering fault rather than as content
+scrolling underneath; it is solid from 62% down, with a blurred fade above it.
+And `briefBackBtn` deliberately sits *outside* the bar: a sticky element cannot
+travel past its own position in flow, so at full scroll the bar stops above the
+back button instead of trapping it (verified, `overlapped=false` on all three).
+
+Nothing was lost with the prose. Every mission carries both a long `brief` and
+a short `goal`, and it is the `goal` that greets the pilot on the launch banner
+- so mission 1 still says "Fly with your finger. Shoot!" at the moment that
+advice is useful, rather than in a paragraph nobody reads. The `brief` field
+stays in the data: it is still the banner fallback for the Daily Patrol, the
+firing range, Boss Rush and the vault, none of which define a `goal`.
+
 ## 8bu. The third output channel
 
 A tablet has three output channels and the game only used two. The third one
@@ -2714,7 +2753,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~567 checks.
+  be re-measured after load. ~571 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
