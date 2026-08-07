@@ -69,9 +69,11 @@ const MAX_SECONDS = 1500;   // 25 minutes of script, then the credits roll
  */
 const MODIFIERS = [
   { id:"giant",    name:"GIANT ENEMIES",   color:"#ff8a3d",
-    blurb:"They're HUGE! Easy to hit, hard to miss." },        // entities.spawnEnemy
+    blurb:"They're ENORMOUS! You can't miss. Really." },       // entities.spawnEnemy
   { id:"tiny",     name:"TINY SHIP",       color:"#7cc4ff",
-    blurb:"Your ship is teeny. Almost impossible to hit!" },   // game.startMission -> player
+    blurb:"Your ship is a little bug. Good luck hitting THAT!" }, // game.startMission -> player
+  { id:"mega",     name:"MEGA SHIP",       color:"#ff5d73",
+    blurb:"Your ship is ENORMOUS. Scare them off the screen!" },  // game.startMission -> player
   { id:"confetti", name:"CONFETTI BLASTS", color:"#c084fc",
     blurb:"Every enemy pops like a firework." },               // game.onEnemyKilled
   { id:"bouncy",   name:"BOUNCY COINS",    color:"#ffd23f",
@@ -88,10 +90,19 @@ const MODIFIERS = [
 const MOD_BY_ID = {};
 MODIFIERS.forEach(m => MOD_BY_ID[m.id] = m);
 
+/*
+ * The pairs that cannot share a sky. Only one so far: a ship cannot be tiny
+ * and enormous at once.
+ */
+const CONFLICTS = [["tiny", "mega"]];
+function conflicts(a, b){
+  return CONFLICTS.some(pair => pair.includes(a.id) && pair.includes(b.id) && a.id !== b.id);
+}
+
 /**
  * Rolls this flight's modifiers: two, with a one-in-three chance of a third.
- * Nothing in the table conflicts with anything else, so a shuffle-and-slice
- * is the whole algorithm.
+ * A shuffled walk that skips anything conflicting with what's already in the
+ * hand, so the count survives an exclusion.
  */
 function roll(){
   const bag = MODIFIERS.slice();
@@ -99,7 +110,14 @@ function roll(){
     const j = Math.floor(Math.random() * (i + 1));
     const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
   }
-  return bag.slice(0, Math.random() < 0.33 ? 3 : 2);
+  const want = Math.random() < 0.33 ? 3 : 2;
+  const out = [];
+  for(const m of bag){
+    if(out.length >= want) break;
+    if(out.some(o => conflicts(o, m))) continue;
+    out.push(m);
+  }
+  return out;
 }
 
 /**
