@@ -3245,6 +3245,25 @@ async function run(){
     const before = SF.game.world.player.x;
     kill();
     check("the last life starts the rewind", RW.active());
+    /*
+     * "When you die your plane should explode or something like this." It
+     * always did - the rewind just seized the screen on the same frame, so
+     * the blast was drawn for exactly no frames. The first beat now hands
+     * the frame back so the wreck is watched, not cut away from.
+     */
+    check("the wreck gets its own beat before the tape runs", (() => {
+      const st = RW._show();
+      // draw() returns before it touches the context on this beat, so a bare
+      // object is a safe stand-in - and false is the whole assertion: the
+      // frame is handed back to the caller, who paints the live wreck.
+      return !!st && st.beat === "death" && RW.draw({}, 0, 480, 800) === false;
+    })());
+    check("the last life blows the ship up, not just dents it", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const branch = src.split("if(p.lives <= 0){")[1].split("} else if")[0];
+      return /fx\.explosion\(p\.x, p\.y, 1\d\d/.test(branch) &&
+             /fx\.debris/.test(branch) && /fx\.ring/.test(branch);
+    })());
     check("the results card waits behind it",
       id("overlayResults").classList.contains("hidden"));
     check("the mission itself really did end - scoring is not deferred",
@@ -3287,8 +3306,8 @@ async function run(){
       if(s) beats[s.beat] = true;
       await runFrames(1, true);
     }
-    check("the rewind runs its three beats and lets go",
-      !RW.active() && beats.scrub && beats.play && beats.hold);
+    check("the rewind runs all four beats and lets go",
+      !RW.active() && beats.death && beats.scrub && beats.play && beats.hold);
     check("replaying the world through the real renderers throws nothing",
       errors.length === errs);
     check("the results card arrives once the tape has run",
@@ -3335,6 +3354,18 @@ async function run(){
     check("the slow-motion really slows down into the impact",
       RW.speedAt(0) > RW.speedAt(0.5) && RW.speedAt(0.5) > RW.speedAt(1) &&
       RW.speedAt(1) > 0);
+    /*
+     * "The replay is too [quick] to actually understand what happened - twice
+     * as slow at least would be better." The first cut opened at 0.9x, which
+     * is slow motion on paper and unreadable in practice. This pins the
+     * ceiling so a later tweak cannot quietly hand the speed back.
+     */
+    check("it never opens faster than half speed", RW.speedAt(0) <= 0.5);
+    check("the whole replay is long enough to follow", (() => {
+      let wall = 0;                             // integrate 1/speed over the tape
+      for(let i = 0; i < 2000; i++) wall += (RW.WINDOW/2000) / RW.speedAt((i + 0.5)/2000);
+      return wall > 4 && wall < 8;              // seconds of screen time
+    })());
     check("a win never rewinds - there is nothing to explain",
       /rewind\.capture/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
       !/rewind\.begin/.test(

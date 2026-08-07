@@ -2529,10 +2529,30 @@ the same ships, the same bolts, the same hull with the kid's own paint on
 it. A stand-in player object carries the cosmetics that cannot change
 during a life and takes its motion from the tape; the boss is drawn by
 its live object with only its position wound back, because a snapshot was
-never going to reproduce a phase machine and weak points. Three beats: a
-fast reverse scrub, the replay easing from 0.9x down to 0.3x, and a held
-freeze with the culprit ringed and NAMED - "KAMIKAZE", "ENEMY FIRE",
-"THE BEAM", the boss's own name.
+never going to reproduce a phase machine and weak points. Four beats: the
+death itself, a fast reverse scrub, the replay easing from 0.45x down to
+0.15x, and a held freeze with the culprit ringed and NAMED - "KAMIKAZE",
+"ENEMY FIRE", "THE BEAM", the boss's own name.
+
+**Two things the first cut got wrong, both reported the same evening.**
+
+*"Too [quick] to actually understand what happened - twice as slow at
+least."* It ran 0.9x easing to 0.3x, which put 1.6 seconds of action on
+screen in 2.4 - technically slow motion, and still too fast to read.
+Halved to 0.45x -> 0.15x, so the same 1.6 seconds takes 4.8. That is the
+difference between watching it and following it, and the whole thing is
+skippable, so being generous costs a tap.
+
+*"When you die your plane should explode or something like this."* It
+always did explode - the rewind simply seized the screen on the very
+frame the last life went, so the blast was drawn for exactly no frames.
+That is now beat zero: the tape waits 1.25s and hands the frame straight
+back to the normal renderer, so the wreck burns over a world already
+frozen by the ending. The blast was also promoted while we were there -
+a lost life gets the standard 58px pop, but the LAST one gets the
+boss-sized send-off in the pilot's own colour: a 150px fireball, three
+rings rolling off it, a shower of wreckage and a hard kick. Losing your
+last life should look like losing it.
 
 The mission still ends on the frame the killing blow lands. Scores, saves
 and medals all run exactly as before; only the results CARD waits, which
@@ -2587,6 +2607,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~532 checks.
+  migration. ~536 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

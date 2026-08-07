@@ -16,7 +16,7 @@
  * from the tape.
  *
  * Three beats: a fast reverse scrub (the tape visibly running back), the
- * replay easing from nearly-live down to a crawl, then a held freeze on
+ * replay easing from half speed down to a crawl, then a held freeze on
  * the impact. One tap skips the lot - a replay you cannot escape stops
  * being a kindness the second time you see it.
  *
@@ -40,9 +40,28 @@ const FRAMES = Math.round(WINDOW * HZ);
  */
 const MAX_E = 40, MAX_EB = 72, MAX_B = 48;
 
+/*
+ * Beat 0 is the death itself. The rewind used to seize the screen on the
+ * frame the last life went, which meant the ship's own destruction - the
+ * one moment the whole mission has been building to - was drawn for
+ * exactly no frames: "when you die your plane should explode or something
+ * like this". It always did explode; nobody was ever allowed to see it.
+ * So the tape waits, and this beat simply lets the live scene play: the
+ * wreck, the rings, the debris, over a world already frozen by the ending.
+ */
+const DEATH = 1.25;
 const SCRUB = 0.45;            // beat 1: the tape running backwards
 const HOLD  = 0.95;            // beat 3: frozen on the impact
-const FAST = 0.90, SLOW = 0.30;   // beat 2 eases between these speeds
+/*
+ * Beat 2 eases between these speeds, and they are HALF what they first
+ * shipped at. The first cut ran 0.90 -> 0.30, which put 1.6 seconds of
+ * action on screen in 2.4 - technically slow motion, and still too quick
+ * to read: "the replay is too [quick] to actually understand what
+ * happened". At 0.45 -> 0.15 the same 1.6 seconds takes 4.8, which is the
+ * difference between watching it and following it. It is skippable, so
+ * the cost of being generous here is a tap.
+ */
+const FAST = 0.45, SLOW = 0.15;
 
 let tape = null;               // the ring buffer, built on the first mission
 let head = 0, filled = 0, due = 0;
@@ -190,8 +209,7 @@ function begin(player){
             levels: (player && player.levels) || {},
             tune: player && player.tune, decal: player && player.decal,
             x:0, y:0, bank:0, vx:0, vy:0, shield:0 };
-  show = { beat: "scrub", t: 0, u: 1, total: 0 };
-  audio.play("rewind");
+  show = { beat: "death", t: 0, u: 1, total: 0 };
   listen(true);
   /*
    * Same grammar as the boss arrival: while a replay is on, the pause and
@@ -251,7 +269,11 @@ function update(dt){
   if(!show) return;
   show.t += dt;
   show.total += dt;
-  if(show.beat === "scrub"){
+  if(show.beat === "death"){
+    // Nothing to drive: the live scene is still being drawn (see draw()),
+    // and fx is still ticking, so the wreck burns on its own.
+    if(show.t >= DEATH){ show.beat = "scrub"; show.t = 0; show.u = 1; audio.play("rewind"); }
+  } else if(show.beat === "scrub"){
     show.u = 1 - clamp(show.t / SCRUB, 0, 1);
     if(show.t >= SCRUB){ show.beat = "play"; show.t = 0; show.u = 0; }
   } else if(show.beat === "play"){
@@ -311,6 +333,10 @@ function wake(idx){
  */
 function draw(ctx, timeMs, VW, VH){
   if(!show || !filled) return false;
+  // The death beat draws nothing of its own: handing the frame back lets the
+  // caller paint the live wreck, its particles and the HUD, exactly as the
+  // game did before any of this existed.
+  if(show.beat === "death") return false;
 
   const idx = clamp(Math.round(show.u * (filled - 1)), 0, filled - 1);
   const f = frameAt(idx);

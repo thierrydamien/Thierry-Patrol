@@ -651,10 +651,27 @@ const callbacks = {
     if(p.lives <= 0){
       p.alive = false;
       /*
-       * Before the results, the tape: "that's not fair" is nearly always
-       * "I never saw it", and the rewind is the answer. Started BEFORE
-       * endMission so the UI finds it running and parks the results screen
-       * behind it - scoring and saving happen on the usual frame either way.
+       * The last life is not another dent - the ship is GONE, and it has to
+       * look it. A lost life gets the standard 58px pop above; this is the
+       * boss-sized send-off, in the pilot's own colour so it is unmistakably
+       * THEIR ship coming apart: a big fireball, three rings rolling off it,
+       * a shower of wreckage, and the screen kicked hard.
+       */
+      fx.explosion(p.x, p.y, 150, p.color, true);
+      for(let i = 0; i < 3; i++)
+        fx.ring(p.x, p.y, 80 + i*60, i % 2 ? "#ffd23f" : p.color, 5 - i, 0.55 + i*0.2);
+      fx.debris(p.x, p.y, 26, p.color);
+      fx.sparks(p.x, p.y, 26, "#ffe9a8", 260);
+      fx.shake(26);
+      fx.flash(1, "255,60,40");
+      fx.hitStop(160);
+      audio.play("bossExplode");
+      /*
+       * Then the tape: "that's not fair" is nearly always "I never saw it".
+       * Started BEFORE endMission so the UI finds it running and parks the
+       * results screen behind it - scoring and saving happen on the usual
+       * frame either way. Its first beat holds on the wreck above, so the
+       * explosion is watched rather than cut away from.
        */
       SF.rewind.capture(source, ent, game.world);
       SF.rewind.begin(p);
