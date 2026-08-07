@@ -2944,6 +2944,40 @@ full list collided with the score on one side and the money on the other.
 Launch also got a slot-machine beat: each name pops up in its colour with a
 firework, one per beat, under the banner.
 
+## 8bt8. One seed per run: the simulation stream stops being a commons
+
+This file records four separate incidents of the same accident: something
+drew from the global RNG and an assertion far away broke - comms shifted the
+stream and a spawn-timing check flapped; a screen-shake test's two draws broke
+a boss-rush check 800 lines later; the rumble probes did it through the shared
+clock; the Wacky Sky block moved the movement bot's phase enough to record a
+ship parked against a wall. And the Daily Patrol's same-sky promise quietly
+died on it: the script was seeded, the simulation wasn't.
+
+The fix is the one `core.js` had been pointing at all along: `rand`,
+`randInt`, `pick` and `chance` - the four helpers every gameplay draw goes
+through - now read from a swappable source, and `startMission` reseeds it
+with one draw per run (`SF.core.seedSim`). A run is reproducible from
+`run.seed` alone; nothing before launch can lean on the stream. Tests (or a
+future daily-style mode, or co-op) can pin the roll with
+`SF.game.nextRunSeed`, consumed once.
+
+The boundary rule, so it stays fixed: SIMULATION code draws from the helpers,
+nothing else; COSMETIC code (particle colours, shake jitter, comms line
+choice, confetti) uses `Math.random` directly, so decoration can never
+perturb gameplay. The two raw `Math.random` calls that were living inside
+enemy behaviours - a swooper's turn direction, a boulder's drift - moved onto
+the helpers, because those ARE gameplay.
+
+The proof test paid for two lessons worth keeping. Snapshots must be
+order-independent: pools reuse dead slots round-robin, so a second identical
+run enumerates the same enemies in a different order - identical battle,
+different array. And a snapshot needs witnesses that actually consume the
+stream: mission 1's opening grunts fly straight lines from fixed formation
+slots, so after eight seconds two different seeds had produced identical
+positions - the per-spawn `phase` and `weaveWidth` draws are in the snapshot
+because they are where the stream leaves fingerprints.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2958,7 +2992,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~608 checks.
+  be re-measured after load. ~613 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

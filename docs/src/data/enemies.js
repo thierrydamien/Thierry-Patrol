@@ -12,7 +12,7 @@
 (function(){
 "use strict";
 const SF = window.SF;
-const { clamp, lerp, rand, randInt } = SF.core;
+const { clamp, lerp, rand, randInt, chance } = SF.core;
 
 /* ---------------------------------------------------------
    MOVEMENT BEHAVIOURS
@@ -85,7 +85,7 @@ const BEHAVIOURS = {
   shielder(e, dt, c){
     if(e.state === 0){
       e.y += e.vy * dt;
-      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; e.vx = (Math.random()<0.5?-1:1) * e.speed * 0.55; }
+      if(e.y >= e.hoverY){ e.y = e.hoverY; e.state = 1; e.vx = (chance(0.5)?-1:1) * e.speed * 0.55; }
     } else {
       e.x += e.vx * dt;
       if(e.x < 70 || e.x > c.VW - 70) e.vx *= -1;
@@ -314,8 +314,8 @@ const BEHAVIOURS = {
       if(e.y >= e.hoverY){
         e.y = e.hoverY;
         e.state = 1;
-        e.stateTimer = 16 + Math.random()*8;
-        if(!e.vx) e.vx = (Math.random() < 0.5 ? -1 : 1) * (55 + Math.random()*45);
+        e.stateTimer = rand(16, 24);
+        if(!e.vx) e.vx = (chance(0.5) ? -1 : 1) * rand(55, 100);
       }
     } else if(e.state === 1){
       e.x += e.vx * dt;
