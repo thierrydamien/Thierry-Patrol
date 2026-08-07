@@ -367,7 +367,7 @@ function resolve(world, ctxObj, dt){
           fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
           fx.shake(10);
         }
-        ctxObj.onPlayerHit("collision");
+        ctxObj.onPlayerHit("collision", e);
         break;
       }
     }
@@ -380,7 +380,7 @@ function resolve(world, ctxObj, dt){
     const rr = b.r + p.r;
     if((b.x-p.x)*(b.x-p.x) + (b.y-p.y)*(b.y-p.y) < rr*rr){
       b.alive = false;
-      if(!invulnerable) ctxObj.onPlayerHit("bullet");
+      if(!invulnerable) ctxObj.onPlayerHit("bullet", b);
       break;
     }
   }
@@ -389,9 +389,9 @@ function resolve(world, ctxObj, dt){
   if(boss && boss.alive && !invulnerable){
     const rr = boss.r + p.r;
     if((boss.x-p.x)*(boss.x-p.x) + (boss.y-p.y)*(boss.y-p.y) < rr*rr){
-      ctxObj.onPlayerHit("boss");
+      ctxObj.onPlayerHit("boss", boss);
     } else if(SF.bosses.beamHits(boss, p.x, p.y)){
-      ctxObj.onPlayerHit("beam");
+      ctxObj.onPlayerHit("beam", boss);
     }
   }
 }

@@ -1,0 +1,428 @@
+/*
+ * THE DEATH REWIND - "oh, THAT'S what got me."
+ *
+ * A seven-year-old's account of dying is "that's not fair". Usually it was
+ * perfectly fair and they simply never saw it: the shot came from outside
+ * where they were looking, or the rock they had been dodging for a second
+ * finally clipped a wingtip. Not knowing is what makes a child put the
+ * tablet down. So when the last life goes, the game rewinds the tape and
+ * shows them - slowly, with the thing that did it ringed and named.
+ *
+ * The replay is the REAL thing, not a diagram: a ring buffer of the last
+ * ~1.6 seconds is played back through the game's own renderers, so it is
+ * the same ships, the same bolts, and the same hull with the kid's own
+ * paint on it. A stand-in player object carries the cosmetics that never
+ * change during a life (colour, parts, tune, paint) and takes its position
+ * from the tape.
+ *
+ * Three beats: a fast reverse scrub (the tape visibly running back), the
+ * replay easing from nearly-live down to a crawl, then a held freeze on
+ * the impact. One tap skips the lot - a replay you cannot escape stops
+ * being a kindness the second time you see it.
+ *
+ * Cost discipline: the buffer is allocated once per mission and written IN
+ * PLACE. Nothing here allocates inside the update loop, because this runs
+ * in a game that has to hold 60fps on a phone.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp } = SF.core;
+const audio = SF.audio;
+
+const HZ = 24;                 // tape speed: plenty for 0.3x playback
+const WINDOW = 1.6;            // seconds of history kept
+const FRAMES = Math.round(WINDOW * HZ);
+/*
+ * Per-frame caps. A frame that overflows simply records the first N - a
+ * replay missing the 41st simultaneous enemy is not a replay anyone can
+ * tell is wrong, whereas a growing buffer on a phone is a real problem.
+ */
+const MAX_E = 40, MAX_EB = 72, MAX_B = 48;
+
+const SCRUB = 0.45;            // beat 1: the tape running backwards
+const HOLD  = 0.95;            // beat 3: frozen on the impact
+const FAST = 0.90, SLOW = 0.30;   // beat 2 eases between these speeds
+
+let tape = null;               // the ring buffer, built on the first mission
+let head = 0, filled = 0, due = 0;
+let show = null;               // the playback state, non-null while running
+let kill = null;               // { x, y, r, label } - what did it
+let doneCb = null;
+let stand = null;              // the stand-in player
+
+/* ---------------------------------------------------------
+   THE TAPE
+   --------------------------------------------------------- */
+function build(){
+  tape = new Array(FRAMES);
+  for(let i = 0; i < FRAMES; i++){
+    const f = { used:false, px:0, py:0, pbank:0, pvx:0, pvy:0, pshield:0, precoil:0,
+                bossOn:false, bx:0, by:0, en:0, ebn:0, bn:0,
+                enemies: new Array(MAX_E), ebullets: new Array(MAX_EB), bullets: new Array(MAX_B) };
+    for(let n = 0; n < MAX_E; n++)
+      f.enemies[n] = { alive:false, x:0, y:0, size:0, r:0, spawnAnim:1, typeId:"grunt", type:null,
+                       elite:false, flash:0, hp:1, maxHp:1, spin:0, fuse:0, state:0, charge:0,
+                       shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null };
+    for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, r:4, kind:"bolt" };
+    for(let n = 0; n < MAX_B;  n++) f.bullets[n]  = { alive:false, x:0, y:0, vx:0, vy:1, tier:0, fromDrone:false };
+    tape[i] = f;
+  }
+}
+
+/** Called at mission start: a fresh tape, nothing part-recorded from last time. */
+function arm(){
+  if(!tape) build();
+  for(let i = 0; i < FRAMES; i++) tape[i].used = false;
+  head = 0; filled = 0; due = 0;
+  show = null; kill = null; doneCb = null;
+}
+
+/**
+ * Writes one frame of the world onto the tape. Called every update; only
+ * commits every 1/HZ seconds, so the sample rate is independent of framerate.
+ */
+function record(dt, world){
+  if(!tape || !world || !world.player) return;
+  due -= dt;
+  if(due > 0) return;
+  due += 1/HZ;
+  if(due < 0) due = 1/HZ;                  // a long stall never floods the tape
+
+  const f = tape[head];
+  head = (head + 1) % FRAMES;
+  if(filled < FRAMES) filled++;
+  f.used = true;
+
+  const p = world.player;
+  f.px = p.x; f.py = p.y; f.pbank = p.bank || 0;
+  f.pvx = p.vx || 0; f.pvy = p.vy || 0;
+  f.pshield = p.shield || 0; f.precoil = p.recoil || 0;
+
+  const boss = world.boss;
+  f.bossOn = !!(boss && boss.alive);
+  if(f.bossOn){ f.bx = boss.x; f.by = boss.y; }
+
+  let n = 0;
+  const es = world.enemies.items;
+  for(let i = 0; i < es.length && n < MAX_E; i++){
+    const e = es[i];
+    if(!e.alive) continue;
+    const d = f.enemies[n++];
+    d.alive = true; d.x = e.x; d.y = e.y; d.size = e.size; d.r = e.r;
+    d.spawnAnim = e.spawnAnim; d.typeId = e.typeId; d.type = e.type; d.elite = e.elite;
+    d.flash = e.flash || 0; d.hp = e.hp; d.maxHp = e.maxHp;
+    d.spin = e.spin || 0; d.fuse = e.fuse || 0;
+    d.state = e.state || 0; d.charge = e.charge || 0;
+    d.shielded = !!e.shielded; d.loot = e.loot || 0;
+    d.carriesRescue = !!e.carriesRescue; d.hazard = !!e.hazard;
+  }
+  for(let i = n; i < f.en; i++) f.enemies[i].alive = false;
+  f.en = n;
+
+  n = 0;
+  const ebs = world.enemyBullets.items;
+  for(let i = 0; i < ebs.length && n < MAX_EB; i++){
+    const b = ebs[i];
+    if(!b.alive) continue;
+    const d = f.ebullets[n++];
+    d.alive = true; d.x = b.x; d.y = b.y; d.r = b.r; d.kind = b.kind;
+  }
+  for(let i = n; i < f.ebn; i++) f.ebullets[i].alive = false;
+  f.ebn = n;
+
+  n = 0;
+  const bs = world.bullets.items;
+  for(let i = 0; i < bs.length && n < MAX_B; i++){
+    const b = bs[i];
+    if(!b.alive) continue;
+    const d = f.bullets[n++];
+    d.alive = true; d.x = b.x; d.y = b.y; d.vx = b.vx; d.vy = b.vy;
+    d.tier = b.tier; d.fromDrone = !!b.fromDrone;
+  }
+  for(let i = n; i < f.bn; i++) f.bullets[i].alive = false;
+  f.bn = n;
+}
+
+/** Oldest-first frame `i` of what was recorded (0 .. filled-1). */
+function frameAt(i){
+  return tape[(head - filled + i + FRAMES*2) % FRAMES];
+}
+
+/* ---------------------------------------------------------
+   WHAT KILLED THEM
+   --------------------------------------------------------- */
+/*
+ * The collision layer knows the source as a word and the object that did
+ * it; both matter. The word decides the phrasing, the object gives the
+ * ring somewhere to sit and a name to print.
+ */
+function capture(source, ent, world){
+  const boss = world && world.boss;
+  if(source === "bullet" && ent){
+    kill = { x: ent.x, y: ent.y, r: Math.max(14, ent.r*2.2), label: "ENEMY FIRE" };
+  } else if(source === "collision" && ent){
+    const nm = ent.hazard ? "ASTEROID"
+                          : ((ent.type && ent.type.name) || "ENEMY").toUpperCase();
+    kill = { x: ent.x, y: ent.y, r: Math.max(22, (ent.r || 20)*1.5), label: nm };
+  } else if(source === "beam" && boss){
+    kill = { x: boss.x, y: boss.y + boss.r, r: 46, label: "THE BEAM" };
+  } else if(boss){
+    kill = { x: boss.x, y: boss.y, r: (boss.r || 60)*0.9, label: (boss.name || "THE BOSS").toUpperCase() };
+  } else {
+    kill = null;
+  }
+}
+
+/* ---------------------------------------------------------
+   PLAYBACK
+   --------------------------------------------------------- */
+function canPlay(){ return !!tape && filled >= 6; }
+
+/** Starts the rewind. Returns false if there is not enough tape to bother. */
+function begin(player){
+  if(!canPlay()) return false;
+  // Cosmetics can't change during a life, so they are copied once and the
+  // tape only has to carry motion.
+  stand = { alive:true, invuln:0, overdriveUntil:0, recoil:0, trail:[],
+            drones: player ? player.drones : 0, crew: (player && player.crew) || [],
+            color: player ? player.color : "#f5a623",
+            levels: (player && player.levels) || {},
+            tune: player && player.tune, decal: player && player.decal,
+            x:0, y:0, bank:0, vx:0, vy:0, shield:0 };
+  show = { beat: "scrub", t: 0, u: 1, total: 0 };
+  audio.play("rewind");
+  listen(true);
+  /*
+   * Same grammar as the boss arrival: while a replay is on, the pause and
+   * mute buttons go with the HUD - there is nothing here to pause. Its OWN
+   * class, not `cinema`: endMission clears cinema on the very next call, so
+   * borrowing it left both buttons sitting live over the replay.
+   */
+  document.body.classList.add("rewinding");
+  return true;
+}
+
+function active(){ return !!show; }
+/** The UI parks the results screen behind this. */
+function onEnd(cb){ doneCb = cb; }
+
+function finish(){
+  if(!show) return;
+  show = null;
+  listen(false);
+  document.body.classList.remove("rewinding");
+  const cb = doneCb;
+  doneCb = null;
+  if(cb) cb();
+}
+
+/*
+ * A tap, a click or any key gets you out - but not the key you were already
+ * holding when you died. On a keyboard you fly by holding a direction, and
+ * the browser repeats that keydown many times a second, so an unguarded
+ * listener skipped the replay before its first frame had drawn: exactly the
+ * player who most needed to see it never would. Hence both guards - repeats
+ * are ignored, and nothing counts for the first fraction of a second.
+ */
+const ARM_AFTER = 0.35;
+let listening = false;
+function skip(e){
+  if(!show || show.total < ARM_AFTER) return;
+  if(e && e.repeat) return;
+  finish();
+}
+function listen(on){
+  if(on === listening) return;
+  listening = on;
+  if(on){
+    window.addEventListener("pointerdown", skip, true);
+    window.addEventListener("keydown", skip, true);
+  } else {
+    window.removeEventListener("pointerdown", skip, true);
+    window.removeEventListener("keydown", skip, true);
+  }
+}
+
+/** Playback speed at position u: fast at first, a crawl into the impact. */
+function speedAt(u){ return FAST - (FAST - SLOW) * Math.pow(clamp(u, 0, 1), 2.5); }
+
+function update(dt){
+  if(!show) return;
+  show.t += dt;
+  show.total += dt;
+  if(show.beat === "scrub"){
+    show.u = 1 - clamp(show.t / SCRUB, 0, 1);
+    if(show.t >= SCRUB){ show.beat = "play"; show.t = 0; show.u = 0; }
+  } else if(show.beat === "play"){
+    show.u += dt * speedAt(show.u) / WINDOW;
+    if(show.u >= 1){
+      show.u = 1; show.beat = "hold"; show.t = 0;
+      audio.play("playerHit");
+      if(SF.fx) SF.fx.shake(10);
+    }
+  } else if(show.t >= HOLD){
+    finish();
+  }
+}
+
+/* ---------------------------------------------------------
+   DRAWING
+   The replay runs through the game's own renderers, so a fake
+   world is dressed with the tape's contents and handed over.
+   --------------------------------------------------------- */
+const fake = { enemies:{ items:null }, enemyBullets:{ items:null }, bullets:{ items:null },
+               pickups:{ items:[] }, player:null, boss:null, haulers:[] };
+
+function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+function dress(f){
+  fake.enemies.items = f.enemies;
+  fake.enemyBullets.items = f.ebullets;
+  fake.bullets.items = f.bullets;
+  stand.x = f.px; stand.y = f.py; stand.bank = f.pbank;
+  stand.vx = f.pvx; stand.vy = f.pvy;
+  stand.shield = f.pshield; stand.recoil = f.precoil;
+  fake.player = stand;
+}
+
+/*
+ * A short engine wake built from where the ship just was - the tape IS the
+ * trail. The four slots are reused rather than rebuilt, so a long replay
+ * doesn't quietly mint garbage every frame.
+ */
+const WAKE = [{ x:0, y:0, life:0.055 }, { x:0, y:0, life:0.110 },
+              { x:0, y:0, life:0.165 }, { x:0, y:0, life:0.220 }];
+function wake(idx){
+  let n = 0;
+  for(let k = 1; k <= WAKE.length; k++){
+    const j = idx - k;
+    if(j < 0) break;
+    const f = frameAt(j);
+    WAKE[n].x = f.px; WAKE[n].y = f.py;
+    n++;
+  }
+  stand.trail = n === WAKE.length ? WAKE : WAKE.slice(0, n);
+}
+
+/**
+ * Draws the replay over the background. Returns true when it owns the
+ * frame, so the caller knows to skip the live world, the HUD and the radio.
+ */
+function draw(ctx, timeMs, VW, VH){
+  if(!show || !filled) return false;
+
+  const idx = clamp(Math.round(show.u * (filled - 1)), 0, filled - 1);
+  const f = frameAt(idx);
+  dress(f);
+  wake(idx);
+
+  // Zoom toward the impact as the tape slows: the room narrows to the one
+  // thing they need to see. Weighted to the player, who is the subject.
+  const held = show.beat === "hold";
+  const k = held ? 1 : (show.beat === "play" ? easeOutCubic(show.u) : 0);
+  const zoom = 1 + 0.42*k;
+  const last = frameAt(filled - 1);
+  const tx = kill ? last.px*0.65 + kill.x*0.35 : last.px;
+  const ty = kill ? last.py*0.65 + kill.y*0.35 : last.py;
+  const halfW = VW/(2*zoom), halfH = VH/(2*zoom);
+  const cx = clamp(tx, halfW, VW - halfW), cy = clamp(ty, halfH, VH - halfH);
+
+  ctx.save();
+  ctx.translate(VW/2, VH/2);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-cx, -cy);
+  // The tape running backwards: a hard horizontal tear, the one piece of
+  // language everybody already reads as "rewinding".
+  if(show.beat === "scrub") ctx.translate(Math.sin(show.t*90)*3, 0);
+
+  const R = SF.render;
+  R.drawHaulers(ctx, SF.game.world, timeMs);   // they hold station: frozen is honest
+  R.drawEnemies(ctx, fake, timeMs);
+  drawBossFrame(ctx, f, timeMs);
+  R.drawBullets(ctx, fake);
+  R.drawPlayer(ctx, stand, timeMs);
+  if(kill) drawRing(ctx, timeMs, held);
+  ctx.restore();
+
+  drawFurniture(ctx, VW, VH, timeMs);
+  return true;
+}
+
+/*
+ * The boss is drawn by its live object - it carries a phase machine, weak
+ * points and damage state that no snapshot is going to reproduce - with
+ * only its position wound back, then put straight again.
+ */
+function drawBossFrame(ctx, f, timeMs){
+  const boss = SF.game.world && SF.game.world.boss;
+  if(!boss || !f.bossOn) return;
+  const bx = boss.x, by = boss.y;
+  boss.x = f.bx; boss.y = f.by;
+  SF.render.drawBoss(ctx, boss, timeMs);
+  boss.x = bx; boss.y = by;
+}
+
+/** The ring on the culprit: closes in during the replay, pulses on the hold. */
+function drawRing(ctx, timeMs, held){
+  const grow = held ? 1 : clamp(show.beat === "play" ? show.u : 0, 0, 1);
+  const pulse = held ? 1 + Math.sin(timeMs/90)*0.06 : 1;
+  const r = kill.r * (2.6 - 1.6*grow) * pulse;
+  ctx.save();
+  ctx.globalAlpha = 0.35 + 0.65*grow;
+  ctx.strokeStyle = "#ff2d55";
+  ctx.lineWidth = 3;
+  ctx.setLineDash([10, 8]);
+  ctx.lineDashOffset = -timeMs/40;
+  ctx.beginPath(); ctx.arc(kill.x, kill.y, r, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  if(held){
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 2;
+    [-1, 1].forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(kill.x + s*r*1.35, kill.y); ctx.lineTo(kill.x + s*r*1.05, kill.y);
+      ctx.moveTo(kill.x, kill.y + s*r*1.35); ctx.lineTo(kill.x, kill.y + s*r*1.05);
+      ctx.stroke();
+    });
+  }
+  ctx.restore();
+}
+
+/** Letterbox, the word REWIND, the culprit's name, and the way out. */
+function drawFurniture(ctx, VW, VH, timeMs){
+  const bar = VH*0.055;
+  ctx.save();
+  ctx.fillStyle = "rgba(4,7,16,0.92)";
+  ctx.fillRect(0, 0, VW, bar);
+  ctx.fillRect(0, VH - bar, VW, bar);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ff2d55";
+  ctx.font = "bold 20px Rajdhani, Arial, sans-serif";
+  const blink = show.beat === "scrub" ? (Math.sin(timeMs/70) > -0.4) : true;
+  if(blink) ctx.fillText(show.beat === "scrub" ? "◀◀ REWIND" : "WHAT HAPPENED", VW/2, bar*0.72);
+
+  if(show.beat === "hold" && kill){
+    const a = clamp(show.t/0.22, 0, 1);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 26px Rajdhani, Arial, sans-serif";
+    ctx.fillText(kill.label, VW/2, VH*0.5 - 10);
+    ctx.fillStyle = "#ff8fa3";
+    ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+    ctx.fillText("this is what got you", VW/2, VH*0.5 + 14);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+  ctx.fillText("tap to skip", VW/2, VH - bar*0.35);
+  ctx.textAlign = "left";
+  ctx.restore();
+}
+
+SF.rewind = { arm, record, capture, begin, active, update, draw, onEnd, skip, finish,
+              canPlay, WINDOW, HZ, FRAMES, speedAt, _tape: () => tape, _kill: () => kill,
+              _show: () => show };
+})();

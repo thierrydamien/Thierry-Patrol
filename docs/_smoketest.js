@@ -70,11 +70,16 @@ function botInput(){
   }
 }
 
-async function runFrames(n){
+/*
+ * `quiet` runs frames with the bot's hands OFF the keyboard. It exists for
+ * the death rewind: the bot holds a direction every frame, and a held key is
+ * a skip request, so a noisy frame can never watch a replay play out.
+ */
+async function runFrames(n, quiet){
   for(let i = 0; i < n; i++){
     frames++;
     fakeNow += 33.4;   // 30fps steps: same simulated time, half the frames
-    botInput();
+    if(!quiet) botInput();
     const batch = pendingFrames;
     pendingFrames = [];
     for(let k = 0; k < batch.length; k++){
@@ -107,7 +112,7 @@ function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/finale.js","src/papadeath.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -3207,6 +3212,142 @@ async function run(){
       for(let i=0;i<8;i++) C.snapshotBackup(true);
       return C.backups().length <= 4;
     })());
+  }
+
+  /*
+   * The rewind block lives LAST on purpose. It starts and abandons two whole
+   * missions, and every mission consumes the shared Math.random stream, so
+   * running it earlier silently reshuffles the spawns of every test after it -
+   * which is exactly how it broke a boss-rush check two hundred lines away.
+   */
+  /* ---------- THE DEATH REWIND ----------
+     "That's not fair" is nearly always "I never saw it". These checks are
+     about the two things that make the answer work: the tape has to hold
+     the seconds BEFORE the hit (a replay that starts at the bang explains
+     nothing), and the results card must wait for it. */
+  {
+    const RW = SF.rewind;
+    const closeCard = () => id("overlayResults").classList.add("hidden");
+    const kill = () => {                       // one contrived, fatal hit
+      const p = SF.game.world.player;
+      p.lives = 1; p.shield = 0; p.invuln = 0;
+      SF.game.callbacks.onPlayerHit("collision",
+        { x: p.x + 30, y: p.y - 40, r: 16, hazard: false, type: { name: "Kamikaze" } });
+    };
+
+    closeCard();                               // an earlier card may still be up
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "pilot");
+    check("a fresh mission starts with a blank tape", !RW.canPlay());
+    await runFrames(90);                       // ~3s: more than the tape holds
+    check("the tape fills as the mission is flown", RW.canPlay());
+
+    const before = SF.game.world.player.x;
+    kill();
+    check("the last life starts the rewind", RW.active());
+    check("the results card waits behind it",
+      id("overlayResults").classList.contains("hidden"));
+    check("the mission itself really did end - scoring is not deferred",
+      SF.game.run.ended === true && SF.game.state === "ending");
+    check("the rewind names what hit you", (() => {
+      const k = RW._kill();
+      return !!k && k.label === "KAMIKAZE" && Number.isFinite(k.x);
+    })());
+    check("the tape records the traffic, not just the ship", (() => {
+      const live = RW._tape().filter(f => f.used);
+      // Something other than the player has to be on the tape, or the replay
+      // shows a lone ship drifting through an empty sky and explains nothing.
+      return live.some(f => f.en > 0 || f.ebn > 0 || f.bn > 0);
+    })());
+    check("the pause and mute buttons stand down for the replay", (() => {
+      // Under its own class: endMission clears `cinema` on the very next
+      // call, so borrowing it left both buttons live over the replay.
+      const sheet = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+      return window.document.body.classList.contains("rewinding") &&
+             /body\.rewinding #pauseBtn/.test(sheet) &&
+             /body\.rewinding #muteBtn/.test(sheet);
+    })());
+    check("the tape holds the seconds BEFORE the hit, not just the bang", (() => {
+      // The oldest frame must be a real, different moment - if the buffer
+      // only held the death frame there would be nothing to learn from.
+      const tape = RW._tape();
+      const live = tape.filter(f => f.used);
+      return live.length > 10 &&
+             live.some(f => Math.abs(f.px - before) > 0.5) &&
+             live.every(f => Number.isFinite(f.px) && Number.isFinite(f.py));
+    })());
+
+    // It plays all three beats and hands over by itself, drawing every frame
+    // through the real renderers on the way - which is what catches a replay
+    // that throws rather than one that merely looks wrong.
+    const errs = errors.length;
+    const beats = {};
+    for(let i = 0; i < 400 && RW.active(); i++){
+      const s = RW._show();
+      if(s) beats[s.beat] = true;
+      await runFrames(1, true);
+    }
+    check("the rewind runs its three beats and lets go",
+      !RW.active() && beats.scrub && beats.play && beats.hold);
+    check("replaying the world through the real renderers throws nothing",
+      errors.length === errs);
+    check("the results card arrives once the tape has run",
+      !id("overlayResults").classList.contains("hidden"));
+    check("and the buttons come back with it",
+      !window.document.body.classList.contains("rewinding"));
+
+    // Second death: a tap has to get you out. A replay you cannot escape
+    // stops being a kindness the moment you have seen it once.
+    closeCard();
+    SF.game.startMission(0, "pilot");
+    await runFrames(90);
+    kill();
+    check("the second death rewinds too", RW.active());
+    // Guard one: nothing counts in the first moments, so the tap that was
+    // already on its way when they died doesn't eat the replay.
+    window.dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true }));
+    check("a tap already in flight when you died does not skip it", RW.active());
+    await runFrames(14, true);           // past the arming grace
+    /*
+     * Guard two, and the one that actually mattered: on a keyboard you fly by
+     * HOLDING a direction, and the browser repeats that keydown many times a
+     * second. Unguarded, the replay was skipped before its first frame drew -
+     * the player who most needed it was the one guaranteed never to see it.
+     */
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key:"ArrowLeft", repeat:true }));
+    check("a held key never skips it, however long the replay runs", RW.active());
+    window.dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true }));
+    check("but a real tap gets you straight out", !RW.active());
+    await runFrames(2, true);
+    check("skipping still shows the results",
+      !id("overlayResults").classList.contains("hidden"));
+    check("and the skip listener does not outlive the replay", (() => {
+      // Fired again with nothing running: must be a no-op, not a throw.
+      const e0 = errors.length;
+      window.dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true }));
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "x" }));
+      return errors.length === e0 && !RW.active();
+    })());
+
+    check("the skip is armed on a delay, not on the first frame",
+      /ARM_AFTER/.test(fs.readFileSync(path.join(__dirname, "src/rewind.js"), "utf8")) &&
+      /e\.repeat/.test(fs.readFileSync(path.join(__dirname, "src/rewind.js"), "utf8")));
+    check("the slow-motion really slows down into the impact",
+      RW.speedAt(0) > RW.speedAt(0.5) && RW.speedAt(0.5) > RW.speedAt(1) &&
+      RW.speedAt(1) > 0);
+    check("a win never rewinds - there is nothing to explain",
+      /rewind\.capture/.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
+      !/rewind\.begin/.test(
+        fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")
+          .split("function endMission")[1].split("EVENT CALLBACKS")[0]));
+    check("the collision layer hands over WHAT hit you, not just a word",
+      /onPlayerHit\("collision", e\)/.test(
+        fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8")) &&
+      /onPlayerHit\("bullet", b\)/.test(
+        fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8")));
+
+    closeCard();
+    SF.game.run.ended = true; SF.game.state = "idle";
   }
 
   /* ---------- report ---------- */

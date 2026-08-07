@@ -13,7 +13,7 @@
  * a deploy MUST be picked up - it is the blunt instrument that guarantees a
  * clean slate.
  */
-const CACHE = "patrol-v5";
+const CACHE = "patrol-v6";
 
 self.addEventListener("install", e => { self.skipWaiting(); });
 

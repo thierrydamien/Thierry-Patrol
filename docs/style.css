@@ -1043,6 +1043,11 @@ button.part-chip:active { transform: scale(0.96); }
 body.cinema .ability-bar,
 body.cinema #pauseBtn,
 body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+/* The death rewind hides the same furniture, under its own name: `cinema` is
+   cleared by endMission, which fires immediately after the replay starts. */
+body.rewinding .ability-bar,
+body.rewinding #pauseBtn,
+body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 
 /* ---------------- the Paint Shop ---------------- */
 /* Cards are the product: the pilot's own ship wearing each colour. */

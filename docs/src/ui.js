@@ -2969,7 +2969,16 @@ click($("muteBtn"), () => {
   });
 });
 
-SF.game.onMissionEnd = showResults;
+/*
+ * The results screen waits for the tape. A death ends the mission on the
+ * frame it happens - scores, saves and medals all run as they always did -
+ * but the card only comes up once the rewind has shown them what hit them.
+ * A win, or a death with too little tape to replay, goes straight through.
+ */
+SF.game.onMissionEnd = (result) => {
+  if(SF.rewind && SF.rewind.active()) SF.rewind.onEnd(() => showResults(result));
+  else showResults(result);
+};
 
 /* ---------------------------------------------------------
    BOOT

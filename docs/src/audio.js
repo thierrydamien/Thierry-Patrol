@@ -382,6 +382,12 @@ SOUNDS.victory = { minGap: 2000, fn: () => {
   [2093, 2637].forEach((f,i) => tone(f, 0.10, "sine", 0.035, null, 0.36 + i*0.07));
 } };
 
+/* The tape running backwards: a falling sweep under a reversed rush of air. */
+SOUNDS.rewind = { minGap: 900, fn: () => {
+  tone(880, 0.42, "sine", 0.05, 180);
+  noise(0.40, 0.10, 4200, 700);
+} };
+
 SOUNDS.flyoff = { minGap: 2000, fn: () => {
   // Engines opening up for the ride home: a long rising sweep over a rush of air.
   tone(140, 0.9, "sawtooth", 0.07, 560);

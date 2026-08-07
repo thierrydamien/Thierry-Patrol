@@ -2515,6 +2515,66 @@ through actual pointer events and then reads the pixels back off a
 rendered hull - the red blob and the gold stripe are counted, not
 assumed.
 
+## 8bt. The death rewind: "oh, THAT'S what got me"
+
+A seven-year-old's account of dying is "that's not fair". Usually it was
+perfectly fair and they simply never saw it - the shot came from outside
+where they were looking, or the rock they had been dodging for a second
+finally clipped a wingtip. Not knowing is what makes a child put the
+tablet down. So when the last life goes, the game rewinds the tape.
+
+A ring buffer holds the last 1.6 seconds at 24Hz and is replayed through
+the game's OWN renderers, so it is the real thing rather than a diagram:
+the same ships, the same bolts, the same hull with the kid's own paint on
+it. A stand-in player object carries the cosmetics that cannot change
+during a life and takes its motion from the tape; the boss is drawn by
+its live object with only its position wound back, because a snapshot was
+never going to reproduce a phase machine and weak points. Three beats: a
+fast reverse scrub, the replay easing from 0.9x down to 0.3x, and a held
+freeze with the culprit ringed and NAMED - "KAMIKAZE", "ENEMY FIRE",
+"THE BEAM", the boss's own name.
+
+The mission still ends on the frame the killing blow lands. Scores, saves
+and medals all run exactly as before; only the results CARD waits, which
+keeps the rewind clear of every rule that reads `run.ended`.
+
+Two things this cost, both worth knowing:
+
+**The tape must be written in place.** It records inside the update loop
+of a game that has to hold 60fps on a phone, so the buffer is allocated
+once per mission and every frame overwrites its slot. Per-frame caps
+(40 enemies, 72 enemy bolts, 48 of yours) bound it; a frame that
+overflows records the first N, because nobody can tell that the 41st
+simultaneous enemy is missing but everybody can feel a growing buffer.
+
+**The skip nearly broke the feature.** "Tap to skip" is not optional -
+a replay you cannot escape stops being a kindness the second time you
+see it - but the first version listened for any key, and on a keyboard
+you fly by HOLDING a direction, which the browser repeats many times a
+second. The replay was skipped before its first frame drew: the player
+who most needed it was the one guaranteed never to see it. The smoke
+test caught it, because the bot flies by holding keys too. Fixed with
+two guards - key repeats are ignored, and nothing counts for the first
+0.35s.
+
+**The furniture needed its own name.** Hiding the pause and mute buttons
+by borrowing the boss arrival's `cinema` class silently did nothing:
+`endMission` clears that class, and it runs on the very next call after
+the replay starts, so both buttons sat live over the replay. They have
+their own `rewinding` class now. Caught by looking at a screenshot, which
+is the only thing that would have caught it.
+
+Verified in real Chromium as well as jsdom, because jsdom stubs the 2D
+context and can prove the wiring but not that anything is drawn: the
+browser run flies a real mission, kills the pilot, and reads pixels back
+off the canvas to confirm the scene paints and the culprit's red ring is
+actually on screen.
+
+One ordering note for whoever adds the next one: the suite's rewind block
+runs LAST, because starting a mission consumes the shared `Math.random`
+stream and running it earlier reshuffled the spawns of a boss-rush check
+two hundred lines away.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2527,6 +2587,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~509 checks.
+  migration. ~532 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).

@@ -269,6 +269,7 @@ function startMission(missionIndex, difficultyId){
   fx.reset();
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.bossintro.reset();
+  SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
@@ -620,7 +621,7 @@ const callbacks = {
     return res;                 // the collision layer needs to know what fell
   },
 
-  onPlayerHit(source){
+  onPlayerHit(source, ent){
     const run = game.run;
     const p = game.world.player;
     if(!p || !p.alive || p.invuln > 0) return;
@@ -649,6 +650,14 @@ const callbacks = {
 
     if(p.lives <= 0){
       p.alive = false;
+      /*
+       * Before the results, the tape: "that's not fair" is nearly always
+       * "I never saw it", and the rewind is the answer. Started BEFORE
+       * endMission so the UI finds it running and parks the results screen
+       * behind it - scoring and saving happen on the usual frame either way.
+       */
+      SF.rewind.capture(source, ent, game.world);
+      SF.rewind.begin(p);
       endMission(false);
     } else if(p.lives === 1){
       SF.comms.say("lowLives");
@@ -1332,6 +1341,9 @@ function update(dt, timeMs){
 
   fx.update(dt, timeMs);
   SF.render.updateBackground(dt);
+  // Last thing in the tick, so the tape holds the world as it was left -
+  // including the frame the killing blow lands on.
+  SF.rewind.record(dt, game.world);
 
   const stats = run.stats;
   stats.killRatio = stats.spawned ? stats.kills / Math.max(stats.spawned, run.director.totalPlanned) : 0;
@@ -1503,6 +1515,12 @@ function draw(timeMs){
   ctx.translate(shakeVec.x, shakeVec.y);
   ctx.clearRect(-30, -30, VW+60, VH+60);
   SF.render.drawBackground(ctx);
+  /*
+   * The rewind owns the whole frame while it runs: the live world is over,
+   * and drawing it under the replay would show two contradictory skies.
+   * No HUD and no radio either - this is a replay, not a moment of play.
+   */
+  if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
@@ -1544,7 +1562,13 @@ function frame(now){
     if(SF.input.consumeBomb()) useBomb();
     if(SF.input.consumeOverdrive()) useOverdrive();
     if(game.state === "playing") update(dt, now);
-    else { fx.update(dt, now); SF.render.updateBackground(dt); }
+    else {
+      // fx keeps ticking through the rewind or the screen would hold the
+      // death's shake as a permanent offset, and the sky would stop drifting.
+      if(SF.rewind.active()) SF.rewind.update(dt);
+      fx.update(dt, now);
+      SF.render.updateBackground(dt);
+    }
     draw(now);
     if(SF.ui) SF.ui.syncAbilityButtons();
   } else if(game.state === "paused"){
