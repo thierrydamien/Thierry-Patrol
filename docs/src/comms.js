@@ -6,7 +6,8 @@
  *  - one panel at a time, ~2.8s, then it slides out;
  *  - every event has its own cooldown, so a run of pick-ups says one thing;
  *  - a minimum gap between any two lines;
- *  - nothing is queued: if something better happens mid-line, it takes over.
+ *  - nothing is queued: if something better happens mid-line, it takes over;
+ *  - on a phone it says nothing at all (see isPhone).
  *
  * It holds no DOM and no ctx - the renderer asks it what to draw.
  */
@@ -18,6 +19,32 @@ const { COMMS, fill } = SF.commsData;
 const MIN_GAP = 1.4;      // seconds between any two lines
 const SHOW_TIME = 2.8;
 
+/*
+ * A phone is the one screen where this panel costs more than it gives.
+ *
+ * It has to live inside the flight envelope - there is no margin to put it in
+ * - and on a ~390-wide field that corner is a sixth of the sky. So the ship
+ * flies behind it, the panel ducks to a whisper to stay out of the way, and
+ * the player is left with neither a readable line nor a clear view of the
+ * thing they are steering. A tablet and a desktop have the room for both, and
+ * keep talking.
+ *
+ * "Phone" is a touch device whose short edge is under 500px - the same
+ * breakpoint the stylesheet already shrinks the special buttons at. Both
+ * halves are load-bearing: an iPad mini is 744 across, so it stays talkative,
+ * and a desktop window dragged narrow still has a mouse and can be dragged
+ * back, so it is not a phone either.
+ */
+function isPhone(){
+  try {
+    if(!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches)) return false;
+    const doc = document.documentElement;
+    const vw = doc.clientWidth  || window.innerWidth  || 820;
+    const vh = doc.clientHeight || window.innerHeight || 1100;
+    return Math.min(vw, vh) < 500;
+  } catch(e){ return false; }   // a browser that cannot answer keeps its comms
+}
+
 const state = {
   active: null,           // { text, speaker, name, color, levels, life, max }
   lastAt: {},             // event id -> sim time it last fired
@@ -25,12 +52,15 @@ const state = {
   vars: { you:"PILOT", mate:"" },
   self: null,             // { name, color, levels } - the pilot's own ship
   mate: null,             // { name, color, levels } - a squadmate, if any
-  enabled: true,
+  enabled: true,          // false on a phone - decided per mission in begin()
 };
 
 /** Called at mission start with the flying profile and their squadmates. */
 function begin(profile, crew){
   const art = SF.shipart;
+  // Asked per mission, not once at load: a desktop window can be resized and a
+  // tablet rotated between one launch and the next.
+  state.enabled = !isPhone();
   state.now = 0;
   state.lastAt = {};
   state.active = null;
@@ -84,5 +114,5 @@ function update(dt){
 function clear(){ state.active = null; }
 function current(){ return state.active; }
 
-SF.comms = { begin, say, update, clear, current, _state: state };
+SF.comms = { begin, say, update, clear, current, isPhone, _state: state };
 })();

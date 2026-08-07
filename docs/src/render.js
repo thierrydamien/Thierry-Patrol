@@ -2138,6 +2138,9 @@ function drawBeam(ctx, boss){
    right. The portrait is the speaker's *actual* ship - so when
    your brother says something, the ship in the panel is the
    one he's been building.
+
+   Never drawn on a phone: comms mute themselves there, so
+   current() is null for the whole mission (see comms.js).
    --------------------------------------------------------- */
 function drawComms(ctx){
   const msg = SF.comms && SF.comms.current();

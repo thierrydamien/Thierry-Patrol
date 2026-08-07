@@ -597,6 +597,62 @@ async function run(){
       const decl = rule[1].split(";").map(d => d.trim()).find(d => /^width\s*:/.test(d));
       return !!decl && parseInt(decl.split(":")[1], 10) >= 44;
     })());
+
+    /* "The messages in the bottom left take too much screen space, and when the
+       plane is in the same area they are half hidden." Both halves of that are
+       one fact: the panel has to live inside the flight envelope, and on a phone
+       there is no spare corner to move it to. So the phone stops talking. The
+       tablet and the desktop, which have the room, must NOT - this is the check
+       that keeps a fix for the small screen from quietly costing the big ones. */
+    check("a phone flies without the comms panel, a tablet and a desktop keep it", (() => {
+      const realMM = window.matchMedia;
+      const iw0 = window.innerWidth, ih0 = window.innerHeight;
+      /* The suite pins every element to a 390x620 phone box (see the top of
+         this file), and the comms rule reads the same clientWidth the field
+         does - so the BOX is what has to move to simulate a device here.
+         innerWidth is set alongside it only so the stand-in device stays
+         coherent whichever branch of the fallback is taken. */
+      const viewport = (w, h) => {
+        const proto = window.HTMLElement.prototype;
+        Object.defineProperty(proto, "clientWidth",  { configurable:true, get(){ return w; } });
+        Object.defineProperty(proto, "clientHeight", { configurable:true, get(){ return h; } });
+        Object.defineProperty(window, "innerWidth",  { configurable:true, value: w });
+        Object.defineProperty(window, "innerHeight", { configurable:true, value: h });
+      };
+      const pretend = (coarse, w, h) => {
+        window.matchMedia = q => ({ matches: coarse && /pointer:\s*coarse/.test(q),
+                                    media: q, addListener(){}, removeListener(){},
+                                    addEventListener(){}, removeEventListener(){} });
+        viewport(w, h);
+      };
+      // Driven through the real seam - begin() then say() - rather than asking
+      // isPhone() what it thinks: what matters is that nothing reaches the
+      // renderer, not how the decision was spelled.
+      const speaks = () => {
+        SF.comms.begin(SF.profile.blank("Probe"), []);
+        SF.comms.say("halfway");
+        const said = !!SF.comms.current();
+        SF.comms.clear();
+        return said;
+      };
+      pretend(true,  390, 844);   const phone   = speaks();   // iPhone 14
+      pretend(true,  820, 1180);  const tablet  = speaks();   // iPad Air
+      pretend(false, 1440, 900);  const desktop = speaks();
+      // Put the suite's world back exactly as it was found - a dozen later
+      // checks measure against that 390x620 box.
+      window.matchMedia = realMM;
+      viewport(390, 620);
+      Object.defineProperty(window, "innerWidth",  { configurable:true, value: iw0 });
+      Object.defineProperty(window, "innerHeight", { configurable:true, value: ih0 });
+      SF.comms.begin(SF.profile.blank("Probe"), []);
+      return !phone && tablet && desktop;
+    })());
+    /* One number, two files: the stylesheet shrinks the buttons at the same
+       width the comms go quiet at, and a phone is a phone in both or neither. */
+    check("comms use the same phone the stylesheet already knows about",
+      /@media \(max-width: 500px\)/.test(css) &&
+      /Math\.min\(vw, vh\) < 500/.test(
+        fs.readFileSync(path.join(__dirname, "src/comms.js"), "utf8")));
   }
   // The map draws every boss's battle hull at its stop, so every boss the
   // campaign names must have a painter the map can borrow.
