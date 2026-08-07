@@ -109,8 +109,19 @@ window.getComputedStyle = el => {
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+// --- vibration stub --------------------------------------------------------
+// jsdom has no vibration motor - and neither does iOS Safari, which is why the
+// haptics module re-checks navigator.vibrate on every call instead of caching
+// it at load. That lets this record exactly what the game asked the motor for.
+const vibrations = [];
+window.navigator.vibrate = (pattern) => { vibrations.push(pattern); return true; };
+function vibeCount(fn){ const n = vibrations.length; fn(); return vibrations.length - n; }
+/** Fires one sound hook with the clock jumped past every rate limit, so that
+ *  consecutive probes can't starve each other. Returns buzzes triggered. */
+function probe(name, arg){ fakeNow += 1000; return vibeCount(() => window.SF.audio.play(name, arg)); }
+
 const SRC = [
-  "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
+  "src/core.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
@@ -133,6 +144,13 @@ async function run(){
   const SF = window.SF;
 
   /* ---------- data sanity ---------- */
+  // Haptics ride on the sound hooks, so a rumble keyed to an event no gameplay
+  // code ever fires would be silently dead.
+  check("every rumble is keyed to a real sound hook",
+    Object.keys(SF.haptics._patterns).every(k => !!SF.audio._sounds[k]));
+  check("no rumble is keyed to a gun or a per-bullet impact",
+    ["shoot","shootHeavy","hitArmour","bossHit","armourClang","combo","coin","telegraph","laneFire"]
+      .every(k => !SF.haptics._patterns[k]));
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
   check("23 campaign missions defined, ids sequential",
@@ -713,7 +731,26 @@ async function run(){
     SF.comms._state.lastAt.missionStart === 0);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
 
+  // Tallying the hooks as well as the buzzes: the rumble table was tuned off
+  // these counts (guns 4/s, kills 0.6/s), so the numbers it was tuned against
+  // stay visible if a later change to spawning moves them.
+  const hooks = {}; const realPlay = SF.audio.play;
+  SF.audio.play = (n, a) => { hooks[n] = (hooks[n]||0) + 1; return realPlay(n, a); };
+  const vibesAtStart = vibrations.length, clockAtStart = fakeNow;
+
   await runFrames(4200);   // mission 1 runs ~1m45 now
+
+  SF.audio.play = realPlay;
+  const vibeRate = (vibrations.length - vibesAtStart) / ((fakeNow - clockAtStart) / 1000);
+  console.log(`Rumble -> ${vibrations.length - vibesAtStart} buzzes over the mission (${vibeRate.toFixed(2)}/s)`);
+  console.log("Sound hooks ->", Object.entries(hooks).sort((a,b) => b[1]-a[1])
+    .map(([k,v]) => `${k}:${v}`).join(" "));
+  // The whole design risk of this feature is a motor that never stops, and the
+  // opposite failure is a feature nobody can feel. Measured over a real mission
+  // rather than reasoned about, and pinned in both directions. This bot is in
+  // god mode and never takes a hit, so everything counted is the core loop.
+  check("the motor punctuates a mission instead of running through it", vibeRate < 2.5);
+  check("the core loop is felt, not just the rare events", vibrations.length - vibesAtStart > 40);
   console.log("Mission 1 sim ->", SF.game.run.phase, "spawned:", SF.game.run.stats.spawned,
     "kills:", SF.game.run.stats.kills, "enemies left:", SF.game.world.enemies.countAlive(),
     "state:", SF.game.state);
@@ -1727,6 +1764,39 @@ async function run(){
     check("screen shake off means the camera holds still",
       !SF.fx.shakeEnabled() && off.x === 0 && off.y === 0);
     clickEl(id("setShake"));
+
+    // Rumble: the third output channel, and the one that survives a muted game.
+    check("a device with a motor gets a rumble row",
+      SF.haptics.supported() && !id("setRumble").classList.contains("hidden"));
+    check("getting hit rumbles", probe("playerHit") === 1);
+    check("firing does not", probe("shoot", 0.5) === 0);
+    check("every kill ticks", probe("enemyExplode", false) === 1);
+    const smallTick = vibrations[vibrations.length-1];
+    check("a big explosion hits harder than an ordinary one",
+      probe("enemyExplode", true) === 1 && vibrations[vibrations.length-1] > smallTick);
+    check("a heavy event sends a pattern, not a single pulse",
+      probe("bomb") === 1 && JSON.stringify(vibrations[vibrations.length-1]) === "[70,40,30]");
+    // Two hits in the same instant are one buzz: vibrate() cancels whatever is
+    // still running, so an unlimited burst smears into one flat rattle.
+    fakeNow += 1000;
+    check("repeat hits in the same instant collapse to one buzz",
+      vibeCount(() => { SF.audio.play("playerHit"); SF.audio.play("playerHit"); }) === 1);
+
+    clickEl(id("setRumble"));
+    check("switching rumble off silences the motor",
+      !SF.haptics.isEnabled() && probe("playerHit") === 0);
+    check("rumble off is remembered", window.localStorage.getItem("patrol_haptics_off") === "1");
+    clickEl(id("setRumble"));
+    check("switching it back on restores it",
+      SF.haptics.isEnabled() && probe("playerHit") === 1);
+    // The two channels are separate settings: a family that plays with the
+    // sound off - which is most of them - should still feel the game.
+    clickEl(id("setSound"));
+    check("muting the sound does not mute the rumble",
+      SF.audio.isMuted() && probe("playerHit") === 1);
+    clickEl(id("setSound"));
+    check("unmuting leaves the game as it was", !SF.audio.isMuted());
+
     check("squad sync lives inside settings",
       !id("setCloud").classList.contains("hidden"));
 

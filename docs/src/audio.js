@@ -11,6 +11,11 @@
  *    short, detuned and rate-limited. Impacts carry the punch instead.
  *  - iOS starts the audio context suspended and only resumes it inside a real
  *    user gesture, so every tap gets a chance to unlock it.
+ *
+ * These named hooks are also where haptics hang off - see the fan-out in
+ * `play()` and the header of haptics.js. One named event is one moment of
+ * feedback, and gameplay code shouldn't have to know how many output channels
+ * the device it's running on happens to have.
  */
 (function(){
 "use strict";
@@ -395,6 +400,10 @@ SOUNDS.flyoff = { minGap: 2000, fn: () => {
 } };
 
 function play(name, arg){
+  // The same event drives the vibration motor. Deliberately above the guards
+  // below: rumble is its own setting, so a game played with the sound off - as
+  // most of them are - is still felt.
+  if(SF.haptics) SF.haptics.play(name, arg);
   if(!ctx || muted || !sfxOn) return;
   const s = SOUNDS[name];
   if(!s) return;
@@ -514,5 +523,8 @@ function setMusic(name){
 
 SF.audio = { init, play, isMuted, setMuted, setMusic,
              musicEnabled, setMusicEnabled, sfxEnabled, setSfxEnabled,
-             MUSIC };   // the table is exported so the smoke test can verify every file exists
+             // Both tables are exported for the smoke test: MUSIC so it can
+             // verify every file exists, SOUNDS so it can check no rumble is
+             // keyed to an event that doesn't exist.
+             MUSIC, _sounds: SOUNDS };
 })();
