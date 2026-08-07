@@ -2428,7 +2428,7 @@ function syncAbilityButtons(force){
   bombBtn.classList.toggle("empty", p.bombs <= 0);
   $("bombCount").textContent = p.bombs;
   odBtn.classList.toggle("hidden", p.overdrivesMax <= 0);
-  const odReady = p.overdrives > 0 && performance.now() >= p.overdriveUntil;
+  const odReady = p.overdrives > 0 && SF.game.now() >= p.overdriveUntil;
   odBtn.classList.toggle("empty", !odReady);
   $("overdriveCount").textContent = p.overdrives;
 }
@@ -2816,7 +2816,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.3";
+const BUILD = "2026-08-07.4";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;

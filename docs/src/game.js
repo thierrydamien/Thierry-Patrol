@@ -32,6 +32,28 @@ const P = SF.profile;
 let canvas, ctx, gameFrame, scale = 1;
 const shakeVec = { x:0, y:0 };
 
+/*
+ * THE MISSION CLOCK.
+ *
+ * Section 8b states the rule - "no gameplay timing on the wall clock" - and
+ * the temp powerups broke it. Rapid Fire and friends were stored as
+ * `simMs + 9000`, so real time kept burning against a nine-second
+ * buff while the game sat paused. Pause for longer than the buff and it was
+ * simply gone, with no shot fired; the HUD bar visibly drained behind the
+ * pause overlay. And it wasn't opt-in - `visibilitychange` auto-pauses, so
+ * app-switching or locking the iPad did it too.
+ *
+ * So there is one clock, and it only advances while a mission is actually
+ * running. Everything downstream already took `timeMs` as a parameter and
+ * therefore became pause-correct for free; the handful of direct
+ * `simMs` calls in here now read this instead.
+ *
+ * It deliberately never resets. Nothing needs it to - every deadline is
+ * relative - and a clock that restarts at zero would leave any deadline
+ * outliving the mission that set it sitting in the future forever.
+ */
+let simMs = 0;
+
 const game = {
   world: new SF.World(),
   run: null,
@@ -350,7 +372,7 @@ function startMission(missionIndex, difficultyId){
      * brief still exists in full on the briefing screen, where there is time.
      */
     bannerText: mission.name.toUpperCase(), bannerSub: mission.goal || mission.brief,
-    bannerColor: "#ffd23f", bannerUntil: performance.now() + 6000,
+    bannerColor: "#ffd23f", bannerUntil: simMs + 6000,
     objectiveDefs: mission.objectives.map(id => OBJECTIVES[id]),
     objectiveIds: mission.objectives.slice(),
     // The ship LAUNCHES - rockets up from below the screen for the first
@@ -422,7 +444,7 @@ function beginVictoryLap(){
   run.bannerText = "AREA CLEAR!";
   run.bannerSub = "grab the last coins — then head home";
   run.bannerColor = "#4ade80";
-  run.bannerUntil = performance.now() + 2200;
+  run.bannerUntil = simMs + 2200;
   audio.play("victory");
   audio.setMusic("menu");                  // the fight is over - let it breathe
   SF.comms.say("headHome");
@@ -544,7 +566,7 @@ const callbacks = {
       run.bannerText = e.type.named + " DOWN";
       run.bannerSub = "you out-flew her, " + pilotName();
       run.bannerColor = "#ff4fd8";
-      run.bannerUntil = performance.now() + 3200;
+      run.bannerUntil = simMs + 3200;
       SF.comms.say("rivalDown");
     }
 
@@ -575,7 +597,7 @@ const callbacks = {
     run.comboTimer = 1.4;
     if(run.combo > run.maxCombo) run.maxCombo = run.combo;
     const comboMult = 1 + Math.min(Math.floor(run.combo/4), 5)*0.4;   // caps at x3
-    const scoreMult = comboMult * run.difficulty.pay * (performance.now() < game.world.player.tempScoreUntil ? 2 : 1);
+    const scoreMult = comboMult * run.difficulty.pay * (simMs < game.world.player.tempScoreUntil ? 2 : 1);
 
     run.score += Math.round(e.score * scoreMult);
     const coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
@@ -930,9 +952,9 @@ function useOverdrive(){
   if(game.run && game.run.mission.noGuns) return false;
   const p = game.world.player;
   if(game.state !== "playing" || !p || !p.alive || p.overdrives <= 0) return false;
-  if(performance.now() < p.overdriveUntil) return false;
+  if(simMs < p.overdriveUntil) return false;
   p.overdrives--;
-  p.overdriveUntil = performance.now() + p.overdriveTime*1000;
+  p.overdriveUntil = simMs + p.overdriveTime*1000;
   audio.play("overdrive");
   fx.ring(p.x, p.y, 120, "#ff8a3d", 4, 0.5);
   fx.text(p.x, p.y - 38, "OVERDRIVE!", "#ff8a3d", 22, true);
@@ -1039,7 +1061,7 @@ function update(dt, timeMs){
         run.bannerText = "⚠ BOSS " + run.rushIndex + " OF " + run.rushList.length + " ⚠";
         run.bannerSub = game.world.boss ? game.world.boss.name : "";
         run.bannerColor = "#ff5d73";
-        run.bannerUntil = performance.now() + 2000;
+        run.bannerUntil = simMs + 2000;
       }
     }
   } else if(run.phase === "finaleIntro"){
@@ -1054,7 +1076,7 @@ function update(dt, timeMs){
       run.bannerText = "ALL WINGS — ENGAGE";
       run.bannerSub = "everything you have, " + pilotName();
       run.bannerColor = "#ff5d73";
-      run.bannerUntil = performance.now() + 2200;
+      run.bannerUntil = simMs + 2200;
       SF.comms.say("devourerStart");
     }
   } else if(run.phase === "clearing"){
@@ -1429,7 +1451,7 @@ function announceNewThreats(){
       run.bannerSub = e.elite ? "she remembers you — sharper this time"
                               : "she copies you — make her commit";
       run.bannerColor = "#ff4fd8";
-      run.bannerUntil = performance.now() + 4200;
+      run.bannerUntil = simMs + 4200;
       fx.flash(0.3, "255,79,216");
       fx.shake(10);
       audio.play("bossAlarm");
@@ -1441,7 +1463,7 @@ function announceNewThreats(){
       run.bannerText = "⚠ ASTEROID FIELD ⚠";
       run.bannerSub = "Break the big ones up - they pay";
       run.bannerColor = "#cbd5e1";
-      run.bannerUntil = performance.now() + 2400;
+      run.bannerUntil = simMs + 2400;
       audio.play("alarm");
     }
   }
@@ -1527,7 +1549,7 @@ function onPickupCollected(item, lost){
     SF.comms.say("rescue");
   } else {
     const def = item.data;
-    const now = performance.now();
+    const now = simMs;
     game.profile.powerupsCollected++;
     audio.play("pickup");
     fx.text(p.x, p.y-34, def.label + "!", def.color, 19, true);
@@ -1595,22 +1617,26 @@ function frame(now){
   if(dt > 0.05) dt = 0.05;         // tab-switch guard
 
   if(game.state === "playing" || game.state === "ending"){
+    // Advances through the death sequence as well as play: fx's own hit-stop
+    // deadline rides this clock, and freezing it there would strand one.
+    simMs += dt * 1000;
     if(SF.input.consumePause() && game.state === "playing" && SF.ui) SF.ui.togglePause();
     if(SF.input.consumeBomb()) useBomb();
     if(SF.input.consumeOverdrive()) useOverdrive();
-    if(game.state === "playing") update(dt, now);
+    if(game.state === "playing") update(dt, simMs);
     else {
       // fx keeps ticking through the rewind or the screen would hold the
       // death's shake as a permanent offset, and the sky would stop drifting.
       if(SF.rewind.active()) SF.rewind.update(dt);
-      fx.update(dt, now);
+      fx.update(dt, simMs);
       SF.render.updateBackground(dt);
     }
-    draw(now);
+    draw(simMs);
     if(SF.ui) SF.ui.syncAbilityButtons();
   } else if(game.state === "paused"){
-    fx.update(0, now);
-    draw(now);
+    // simMs deliberately does NOT advance here. This is the whole fix.
+    fx.update(0, simMs);
+    draw(simMs);
   }
 }
 
@@ -1621,6 +1647,9 @@ function start(){
 SF.game = game;
 Object.assign(game, {
   attach, resize, start, startMission, endMission, useBomb, useOverdrive,
+  // The mission clock, for the UI and the renderer: both read deadlines that
+  // are set in here, and all three have to agree about what time it is.
+  now: () => simMs,
   buildLoadout, squadronDue, callbacks,
 });
 })();

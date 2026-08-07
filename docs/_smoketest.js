@@ -218,9 +218,19 @@ async function run(){
       typeof m.goal === "string" && m.goal.length >= 8 && m.goal.length <= 36 &&
       m.goal !== m.brief));
   check("the opening card holds long enough to be read",
-    /bannerUntil: performance\.now\(\) \+ (\d+)/.test(
+    /bannerUntil: simMs \+ (\d+)/.test(
       fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")) &&
     Number(RegExp.$1) >= 5000);
+  /*
+   * DESIGN 8b's rule, now enforced rather than just written down: "no gameplay
+   * timing on the wall clock". The temp powerups broke it for a long time -
+   * `performance.now() + 9000` deadlines against a pause that stops the game
+   * but not the clock - and the only reason it went unnoticed is that nothing
+   * checked. game.js is the simulation, so it gets no wall clock at all.
+   */
+  check("the simulation keeps no wall clock of its own",
+    !/performance\.now\(\)/.test(
+      fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
   check("the opening card shows the goal, not the briefing prose",
     /bannerSub: mission\.goal/.test(
       fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
@@ -3577,6 +3587,51 @@ async function run(){
 
     closeCard();
     SF.game.run.ended = true; SF.game.state = "idle";
+  }
+
+  /* ---------- pause must not burn a powerup ---------- */
+  /*
+   * Temp buffs were absolute `performance.now()` deadlines while pause was a
+   * state flag with no compensation, so real time kept running against a
+   * nine-second powerup. Pause longer than the buff and it was gone with no
+   * shot fired - and `visibilitychange` auto-pauses, so app-switching or
+   * locking the iPad did it without the player choosing to.
+   *
+   * Deliberately the last thing in this file. It drives hundreds of paused
+   * frames, and anything that touches the global RNG stream shifts every
+   * spawn after it - which is exactly how a boss-rush assertion 800 lines
+   * away broke earlier in this session.
+   */
+  {
+    SF.game.godMode = true;
+    SF.game.startMission(0, "pilot");
+    await runFrames(60);
+    const p = SF.game.world.player;
+    check("a mission is running before the pause test",
+      SF.game.state === "playing" && !!p);
+
+    // Granted the way the game grants it: nine seconds on the mission clock.
+    p.tempRapidUntil = SF.game.now() + 9000;
+    p.overdriveUntil = SF.game.now() + 5000;
+    const clockBefore = SF.game.now();
+
+    clickEl(id("pauseBtn"));
+    check("the game pauses", SF.game.state === "paused");
+    await runFrames(400);   // ~13 simulated seconds, comfortably past both buffs
+    check("the mission clock stops dead while paused", SF.game.now() === clockBefore);
+    check("a 9s powerup survives a 13s pause", SF.game.now() < p.tempRapidUntil);
+    check("so does overdrive", SF.game.now() < p.overdriveUntil);
+
+    clickEl(id("resumeBtn"));
+    await runFrames(4);
+    check("the mission resumes", SF.game.state === "playing");
+    check("the clock restarts where it stopped", SF.game.now() > clockBefore &&
+      SF.game.now() - clockBefore < 1000);
+    check("the powerup is still running after resuming", SF.game.now() < p.tempRapidUntil);
+    // ...and still expires normally once the game is actually being played.
+    await runFrames(340);   // ~11s of real play
+    check("but it does expire once time is actually played",
+      SF.game.now() > p.tempRapidUntil);
   }
 
   /* ---------- report ---------- */
