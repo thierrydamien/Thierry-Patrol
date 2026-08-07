@@ -288,6 +288,18 @@ function startMission(missionIndex, difficultyId){
    */
   SF.field.refresh();
 
+  /*
+   * One seed per run, drawn before anything else can consume a number: the
+   * loadout, the wave director and every spawn from here on read the same
+   * deterministic stream, so a run is reproducible from its seed alone and
+   * nothing that happened before launch can lean on it. `nextRunSeed` lets a
+   * test (or a future daily-style mode) pin the roll; it is consumed once.
+   */
+  const seed = game.nextRunSeed != null ? game.nextRunSeed
+             : Math.floor(Math.random() * 2147483647);
+  game.nextRunSeed = null;
+  SF.core.seedSim(seed);
+
   const profile = game.profile;
   // "wacky" is the WACKY SKY - an endless generated mission that rolls two or
   // three silly modifiers per flight (see wacky.js). "test" is the Armory's
@@ -384,6 +396,7 @@ function startMission(missionIndex, difficultyId){
     // the slot-machine reveal that pops each name in its own colour.
     modLine: mission.modList ? mission.modList.map(m => m.name).join(" + ") : null,
     modReveal: mission.modList ? { queue: mission.modList.slice(), t: 1.1 } : null,
+    seed,
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, bossCleared: false, progress: 0,
@@ -632,6 +645,8 @@ const callbacks = {
     if(run.mods.confetti){
       // CONFETTI BLASTS: every pop is the celebration firework. The plain
       // explosion still runs underneath so the hit keeps its physical punch.
+      // Math.random on purpose: a confetti colour is decoration, and
+      // decoration must not consume the seeded simulation stream.
       fx.firework(e.x, e.y, ["#ff5d73","#ffd23f","#4ade80","#3fc9ff","#c084fc"]
         [Math.floor(Math.random()*5)]);
     }

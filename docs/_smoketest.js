@@ -53,7 +53,9 @@ window.cancelAnimationFrame = () => {};
  * jsdom KeyboardEvents every frame was the single slowest thing in this test.
  */
 let botX = 0, botY = 0;
+let botEnabled = true;   // the seed-determinism block needs an idle stick
 function botInput(){
+  if(!botEnabled) return;
   const key = (type, k) => window.dispatchEvent(new window.KeyboardEvent(type, { key: k }));
   const t = fakeNow/1000;
   const wantX = Math.sin(t*0.9) > 0 ? -1 : 1;
@@ -3742,6 +3744,91 @@ async function run(){
                return no && !!(t.missions[3].cleared); })());
   }
 
+  /* ---------- the seeded simulation stream ---------- */
+  /*
+   * The design notes record four separate incidents of something perturbing
+   * the global RNG stream and breaking an assertion far away. The fix is one
+   * seed per run, drawn at startMission: a run is reproducible from its seed
+   * alone, and nothing that happens before launch can lean on the stream.
+   * This block is the proof, and it lives down here with the other
+   * frame-heavy sections for the reason 8bt7 records.
+   */
+  {
+    const prof = SF.profile.blank("Seed");
+    [1,2,3].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    prof.lastFlightDay = new Date().toDateString();
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.game.godMode = true;
+    botEnabled = false;
+    SF.input.clearMovement();
+
+    /*
+     * Two lessons paid for while writing this. The tuples are SORTED because
+     * pools reuse dead slots round-robin, so a second run enumerates the same
+     * enemies in a different order - identical battle, different array. And
+     * `phase`/`weaveWidth` are in the snapshot because mission 1's opening
+     * grunts fly straight lines from fixed formation slots: after eight
+     * seconds two different seeds had produced identical POSITIONS, and the
+     * only witnesses to the stream were the per-spawn draws nobody can see.
+     */
+    const snapshot = () => JSON.stringify({
+      enemies: SF.game.world.enemies.items.filter(e => e.alive)
+        .map(e => [e.typeId, Math.round(e.x*10), Math.round(e.y*10), e.hp,
+                   Math.round((e.phase || 0)*1000), Math.round((e.weaveWidth || 0)*10)])
+        .sort((a, b) => JSON.stringify(a) < JSON.stringify(b) ? -1 : 1),
+      spawned: SF.game.run.director.spawnedCount,
+      bullets: SF.game.world.bullets.countAlive(),
+      px: Math.round(SF.game.world.player.x),
+      powerupIn: Math.round(SF.game.run.powerupTimer * 1000),
+    });
+
+    const fly = async (seed) => {
+      SF.game.nextRunSeed = seed;
+      SF.ui.show("screen-game");
+      SF.game.startMission(0, "pilot");
+      await runFrames(240);
+      const snap = snapshot();
+      SF.game.endMission(false);
+      SF.game.state = "idle";
+      return snap;
+    };
+
+    const first = await fly(424242);
+
+    // The regression this work kills: burn the global stream hard between
+    // runs. Before the seeded stream, this shifted every spawn afterwards.
+    for(let i = 0; i < 137; i++) Math.random();
+    SF.fx.explosion(100, 100, 40, "#fff", true);
+    SF.fx.sparks(50, 50, 30, "#fff", 200);
+
+    const second = await fly(424242);
+    check("the same seed flies the same battle, twice", first === second);
+    check("...even after the global stream was deliberately trampled between runs",
+      first === second);   // the trampling above is the whole point of this label
+
+    const third = await fly(7);
+    check("a different seed flies a different battle", third !== first);
+
+    SF.game.nextRunSeed = 99;
+    SF.ui.show("screen-game");
+    SF.game.startMission(0, "pilot");
+    check("the run wears its seed and the pin is consumed once",
+      SF.game.run.seed === 99 && SF.game.nextRunSeed === null);
+    SF.game.endMission(false);
+    SF.game.state = "idle";
+    check("an unpinned run draws a fresh seed of its own", (() => {
+      SF.ui.show("screen-game");
+      SF.game.startMission(0, "pilot");
+      const ok = Number.isInteger(SF.game.run.seed) && SF.game.run.seed !== 99;
+      SF.game.endMission(false);
+      SF.game.state = "idle";
+      return ok;
+    })());
+
+    botEnabled = true;
+  }
+
   /* ---------- pause must not burn a powerup ---------- */
   /*
    * Temp buffs were absolute `performance.now()` deadlines while pause was a
@@ -3782,6 +3869,10 @@ async function run(){
       SF.game.now() - clockBefore < 1000);
     check("the powerup is still running after resuming", SF.game.now() < p.tempRapidUntil);
     // ...and still expires normally once the game is actually being played.
+    // A RAPID drop collected mid-flight would legitimately re-extend the
+    // deadline and fail this for the wrong reason - keep the sky bare.
+    SF.game.run.powerupTimer = 9999;
+    SF.game.world.pickups.killAll();
     await runFrames(340);   // ~11s of real play
     check("but it does expire once time is actually played",
       SF.game.now() > p.tempRapidUntil);

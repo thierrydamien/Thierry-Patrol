@@ -22,10 +22,33 @@ function lerp(a, b, t){ return a + (b - a) * t; }
 function damp(current, target, rate, dt){ return lerp(current, target, 1 - Math.exp(-rate * dt)); }
 function dist2(ax, ay, bx, by){ const dx = ax - bx, dy = ay - by; return dx*dx + dy*dy; }
 function len(x, y){ return Math.sqrt(x*x + y*y); }
-function rand(a, b){ return a + Math.random() * (b - a); }
-function randInt(a, b){ return Math.floor(a + Math.random() * (b - a + 1)); }
-function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-function chance(p){ return Math.random() < p; }
+/*
+ * THE SIMULATION STREAM.
+ *
+ * Every gameplay draw - spawn positions, elite picks, aim coin-flips, boss
+ * cadence - goes through these four helpers, and they used to read
+ * Math.random directly. That made the stream global property: anything that
+ * drew a number moved every draw after it. The design notes record FOUR
+ * separate incidents of a test perturbing the stream and breaking an
+ * assertion hundreds of lines away, and the Daily Patrol's same-sky-for-
+ * everyone promise quietly broke on it (the script was seeded; the sim
+ * wasn't).
+ *
+ * Now the source is swappable: `seedSim(n)` points the helpers at a
+ * deterministic mulberry32, and startMission reseeds per run. Two rules keep
+ * it honest:
+ *  - SIMULATION code draws from these helpers, nothing else.
+ *  - COSMETIC code (particle colours, screen shake jitter, comms line
+ *    choice, confetti CSS) uses Math.random directly, so decoration can
+ *    never perturb gameplay. When adding a random draw, that is the choice
+ *    being made.
+ */
+let simRandom = Math.random;
+function seedSim(seed){ simRandom = mulberry32(seed >>> 0); }
+function rand(a, b){ return a + simRandom() * (b - a); }
+function randInt(a, b){ return Math.floor(a + simRandom() * (b - a + 1)); }
+function pick(arr){ return arr[Math.floor(simRandom() * arr.length)]; }
+function chance(p){ return simRandom() < p; }
 function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
 /** Deterministic RNG. The Wacky Sky draws each flight script from one seed. */
@@ -132,5 +155,5 @@ class SpatialGrid {
   }
 }
 
-SF.core = { TAU, clamp, lerp, damp, dist2, len, rand, randInt, pick, chance, easeOutCubic, mulberry32, Pool, SpatialGrid };
+SF.core = { TAU, clamp, lerp, damp, dist2, len, rand, randInt, pick, chance, seedSim, easeOutCubic, mulberry32, Pool, SpatialGrid };
 })();
