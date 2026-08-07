@@ -289,8 +289,10 @@ const ACHIEVEMENTS = [
   { id:"veteran_wings",icon:"🎗️", name:"Veteran Wings",   desc:"Complete a mission on VETERAN",       check:p=>p.hardestCleared>=3 },
   { id:"nightmare",    icon:"👑", name:"Nightmare Fuel",  desc:"Complete a mission on NIGHTMARE",     check:p=>p.hardestCleared>=4 },
   { id:"campaign",     icon:"🏆", name:"Thierry Patrol", desc:"Complete every mission",              check:p=>p.campaignComplete },
-  { id:"daily_ace",    icon:"🌅", name:"Dawn Patrol",     desc:"Score 3,000 on a Daily Patrol",       check:p=>p.endlessBest>=3000 },
-  { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes on a Daily Patrol",    check:p=>p.endlessLongest>=240 },
+  // ids stay "daily_*": medals are stored on profiles by id, and renaming the
+  // id would silently un-earn them. Only the flavour moved to the Wacky Sky.
+  { id:"daily_ace",    icon:"🎲", name:"Sky Spinner",     desc:"Score 3,000 in the Wacky Sky",        check:p=>p.endlessBest>=3000 },
+  { id:"daily_iron",   icon:"⏱️", name:"Iron Wings",      desc:"Last 4 minutes in the Wacky Sky",     check:p=>p.endlessLongest>=240 },
   { id:"gauntlet",     icon:"☠️", name:"Gauntlet Runner", desc:"Beat 3 bosses in one Boss Rush",      check:p=>p.bossRushBest>=3 },
   { id:"devourer",     icon:"🌟", name:"The Last Star",   desc:"Destroy the Devourer",                check:p=>p.devourerDown },
   { id:"rush_master",  icon:"🏴", name:"Rush Master",     desc:"Beat 5 bosses in one Boss Rush",      check:p=>p.bossRushBest>=5 },

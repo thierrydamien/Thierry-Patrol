@@ -289,17 +289,17 @@ function startMission(missionIndex, difficultyId){
   SF.field.refresh();
 
   const profile = game.profile;
-  // "daily" is the endless Daily Patrol - a generated mission, not a campaign
-  // slot. Same day = same seed = same waves on every device. "test" is the
-  // Armory's firing range, "rush" the boss gauntlet, "vault" the secret.
-  const daily = missionIndex === "daily";
+  // "wacky" is the WACKY SKY - an endless generated mission that rolls two or
+  // three silly modifiers per flight (see wacky.js). "test" is the Armory's
+  // firing range, "rush" the boss gauntlet, "vault" the secret.
+  const wacky = missionIndex === "wacky";
   const test = missionIndex === "test";
   const rush = missionIndex === "rush";
   const vault = missionIndex === "vault";
   // Replayable on request: the door never locks. Only the SOLAR GOLD paint
   // is one-time (see endMission) - `vaultDone` still gates that, it just no
   // longer gates the mission itself.
-  const mission = daily ? SF.daily.build()
+  const mission = wacky ? SF.wacky.build()
                 : test  ? buildTestRange()
                 : rush  ? buildBossRush()
                 : vault ? buildStarVault()
@@ -313,10 +313,26 @@ function startMission(missionIndex, difficultyId){
   SF.bossintro.reset();
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
-  SF.render.initBackground(daily ? SF.daily.skyIndex() : test ? 0 : rush ? 7
+  game.world.mods = mission.mods || {};   // the Wacky Sky's roll; {} elsewhere
+  SF.render.initBackground(wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
+
+  /*
+   * The player-side modifiers are applied here, not in createPlayer: the
+   * loadout is the pilot's own gear, and the roll is the sky's joke on top of
+   * it. `artScale` is what the renderer draws the hull at, kept separate from
+   * the collision radius so TINY SHIP shrinks both, honestly, in one place.
+   */
+  if(game.world.mods.tiny){
+    game.world.player.r = 6;              // stock is 11 - visibly hard to hit
+    game.world.player.artScale = 0.68;
+  }
+  if(game.world.mods.turbo){
+    game.world.player.accel *= 1.45;
+    game.world.player.maxSpeed *= 1.45;
+  }
 
   const director = new SF.systems.WaveDirector(mission, difficulty, game.world);
   const wavesEndT = mission.waves.reduce((t, wv) => Math.max(t, wv.t), 0) + 10;
@@ -357,7 +373,9 @@ function startMission(missionIndex, difficultyId){
      * more lucrative without letting headcount run the economy. Completion and
      * rescue bonuses are per-mission, not per-head, so they keep the full rate.
      */
-    payScale: difficulty.pay / Math.sqrt(difficulty.density || 1),
+    payScale: (difficulty.pay / Math.sqrt(difficulty.density || 1))
+              * (mission.mods && mission.mods.gold ? 2 : 1),   // DOUBLE COINS
+    mods: mission.mods || {},
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, bossCleared: false, progress: 0,
@@ -489,7 +507,7 @@ function endMission(completed){
     profile.missionsCompleted++;
     if(run.stats.damageTaken === 0) profile.flawlessMissions++;
   }
-  // The Daily Patrol keeps its own book: one all-time best score and one
+  // The Wacky Sky keeps its own book: one all-time best score and one
   // longest run, no campaign record, no lastMission (the campaign hint must
   // keep pointing at a real map stop).
   let prevFamilyBest = null, prevSelfBest = 0;
@@ -603,6 +621,12 @@ const callbacks = {
     const coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
     game.world.dropCoins(e.x, e.y, coin);
 
+    if(run.mods.confetti){
+      // CONFETTI BLASTS: every pop is the celebration firework. The plain
+      // explosion still runs underneath so the hit keeps its physical punch.
+      fx.firework(e.x, e.y, ["#ff5d73","#ffd23f","#4ade80","#3fc9ff","#c084fc"]
+        [Math.floor(Math.random()*5)]);
+    }
     fx.explosion(e.x, e.y, e.size, e.elite ? "#ffd23f" : "#ffb03d", e.elite || e.maxHp >= 5);
     fx.shake(e.elite ? 9 : (e.maxHp >= 5 ? 6 : 3));
     if(e.elite || e.maxHp >= 6) fx.hitStop(55);
@@ -1357,6 +1381,19 @@ function update(dt, timeMs){
   // The Star Vault: the sky rains golden stars, thick during the free-fly
   // and still falling (thinner) through the KING PAPA fight, so the whole
   // level glitters end to end.
+  // PAPA RAIN: the Wacky Sky's best joke, stolen from the Star Vault. A Papa
+  // head drifts in every several seconds - worth money, a boing, and a line
+  // of French. The cadence is a drip, not a downpour: each one should be an
+  // event a kid points at, and the vault's blast stays the only flood.
+  if(run.mods.papaRain && run.phase !== "intro" && !run.ended){
+    run.papaRainTimer = (run.papaRainTimer == null ? 3 : run.papaRainTimer) - dt;
+    if(run.papaRainTimer <= 0){
+      run.papaRainTimer = rand(6, 11);
+      const hd = game.world.spawnPickup("papahead", rand(40, VW - 40), -30);
+      hd.vx = rand(-50, 50);
+    }
+  }
+
   if(run.mission.starRain && run.phase !== "intro" && !run.ended){
     run.starTimer = (run.starTimer == null ? 0.5 : run.starTimer) - dt;
     if(run.starTimer <= 0){

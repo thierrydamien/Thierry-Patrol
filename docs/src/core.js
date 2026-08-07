@@ -28,7 +28,7 @@ function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 function chance(p){ return Math.random() < p; }
 function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
-/** Deterministic RNG, used so a daily challenge plays identically for everyone. */
+/** Deterministic RNG. The Wacky Sky draws each flight script from one seed. */
 function mulberry32(seed){
   let a = seed >>> 0;
   return function(){

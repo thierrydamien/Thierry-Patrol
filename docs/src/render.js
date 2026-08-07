@@ -278,7 +278,9 @@ function drawPlayer(ctx, p, timeMs){
   if(!p || !p.alive) return;
   if(p.invuln > 0 && Math.floor(p.invuln*12)%2 === 0) return; // blink while recovering
 
-  const size = 58;
+  // TINY SHIP draws smaller through artScale, set with the shrunken hitbox in
+  // startMission so the eye and the collision agree about what "tiny" means.
+  const size = 58 * (p.artScale || 1);
   const y = p.y + p.recoil;
   const overdrive = timeMs < p.overdriveUntil;
   const speed = Math.hypot(p.vx || 0, p.vy || 0);
@@ -2572,9 +2574,20 @@ function drawHud(ctx, game){
     ctx.shadowBlur = 0;
     if(run.bannerSub){
       // The sub-line carries the mission's actual instruction, so it is sized
-      // to be READ from a tablet on a lap - 14px was a footnote.
+      // to be READ from a tablet on a lap - 14px was a footnote. But it must
+      // also FIT: the Wacky Sky's reveal lists up to three modifier names on
+      // this line, and a three-roll on a phone clipped at both edges - the
+      // one line the mode exists for, unreadable. Shrink-to-fit, floored at
+      // 13px, and the floor is enough for the longest constructible roll.
       ctx.fillStyle = "#fff";
-      ctx.font = "600 19px Rajdhani, Arial, sans-serif";
+      let subPx = 19;
+      ctx.font = "600 " + subPx + "px Rajdhani, Arial, sans-serif";
+      const maxW = VW - 24;
+      const w = ctx.measureText(run.bannerSub).width;
+      if(w > maxW){
+        subPx = Math.max(13, Math.floor(subPx * maxW / w));
+        ctx.font = "600 " + subPx + "px Rajdhani, Arial, sans-serif";
+      }
       ctx.fillText(run.bannerSub, VW/2, cy + 60);
     }
     ctx.textAlign = "left";

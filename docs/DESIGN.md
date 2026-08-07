@@ -2871,6 +2871,58 @@ The switch sits in the existing settings overlay next to Screen shake, its
 closest relative - both are feel, not content, and both are the kind of thing
 someone turns off once and forgets.
 
+## 8bt7. The Wacky Sky replaces the Daily Patrol
+
+"Daily patrol won't be a mode my kids will enjoy. I want to remove it and add
+a more fun mode."
+
+The Daily Patrol was designed as a fairness contest: one seed per day, same
+sky for everyone, a fair fight over one number. Two problems. The kids never
+cared about the contest - a leaderboard is an adult's idea of a reason to
+press a button. And the promise was only half true anyway (8bt-era finding):
+the wave *script* was date-seeded, but placement, elites and every per-enemy
+trait came from the global `Math.random()`, so two devices agreed on the plan
+and then flew different skies.
+
+The Wacky Sky keeps the good machinery - the escalating band script, forced
+carriers, the 25-minute cut, the `endless` bookkeeping - and swaps the
+premise: every flight rolls two (sometimes three) modifiers from a table of
+eight, and the launch banner is the reveal. GIANT ENEMIES, TINY SHIP,
+CONFETTI BLASTS, BOUNCY COINS, PAPA RAIN, DOUBLE COINS, TURBO ENGINES,
+SLEEPY ENEMIES. The pull is "what did we get THIS time?!", which is a
+seven-year-old's actual reason to come back.
+
+**Modifier rules.** Every modifier must be visible within seconds ("12% more
+hull" is a patch note, not a party), and none may make the run harder than
+the campaign - GIANT trades 25% more hull for a 55% bigger target, so it
+plays easier and funnier, on purpose. Effects live in the systems they modify
+(`spawnEnemy`, `updatePickups`, the kill callback, `startMission`), switched
+by `world.mods` / `run.mods` - the same per-mission flag pattern as
+`world.silent` - so `wacky.js` only declares the table and never learns any
+physics.
+
+Implementation notes that earned their comments: pickups carry a
+`bounces = 3` budget set at spawn (pooled objects keep stale fields, so lazy
+defaulting would leak budgets between runs); rescue pods are exempt from
+bouncing because a rescue boinging off the floor reads wrong even here; PAPA
+RAIN is a drip (one head every 6-11s), not the vault's flood, so each one is
+an event a kid points at; and the banner's sub-line now shrinks to fit,
+because a three-modifier reveal clipped both edges on a phone - the one line
+the mode exists for, unreadable.
+
+**What carries over.** `endlessBest`/`endlessLongest` keep their names and
+their values - the family's old Daily bests seed the new crown, so nobody's
+record vanished. The medals keep their `daily_*` ids for the same reason
+(medals are stored on profiles by id); only their flavour moved. The
+first-flight-of-the-day double pay is untouched - it was never part of the
+mode, it fires on any mission.
+
+A test-suite lesson, recorded because it is now the FOURTH entry in this
+family: the new section runs hundreds of extra frames and free rolls, and in
+its original slot it shifted the movement bot's phase enough that the rewind
+test's tape recorded a ship parked against a wall. Phase-heavy sections live
+at the end of the suite now, beside the pause block, for exactly this reason.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2885,7 +2937,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~589 checks.
+  be re-measured after load. ~602 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
