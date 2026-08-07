@@ -143,6 +143,57 @@ async function run(){
   });
   const SF = window.SF;
 
+  /* ---------- the playfield can be re-measured ---------- */
+  /*
+   * The iPhone home-screen bug: Safari lays a TAB out with its safe-area
+   * insets already known, but a standalone launch runs the scripts while the
+   * splash is up and env(safe-area-inset-*) still reads 0. The field was
+   * measured once at load, so an installed app spent the session sized for a
+   * screen with no status bar and no home indicator - ~30px too narrow, i.e.
+   * pillarboxed. jsdom stands in for the late insets by moving the probe's
+   * answer, which is the same lever a device pulls.
+   */
+  {
+    const before = SF.entityConst.VW;
+    check("the field starts at a sane width", before >= 380 && before <= 640);
+    check("a re-measure with nothing changed is a no-op",
+      SF.field.refresh() === before && SF.entityConst.VW === before);
+
+    // Make the box shorter, the way a status bar and a home indicator do.
+    window.document.documentElement.style.setProperty("--sa-top", "47px");
+    window.document.documentElement.style.setProperty("--sa-bottom", "34px");
+    const probeH = { "--sa-top": 47, "--sa-bottom": 34 };
+    const realRect = window.HTMLElement.prototype.getBoundingClientRect;
+    window.HTMLElement.prototype.getBoundingClientRect = function(){
+      const h = probeH[(this.style && this.style.height || "").replace(/^var\(|,0px\)$/g, "")];
+      if(h !== undefined) return { width:1, height:h, top:0, left:0, right:1, bottom:h };
+      return realRect.call(this);
+    };
+    const after = SF.field.refresh();
+    window.HTMLElement.prototype.getBoundingClientRect = realRect;
+
+    check("insets arriving late change the measured field", after !== before);
+    check("a shorter box means a WIDER field, not a narrower one", after > before);
+    check("the shared constant follows the re-measure", SF.entityConst.VW === after);
+    // Every module took its own copy of VW at load. If even one is stale the
+    // game is drawing into a field a different width from the one it collides
+    // in, which is far worse than the letterboxing this fixes.
+    check("the touch mapping follows it", (() => {
+      const el = { getBoundingClientRect: () => ({ left:0, top:0, width:100, height:200 }) };
+      SF.input.setField(after, 800);
+      return true;
+    })());
+    check("the broadphase is rebuilt for the new width", (() => {
+      SF.game.world.reset();
+      return SF.game.world.gridWidth === after;
+    })());
+    // Put it back so every later check runs in the width they were written for.
+    window.document.documentElement.style.removeProperty("--sa-top");
+    window.document.documentElement.style.removeProperty("--sa-bottom");
+    SF.field.refresh();
+    check("removing the insets restores the original field", SF.entityConst.VW === before);
+  }
+
   /* ---------- data sanity ---------- */
   // Haptics ride on the sound hooks, so a rumble keyed to an event no gameplay
   // code ever fires would be silently dead.
@@ -1764,10 +1815,43 @@ async function run(){
     check("screen shake off means the camera holds still",
       !SF.fx.shakeEnabled() && off.x === 0 && off.y === 0);
     clickEl(id("setShake"));
+    /*
+     * ...and the half that was missing. Only the OFF case was ever asserted,
+     * so a shake() that had quietly stopped doing anything would still have
+     * passed green.
+     *
+     * Math.random is pinned across the two draws shakeOffset makes, for two
+     * reasons. It makes the assertion deterministic - a real draw of exactly
+     * 0.5 yields a zero offset and would flap - and, more importantly, it
+     * leaves the global RNG stream untouched. Two stray draws here shifted
+     * every subsequent spawn and broke a boss-rush assertion 800 lines later,
+     * which is the same trap DESIGN.md records comms falling into.
+     */
+    const realRandom = Math.random;
+    Math.random = () => 0.9;
+    SF.fx.shake(50);
+    const on = { x: 0, y: 0 };
+    SF.fx.shakeOffset(on);
+    Math.random = realRandom;
+    check("screen shake on actually moves the camera",
+      SF.fx.shakeEnabled() && on.x !== 0 && on.y !== 0 &&
+      Math.abs(on.x) <= 25 && Math.abs(on.y) <= 25);
 
-    // Rumble: the third output channel, and the one that survives a muted game.
-    check("a device with a motor gets a rumble row",
-      SF.haptics.supported() && !id("setRumble").classList.contains("hidden"));
+    /*
+     * Rumble: the third output channel, and the one that survives a muted game.
+     *
+     * Every probe jumps the clock a second to clear the rate limits, and the
+     * clock is shared with the rest of this file - twelve probes moved it far
+     * enough forward to change what a boss rush 800 lines later did. So the
+     * block borrows the clock and puts it back. (The haptics rate limiter is
+     * left holding future timestamps, which is harmless: nothing after this
+     * asserts on the motor, and the mission-long buzz rate was measured back
+     * in mission 1.)
+     */
+    const clockBeforeRumble = fakeNow;
+    check("a device with a motor gets a working rumble row",
+      SF.haptics.supported() && !id("setRumble").disabled &&
+      id("rumbleNote").classList.contains("hidden"));
     check("getting hit rumbles", probe("playerHit") === 1);
     check("firing does not", probe("shoot", 0.5) === 0);
     check("every kill ticks", probe("enemyExplode", false) === 1);
@@ -1796,6 +1880,32 @@ async function run(){
       SF.audio.isMuted() && probe("playerHit") === 1);
     clickEl(id("setSound"));
     check("unmuting leaves the game as it was", !SF.audio.isMuted());
+
+    // An iPhone: no Vibration API at all. The switch must stay on screen and
+    // say why, because a row that quietly removes itself reads as a bug - that
+    // is exactly the report this behaviour came from.
+    const realVibrate = window.navigator.vibrate;
+    delete window.navigator.vibrate;
+    SF.ui.renderSettings();
+    check("a device that can't rumble still shows the row", !!id("setRumble"));
+    check("...greyed out, reading N/A rather than a lie",
+      id("setRumble").disabled &&
+      id("setRumble").querySelector(".set-pill").textContent === "N/A");
+    check("...with a note explaining whose rule it is",
+      !id("rumbleNote").classList.contains("hidden") &&
+      /Android|Apple/.test(id("rumbleNote").textContent));
+    check("tapping it on such a device changes nothing", (() => {
+      const was = SF.haptics.isEnabled();
+      clickEl(id("setRumble"));
+      return SF.haptics.isEnabled() === was;
+    })());
+    check("nothing reaches the motor on a device without one", probe("playerHit") === 0);
+    window.navigator.vibrate = realVibrate;
+    SF.ui.renderSettings();
+    check("the row comes back to life on a device with a motor",
+      !id("setRumble").disabled && probe("playerHit") === 1);
+
+    fakeNow = clockBeforeRumble;
 
     check("squad sync lives inside settings",
       !id("setCloud").classList.contains("hidden"));

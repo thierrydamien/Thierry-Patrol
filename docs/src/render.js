@@ -11,7 +11,22 @@
 "use strict";
 const SF = window.SF;
 const { clamp, rand, TAU, easeOutCubic } = SF.core;
-const { VW, VH, BULLET_TIERS } = SF.entityConst;
+let { VW, VH, BULLET_TIERS } = SF.entityConst;
+/*
+ * Several buffers here are sized to the field and built once, lazily, then
+ * kept for the session. If the field is re-measured (see entities.js) they are
+ * suddenly the wrong shape, so they are dropped rather than stretched - a
+ * vignette or a blackout veil cut for a narrower field leaves an unlit strip
+ * down the right-hand edge, which is worse than the cost of rebuilding them.
+ * `skyIndex` is reset too, so the next initBackground() regenerates the sky at
+ * the new width instead of short-circuiting on an unchanged mission index.
+ */
+SF.field.onChange(w => {
+  VW = w;
+  vignette = null;
+  darkCv = null; darkCtx = null;
+  skyIndex = -1;
+});
 
 /* ---------------------------------------------------------
    ASSETS

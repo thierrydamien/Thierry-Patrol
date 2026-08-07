@@ -20,7 +20,8 @@
 "use strict";
 const SF = window.SF;
 const { clamp, rand, TAU } = SF.core;
-const { VW, VH } = SF.entityConst;
+let { VW, VH } = SF.entityConst;
+SF.field.onChange(w => { VW = w; });
 const fx = SF.fx;
 const audio = SF.audio;
 

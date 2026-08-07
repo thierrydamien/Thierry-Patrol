@@ -2785,10 +2785,21 @@ function renderSettings(){
   pill("setMusicRow", audio.musicEnabled());
   pill("setSfx", audio.sfxEnabled());
   pill("setShake", SF.fx.shakeEnabled());
-  // No motor, no row: a switch that can never do anything is worse than a
-  // missing one, and on iOS that is every device this family owns.
-  $("setRumble").classList.toggle("hidden", !SF.haptics.supported());
-  pill("setRumble", SF.haptics.isEnabled());
+  /*
+   * The row stays visible on a device that cannot rumble, greyed out with a
+   * note under it. Hiding it was the first instinct and it was wrong: every
+   * device this family owns is an iPhone or an iPad, so the feature simply
+   * wasn't there and the report that came back was "the phone never shakes
+   * even though the feature is enabled" - someone hunting for a switch that
+   * had quietly removed itself. An explanation beats an absence.
+   */
+  const canRumble = SF.haptics.supported();
+  const rumbleBtn = $("setRumble");
+  rumbleBtn.disabled = !canRumble;
+  pill("setRumble", canRumble && SF.haptics.isEnabled());
+  rumbleBtn.querySelector(".set-pill").textContent =
+    !canRumble ? "N/A" : (SF.haptics.isEnabled() ? "ON" : "OFF");
+  $("rumbleNote").classList.toggle("hidden", canRumble);
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
@@ -2806,7 +2817,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.1";
+const BUILD = "2026-08-07.2";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;
@@ -2834,6 +2845,7 @@ click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); re
 click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
 click($("setRumble"), () => {
+  if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());
   // Turning it on should be felt at once: the tap that switched it on happened
   // while it was still off, so nothing has buzzed yet.
@@ -3040,7 +3052,7 @@ if("serviceWorker" in navigator){
 }
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
-          queueToast, maybeStory, missionFace, openPaintEditor,
+          queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile };
 })();

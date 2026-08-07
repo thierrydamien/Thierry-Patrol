@@ -287,11 +287,15 @@
         <span>Sound effects</span><span class="set-pill">ON</span></button>
       <button id="setShake" class="settings-row">
         <span>Screen shake</span><span class="set-pill">ON</span></button>
-      <!-- Hidden entirely on a device with no vibration motor, which is every
-           iPhone and iPad: Safari implements no Vibration API at all. -->
-      <button id="setRumble" class="settings-row hidden">
+      <!-- Always shown, even on the iPhones and iPads that cannot do it: a
+           switch that quietly vanishes reads as a broken feature, and the note
+           below turns "nothing happens" into an answer. -->
+      <button id="setRumble" class="settings-row">
         <span>Rumble</span><span class="set-pill">ON</span></button>
     </div>
+    <p id="rumbleNote" class="settings-note hidden">
+      Rumble needs an Android phone or tablet. iPhones and iPads don't let a
+      web app buzz — that's Apple's rule, not the game's.</p>
     <div class="settings-rows">
       <button id="setCloud" class="settings-row hidden">
         <span>Squad Sync</span><span class="set-chev">›</span></button>

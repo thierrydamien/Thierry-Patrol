@@ -2595,6 +2595,59 @@ runs LAST, because starting a mission consumes the shared `Math.random`
 stream and running it earlier reshuffled the spawns of a boss-rush check
 two hundred lines away.
 
+## 8bt2. Full screen, fourth time: measuring once was the bug
+
+"It's full screen in web browser but not when open as an app on iPhone."
+
+Section 8br measured the box instead of guessing it, and that was right. It was
+measured **once, at script load**, and that was the remaining bug - because the
+two cases differ in *when* the answer exists, not in what the answer is.
+
+Safari lays a tab out inside a viewport that already knows its safe-area
+insets, so by the time the scripts at the end of `<body>` run, `env()` is real.
+A home-screen app launches through a splash screen and runs those same scripts
+before the system has told the page anything, so `env(safe-area-inset-*)` still
+reads 0. The field is then sized for a phone with no status bar and no home
+indicator - measured honestly, against a box that doesn't exist yet.
+
+Reproduced in Chromium by delivering the insets two ways: in the stylesheet
+(browser) versus injected after load (app). Same code, same device, one number
+apart:
+
+| | VW | frame | fill |
+|---|---|---|---|
+| iPhone 14, browser | 409 | 390x763 | 100% |
+| iPhone 14, **as an app** | **380** | **362x763** | **92.8%** |
+
+380 is the clamp floor - the field had fallen all the way through its own
+safety net. 28px of black down each side, exactly as reported.
+
+So `VW` stopped being a `const`. `SF.field.refresh()` re-measures and, only if
+the number actually moved, tells every module that took its own copy. The
+subscription is the awkward part and it is the price of destructuring a
+constant at load; the alternative is a property lookup in every hot loop, which
+is worse. Three things have to be told beyond the plain number holders: the
+touch mapping (`SF.input.setField` - a stale width maps a thumb to the wrong
+place), the broadphase (the World is built once at load, so its grid would stay
+sized to the old width and anything in the new right-hand strip would collide
+with nothing), and the render caches sized to the field (the vignette and the
+blackout veil, dropped rather than stretched).
+
+**When** to re-measure is the whole design. Not per frame, not on resize:
+mid-mission every entity holds coordinates in the old space. The only safe
+moment is while a world is being built, so `startMission()` calls it first,
+before `reset()`. Menus never use `VW`, so nothing is visibly wrong before the
+first launch.
+
+One process note, and it cost an hour. Adding the positive screen-shake
+assertion called `shakeOffset()`, which draws `Math.random()` twice - and that
+shifted the global RNG stream enough to break a boss-rush assertion 800 lines
+later. The rumble probes did the same thing through the shared fake clock.
+Both are now contained (`Math.random` pinned across the draws, the clock
+borrowed and put back). This is the third time this file has recorded a test
+perturbing the stream and breaking something far away, which is really an
+argument for the seeded RNG in `core.js` reaching the simulation one day.
+
 ## 8bu. The third output channel
 
 A tablet has three output channels and the game only used two. The third one
@@ -2660,7 +2713,8 @@ Roughly in value order:
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
-  the vibration motor jsdom doesn't have. ~550 checks.
+  the vibration motor jsdom doesn't have, and pins the playfield's ability to
+  be re-measured after load. ~567 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
