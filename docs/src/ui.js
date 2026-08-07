@@ -2826,7 +2826,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.7";
+const BUILD = "2026-08-07.8";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;

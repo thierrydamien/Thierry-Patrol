@@ -555,16 +555,27 @@ class World {
     e.speed = type.speed * (diff ? diff.speed : 1) * (elite ? ELITE.speedMult : 1);
     /*
      * The Wacky Sky's roll, applied exactly where elites already scale these
-     * numbers. GIANT trades a little more hull for a much bigger target -
-     * collision radius grows 55% while hp grows 25%, so it plays EASIER and
-     * funnier, which is the mode's contract. SLEEPY only touches movement:
+     * numbers.
+     *
+     * GIANT is tiered by the enemy's own bulk, and the first cut wasn't:
+     * a flat 1.55x looked like a tuning change, not a joke ("I can barely
+     * tell the difference with a normal game"). Popcorn - the most numerous
+     * thing on screen, so the thing that sets the impression - now doubles;
+     * mid-weights grow by 60%; terrain-sized types grow least, because a
+     * boulder at 2x is a wall, and the mode's contract is EASIER and
+     * funnier, never harder. Hull only grows 25% at every tier, so they all
+     * still melt.
+     *
+     * SLEEPY dropped from 0.6x to 0.35x for the same reason: 0.6 read as a
+     * slightly quiet day, 0.35 reads as flying through syrup. Movement only -
      * their shots stay honest so dodging still means something.
      */
     if(this.mods.giant){
-      e.r *= 1.55; e.size *= 1.55;
+      const f = e.r <= 16 ? 2.1 : e.r <= 26 ? 1.6 : 1.25;
+      e.r *= f; e.size *= f;
       e.hp = Math.round(e.hp * 1.25); e.maxHp = e.hp;
     }
-    if(this.mods.sleepy) e.speed *= 0.6;
+    if(this.mods.sleepy) e.speed *= 0.35;
     e.vx = 0; e.vy = e.speed;
     e.score = Math.round(type.score * (elite ? ELITE.scoreMult : 1));
     e.money = Math.round(type.money * (elite ? ELITE.moneyMult : 1));

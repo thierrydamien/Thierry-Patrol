@@ -169,19 +169,23 @@ function initBackground(missionIndex){
 }
 
 function updateBackground(dt){
-  bgPhase += dt*0.08*warp;
+  // TURBO ENGINES streak the whole sky: stars and dust at nearly double
+  // speed, so the boost is visible even when the thumb is still.
+  const wf = warp * (SF.game && SF.game.world && SF.game.world.mods &&
+                     SF.game.world.mods.turbo ? 1.9 : 1);
+  bgPhase += dt*0.08*wf;
   // The backdrop is vertically tileable, so it can genuinely scroll rather
   // than drift - you are flying through it, not past a photograph.
-  skyScroll = (skyScroll + dt*14*warp) % VH;
+  skyScroll = (skyScroll + dt*14*wf) % VH;
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
-    s.y += s.speed*warp*dt;
+    s.y += s.speed*wf*dt;
     s.twinkle += dt*2.5;
     if(s.y > VH){ s.y -= VH; s.x = rand(0, VW); }
   }
   for(let i=0;i<dust.length;i++){
     const d = dust[i];
-    d.y += d.speed*warp*dt;
+    d.y += d.speed*wf*dt;
     if(d.y > VH + 20){ d.y = -20; d.x = rand(0, VW); }
   }
   cometTimer -= dt;
@@ -2324,9 +2328,23 @@ function drawHud(ctx, game){
   ctx.fillStyle = run.difficulty.color;
   ctx.font = "bold 14px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.mission.name.toUpperCase(), VW/2, 10);
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
-  ctx.fillText(run.difficulty.name, VW/2, 28);
+  if(run.mission.modList && run.mission.modList.length){
+    // The Wacky Sky wears its roll all run long. The banner fades after six
+    // seconds, and without this the mode looked like a normal mission for
+    // the other 24 minutes. It replaces the tier label - the mode is always
+    // PILOT, so that line said nothing. One name at a time, cycling every
+    // couple of seconds in the modifier's own colour: the full list drawn at
+    // once collided with the score on one side and the money on the other.
+    const list = run.mission.modList;
+    const m = list[Math.floor(nowM / 2000) % list.length];
+    ctx.fillStyle = m.color;
+    ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+    ctx.fillText(m.name, VW/2, 28);
+  } else {
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
+    ctx.fillText(run.difficulty.name, VW/2, 28);
+  }
 
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,210,63,0.55)";

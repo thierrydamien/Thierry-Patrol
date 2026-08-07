@@ -79,7 +79,7 @@ const MODIFIERS = [
   { id:"papaRain", name:"PAPA RAIN",       color:"#ffe9a8",
     blurb:"Papa heads fall from space. Catch them!" },         // game.update
   { id:"gold",     name:"DOUBLE COINS",    color:"#ffd23f",
-    blurb:"Everything pays twice as much." },                  // run.payScale
+    blurb:"It rains money, and everything pays double!" },     // run.payScale + coin rain
   { id:"turbo",    name:"TURBO ENGINES",   color:"#4ade80",
     blurb:"Your ship is super fast. Hold on!" },               // game.startMission -> player
   { id:"sleepy",   name:"SLEEPY ENEMIES",  color:"#9bb0ff",
