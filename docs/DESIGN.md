@@ -2595,6 +2595,58 @@ runs LAST, because starting a mission consumes the shared `Math.random`
 stream and running it earlier reshuffled the spawns of a boss-rush check
 two hundred lines away.
 
+## 8bu. The third output channel
+
+A tablet has three output channels and the game only used two. The third one
+earns its place here for a reason specific to these players: the sound is
+usually off. It gets muted in the car, at the table, next to a sleeping
+sibling. Rumble is the only feedback that survives that, and for a kid holding
+the iPad it does something a screen and a speaker can't - it puts the hit in
+their hands.
+
+**It hangs off the sound hooks, not its own call sites.** `SF.audio.play()`
+fans out to `SF.haptics.play()` before its own guards. Gameplay code already
+names every moment worth reacting to (`"playerHit"`, `"bossPhase"`,
+`"coreExposed"`), and threading a second set of calls through a dozen files
+would have guaranteed a table that silently drifted the first time someone
+added a sound - there are 66 of them now. One named event is one moment of
+feedback; how many channels it comes out of is the device's business. The
+fan-out sits *above* the mute and SFX checks deliberately: rumble is its own
+setting, so a game played with the sound off is still felt.
+
+**The table was tuned off measurements, and the first cut was wrong.** The
+instinct was that killing things is far too frequent to buzz on - enemies pop
+constantly. Instrumenting a real mission said otherwise: guns fire at 4/s (never
+worth a buzz, and auto-fire means the player didn't even ask), but kills land at
+0.6/s, which is a tick you read as a tick. Cutting them gave five buzzes across
+a 140-second mission, a feature nobody would notice. Putting them back gives
+about 0.5 buzzes/second - punctuation. The smoke test now prints the hook tally
+the table was tuned against and fails in *both* directions: over 2.5/second is a
+rattle, under 40 in a mission is a feature that isn't there.
+
+Two mechanisms bound the worst case. Each event has its own rate limit, and a
+global 45ms floor sits under all of them - `vibrate()` cancels whatever is still
+running rather than queuing, so without a floor a burst (a smart bomb killing
+fifteen at once) truncates itself into one flat smear instead of reading as the
+bomb going off. Anything absent from the table is absent on purpose, and the
+smoke test pins the omissions: guns, per-bullet impacts and armour clangs, boss
+telegraphs and lane fire, the coins and combo ticks that trail a kill whose own
+tick already fired, and every `papa*` sound - KING PAPA is a comedy routine, the
+joke is the sound, and buzzing through it would flatten it.
+
+**iOS implements no Vibration API at all.** On an iPhone or iPad - which is
+every device this family owns - every call is a no-op, so support is re-checked
+per call rather than cached, and the settings row hides itself rather than
+offering a switch that does nothing. Checking per call is also what lets the
+smoke test install a recording stub and assert on what the game actually asked
+the motor for, instead of trusting the table by inspection. The feature is real
+on Android phones and tablets and inert on the iPads; that asymmetry is the
+honest state of the web platform, not something to paper over.
+
+The switch sits in the existing settings overlay next to Screen shake, its
+closest relative - both are feel, not content, and both are the kind of thing
+someone turns off once and forgets.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2607,6 +2659,9 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~536 checks.
+  migration, and checks the rumble table against a recording stub in place of
+  the vibration motor jsdom doesn't have. ~550 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
-  (throwaway harness, not checked in — see the README).
+  (throwaway harness, not checked in — see the README). The haptics work was
+  checked with `navigator.vibrate` both present and absent, since the two cases
+  render different UI.

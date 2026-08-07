@@ -2785,6 +2785,10 @@ function renderSettings(){
   pill("setMusicRow", audio.musicEnabled());
   pill("setSfx", audio.sfxEnabled());
   pill("setShake", SF.fx.shakeEnabled());
+  // No motor, no row: a switch that can never do anything is worse than a
+  // missing one, and on iOS that is every device this family owns.
+  $("setRumble").classList.toggle("hidden", !SF.haptics.supported());
+  pill("setRumble", SF.haptics.isEnabled());
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
@@ -2802,7 +2806,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-05.3";
+const BUILD = "2026-08-07.1";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;
@@ -2829,6 +2833,13 @@ click($("setSound"), () => { audio.setMuted(!audio.isMuted()); renderSettings();
 click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); renderSettings(); });
 click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
+click($("setRumble"), () => {
+  SF.haptics.setEnabled(!SF.haptics.isEnabled());
+  // Turning it on should be felt at once: the tap that switched it on happened
+  // while it was still off, so nothing has buzzed yet.
+  if(SF.haptics.isEnabled()) SF.haptics.play("uiBuy");
+  renderSettings();
+});
 click($("setReset"), () => {
   if(!profile) return;
   const who = profile.name;

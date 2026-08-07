@@ -287,6 +287,10 @@
         <span>Sound effects</span><span class="set-pill">ON</span></button>
       <button id="setShake" class="settings-row">
         <span>Screen shake</span><span class="set-pill">ON</span></button>
+      <!-- Hidden entirely on a device with no vibration motor, which is every
+           iPhone and iPad: Safari implements no Vibration API at all. -->
+      <button id="setRumble" class="settings-row hidden">
+        <span>Rumble</span><span class="set-pill">ON</span></button>
     </div>
     <div class="settings-rows">
       <button id="setCloud" class="settings-row hidden">
@@ -336,6 +340,7 @@
 </div>
 
 <script src="src/core.js"></script>
+<script src="src/haptics.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/data/config.js"></script>
 <script src="src/data/enemies.js"></script>
