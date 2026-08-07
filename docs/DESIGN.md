@@ -2687,6 +2687,60 @@ advice is useful, rather than in a paragraph nobody reads. The `brief` field
 stays in the data: it is still the banner fallback for the Daily Patrol, the
 firing range, Boss Rush and the vault, none of which define a `goal`.
 
+## 8bt4. The pause that ate your powerups
+
+Section 8b has said "no gameplay timing on the wall clock" since the
+boss-celebration `setTimeout` bug. The temp powerups had been breaking that
+rule the whole time, and nothing checked.
+
+Rapid Fire, Spread, Homing, Score x2 and Overdrive were stored as absolute
+`performance.now() + 9000` deadlines. Pause was a state flag with no
+compensation anywhere - a repo-wide grep for `pausedAt|pauseOffset|resumeAt`
+returned nothing. So real time kept burning against a nine-second buff while
+the game sat still. **Any pause longer than the buff killed it outright**,
+without a shot fired.
+
+Three things made it worse than it sounds. It was not opt-in: `visibilitychange`
+auto-pauses, so app-switching, locking the iPad or turning it sideways did it
+too. It was *visible* - `draw()` still runs while paused and the HUD boost bars
+read the same wall clock, so a kid watched the bar they had just earned drain
+away behind the pause overlay. And the same leak hit `bannerUntil` and
+`objectiveFlashUntil`, so a banner raised just before a pause was already gone
+on resume.
+
+The irony worth recording: `finale.js` opens by stating the rule the rest of
+the game was breaking - *"Every clock is simulation time (dt), never wall
+clock, so pause works."* The finale choreography obeyed it. `run.time` obeyed
+it. The player's own buffs did not.
+
+The fix is one clock. `simMs` advances by `dt` in the frame loop while a
+mission is playing or ending, and not at all while paused. Everything
+downstream already took `timeMs` as a parameter, so it became pause-correct for
+free; the thirteen direct `performance.now()` reads in `game.js` now read the
+clock, and `render.js` and `ui.js` get at it through `SF.game.now()` because
+they read deadlines `game.js` sets - all three have to agree what time it is.
+
+Two decisions inside that. The clock **advances through the death sequence**,
+not just play, because `fx`'s hit-stop deadline rides it and freezing it there
+would strand one. And it **never resets**: every deadline is relative, and a
+clock that restarted at zero each mission would leave any deadline outliving
+its mission parked in the future forever - a fresh run would start hit-stopped
+at 12% speed.
+
+Verified twice. In jsdom: a nine-second buff survives thirteen simulated
+seconds of pause, the clock reads identical before and after, and the buff
+still expires normally once time is actually played. In Chromium with real
+elapsed time: twelve real seconds paused, clock moved 0ms, 8.9s of buff left on
+resume. (The browser harness could not show the *expiry* half, because headless
+runs frames slower than the 50ms `dt` clamp allows, so wall time outruns sim
+time there. That clamp is the pre-existing tab-switch guard and is doing its
+job.)
+
+The rule is now enforced rather than written down: a test asserts `game.js` -
+the simulation - contains no `performance.now()` at all. The remaining wall-clock
+reads in the codebase are all correct ones: a cosmetic pulse, the hangar's
+celebration animation, and a real-world tap counter for the secret.
+
 ## 8bu. The third output channel
 
 A tablet has three output channels and the game only used two. The third one
@@ -2753,7 +2807,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~571 checks.
+  be re-measured after load. ~581 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

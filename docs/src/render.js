@@ -2281,7 +2281,7 @@ let hudPanelGrad = null;   // identical every frame - built once
 function drawHud(ctx, game){
   const p = game.world.player;
   const run = game.run;
-  const nowM = performance.now();
+  const nowM = SF.game.now();
   const hdt = Math.min(0.05, (nowM - hudLastMs)/1000); hudLastMs = nowM;
   ctx.save();
   ctx.textBaseline = "top";
@@ -2375,7 +2375,7 @@ function drawHud(ctx, game){
   // still clean?" the labels were gone. It stays up now: bright and full-size
   // through the opening, then smaller and quieter, but always legible. During
   // a boss it steps below the boss bar instead of fighting it.
-  const intro = run.time < 7 || performance.now() < run.objectiveFlashUntil;
+  const intro = run.time < 7 || SF.game.now() < run.objectiveFlashUntil;
   const oySize = intro ? 12 : 11;
   ctx.font = oySize + "px Rajdhani, Arial, sans-serif";
   let oy = run.bossActive ? 152 : 92;
@@ -2392,7 +2392,7 @@ function drawHud(ctx, game){
   // 9-second buff nobody can see the end of just reads as "my guns went weird
   // for a bit" - the draining bar is what makes it a resource kids race.
   if(p){
-    const nowT = performance.now();
+    const nowT = SF.game.now();   // the mission clock, so a pause doesn't drain the bars
     const boosts = [];
     if(nowT < p.overdriveUntil)
       boosts.push({ label:"OVERDRIVE", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
@@ -2540,9 +2540,9 @@ function drawHud(ctx, game){
   // A banner never sits on top of an attack warning - the warning is the one
   // the player has to read RIGHT NOW.
   const arenaBusy = bossIn && (bossIn.lanes || bossIn.nova || bossIn.lance || bossIn.claw);
-  if(run.bannerText && performance.now() < run.bannerUntil && !arenaBusy &&
+  if(run.bannerText && SF.game.now() < run.bannerUntil && !arenaBusy &&
      !(bossIn && bossIn.alive && bossIn.entering)){
-    const remain = (run.bannerUntil - performance.now())/1000;
+    const remain = (run.bannerUntil - SF.game.now())/1000;
     // A long hold needs a long fade: the band draws OVER the traffic, so it
     // spends its last second and a half going see-through rather than
     // sitting opaque and then vanishing.
