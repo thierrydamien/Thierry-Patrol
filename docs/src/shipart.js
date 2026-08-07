@@ -449,15 +449,20 @@ const TUNE_ART = {
  * tall is a big simple shape. Drawn last, over every bought part, and
  * clipped to a hull-ish silhouette so paint never floats off the metal.
  */
+/*
+ * The hull-ish silhouette liveries are clipped to, as vertices so the paint
+ * easel can ask "is this cell on the ship?" against the SAME shape (see
+ * paintjob.js). One polygon, two readers - they can never drift apart.
+ */
+const HULL_POLY = [
+  [0, -0.50], [0.17, -0.14], [0.30, 0.16], [0.16, 0.44],
+  [-0.16, 0.44], [-0.30, 0.16], [-0.17, -0.14],
+];
 function hullClip(ctx, S){
   ctx.beginPath();
-  ctx.moveTo(0, -S*0.50);
-  ctx.lineTo(S*0.17, -S*0.14);
-  ctx.lineTo(S*0.30, S*0.16);
-  ctx.lineTo(S*0.16, S*0.44);
-  ctx.lineTo(-S*0.16, S*0.44);
-  ctx.lineTo(-S*0.30, S*0.16);
-  ctx.lineTo(-S*0.17, -S*0.14);
+  HULL_POLY.forEach(([x, y], i) => {
+    if(i === 0) ctx.moveTo(x*S, y*S); else ctx.lineTo(x*S, y*S);
+  });
   ctx.closePath();
   ctx.clip();
 }
@@ -568,9 +573,14 @@ function drawShip(ctx, cx, cy, size, opts){
   front.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
   if(tuneArt && tuneArt.front){ ctx.save(); tuneArt.front(ctx, S, o); ctx.restore(); }
   // The livery goes on over every bought part: paint you can't see under a
-  // wing is paint that wasn't worth buying.
-  if(opts.decal && LIVERY_ART[opts.decal]){
-    ctx.save(); LIVERY_ART[opts.decal](ctx, S); ctx.restore();
+  // wing is paint that wasn't worth buying. A "px1:" value is not a shop
+  // pattern but a drawing the pilot made - same layer, same clipping.
+  if(opts.decal){
+    if(SF.paintjob && SF.paintjob.isCustom(opts.decal)){
+      SF.paintjob.paint(ctx, S, opts.decal);
+    } else if(LIVERY_ART[opts.decal]){
+      ctx.save(); LIVERY_ART[opts.decal](ctx, S); ctx.restore();
+    }
   }
 
   // The grey silhouette of what's next: always something to want.
@@ -655,5 +665,6 @@ function shadeHex(hex, k){
   return "rgb(" + c.map(n => Math.round(n + (t-n)*a)).join(",") + ")";
 }
 
-SF.shipart = { PARTS, PART_BY_ID, levelsOf, partList, nextPart, ownedCount, drawShip };
+SF.shipart = { PARTS, PART_BY_ID, levelsOf, partList, nextPart, ownedCount, drawShip,
+               hullClip, HULL_POLY };
 })();

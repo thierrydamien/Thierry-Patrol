@@ -243,6 +243,25 @@
 
 </div>
 
+<!-- The paint easel: full-screen so a phone gets every pixel of grid.
+     Opened from the Style Shop's YOUR OWN PAINT card. -->
+<div id="paintEditor" class="paint-editor hidden">
+  <div class="pe-panel">
+    <div class="pe-head">
+      <h2 class="pe-title">PAINT YOUR SHIP</h2>
+      <canvas id="pePreview" width="72" height="72"></canvas>
+    </div>
+    <canvas id="peCanvas" width="384" height="384"></canvas>
+    <div id="pePalette" class="pe-palette"></div>
+    <div class="pe-buttons">
+      <button id="peUndo" class="ghost-btn">↩ UNDO</button>
+      <button id="peClear" class="ghost-btn">WIPE IT</button>
+      <button id="peCancel" class="ghost-btn">CANCEL</button>
+      <button id="peDone" class="main-btn">PUT IT ON MY SHIP</button>
+    </div>
+  </div>
+</div>
+
 <div id="loadingOverlay" class="loading-overlay">
   <div class="loading-text">LOADING...</div>
 </div>
@@ -340,6 +359,7 @@
 <script src="src/insignia.js"></script>
 <script src="src/skygen.js"></script>
 <script src="src/shipart.js"></script>
+<script src="src/paintjob.js"></script>
 <script src="src/pilotart.js"></script>
 <script src="src/comms.js"></script>
 <script src="src/game.js"></script>

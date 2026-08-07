@@ -108,7 +108,7 @@ const SRC = [
   "src/core.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/finale.js","src/papadeath.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
 const results = [];
@@ -1837,6 +1837,110 @@ async function run(){
         return true;
       } catch(e){ return false; }
     })());
+
+    /* ---------- YOUR OWN PAINT: the easel ----------
+       The livery a kid draws themself. It travels as a "px1:" string in the
+       same decal slot the shop patterns use, so every check here is about the
+       two promises that matter: what you paint is what the hull wears, and
+       taking it off never destroys it. */
+    {
+      const PJ = SF.paintjob;
+      check("the easel is a 12x12 grid with a hull-shaped reach",
+        PJ.COLS === 12 && PJ.ROWS === 12 &&
+        PJ.usable(6, 6) && !PJ.usable(0, 0) && !PJ.usable(11, 0));
+      check("the easel mask and the worn clip share one hull polygon",
+        Array.isArray(SF.shipart.HULL_POLY) && SF.shipart.HULL_POLY.length >= 6 &&
+        /HULL_POLY/.test(fs.readFileSync(path.join(__dirname, "src/paintjob.js"), "utf8")) &&
+        /HULL_POLY\.forEach/.test(fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8")));
+      check("a drawing survives the round trip and rubbish is refused", (() => {
+        const cells = new Array(PJ.COLS*PJ.ROWS).fill(0);
+        cells[6*PJ.COLS + 6] = 3; cells[7*PJ.COLS + 5] = 12;
+        const str = PJ.encode(cells);
+        return PJ.isCustom(str) &&
+               JSON.stringify(PJ.decode(str)) === JSON.stringify(cells) &&
+               PJ.encode(new Array(PJ.COLS*PJ.ROWS).fill(0)) === null &&
+               PJ.decode("px1:zz") === null && PJ.decode("stripes") === null &&
+               PJ.decode(null) === null &&
+               PJ.decode("px1:" + "d".repeat(PJ.COLS*PJ.ROWS)) === null;
+      })());
+
+      // The whole journey a kid takes: open the easel, drag a stroke across
+      // the wing, jab at the empty air beside the nose, put it on the ship.
+      SF.ui.openPaintEditor();
+      check("the easel opens over the shop",
+        !id("paintEditor").classList.contains("hidden"));
+      const pcv = id("peCanvas");
+      const CELL = pcv.width / PJ.COLS;
+      const at = (c, r) => ({ clientX: (c + 0.5)*CELL, clientY: (r + 0.5)*CELL, bubbles: true });
+      const pdown = xy => pcv.dispatchEvent(new window.MouseEvent("pointerdown", xy));
+      const pmove = xy => pcv.dispatchEvent(new window.MouseEvent("pointermove", xy));
+      const pup   = ()  => window.dispatchEvent(new window.MouseEvent("pointerup", { bubbles:true }));
+      pdown(at(6, 6)); pmove(at(7, 6)); pup();
+      pdown(at(0, 0)); pup();
+      clickEl(id("peDone"));
+      const inked = SF.profile.load(activeName);
+      check("PUT IT ON wears the drawing and archives it on the easel",
+        PJ.isCustom(inked.decal) && inked.decal === inked.paintjob);
+      check("the stroke landed on the hull and the air stayed empty", (() => {
+        const got = PJ.decode(inked.decal);
+        return !!got && got[6*PJ.COLS + 6] === 1 && got[6*PJ.COLS + 7] === 1 && got[0] === 0;
+      })());
+      check("the easel closes itself after the reveal",
+        id("paintEditor").classList.contains("hidden"));
+      check("the flying ship wears the drawing too", (() => {
+        const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+        return SF.game.buildLoadout(inked, diff).decal === inked.decal;
+      })());
+
+      // The shop hangs the drawing on the wall like any livery.
+      clickEl(Array.from(qa(".armory-tab")).find(t => /STYLE/.test(t.textContent)));
+      check("the shop shows MY OWN PAINT as worn",
+        Array.from(qa(".paint-name")).some(n => n.textContent === "MY OWN PAINT") &&
+        !!id("ownPaintWear") && id("ownPaintWear").disabled &&
+        /WEARING IT/.test(id("ownPaintWear").textContent));
+      clickEl(Array.from(qa(".paint-card button")).find(b => /STRIP IT OFF/.test(b.textContent)));
+      const bare = SF.profile.load(activeName);
+      check("stripping the hull never destroys the drawing",
+        bare.decal === null && PJ.isCustom(bare.paintjob));
+      clickEl(id("ownPaintWear"));
+      check("one tap puts it back on",
+        PJ.isCustom(SF.profile.load(activeName).decal));
+
+      check("an empty easel refuses to be worn", (() => {
+        SF.ui.openPaintEditor();
+        clickEl(id("peClear"));
+        clickEl(id("peDone"));               // must not equip nothing
+        const still = SF.profile.load(activeName);
+        const stayedOpen = !id("paintEditor").classList.contains("hidden");
+        clickEl(id("peUndo"));               // the wipe comes back off
+        clickEl(id("peCancel"));
+        return stayedOpen && PJ.isCustom(still.decal) && PJ.isCustom(still.paintjob);
+      })());
+      check("cancel walks away without touching the ship", (() => {
+        const before = SF.profile.load(activeName);
+        SF.ui.openPaintEditor();
+        pdown(at(5, 8)); pup();
+        clickEl(id("peCancel"));
+        const after = SF.profile.load(activeName);
+        return after.decal === before.decal && after.paintjob === before.paintjob;
+      })());
+
+      // Hand the bought pattern back for the checks further down the file.
+      const wearer = SF.ui.getProfile();
+      wearer.decal = "stripes";
+      SF.profile.save(wearer);
+      SF.ui.renderArmory();
+
+      const easelCss = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+      check("a finger on the grid is a brush, never a scroll",
+        /#peCanvas\s*\{[^}]*touch-action:\s*none/.test(easelCss));
+      check("every paint pot clears the 44px touch floor",
+        /\.pe-swatch\s*\{[^}]*min-height:\s*44px/.test(easelCss));
+      check("the easel sits inside the phone's safe strips",
+        /\.paint-editor\s*\{[^}]*var\(--sa-top/.test(easelCss) &&
+        /\.paint-editor\s*\{[^}]*var\(--sa-bottom/.test(easelCss));
+    }
+
     check("the ship bay unpins on the browsing tabs",
       id("screen-armory").classList.contains("unpinned"));
     check("the accent line is gone from the shelves",

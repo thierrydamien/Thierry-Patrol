@@ -1293,6 +1293,55 @@ function renderPaintTab(panel){
     return g;
   };
 
+  /*
+   * The one livery money can't buy: the pilot's own drawing, made at the
+   * easel. It leads the shop because "you made it" beats anything on the
+   * shelves below - and because the easel is free, a brand-new pilot with
+   * £0 still walks out of this tab with a ship that is theirs.
+   */
+  head("YOUR OWN PAINT — the one livery money can't buy");
+  const og = grid();
+  const mineWorn = SF.paintjob.isCustom(profile.decal);
+  const mine = document.createElement("div");
+  mine.className = "paint-card" + (mineWorn ? " on" : "");
+  const mcv = document.createElement("canvas");
+  mcv.width = 120; mcv.height = 84;
+  mine.appendChild(mcv);
+  const mc = mcv.getContext("2d");
+  if(mc) SF.shipart.drawShip(mc, 60, 46, 66,
+    { color: profile.shipColor, levels, t: 0.6, tune: profile.tune,
+      decal: profile.paintjob || null });
+  const mnm = document.createElement("div");
+  mnm.className = "paint-name"; mnm.textContent = "MY OWN PAINT";
+  mine.appendChild(mnm);
+  const mds = document.createElement("div");
+  mds.className = "paint-desc";
+  mds.textContent = profile.paintjob
+    ? "Painted by hand at the easel."
+    : "Grab a brush and paint your hull yourself.";
+  mine.appendChild(mds);
+  if(profile.paintjob){
+    const wearBtn = document.createElement("button");
+    wearBtn.className = "small-btn";
+    wearBtn.id = "ownPaintWear";
+    wearBtn.textContent = mineWorn ? "WEARING IT" : "WEAR IT";
+    wearBtn.disabled = mineWorn;
+    click(wearBtn, () => {
+      profile.decal = profile.paintjob;
+      P.save(profile);
+      hangar.celebrate = performance.now();
+      renderArmory(); renderMenu();
+    });
+    mine.appendChild(wearBtn);
+  }
+  const drawBtn = document.createElement("button");
+  drawBtn.className = "small-btn" + (profile.paintjob ? "" : " free-btn");
+  drawBtn.id = "ownPaintDraw";
+  drawBtn.textContent = profile.paintjob ? "BACK TO THE EASEL" : "FREE — DRAW IT";
+  click(drawBtn, openPaintEditor);
+  mine.appendChild(drawBtn);
+  og.appendChild(mine);
+
   head("PAINT JOBS — your whole ship, everywhere, instantly");
   const pg = grid();
   /*
@@ -1504,6 +1553,149 @@ function renderPaintTab(panel){
   note.textContent = "Trails show off best on the Test Range — try yours!";
   wrap.appendChild(note);
   panel.appendChild(wrap);
+}
+
+/* ---------------------------------------------------------
+   THE EASEL
+   A 12x12 finger-paint grid laid over the widest band of the
+   pilot's own hull, zoomed right in so every cell is a fat
+   touch target on a phone. The little preview in the corner
+   shows the whole ship wearing the drawing as it grows. What
+   comes out is worn exactly like a bought livery (paintjob.js
+   for how it travels), so the drawing flies every mission.
+   --------------------------------------------------------- */
+const pe = { cells: null, color: 1, undo: [], down: false, wired: false };
+
+function openPaintEditor(){
+  const PJ = SF.paintjob;
+  pe.cells = PJ.decode(profile.paintjob) || new Array(PJ.COLS*PJ.ROWS).fill(0);
+  pe.undo = [];
+  wireEasel();
+  buildEaselPalette();
+  $("paintEditor").classList.remove("hidden");
+  drawEasel();
+}
+function closeEasel(){ $("paintEditor").classList.add("hidden"); }
+
+function buildEaselPalette(){
+  const host = $("pePalette");
+  host.innerHTML = "";
+  const swatch = (idx, label) => {
+    const b = document.createElement("button");
+    b.className = "pe-swatch" + (idx === pe.color ? " sel" : "") + (idx === 0 ? " eraser" : "");
+    if(idx > 0) b.style.background = SF.paintjob.PALETTE[idx - 1];
+    if(label) b.textContent = label;
+    b.setAttribute("aria-label", idx === 0 ? "eraser" : "paint pot " + idx);
+    click(b, () => { pe.color = idx; buildEaselPalette(); });
+    host.appendChild(b);
+  };
+  SF.paintjob.PALETTE.forEach((_, i) => swatch(i + 1));
+  swatch(0, "⌫");
+}
+
+/** Canvas pixel coords of a pointer event, robust to CSS scaling. */
+function easelCell(ev){
+  const cv = $("peCanvas");
+  const r = cv.getBoundingClientRect();
+  const sx = cv.width  / (r.width  || cv.width);
+  const sy = cv.height / (r.height || cv.height);
+  const x = (ev.clientX - r.left) * sx, y = (ev.clientY - r.top) * sy;
+  const CELL = cv.width / SF.paintjob.COLS;
+  return { c: Math.floor(x / CELL), row: Math.floor(y / CELL) };
+}
+
+function easelPaint(ev){
+  const PJ = SF.paintjob;
+  const { c, row } = easelCell(ev);
+  if(!PJ.usable(c, row)) return;        // off the hull: the brush just misses
+  const i = row*PJ.COLS + c;
+  if(pe.cells[i] === pe.color) return;
+  pe.cells[i] = pe.color;
+  drawEasel();
+}
+
+function wireEasel(){
+  if(pe.wired) return;
+  pe.wired = true;
+  const cv = $("peCanvas");
+  // One undo step per STROKE, not per cell - a dragged squiggle comes off
+  // with one tap, which is the level a seven-year-old thinks in.
+  cv.addEventListener("pointerdown", ev => {
+    if(ev.preventDefault) ev.preventDefault();
+    pe.undo.push(pe.cells.slice());
+    if(pe.undo.length > 40) pe.undo.shift();
+    pe.down = true;
+    if(cv.setPointerCapture && ev.pointerId != null){
+      try { cv.setPointerCapture(ev.pointerId); } catch(e){}
+    }
+    easelPaint(ev);
+  });
+  cv.addEventListener("pointermove", ev => { if(pe.down) easelPaint(ev); });
+  window.addEventListener("pointerup",     () => { pe.down = false; });
+  window.addEventListener("pointercancel", () => { pe.down = false; });
+
+  click($("peUndo"),  () => { if(pe.undo.length){ pe.cells = pe.undo.pop(); drawEasel(); } });
+  click($("peClear"), () => {
+    pe.undo.push(pe.cells.slice());
+    pe.cells = new Array(SF.paintjob.COLS*SF.paintjob.ROWS).fill(0);
+    drawEasel();
+  });
+  click($("peCancel"), closeEasel);
+  click($("peDone"), () => {
+    const str = SF.paintjob.encode(pe.cells);
+    if(!str){ queueToast({ name: "Paint something first!", label: "EASEL" }); return; }
+    profile.paintjob = str;
+    profile.decal = str;                 // fresh art goes straight on the ship
+    P.save(profile);
+    audio.play("uiBuy");
+    hangar.celebrate = performance.now();
+    closeEasel();
+    renderArmory(); renderMenu();
+    queueToast({ name: "Your paint is on the ship!", label: "HANGAR" });
+  });
+}
+
+function drawEasel(){
+  const PJ = SF.paintjob;
+  const cv = $("peCanvas");
+  const ctx = cv && cv.getContext("2d");
+  if(!ctx) return;
+  const W = cv.width, H = cv.height, CELL = W/PJ.COLS;
+  // The canvas frames exactly the paint band, so the hull-unit scale and the
+  // hull origin both fall out of REGION.
+  const S = W / PJ.REGION.w;
+  const ox = W/2 - (PJ.REGION.x + PJ.REGION.w/2)*S;
+  const oy = H/2 - (PJ.REGION.y + PJ.REGION.h/2)*S;
+
+  ctx.clearRect(0, 0, W, H);
+  // The pilot's real ship, zoomed to the band, held still under the grid.
+  SF.shipart.drawShip(ctx, ox, oy, S, { color: profile.shipColor,
+    levels: SF.shipart.levelsOf(profile), t: 0.35, idle: false, tune: profile.tune });
+  // Dim what isn't paintable, so the easel reads ship-shaped.
+  ctx.fillStyle = "rgba(4,8,18,0.62)";
+  for(let r = 0; r < PJ.ROWS; r++)
+    for(let c = 0; c < PJ.COLS; c++)
+      if(!PJ.usable(c, r)) ctx.fillRect(c*CELL, r*CELL, CELL, CELL);
+  // The paint so far - through the same clip it is worn with, so edge cells
+  // look on the easel exactly as they will on the wing.
+  const str = PJ.encode(pe.cells);
+  if(str){ ctx.save(); ctx.translate(ox, oy); PJ.paint(ctx, S, str); ctx.restore(); }
+  // Grid lines last, so they stay visible over the paint.
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 1;
+  for(let i = 0; i <= PJ.COLS; i++){
+    ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(W, i*CELL); ctx.stroke();
+  }
+  // And the whole ship in the corner, wearing the work in progress.
+  const pv = $("pePreview");
+  const pc = pv && pv.getContext("2d");
+  if(pc){
+    pc.clearRect(0, 0, pv.width, pv.height);
+    SF.shipart.drawShip(pc, pv.width/2, pv.height/2 + 4, 52,
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
+        t: 0.35, idle: false, tune: profile.tune, decal: str || null });
+  }
 }
 
 /** The parts ladder: what's on the ship and what's still missing. */
@@ -2828,7 +3020,7 @@ if("serviceWorker" in navigator){
 }
 
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
-          queueToast, maybeStory, missionFace,
+          queueToast, maybeStory, missionFace, openPaintEditor,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile };
 })();

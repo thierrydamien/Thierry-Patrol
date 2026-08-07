@@ -1081,6 +1081,48 @@ body.cinema #muteBtn { opacity: 0; pointer-events: none; transition: opacity .4s
 }
 .settings-build:active { color: var(--accent); }
 
+/* ===================== THE EASEL =====================
+   Full-screen so a phone gives the grid every pixel it has. The canvas is
+   384px of drawing surface scaled to fit; touch-action:none because a
+   finger on the grid is a brush, never a scroll. */
+.paint-editor {
+  position:fixed; inset:0; z-index:70;
+  display:flex; align-items:center; justify-content:center;
+  padding: calc(8px + var(--sa-top, 0px)) 12px calc(8px + var(--sa-bottom, 0px));
+  background: rgba(4,8,18,0.90);
+}
+.paint-editor.hidden { display:none; }
+.pe-panel {
+  background:#0b1226;
+  border:1.5px solid rgba(127,196,255,0.30);
+  border-radius:16px;
+  padding:12px 14px 14px;
+  width:100%; max-width:440px; max-height:100%;
+  overflow:auto;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.pe-head { display:flex; width:100%; align-items:center; justify-content:space-between; }
+.pe-title { font-size:18px; letter-spacing:2px; margin:0; }
+#pePreview { width:56px; height:56px; }
+#peCanvas {
+  width:min(100%, 384px); aspect-ratio:1;
+  touch-action:none; cursor:crosshair;
+  border-radius:10px; background:#070b18;
+  border:1px solid rgba(255,255,255,0.10);
+}
+.pe-palette { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.pe-swatch {
+  width:44px; height:44px; min-height:44px;
+  border-radius:10px; border:2px solid rgba(255,255,255,0.18);
+  padding:0; font-size:16px; color:#fff; cursor:pointer;
+}
+.pe-swatch.sel { border-color:#ffffff; box-shadow:0 0 0 2px #7fc4ff; transform:scale(1.06); }
+.pe-swatch.eraser {
+  background: repeating-conic-gradient(#39415a 0% 25%, #232a40 0% 50%) 0 0 / 14px 14px;
+}
+.pe-buttons { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.pe-buttons .main-btn { flex-basis:100%; }
+
 /* ===================== TURN YOUR PHONE =====================
    A vertical shooter in landscape is 34% of the screen with the ship
    squeezed into a stripe - measured on an iPhone 14 sideways: a 299x374

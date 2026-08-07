@@ -2476,6 +2476,45 @@ variables from an init script lands too late: the scripts at the end of
 `<body>` have already read the probe. The stylesheet has to carry them,
 because that is what a real device does.
 
+## 8bs. YOUR OWN PAINT: the easel
+
+The Style Shop's whole idea is "if kids spend money it needs to be an
+obvious difference". The easel is the same idea with the money removed:
+the one livery the shop cannot sell is the one a kid painted themself.
+
+A 12x12 grid is laid over the widest band of the hull - wings and body,
+zoomed right in, so every cell is a fat touch target on a phone. Cells
+whose centre falls off the hull are dimmed and refuse the brush, so the
+easel is ship-shaped rather than a square that lies about its corners; a
+small live preview in the panel corner shows the whole ship wearing the
+work in progress. Twelve pots and an eraser, one undo step per *stroke*
+(a dragged squiggle comes off with one tap - the unit a seven-year-old
+thinks in), WIPE IT, and PUT IT ON MY SHIP, which wears it on the spot.
+
+The nose-art lesson (8bb) still rules: this is not a sticker, it is a
+whole-hull livery drawn as one crisp pixel-per-cell sprite, scaled with
+smoothing off and clipped by the same hull polygon the bought patterns
+use - the polygon was lifted to `HULL_POLY` so the easel's reach and the
+worn clip can never drift apart.
+
+How it travels is the part worth stealing: the worn form IS the encoded
+drawing, a `px1:`-prefixed string riding in `profile.decal`. Every place
+that already hands `decal` along - loadout to player to renderer, the
+campaign map, the hangar, the finale fleet - carries the drawing without
+knowing the feature exists, and it rides cloud sync inside the record
+like any other field. The saved art also lives in `profile.paintjob`, so
+stripping the hull or buying FLAME JOB never destroys it; the shop grows
+a MY OWN PAINT card that leads the wall, because "you made it" beats
+anything on the shelves below - and because the easel is free, a
+brand-new pilot with £0 still walks out with a ship that is theirs.
+
+Verified at both ends: the jsdom suite drives the real journey (open,
+drag a stroke, jab the empty air beside the nose, PUT IT ON, strip it,
+wear it again, refuse an empty easel), and a real Chromium run paints
+through actual pointer events and then reads the pixels back off a
+rendered hull - the red blob and the gold stripe are counted, not
+assumed.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2488,6 +2527,6 @@ Roughly in value order:
   tables (every wave references a real enemy, every boss weak point disables a
   real attack, phases descend), then plays mission 1 to completion and a boss
   mission with a bot, asserting on stars, money, kills, pooling and save
-  migration. ~491 checks.
+  migration. ~509 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README).
