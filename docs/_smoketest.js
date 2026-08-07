@@ -212,6 +212,32 @@ async function run(){
     check("removing the insets restores the original field", SF.entityConst.VW === before);
   }
 
+  /*
+   * "The top of the page is hidden by the top icons of my phone."
+   *
+   * The title screens centre with an auto margin, so the gap above the title
+   * was free space - and free space runs out. On a full menu there is none
+   * left and the title sits flush against the safe-area edge, under the clock
+   * and the Dynamic Island. Measured on a cramped viewport before the fix:
+   * clearance 0px. jsdom has no layout, so this pins the rule instead.
+   */
+  {
+    const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+    const menuBg = /\.menu-bg\s*\{[\s\S]*?\}/.exec(css);
+    check("the title screens exist as a styled block", !!menuBg);
+    const rule = menuBg ? menuBg[0] : "";
+    const pad = /padding-top:\s*calc\(\s*max\(\s*20px\s*,\s*env\(safe-area-inset-top[^)]*\)\s*\)\s*\+\s*(\d+)px\s*\)/.exec(rule);
+    check("their top padding is the safe-area inset PLUS room, not just the inset",
+      !!pad && Number(pad[1]) >= 12);
+    // The old rule was a flat `padding-bottom: 40px`, which ignored the home
+    // indicator entirely - fine on the phone it was eyeballed on, wrong on the
+    // ones with a taller one.
+    check("and their bottom padding respects the home indicator",
+      /padding-bottom:\s*calc\(\s*max\(\s*20px\s*,\s*env\(safe-area-inset-bottom/.test(rule));
+    check("the page paints a solid colour under the gradient",
+      /background-color:\s*#0a0920/.test(css));
+  }
+
   /* ---------- data sanity ---------- */
   // Haptics ride on the sound hooks, so a rumble keyed to an event no gameplay
   // code ever fires would be silently dead.

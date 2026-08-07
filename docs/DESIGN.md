@@ -2784,6 +2784,41 @@ was checked against the broken code before being kept: four assertions fail on
 the old `setMusic`, all pass on the new one. A regression test that never saw
 the regression is decoration.
 
+## 8bt6. The title under the clock
+
+"The top of the page is hidden by the top icons of my phone."
+
+The menu screens centre themselves vertically with an auto margin, which means
+the gap above the title is *leftover* space - whatever the content doesn't
+need. On a fresh profile that's plenty. On a full one - a maxed pilot card
+with a longer rank line, every mode unlocked with its own subtitle - the
+content eats all of it, the flex box pins to the top, and the only thing
+between the title and the glass is the bare safe-area padding. The title sits
+flush against the status bar, visually jammed under the clock and the Dynamic
+Island.
+
+Reproduced by measurement, not by eye: on a viewport short enough for the menu
+to overflow, clearance below the status bar was **0px**. Which is the general
+shape of this bug class: spacing that comes out of a *remainder* looks perfect
+in every roomy test and vanishes exactly when the screen is fullest.
+
+The fix makes the clearance a floor instead of a remainder:
+`padding-top: calc(max(20px, env(safe-area-inset-top)) + 16px)` - the inset is
+the hard minimum and the 16px is breathing room ON TOP of it, present whether
+or not the flex centring has anything left to give. The bottom edge got the
+same treatment, replacing a flat `padding-bottom: 40px` that had been
+eyeballed on one phone and ignored the home indicator on all of them. And
+`html/body` now paint a solid `#0a0920` under the gradient, because a
+standalone app's page box can come up short of the glass and anything it
+doesn't cover was flashing white.
+
+One harness note, because it bit again: the test rig originally stood in for
+the device by overriding `.screen`'s padding with `!important` - which
+silently masked the very rule under test. It now substitutes the inset values
+into the stylesheet *text*, so every rule that reads `env()` - including the
+new `calc()` - is exercised exactly as written. Same lesson as 8br: fake the
+input, never the rule.
+
 ## 8bu. The third output channel
 
 A tablet has three output channels and the game only used two. The third one
@@ -2850,7 +2885,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~585 checks.
+  be re-measured after load. ~589 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
