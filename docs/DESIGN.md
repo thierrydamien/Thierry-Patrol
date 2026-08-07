@@ -2741,6 +2741,49 @@ the simulation - contains no `performance.now()` at all. The remaining wall-cloc
 reads in the codebase are all correct ones: a cosmetic pulse, the hangar's
 celebration animation, and a real-world tap counter for the secret.
 
+## 8bt5. Two songs at once
+
+"When I open the game on iPhone as an app added to my homescreen there's two
+musics playing at the same time. I don't have this issue in the web browser."
+
+`setMusic()` faded out exactly one element - the `old` it captured at the top -
+and every call began by clearing the running fade timer. Those two facts
+together are the bug. A switch landing while a fade was still going killed the
+timer that was fading the *previous* track down, and that element was then
+referenced by nobody: still playing, still audible, at whatever volume it had
+reached, for the rest of the session.
+
+It needs no unusual sequence. `menu -> combat -> boss` is just launching into a
+boss mission. Reproduced in Chromium by driving exactly that with the switches
+inside the 70ms fade window:
+
+```
+after menu->combat->boss, settled   2 sounding: menu.mp3@0.07 boss.mp3@0.68
+```
+
+The menu theme is quiet there, but 0.07 is perfectly audible on a phone
+speaker, and a switch earlier in the fade strands it louder.
+
+**Why the home-screen app and not the browser.** The bug is not iOS-specific at
+all - the browser was hiding it. Autoplay rules refuse the early tracks until a
+real gesture, so in a tab the stranded element had usually never started
+sounding in the first place. A standalone app is a more trusted media context
+and gets to start them, so the same defect finally became audible. The report
+was about a platform; the defect was in the fade.
+
+The fix is to stop guessing how many tracks are playing. `musicEls` is already
+a registry of every element ever created, so `otherTracks()` returns everything
+that is not the current one and the fade tick winds *all* of them down. Same
+function guards `applyMusicState()`, so a stranded element cannot play through
+a mute, a music-off switch, or a backgrounded app either.
+
+Two notes on testing it. jsdom implements neither `play()` nor `pause()`, so
+the music layer was invisible to the smoke test - it now installs a stub that
+is just enough of an `<audio>` to answer "how many are sounding". And the test
+was checked against the broken code before being kept: four assertions fail on
+the old `setMusic`, all pass on the new one. A regression test that never saw
+the regression is decoration.
+
 ## 8bu. The third output channel
 
 A tablet has three output channels and the game only used two. The third one
@@ -2807,7 +2850,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~581 checks.
+  be re-measured after load. ~585 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

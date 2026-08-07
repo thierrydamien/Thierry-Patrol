@@ -97,6 +97,24 @@ class StubImage {
   get src(){ return this._src; }
 }
 window.Image = StubImage;
+
+/*
+ * jsdom implements neither play() nor pause() on media elements, so the music
+ * layer is invisible to it by default. This stub is just enough of an <audio>
+ * to answer the only question that matters: how many tracks are sounding.
+ */
+const madeAudio = [];
+class StubAudio {
+  constructor(src){
+    this.src = src; this.paused = true; this.volume = 1;
+    this.currentTime = 0; this.loop = false; this.onended = null;
+    madeAudio.push(this);
+  }
+  play(){ this.paused = false; return Promise.resolve(); }
+  pause(){ this.paused = true; }
+}
+window.Audio = StubAudio;
+function soundingTracks(){ return madeAudio.filter(a => !a.paused && a.volume > 0.001); }
 window.addEventListener("error", e => errors.push(e.error || e.message));
 Object.defineProperty(window.HTMLElement.prototype, "clientWidth", { configurable:true, get(){ return 390; } });
 Object.defineProperty(window.HTMLElement.prototype, "clientHeight", { configurable:true, get(){ return 620; } });
@@ -3632,6 +3650,42 @@ async function run(){
     await runFrames(340);   // ~11s of real play
     check("but it does expire once time is actually played",
       SF.game.now() > p.tempRapidUntil);
+  }
+
+  /* ---------- one soundtrack at a time ---------- */
+  /*
+   * "There's two musics playing at the same time" - on the iPhone home-screen
+   * app, not in a browser tab.
+   *
+   * setMusic() captured a single `old` element to fade out, and every call
+   * clears the running fade timer. So a switch landing inside the previous
+   * 70ms fade killed the timer that was fading the OLDER track down and left
+   * it sounding forever at whatever volume it had reached. menu -> combat ->
+   * boss - which is just launching into a boss mission - was enough; it
+   * reproduced in Chromium with the menu theme stranded at 0.07 under the boss
+   * theme at 0.68. The browser only hid it because autoplay refuses the early
+   * tracks until a gesture.
+   */
+  {
+    SF.audio.setMusic(null);
+    await sleep(900);                       // let everything settle to silence
+    check("silence really is silent", soundingTracks().length === 0);
+
+    SF.audio.setMusic("menu");
+    await sleep(90);                        // mid-fade...
+    SF.audio.setMusic("combat");
+    await sleep(60);                        // ...and again, inside that fade
+    SF.audio.setMusic("boss");
+    await sleep(1600);                      // long enough for every fade to end
+
+    const sounding = soundingTracks();
+    check("switching tracks mid-fade leaves exactly one playing", sounding.length === 1);
+    check("...and it is the track that was actually asked for",
+      sounding.length === 1 && /boss/.test(sounding[0].src));
+    // Muting has to reach a stranded element too, or it plays through the mute.
+    SF.audio.setMuted(true);
+    check("muting silences every track", soundingTracks().length === 0);
+    SF.audio.setMuted(false);
   }
 
   /* ---------- report ---------- */
