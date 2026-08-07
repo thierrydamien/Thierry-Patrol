@@ -96,8 +96,6 @@
       </div>
     </div>
 
-    <p id="briefText" class="brief-text"></p>
-
     <div class="brief-cols">
       <div class="brief-block">
         <label class="panel-label">STAR OBJECTIVES</label>
@@ -113,7 +111,13 @@
     <div id="briefDifficulties" class="difficulty-list"></div>
     <div id="briefDiffDetail" class="diff-detail"></div>
 
-    <button id="launchBtn" class="main-btn launch-btn">▶ LAUNCH</button>
+    <!-- Pinned to the bottom of the scroll box. Cutting content shortened this
+         screen but could never guarantee it fits - the roster grows with the
+         mission and a small phone runs out first. Sticky makes "can they see
+         LAUNCH without scrolling" true by construction, on every device. -->
+    <div class="brief-actions">
+      <button id="launchBtn" class="main-btn launch-btn">▶ LAUNCH</button>
+    </div>
     <button id="briefBackBtn" class="ghost-btn">Back to Missions</button>
   </section>
 

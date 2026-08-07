@@ -757,6 +757,24 @@ async function run(){
   check("briefing opens for mission 1", id("screen-briefing").classList.contains("active"));
   check("briefing lists 3 objectives", qa("#briefObjectives .bo-row").length === 3);
   check("briefing shows what you'll be facing", qa("#briefRoster .roster-chip").length > 0);
+  /*
+   * The briefing carries no prose. The story paragraph was the tallest thing
+   * between the hero and the button - "my kids don't care about the story, it
+   * is more important they can see the launch button without scrolling" - and
+   * LAUNCH now sits in a bar pinned to the bottom of the scroll box, so it is
+   * on screen whatever the roster does to the page height.
+   */
+  check("the briefing no longer carries a wall of story", !id("briefText"));
+  check("LAUNCH lives in the pinned bar, not at the end of the page",
+    !!q(".brief-actions #launchBtn"));
+  check("Back stays outside the bar, so it can't be trapped under it",
+    !q(".brief-actions #briefBackBtn") && !!id("briefBackBtn"));
+  // The short line survives where it is actually useful: every mission has a
+  // `goal`, and that is what greets the pilot on the launch banner. The
+  // tutorial missions say "Fly with your finger. Shoot!" there, so cutting the
+  // long `brief` from this screen costs a 7-year-old nothing.
+  check("every mission still has a one-line goal for the launch banner",
+    SF.missions.MISSIONS.every(m => typeof m.goal === "string" && m.goal.length > 4));
   check("hard tiers are locked until stars are earned", qa("#briefDifficulties .diff-card.locked").length === 3);
   check("a tier is preselected so LAUNCH always works",
     qa("#briefDifficulties .diff-card.on").length === 1);

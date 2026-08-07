@@ -2017,7 +2017,6 @@ function openBriefing(index){
   $("briefBoss").classList.toggle("hidden", !m.boss);
   $("briefTitle").textContent = m.name.toUpperCase();
   $("briefSubtitle").textContent = m.subtitle;
-  $("briefText").textContent = m.brief;
 
   /*
    * "What's out there": the actual enemy art for the archetypes this mission
@@ -2817,7 +2816,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.2";
+const BUILD = "2026-08-07.3";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;
