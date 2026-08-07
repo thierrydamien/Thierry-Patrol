@@ -139,7 +139,7 @@ function vibeCount(fn){ const n = vibrations.length; fn(); return vibrations.len
 function probe(name, arg){ fakeNow += 1000; return vibeCount(() => window.SF.audio.play(name, arg)); }
 
 const SRC = [
-  "src/core.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/daily.js",
+  "src/core.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
@@ -2446,67 +2446,6 @@ async function run(){
     SF.game.state = "idle";
   }
 
-  /* ---------- the daily patrol (seeded endless mode) ---------- */
-  {
-    const a = SF.daily.build("Mon Aug 03 2026");
-    const b = SF.daily.build("Mon Aug 03 2026");
-    const c = SF.daily.build("Tue Aug 04 2026");
-    check("the same day builds the same sky for everyone",
-      JSON.stringify(a.waves) === JSON.stringify(b.waves));
-    check("a new day builds a new sky",
-      JSON.stringify(a.waves) !== JSON.stringify(c.waves));
-    check("every generated wave names a real enemy and formation",
-      a.waves.every(wv => SF.enemyData.ENEMY_TYPES[wv.type] && wv.n >= 1 && wv.t >= 1));
-    check("the daily script escalates and runs long",
-      a.waves.length > 150 && a.waves[a.waves.length-1].t > 1200);
-    check("rescues stay on the daily menu",
-      a.waves.filter(wv => wv.type === "carrier").length >= 15);
-
-    // A run: launch, score, die - the score books as the endless best, the
-    // campaign records stay untouched, and the results read as a patrol.
-    const prof = SF.profile.blank("Daily"); prof.callsign = "Daily";
-    [1,2,3].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
-    SF.profile.save(prof);
-    SF.game.profile = prof;
-    SF.ui.show("screen-game");
-    SF.game.startMission("daily", "pilot");
-    check("a daily run flies the generated mission",
-      SF.game.run.mission.endless === true && SF.game.run.mission.id === "daily");
-    await runFrames(120);
-    SF.game.run.score = 4321;
-    const missionsBefore = JSON.stringify(prof.missions);
-    SF.game.endMission(false);
-    check("the score books as the endless best",
-      prof.endlessBest === 4321 && prof.endlessLongest >= 1);
-    check("a daily run never touches the campaign records",
-      JSON.stringify(prof.missions) === missionsBefore && prof.lastMission !== "daily");
-    check("the results read as a patrol, not a defeat",
-      id("resultTitle").textContent === "PATROL OVER" &&
-      /NEW RECORD/.test(id("resultSubtitle").textContent) &&
-      id("nextBtn").classList.contains("hidden"));
-    check("a worse run does not overwrite the best", (() => {
-      SF.game.startMission("daily", "pilot");
-      SF.game.run.score = 100;
-      SF.game.endMission(false);
-      return prof.endlessBest === 4321 && !/NEW RECORD/.test(id("resultSubtitle").textContent);
-    })());
-    SF.game.state = "idle";
-
-    // Menu gating: locked before mission 3, and it says so.
-    const rook = SF.profile.blank("Rook"); SF.profile.save(rook);
-    SF.game.profile = rook;
-    clickEl(qa("#profileGrid .profile-card")[0]); // any click path re-renders below
-    SF.ui.renderProfiles();
-    check("daily medals exist and pay",
-      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_ace" && x.pay > 0) &&
-      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_iron" && x.pay > 0));
-    check("the daily unlock rule is mission 3",
-      (() => { const t = SF.profile.blank("T");
-               const no = !(t.missions[3] && t.missions[3].cleared);
-               t.missions[3] = { cleared:true, stars:{}, best:{} };
-               return no && !!(t.missions[3].cleared); })());
-  }
-
   /* ---------- the armory test range ---------- */
   {
     const prof = SF.profile.blank("Range"); prof.callsign = "Range";
@@ -3631,6 +3570,146 @@ async function run(){
 
     closeCard();
     SF.game.run.ended = true; SF.game.state = "idle";
+  }
+
+  /* ---------- the wacky sky (random-modifier endless mode) ---------- */
+  /*
+   * Near the end on purpose, beside the pause block: this section runs
+   * hundreds of extra frames and free rolls, and both the shared clock and
+   * the global RNG stream feed every phase-sensitive assertion above it. In
+   * its original slot it silently moved the movement bot's sweep enough that
+   * the rewind tape recorded a ship parked against a wall.
+   */
+  {
+    // The script machinery, inherited from the daily era: escalation, length,
+    // and rescues staying on the menu all hold for every roll of the dice.
+    const a = SF.wacky.build(["giant"]);
+    const b = SF.wacky.build(["giant"]);
+    check("every generated wave names a real enemy and formation",
+      a.waves.every(wv => SF.enemyData.ENEMY_TYPES[wv.type] && wv.n >= 1 && wv.t >= 1));
+    check("the wacky script escalates and runs long",
+      a.waves.length > 150 && a.waves[a.waves.length-1].t > 1200);
+    check("rescues stay on the wacky menu",
+      a.waves.filter(wv => wv.type === "carrier").length >= 15);
+    check("two flights are two different skies",
+      JSON.stringify(a.waves) !== JSON.stringify(b.waves));
+
+    // The dice themselves.
+    const sizes = new Set(Array.from({length: 60}, () => SF.wacky.roll().length));
+    check("a roll gives two or sometimes three modifiers",
+      [...sizes].every(n => n === 2 || n === 3) && sizes.has(2));
+    check("every rolled modifier is a real table entry",
+      SF.wacky.roll().every(m => SF.wacky.MODIFIERS.includes(m)));
+    check("every modifier explains itself in kid words",
+      SF.wacky.MODIFIERS.every(m => m.name && m.blurb && m.blurb.length > 10));
+    check("the roll becomes the goal line, so the banner IS the reveal",
+      a.goal.includes("GIANT ENEMIES"));
+
+    /*
+     * A run with a pinned roll, so every modifier under test is actually ON.
+     * The build is stubbed rather than the roll: startMission asks
+     * SF.wacky.build() with no arguments, and hoping the dice cooperate is
+     * how a test flakes.
+     */
+    const prof = SF.profile.blank("Wacky"); prof.callsign = "Wacky";
+    [1,2,3].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    prof.lastFlightDay = new Date().toDateString();   // keep the daily double out of the arithmetic
+    SF.profile.save(prof);
+    SF.game.profile = prof;
+    SF.ui.show("screen-game");
+    const realBuild = SF.wacky.build;
+    SF.wacky.build = () => realBuild(["giant","tiny","gold","bouncy","papaRain"]);
+    SF.game.startMission("wacky", "pilot");
+    SF.wacky.build = realBuild;
+
+    check("a wacky run flies the generated mission",
+      SF.game.run.mission.endless === true && SF.game.run.mission.id === "wacky");
+    check("the roll reaches both the run and the world",
+      SF.game.run.mods.giant === true && SF.game.world.mods.giant === true);
+    check("TINY SHIP shrinks the hitbox and the drawn hull together",
+      SF.game.world.player.r === 6 && SF.game.world.player.artScale === 0.68);
+    check("DOUBLE COINS doubles the per-kill pay rate",
+      Math.abs(SF.game.run.payScale - 2) < 0.001);   // PILOT is 1.0 unmodified
+    check("GIANT ENEMIES really are giant", (() => {
+      const t = SF.enemyData.ENEMY_TYPES.grunt;
+      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
+      const ok = e.r > t.r * 1.5 && e.size > t.size * 1.5;
+      e.alive = false;
+      return ok;
+    })());
+    check("BOUNCY COINS bounce off the walls", (() => {
+      const c = SF.game.world.spawnPickup("coin", 5, 300, { value: 1 });
+      c.vx = -80; c.vy = 0;
+      SF.game.world.updatePickups(0.016, () => {});
+      const ok = c.vx > 0;
+      c.alive = false;
+      return ok;
+    })());
+    check("...and off the floor, three times, each softer", (() => {
+      const c = SF.game.world.spawnPickup("coin", 200, SF.entityConst.VH + 5, { value: 1 });
+      c.vx = 0; c.vy = 60;
+      SF.game.world.updatePickups(0.016, () => {});
+      const ok = c.vy < 0 && c.bounces === 2;
+      c.alive = false;
+      return ok;
+    })());
+    check("a rescue pod is above bouncing, even here", (() => {
+      const r = SF.game.world.spawnPickup("rescue", 5, 300, {});
+      r.vx = -80;
+      SF.game.world.updatePickups(0.016, () => {});
+      const ok = r.vx < 0;
+      r.alive = false;
+      return ok;
+    })());
+
+    await runFrames(400);   // ~13s: past the intro and the first PAPA RAIN drop
+    check("PAPA RAIN actually rains Papa heads",
+      SF.game.world.pickups.items.some(i => i.kind === "papahead") ||
+      (SF.game.run.stats.papaHeads || 0) > 0);
+    check("no runtime errors with five modifiers running at once", errors.length === 0);
+
+    SF.game.run.score = 4321;
+    const missionsBefore = JSON.stringify(prof.missions);
+    SF.game.endMission(false);
+    check("the score books as the endless best",
+      prof.endlessBest === 4321 && prof.endlessLongest >= 1);
+    check("a wacky run never touches the campaign records",
+      JSON.stringify(prof.missions) === missionsBefore && prof.lastMission !== "wacky");
+    check("the results celebrate the flight instead of mourning it",
+      id("resultTitle").textContent === "WHAT A FLIGHT!" &&
+      /NEW RECORD/.test(id("resultSubtitle").textContent) &&
+      id("nextBtn").classList.contains("hidden"));
+    check("a worse run does not overwrite the best", (() => {
+      SF.game.startMission("wacky", "pilot");
+      SF.game.run.score = 100;
+      SF.game.endMission(false);
+      return prof.endlessBest === 4321 && !/NEW RECORD/.test(id("resultSubtitle").textContent);
+    })());
+    check("a campaign mission spawns unmodified enemies afterwards", (() => {
+      SF.game.startMission(0, "pilot");   // must not inherit the wacky roll
+      const t = SF.enemyData.ENEMY_TYPES.grunt;
+      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
+      const ok = e.r === t.r && SF.game.world.player.r === 11 && !SF.game.world.player.artScale;
+      e.alive = false;
+      SF.game.endMission(false);
+      return ok;
+    })());
+    SF.game.state = "idle";
+
+    // Menu gating: locked before mission 3, and it says so.
+    const rook = SF.profile.blank("Rook"); SF.profile.save(rook);
+    SF.game.profile = rook;
+    clickEl(qa("#profileGrid .profile-card")[0]); // any click path re-renders below
+    SF.ui.renderProfiles();
+    // Medal ids stay "daily_*" so nobody's earned medals vanish; the flavour moved.
+    check("the endless medals survive the rename with their ids intact",
+      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_ace" && x.pay > 0 && /Wacky/.test(x.desc)) &&
+      SF.config.ACHIEVEMENTS.some(x => x.id === "daily_iron" && x.pay > 0 && /Wacky/.test(x.desc)));
+    check("the wacky unlock rule is mission 3",
+      (() => { const t = SF.profile.blank("T");
+               const no = !(t.missions[3] && t.missions[3].cleared);
+               t.missions[3] = { cleared:true, stars:{}, best:{} };
+               return no && !!(t.missions[3].cleared); })());
   }
 
   /* ---------- pause must not burn a powerup ---------- */

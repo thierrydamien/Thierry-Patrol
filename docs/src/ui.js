@@ -196,18 +196,19 @@ function renderMenu(){
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
-  // The Daily Patrol opens once the basics are learned (mission 3 cleared).
-  // Its sub is the score to beat - yours, or the leading brother's.
+  // The Wacky Sky opens once the basics are learned (mission 3 cleared).
+  // Its sub is the score to beat - yours, or the leading brother's. The old
+  // Daily Patrol bests carry straight over: same field, new party.
   {
-    const open = dailyUnlocked(profile);
-    $("dailyBtn").classList.toggle("locked", !open);
+    const open = wackyUnlocked(profile);
+    $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("dailySub", !open ? "opens after Mission 3"
+    setSub("wackySub", !open ? "opens after Mission 3"
       : rivals.length
         ? "beat " + (rivals[0].callsign || rivals[0].name) + "'s " +
           rivals[0].endlessBest.toLocaleString("en-US") + " pts"
-        : "today's sky - same for everyone");
+        : "every flight is a surprise");
   }
   // Boss Rush opens once the first boss falls; the sub is the score to beat.
   {
@@ -268,20 +269,29 @@ function drawMenuIcons(){
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0, tune: profile.tune });
   });
 
-  paint("dailyBtn", c => {              // a sun coming up over the horizon
+  paint("wackyBtn", c => {              // a tumbling die, mid-roll
     glowSet(c, "#ffd23f");
+    c.save();
+    c.translate(38, 40); c.rotate(-0.35);
     c.fillStyle = "#ffd23f";
-    c.beginPath(); c.arc(38, 46, 15, Math.PI, 0); c.fill();
-    c.strokeStyle = "#ffd23f"; c.lineWidth = 3; c.lineCap = "round";
-    for(let i=0;i<5;i++){
-      const a = Math.PI + (i/4)*Math.PI;
+    const r = 17;
+    // rounded square
+    c.beginPath();
+    c.moveTo(-r+6, -r); c.arcTo(r, -r, r, r, 6); c.arcTo(r, r, -r, r, 6);
+    c.arcTo(-r, r, -r, -r, 6); c.arcTo(-r, -r, r, -r, 6); c.closePath(); c.fill();
+    c.shadowBlur = 0;
+    c.fillStyle = "#241a00";
+    [[-7,-7],[0,0],[7,7]].forEach(([x,y]) => {   // three pips on the diagonal
+      c.beginPath(); c.arc(x, y, 3.4, 0, Math.PI*2); c.fill();
+    });
+    c.restore();
+    // motion sparkles: the roll is still happening
+    c.fillStyle = "#ffd23f";
+    [[12,14],[62,20],[58,60]].forEach(([x,y]) => {
       c.beginPath();
-      c.moveTo(38 + Math.cos(a)*21, 46 + Math.sin(a)*21);
-      c.lineTo(38 + Math.cos(a)*27, 46 + Math.sin(a)*27);
-      c.stroke();
-    }
-    c.strokeStyle = "rgba(255,210,63,0.65)"; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(10, 48); c.lineTo(66, 48); c.stroke();
+      c.moveTo(x, y-4); c.lineTo(x+2.6, y); c.lineTo(x, y+4); c.lineTo(x-2.6, y);
+      c.closePath(); c.fill();
+    });
   });
 
   paint("rushBtn", c => {               // a horned boss hull, eyes lit
@@ -2124,7 +2134,7 @@ function drawBriefHero(index){
     color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0.7, idle:false });
 }
 
-function dailyUnlocked(p){
+function wackyUnlocked(p){
   const rec = p && p.missions && p.missions[3];
   return !!(rec && rec.cleared);
 }
@@ -2351,17 +2361,17 @@ function renderLeaderboard(){
   // tail collapses into one quiet line.
   const flown = MISSIONS.filter(m => P.familyBest(m.id));
   const unflown = MISSIONS.length - flown.length;
-  // The Daily Patrol crown sits on top of the record board - it's the one
-  // record that resets its battleground every morning.
-  const daily = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
+  // The Wacky Sky crown sits on top of the record board - the one record no
+  // campaign stop owns, and the mode both brothers can grind forever.
+  const wackyRows = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
     .sort((a,b) => b.endlessBest - a.endlessBest);
-  const dailyRow = daily.length ? `<div class="rb-row rb-daily${daily[0].name === profile.name ? " mine" : ""}">
+  const wackyRow = wackyRows.length ? `<div class="rb-row rb-wacky${wackyRows[0].name === profile.name ? " mine" : ""}">
       <span class="rb-num">★</span>
-      <span class="rb-name">Daily Patrol</span>
-      <span class="rb-holder">${esc(daily[0].callsign || daily[0].name)}</span>
-      <span class="rb-score">${daily[0].endlessBest.toLocaleString()}</span>
+      <span class="rb-name">Wacky Sky</span>
+      <span class="rb-holder">${esc(wackyRows[0].callsign || wackyRows[0].name)}</span>
+      <span class="rb-score">${wackyRows[0].endlessBest.toLocaleString()}</span>
     </div>` : "";
-  $("recordBoard").innerHTML = dailyRow + flown.map(m => {
+  $("recordBoard").innerHTML = wackyRow + flown.map(m => {
     const best = P.familyBest(m.id);
     const mine = best.owner === profile.name;
     return `<div class="rb-row${mine ? " mine" : ""}">
@@ -2439,7 +2449,7 @@ function showResults(result){
   const { completed, stars, run, objectives, unlocked, prevFamilyBest, prevSelfBest,
           endless, endlessNewBest, durationSec, rush, rushBeaten, rushTotal } = result;
   $("resultTitle").textContent = rush ? (completed ? "RUSH COMPLETE!" : "RUSH OVER")
-    : endless ? "PATROL OVER"
+    : endless ? "WHAT A FLIGHT!"
     : completed ? "MISSION COMPLETE" : "SHIP DOWN";
   $("resultTitle").style.color = rush ? (completed ? "#4ade80" : "#ffd23f")
     : endless ? "#ffd23f"
@@ -2453,7 +2463,7 @@ function showResults(result){
       ? "ALL " + rushTotal + " bosses down, " + (profile.callsign || profile.name) + "!"
       : rushBeaten + " of " + rushTotal + " bosses down — go again?";
   } else if(endless){
-    // A Daily Patrol run never fails - it just has a length and a score.
+    // A Wacky Sky run never fails - it just has a length and a score.
     const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
     sub.textContent = endlessNewBest
       ? "NEW RECORD! " + run.score.toLocaleString("en-US") + " pts in " + m + ":" + s
@@ -2480,13 +2490,13 @@ function showResults(result){
 
   // Advice a seven-year-old can act on is a BUTTON, not a sentence: after two
   // losses on a harder tier, the easier way down is one tap. The arcade modes
-  // (daily, rush) run at a fixed tier, so they never offer it.
+  // (wacky, rush) run at a fixed tier, so they never offer it.
   $("rookieBtn").classList.toggle("hidden",
     !(!endless && !rush && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
   // a loss gets the ten-second defeat sting, which hands back to the menu.
-  // A Daily Patrol ending is never a defeat, so it never gets the sting.
+  // A Wacky Sky ending is never a defeat, so it never gets the sting.
   audio.setMusic(completed || endless ? "menu" : "defeat");
 
   // Three stars rains confetti. Pride deserves paper.
@@ -2510,7 +2520,7 @@ function showResults(result){
   }
 
   // Stars pop in one at a time - the small ceremony that makes replaying
-  // worth it. The Daily Patrol has no stars: the score is the whole story.
+  // worth it. The Wacky Sky has no stars: the score is the whole story.
   const starBox = $("resultStars");
   starBox.innerHTML = (endless || rush) ? "" : [0,1,2].map(i => `<span class="rs" data-i="${i}">★</span>`).join("");
   Array.from(starBox.children).forEach((el, i) => {
@@ -2540,7 +2550,7 @@ function showResults(result){
     <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
     ${(unlocked || []).map(a =>
       `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect £${(a.pay||0).toLocaleString("en-GB")} in MEDALS</b></div>`).join("")}
-    ${endless ? dailyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
+    ${endless ? wackyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
   renderResultComms(run, completed || (endless && endlessNewBest), stars, prevFamilyBest,
                     endless ? result.prevEndlessBest : prevSelfBest);
@@ -2576,14 +2586,14 @@ function rushRecordLine(){
     esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
 }
 
-/** Who holds the Daily Patrol crown right now - shown after every daily run. */
-function dailyRecordLine(){
+/** Who holds the Wacky Sky crown right now - shown after every wacky run. */
+function wackyRecordLine(){
   const rows = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
     .sort((a,b) => b.endlessBest - a.endlessBest);
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Daily crown</span><b>${mine ? "YOURS" :
+  return `<div class="rl record"><span>Wacky Sky crown</span><b>${mine ? "YOURS" :
     esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString("en-US")} pts</b></div>`;
 }
 
@@ -2816,7 +2826,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.6";
+const BUILD = "2026-08-07.7";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;
@@ -2915,14 +2925,14 @@ click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
     }
   });
 })();
-// The Daily Patrol launches straight in - no briefing, no tier choice. Same
-// sky, same rules, PILOT difficulty for everyone: a fair fight over a score.
-click($("dailyBtn"), () => {
-  if(!dailyUnlocked(profile)){
-    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Daily Patrol", label:"LOCKED" });
+// The Wacky Sky launches straight in - no briefing, no tier choice. The
+// launch banner IS the reveal: the roll is a surprise until the sky opens.
+click($("wackyBtn"), () => {
+  if(!wackyUnlocked(profile)){
+    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Wacky Sky", label:"LOCKED" });
     return;
   }
-  launch("daily", "pilot");
+  launch("wacky", "pilot");
 });
 click($("rushBtn"), () => {
   if(!rushUnlocked(profile)){

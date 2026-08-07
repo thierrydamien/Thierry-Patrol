@@ -553,6 +553,18 @@ class World {
     e.r = type.r * (elite ? ELITE.sizeMult : 1);
     e.size = type.size * (elite ? ELITE.sizeMult : 1);
     e.speed = type.speed * (diff ? diff.speed : 1) * (elite ? ELITE.speedMult : 1);
+    /*
+     * The Wacky Sky's roll, applied exactly where elites already scale these
+     * numbers. GIANT trades a little more hull for a much bigger target -
+     * collision radius grows 55% while hp grows 25%, so it plays EASIER and
+     * funnier, which is the mode's contract. SLEEPY only touches movement:
+     * their shots stay honest so dodging still means something.
+     */
+    if(this.mods.giant){
+      e.r *= 1.55; e.size *= 1.55;
+      e.hp = Math.round(e.hp * 1.25); e.maxHp = e.hp;
+    }
+    if(this.mods.sleepy) e.speed *= 0.6;
     e.vx = 0; e.vy = e.speed;
     e.score = Math.round(type.score * (elite ? ELITE.scoreMult : 1));
     e.money = Math.round(type.money * (elite ? ELITE.moneyMult : 1));
@@ -692,6 +704,7 @@ class World {
     p.vy = kind === "rescue" ? 42 : kind === "supply" ? 44 : rand(40, 80);
     p.value = (data && data.value) || 0;
     p.data = data || null;
+    p.bounces = 3;   // BOUNCY COINS' budget; inert unless that mod is rolled
     return p;
   }
 
@@ -717,7 +730,28 @@ class World {
       it.angle += dt*2.4;
       it.vy += 95*dt;                        // fall, gently - coins are worth chasing
       it.vy = Math.min(it.vy, it.kind === "rescue" ? 55 : it.kind === "supply" ? 58 : 86);
-      it.vx *= Math.pow(0.96, dt*60);
+      /*
+       * BOUNCY COINS. Walls reflect, and the floor gives back three bounces
+       * before letting the coin leave - each softer than the last, so the sky
+       * fills with lazy popcorn instead of a perpetual-motion machine (the
+       * pickup pool caps at 160, and pickups that never exit would eat it).
+       * Rescue pods and supply crates are exempt: a *rescue* boinging off the
+       * floor reads wrong even in the silly mode. Everywhere else the sideways
+       * drift decays like it always has.
+       */
+      const bouncy = this.mods.bouncy && it.kind !== "rescue" && it.kind !== "supply";
+      if(bouncy){
+        if(it.x < 14 && it.vx < 0){ it.x = 14; it.vx = -it.vx; }
+        else if(it.x > VW - 14 && it.vx > 0){ it.x = VW - 14; it.vx = -it.vx; }
+        if(it.y > VH - 16 && it.vy > 0 && it.bounces > 0){
+          it.bounces--;
+          it.y = VH - 16;
+          it.vy = -it.vy * 0.72;
+          it.vx += rand(-40, 40);   // each bounce wanders - that's the comedy
+        }
+      } else {
+        it.vx *= Math.pow(0.96, dt*60);
+      }
 
       if(p && p.alive){
         const dx = p.x - it.x, dy = p.y - it.y;

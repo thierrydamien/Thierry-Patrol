@@ -71,7 +71,7 @@ const STORY = {
       { art:"sky",  text:"The Devourer came apart in a light so bright that every pilot in the sector saw it from home. Where it was, there is nothing now - just the dark, and then, slowly, stars again." },
       { art:"crew", text:"They all came, {you}. Every pilot you ever pulled out of a cell or caught drifting - they turned up at the end and flew the last minute with you. That's the part they'll tell." },
       { art:"now",  text:"Command's calling it the day the war ended. Down there they're calling it something else: the day the Thierrys went out to the last star and came back." },
-      { art:"sky",  text:"The sky is yours, {you}. Take it anywhere - the missions are still up there on the harder tiers, and nobody has ever flown the Daily Patrol as far as you're about to." },
+      { art:"sky",  text:"The sky is yours, {you}. Take it anywhere - the missions are still up there on the harder tiers, and no sky is too wild for you now - not even the Wacky one." },
     ],
     button:"COME HOME",
   },
