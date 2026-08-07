@@ -456,6 +456,30 @@ function elFor(key){
   return el;
 }
 
+/*
+ * Everything that is NOT the current track, i.e. everything that has to end up
+ * silent.
+ *
+ * This exists because of "two musics playing at the same time". setMusic()
+ * used to capture a single `old` element to fade out, and every call clears
+ * the running fade timer - so a switch that landed while a fade was still
+ * going killed the timer that was fading the PREVIOUS track down and left it
+ * sounding forever, at whatever volume it had reached. menu -> combat -> boss,
+ * which is just launching into a boss mission, was enough to do it: reproduced
+ * with the menu theme stranded at 0.07 under the boss theme at 0.68.
+ *
+ * Fading one element was always going to be a guess about how many were
+ * playing. The registry knows, so ask it.
+ */
+function otherTracks(){
+  const out = [];
+  for(const k in musicEls){
+    const e = musicEls[k];
+    if(e && e !== musicEl) out.push(e);
+  }
+  return out;
+}
+
 /** Try to sound the current element. Autoplay rules may refuse before the
     first tap - init() retries on every gesture, so it recovers by itself. */
 function tryPlay(){
@@ -470,6 +494,10 @@ function tryPlay(){
     A hidden tab counts as "off" too - background music from a page nobody is
     looking at is how a game gets force-closed. */
 function applyMusicState(){
+  // Whatever state we are moving into, nothing but the current track may be
+  // sounding: a stranded element would otherwise play straight through a mute,
+  // a music-off switch and a backgrounded app.
+  otherTracks().forEach(e => { try { e.pause(); } catch(err){} });
   if(!musicEl) return;
   if(muted || !musicOn || document.hidden){
     try { musicEl.pause(); } catch(e){}
@@ -485,7 +513,6 @@ document.addEventListener("visibilitychange", applyMusicState);
 function setMusic(name){
   if(name === musicTrack) return;
   musicTrack = name;
-  const old = musicEl;
   musicEl = null;
   const def = name && MUSIC[name];
   if(def){
@@ -507,11 +534,13 @@ function setMusic(name){
   if(fadeTimer) clearInterval(fadeTimer);
   fadeTimer = setInterval(() => {
     let busy = false;
-    if(old && old !== musicEl){
-      old.volume = Math.max(0, old.volume - 0.10);
-      if(old.volume > 0) busy = true;
-      else try { old.pause(); } catch(e){}
-    }
+    // Every outgoing track, not just the one this call happened to displace.
+    otherTracks().forEach(e => {
+      if(e.paused) return;
+      e.volume = Math.max(0, e.volume - 0.10);
+      if(e.volume > 0) busy = true;
+      else try { e.pause(); } catch(err){}
+    });
     if(musicEl && !muted && musicOn && musicEl.volume < musicVol){
       musicEl.volume = Math.min(musicVol, musicEl.volume + 0.07);
       busy = true;
