@@ -338,8 +338,20 @@ function startMission(missionIndex, difficultyId){
    * the collision radius so TINY SHIP shrinks both, honestly, in one place.
    */
   if(game.world.mods.tiny){
-    game.world.player.r = 5;              // stock is 11 - visibly hard to hit
-    game.world.player.artScale = 0.55;    // roughly half a ship: unmissable
+    // Third cut. Half a ship was still "not really noticeable"; a THIRD of a
+    // ship is a gnat with a gun, which is the joke. The hitbox shrinks with
+    // it - tiny is the one modifier where matching art and collision makes
+    // the game strictly easier, so no cartoon split is needed.
+    game.world.player.r = 4;              // stock is 11
+    game.world.player.artScale = 0.32;
+  }
+  if(game.world.mods.mega){
+    // The other half of "tiny and huge ships": drawn at nearly double,
+    // colliding at stock. Art-only on purpose - a genuinely doubled hitbox
+    // would be the one modifier that makes the game harder, and the fun is
+    // LOOKING like a parade float, not dying like one. The wingman drones
+    // scale with the hull, which is its own joke.
+    game.world.player.artScale = 1.9;
   }
   if(game.world.mods.turbo){
     // 1.45x read as "a good thruster upgrade". 1.7x reads as TURBO - and the

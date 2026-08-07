@@ -2944,6 +2944,27 @@ full list collided with the score on one side and the money on the other.
 Launch also got a slot-machine beat: each name pops up in its colour with a
 firework, one per beat, under the banner.
 
+### 8bt7c. Third pass: cartoon physics
+
+"The size difference isn't really noticeable... Don't be afraid of overdoing
+it. Better too crazy than too simple." A brief that explicit deserves a
+mechanism, not another nudge, and the mechanism is the oldest cartoon trick
+there is: **draw insane, collide fair**.
+
+GIANT popcorn now TRIPLES on screen while its hitbox grows only 1.6x. The
+split is what protects the mode's oldest contract (easier and funnier, never
+harder): formations spread across VW however fat their members get, so at 3x
+collision radii a 13-grunt wall would physically seal the field. Drawn
+enormous, collided fair - a wall LOOKS solid and shreds like popcorn. TINY
+went from half a ship to a THIRD (there, art and hitbox shrink together,
+because matching them only makes the game easier). And "tiny and huge ships"
+got its other half: MEGA SHIP, drawn at 1.9x and colliding at stock - the
+one modifier where an honest hitbox would have made the game harder, so it
+gets the cartoon split in the other direction. The wingman drones scale with
+the hull, which is its own joke. `tiny` and `mega` are the table's first
+exclusion pair; the roll walks a shuffle and skips conflicts so the hand
+size survives.
+
 ## 8bt8. One seed per run: the simulation stream stops being a commons
 
 This file records four separate incidents of the same accident: something
@@ -2992,7 +3013,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~613 checks.
+  be re-measured after load. ~617 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

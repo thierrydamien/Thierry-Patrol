@@ -3628,38 +3628,38 @@ async function run(){
       SF.game.run.mission.endless === true && SF.game.run.mission.id === "wacky");
     check("the roll reaches both the run and the world",
       SF.game.run.mods.giant === true && SF.game.world.mods.giant === true);
-    check("TINY SHIP shrinks the hitbox and the drawn hull together",
-      SF.game.world.player.r === 5 && SF.game.world.player.artScale === 0.55);
+    check("the HUD wears the roll for the whole run, not just the banner",
+      SF.game.run.mission.modList.length >= 2 &&
+      /run\.mission\.modList/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
+    check("the reveal queues one pop per modifier",
+      SF.game.run.modReveal && SF.game.run.modReveal.queue.length === SF.game.run.mission.modList.length);
+    check("TINY SHIP is a gnat: a third of a ship, hitbox to match",
+      SF.game.world.player.r === 4 && SF.game.world.player.artScale === 0.32);
     check("DOUBLE COINS doubles the per-kill pay rate",
       Math.abs(SF.game.run.payScale - 2) < 0.001);   // PILOT is 1.0 unmodified
-    check("GIANT popcorn actually doubles - a joke, not a tuning note", (() => {
+    check("GIANT popcorn TRIPLES on screen - cartoon, not tuning", (() => {
       const t = SF.enemyData.ENEMY_TYPES.grunt;
       const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
-      const ok = e.r > t.r * 2 && e.size > t.size * 2;
+      const ok = e.size > t.size * 2.8;
+      e.alive = false;
+      return ok;
+    })());
+    check("...but collides at a fair size, so a wall formation stays passable", (() => {
+      // Formations spread across VW however fat their members get: at 3x
+      // collision radii a 13-grunt wall would physically seal the field.
+      const t = SF.enemyData.ENEMY_TYPES.grunt;
+      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
+      const ok = e.r > t.r * 1.4 && e.r < t.r * 1.7;
       e.alive = false;
       return ok;
     })());
     check("...while terrain-sized types stay flyable-around", (() => {
       const t = SF.enemyData.ENEMY_TYPES.boulder;
       const e = SF.game.world.spawnEnemy("boulder", 100, -40, { difficulty: SF.game.run.difficulty });
-      const ok = e.r < t.r * 1.4;   // 1.25 tier: bigger, never a wall
+      const ok = e.r < t.r * 1.2 && e.size < t.size * 1.5;
       e.alive = false;
       return ok;
     })());
-    check("SLEEPY enemies fly through syrup, not just a quiet day", (() => {
-      SF.game.world.mods.sleepy = true;
-      const t = SF.enemyData.ENEMY_TYPES.grunt;
-      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
-      delete SF.game.world.mods.sleepy;
-      const ok = e.speed < t.speed * 0.4;
-      e.alive = false;
-      return ok;
-    })());
-    check("the HUD wears the roll for the whole run, not just the banner",
-      SF.game.run.mission.modList.length >= 2 &&
-      /run\.mission\.modList/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
-    check("the reveal queues one pop per modifier",
-      SF.game.run.modReveal && SF.game.run.modReveal.queue.length === SF.game.run.mission.modList.length);
     check("BOUNCY COINS bounce off the walls", (() => {
       const c = SF.game.world.spawnPickup("coin", 5, 300, { value: 1 });
       c.vx = -80; c.vy = 0;
@@ -3716,6 +3716,37 @@ async function run(){
       SF.game.run.score = 100;
       SF.game.endMission(false);
       return prof.endlessBest === 4321 && !/NEW RECORD/.test(id("resultSubtitle").textContent);
+    })());
+    check("MEGA SHIP is drawn as a parade float and collides at stock", (() => {
+      // Art-only on purpose: a doubled hitbox would be the one modifier that
+      // makes the game harder.
+      const real = SF.wacky.build;
+      SF.wacky.build = () => real(["mega"]);
+      SF.game.startMission("wacky", "pilot");
+      SF.wacky.build = real;
+      const p2 = SF.game.world.player;
+      const ok = p2.artScale === 1.9 && p2.r === 11;
+      SF.game.endMission(false);
+      return ok;
+    })());
+    check("tiny and mega never share a sky", (() => {
+      for(let i = 0; i < 300; i++){
+        const ids = SF.wacky.roll().map(m => m.id);
+        if(ids.includes("tiny") && ids.includes("mega")) return false;
+      }
+      return true;
+    })());
+    check("an exclusion does not shrink the hand",
+      (() => { for(let i = 0; i < 60; i++){ const n = SF.wacky.roll().length;
+               if(n !== 2 && n !== 3) return false; } return true; })());
+    check("SLEEPY enemies fly through syrup, not just a quiet day", (() => {
+      SF.game.world.mods.sleepy = true;
+      const t = SF.enemyData.ENEMY_TYPES.grunt;
+      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
+      delete SF.game.world.mods.sleepy;
+      const ok = e.speed < t.speed * 0.4;
+      e.alive = false;
+      return ok;
     })());
     check("a campaign mission spawns unmodified enemies afterwards", (() => {
       SF.game.startMission(0, "pilot");   // must not inherit the wacky roll
