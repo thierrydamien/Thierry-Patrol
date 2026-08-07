@@ -3627,16 +3627,37 @@ async function run(){
     check("the roll reaches both the run and the world",
       SF.game.run.mods.giant === true && SF.game.world.mods.giant === true);
     check("TINY SHIP shrinks the hitbox and the drawn hull together",
-      SF.game.world.player.r === 6 && SF.game.world.player.artScale === 0.68);
+      SF.game.world.player.r === 5 && SF.game.world.player.artScale === 0.55);
     check("DOUBLE COINS doubles the per-kill pay rate",
       Math.abs(SF.game.run.payScale - 2) < 0.001);   // PILOT is 1.0 unmodified
-    check("GIANT ENEMIES really are giant", (() => {
+    check("GIANT popcorn actually doubles - a joke, not a tuning note", (() => {
       const t = SF.enemyData.ENEMY_TYPES.grunt;
       const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
-      const ok = e.r > t.r * 1.5 && e.size > t.size * 1.5;
+      const ok = e.r > t.r * 2 && e.size > t.size * 2;
       e.alive = false;
       return ok;
     })());
+    check("...while terrain-sized types stay flyable-around", (() => {
+      const t = SF.enemyData.ENEMY_TYPES.boulder;
+      const e = SF.game.world.spawnEnemy("boulder", 100, -40, { difficulty: SF.game.run.difficulty });
+      const ok = e.r < t.r * 1.4;   // 1.25 tier: bigger, never a wall
+      e.alive = false;
+      return ok;
+    })());
+    check("SLEEPY enemies fly through syrup, not just a quiet day", (() => {
+      SF.game.world.mods.sleepy = true;
+      const t = SF.enemyData.ENEMY_TYPES.grunt;
+      const e = SF.game.world.spawnEnemy("grunt", 100, -40, { difficulty: SF.game.run.difficulty });
+      delete SF.game.world.mods.sleepy;
+      const ok = e.speed < t.speed * 0.4;
+      e.alive = false;
+      return ok;
+    })());
+    check("the HUD wears the roll for the whole run, not just the banner",
+      SF.game.run.mission.modList.length >= 2 &&
+      /run\.mission\.modList/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
+    check("the reveal queues one pop per modifier",
+      SF.game.run.modReveal && SF.game.run.modReveal.queue.length === SF.game.run.mission.modList.length);
     check("BOUNCY COINS bounce off the walls", (() => {
       const c = SF.game.world.spawnPickup("coin", 5, 300, { value: 1 });
       c.vx = -80; c.vy = 0;
@@ -3663,6 +3684,15 @@ async function run(){
     })());
 
     await runFrames(400);   // ~13s: past the intro and the first PAPA RAIN drop
+    check("the reveal pops drain as the run starts",
+      SF.game.run.modReveal.queue.length === 0);
+    // Kill-drop coins spawn where enemies die (y > 0); the gold shower spawns
+    // above the field. A coin born up there can only be the rain.
+    SF.game.world.pickups.killAll();
+    SF.game.run.goldRainTimer = 0.01;
+    await runFrames(3);
+    check("DOUBLE COINS visibly rains money from the top of the sky",
+      SF.game.world.pickups.items.some(i => i.alive && i.kind === "coin" && i.y < 60));
     check("PAPA RAIN actually rains Papa heads",
       SF.game.world.pickups.items.some(i => i.kind === "papahead") ||
       (SF.game.run.stats.papaHeads || 0) > 0);

@@ -2923,6 +2923,27 @@ its original slot it shifted the movement bot's phase enough that the rewind
 test's tape recorded a ship parked against a wall. Phase-heavy sections live
 at the end of the suite now, beside the pause block, for exactly this reason.
 
+### 8bt7b. Second pass: LOUDER
+
+"I'm playing a game and I can barely tell the difference with a normal game."
+Fair, and the miss was mine: the rule said every modifier must be visible in
+seconds, and half the table broke it. A DOUBLE COINS + SLEEPY ENEMIES roll
+changed nothing a kid could point at, the magnitudes were tuning-level
+(giant 1.55x reads as a patch note), and after the six-second banner faded
+nothing on screen said the mode was on at all.
+
+Three fixes. Magnitudes went to cartoon level, tiered by bulk: popcorn
+doubles (2.1x), mid-weights 1.6x, terrain 1.25x so a boulder never becomes a
+wall; tiny is now half a ship; sleepy dropped to 0.35x - syrup, not a quiet
+day; turbo to 1.7x. Every silent modifier got a visible signature: DOUBLE
+COINS literally rains coins from the top of the sky, SLEEPY enemies snore
+drifting "z z z", TURBO streaks the starfield at 1.9x. And the mode wears its
+roll all run long: the HUD's tier line (dead weight - the mode is always
+PILOT) now cycles one modifier name at a time in its own colour, because the
+full list collided with the score on one side and the money on the other.
+Launch also got a slot-machine beat: each name pops up in its colour with a
+firework, one per beat, under the banner.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -2937,7 +2958,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~602 checks.
+  be re-measured after load. ~608 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

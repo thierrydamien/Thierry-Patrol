@@ -326,12 +326,15 @@ function startMission(missionIndex, difficultyId){
    * the collision radius so TINY SHIP shrinks both, honestly, in one place.
    */
   if(game.world.mods.tiny){
-    game.world.player.r = 6;              // stock is 11 - visibly hard to hit
-    game.world.player.artScale = 0.68;
+    game.world.player.r = 5;              // stock is 11 - visibly hard to hit
+    game.world.player.artScale = 0.55;    // roughly half a ship: unmissable
   }
   if(game.world.mods.turbo){
-    game.world.player.accel *= 1.45;
-    game.world.player.maxSpeed *= 1.45;
+    // 1.45x read as "a good thruster upgrade". 1.7x reads as TURBO - and the
+    // background streaks harder with it (see updateBackground), so the speed
+    // is visible even when the thumb is still.
+    game.world.player.accel *= 1.7;
+    game.world.player.maxSpeed *= 1.7;
   }
 
   const director = new SF.systems.WaveDirector(mission, difficulty, game.world);
@@ -376,6 +379,11 @@ function startMission(missionIndex, difficultyId){
     payScale: (difficulty.pay / Math.sqrt(difficulty.density || 1))
               * (mission.mods && mission.mods.gold ? 2 : 1),   // DOUBLE COINS
     mods: mission.mods || {},
+    // The roll, spelled out for the HUD (it replaces the tier label - the
+    // Wacky Sky is always PILOT, so that line was dead weight) and queued for
+    // the slot-machine reveal that pops each name in its own colour.
+    modLine: mission.modList ? mission.modList.map(m => m.name).join(" + ") : null,
+    modReveal: mission.modList ? { queue: mission.modList.slice(), t: 1.1 } : null,
     score: 0, money: 0, combo: 0, comboTimer: 0, maxCombo: 0,
     time: 0, phase: "intro", phaseTimer: 2.2,
     bossActive: false, bossSpawned: false, bossCleared: false, progress: 0,
@@ -1381,6 +1389,54 @@ function update(dt, timeMs){
   // The Star Vault: the sky rains golden stars, thick during the free-fly
   // and still falling (thinner) through the KING PAPA fight, so the whole
   // level glitters end to end.
+  /*
+   * The Wacky Sky's slot-machine reveal. The banner lists the whole roll, but
+   * a list is a sentence, and a seven-year-old reads a POP: each modifier
+   * name bursts up in its own colour, one per beat, under the banner.
+   */
+  if(run.modReveal && run.modReveal.queue.length && !run.ended){
+    run.modReveal.t -= dt;
+    if(run.modReveal.t <= 0){
+      const m = run.modReveal.queue.shift();
+      run.modReveal.t = 0.9;
+      fx.text(VW/2, VH*0.60, m.name + "!", m.color, 30, true);
+      fx.firework(VW/2 + rand(-60, 60), VH*0.56, m.color);
+      audio.play("uiBuy");
+    }
+  }
+
+  // SLEEPY ENEMIES snore. The 0.35x speed is the mechanic; the drifting
+  // "z z z" is what makes a kid SEE it instead of wondering why the sky is
+  // quiet. One snorer every beat and a half, picked at random.
+  if(run.mods.sleepy && !run.ended){
+    run.zzzTimer = (run.zzzTimer == null ? 1.2 : run.zzzTimer) - dt;
+    if(run.zzzTimer <= 0){
+      run.zzzTimer = 1.6;
+      const alive = game.world.enemies.items.filter(e => e.alive && e.y > 0 && e.y < VH*0.7);
+      if(alive.length){
+        const e = alive[Math.floor(rand(0, alive.length))];
+        fx.text(e.x + e.size*0.3, e.y - e.size*0.4, "z z z", "#9bb0ff", 15, true);
+      }
+    }
+  }
+
+  // DOUBLE COINS doesn't just double the ledger - it visibly RAINS money.
+  // The doubled payScale was invisible ("I can barely tell the difference"),
+  // and an economy modifier a kid can't see isn't a party trick, it's
+  // accounting. A little shower of free coins every few seconds is the party.
+  if(run.mods.gold && run.phase !== "intro" && !run.ended){
+    run.goldRainTimer = (run.goldRainTimer == null ? 2.5 : run.goldRainTimer) - dt;
+    if(run.goldRainTimer <= 0){
+      run.goldRainTimer = rand(4.5, 7);
+      const n = randInt(3, 4);
+      for(let i = 0; i < n; i++){
+        const c = game.world.spawnPickup("coin", rand(40, VW - 40), rand(-60, -15),
+                                         { value: randInt(6, 12) });
+        c.vx = rand(-35, 35);
+      }
+    }
+  }
+
   // PAPA RAIN: the Wacky Sky's best joke, stolen from the Star Vault. A Papa
   // head drifts in every several seconds - worth money, a boing, and a line
   // of French. The cadence is a drip, not a downpour: each one should be an
