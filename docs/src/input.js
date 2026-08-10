@@ -88,10 +88,20 @@ function attach(canvasEl, vw, vh){
      */
     if(dragPointerId !== null || e.pointerType !== "mouse") return;
     const r = canvas.getBoundingClientRect();
-    const inside = r.width > 0 &&
-      e.clientX >= r.left && e.clientX <= r.right &&
-      e.clientY >= r.top && e.clientY <= r.bottom;
-    if(inside){
+    /*
+     * Fullscreen letterboxes a 3:4 playfield inside a 16:10 laptop display, so
+     * the sky is flanked by wide black bars. Treating those as "outside" meant
+     * the ship went dead the moment the pointer drifted onto one, and hunting
+     * for an invisible cursor to get back was worse than the drift. In
+     * fullscreen the whole screen IS the game: anywhere steers, and
+     * pointerToVirtual's clamp parks the ship on the nearest edge. Windowed,
+     * only the canvas counts - past it are the browser's own controls and
+     * other apps, and nobody is flying with those.
+     */
+    const live = r.width > 0 && (!!document.fullscreenElement ||
+      (e.clientX >= r.left && e.clientX <= r.right &&
+       e.clientY >= r.top && e.clientY <= r.bottom));
+    if(live){
       hoverSteer = true; state.dragging = true;
       pointerToVirtual(e.clientX, e.clientY, 0);
     } else if(hoverSteer){
