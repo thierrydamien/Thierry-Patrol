@@ -1295,11 +1295,6 @@ function renderArmory(){
   tabs.onscroll = syncTabFade;
   syncTabFade();
 
-  // Browsing tabs don't pin the ship bay: on STYLE SHOP and MY SHIP the
-  // cards already show the ship, and a sticky bay turned scrolling into
-  // peering through a letterbox.
-  $("screen-armory").classList.toggle("unpinned", armoryTab === "paint" || armoryTab === "parts");
-
   const panel = $("armoryPanel");
   panel.innerHTML = "";
   if(armoryTab === "parts") renderPartsTab(panel, levels, next);
@@ -2990,7 +2985,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-10.1";
+const BUILD = "2026-08-10.2";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;

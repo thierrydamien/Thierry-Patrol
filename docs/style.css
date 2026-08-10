@@ -805,20 +805,19 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 
 /* ===================== ARMORY / HANGAR ===================== */
-/* The bay is pinned so a part you buy appears on the hull under your thumb,
-   without scrolling back up. It sticks to the scroll container (.screen). */
+/* The bay used to be sticky so a part you buy appeared on the hull under your
+   thumb. It cost more than it gave: on a tall screen it froze the ship across
+   the top third and hard-clipped every card sliding under it. The bay now
+   scrolls away like everything else - fitting a part already announces itself
+   with a "FITTED" toast, so nothing is lost by letting the ship leave. */
 .armory-top {
-  position: sticky; top: 0; z-index: 5;
+  position: static;
   width:100%; padding-bottom:8px;
-  /* Solid, not a fade: a translucent tail let the shelves scroll up *through*
-     the "next part" line and read as overlapping text. */
-  background: #16143c;
-  box-shadow: 0 8px 14px -8px rgba(0,0,0,0.85);
 }
 .armory-stage {
-  /* Capped in viewport height as well as ratio: pinned to the top of a short
-     laptop window, a 620x360 box would eat half the screen and leave no room
-     for the thing you came here to buy. */
+  /* Capped in viewport height as well as ratio: on a short laptop window a
+     full-width 620x360 box would eat half the screen before you saw a single
+     thing you came here to buy. */
   position:relative; width:100%; aspect-ratio: 620 / 340; max-height: 32vh;
   border-radius:16px; border:1px solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(30,42,90,0.55), rgba(8,10,26,0.75));
@@ -1225,9 +1224,6 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .trail-strip { height:30px; width:100%; }
 .paint-note { font-size:12px; color: rgba(255,255,255,0.6); text-align:center; margin-top:2px; }
 
-/* Browsing tabs (STYLE SHOP, MY SHIP) don't need the ship bay glued to the
-   top - it made long lists feel like scrolling through a letterbox. */
-#screen-armory.unpinned .armory-top { position: static; box-shadow: none; }
 /* A free paint still gets a button, just not a price-shaped one. */
 .paint-card .free-btn { background: #4ade80; color:#08260f; }
 
