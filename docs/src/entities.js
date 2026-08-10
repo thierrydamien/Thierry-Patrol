@@ -374,7 +374,8 @@ class World {
       p.vy += (ay/l) * p.accel * dt;
     }
     if(input.dragging){
-      // Touch: steer toward the finger with a spring, capped at the same top speed.
+      // Pointer (finger or hovering cursor): steer toward it with a spring,
+      // capped at the same top speed.
       const dx = input.dragX - p.x, dy = input.dragY - p.y;
       p.vx = damp(p.vx, clamp(dx * 12, -p.maxSpeed, p.maxSpeed), 26, dt);
       p.vy = damp(p.vy, clamp(dy * 12, -p.maxSpeed, p.maxSpeed), 26, dt);

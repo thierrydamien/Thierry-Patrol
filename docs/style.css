@@ -667,7 +667,11 @@ html, body {
 
 /* ---------------- game ---------------- */
 .game-frame { position:relative; background:#05040f; border-radius:10px; overflow:hidden; }
-#game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+/* cursor:none - with hover steering the ship IS the pointer, and an arrow
+   riding on top of your own ship reads as clutter. The HUD buttons and every
+   overlay sit above the canvas, so the cursor reappears the moment there is
+   something to click. */
+#game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:none; }
 
 .icon-btn {
   position:absolute; z-index:5; width:36px; height:36px; border-radius:50%;
