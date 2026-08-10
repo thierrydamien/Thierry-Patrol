@@ -3198,6 +3198,50 @@ Deleted with it: the `unpinned` class, the `#screen-armory.unpinned` rule, and
 the tab-conditional `classList.toggle` in `renderArmory`. Three moving parts
 whose only job was to decide when the fourth one was wrong.
 
+## 8y. The trackpad is a touchscreen lying flat
+
+"Make the game fully playable with a Mac trackpad, similar to the iPad
+experience - move a finger around the trackpad without needing to click or
+hold." The good news is that the browser has already done most of this: a
+trackpad glide arrives as plain `pointermove` events with `pointerType:
+"mouse"` and no button down. The iPad experience was only missing because the
+input layer *required a pointerdown* before it would listen.
+
+So mouse pointers get **hover steering**: whenever a buttonless mouse move
+lands inside the playfield canvas, the ship engages and chases it - the same
+spring, the same speed cap, the same feel as a finger on glass. When the
+pointer leaves the canvas the ship disengages and settles. A click mid-flight
+neither starts nor stops anything: `pointerup` hands control straight back to
+hover instead of dropping the drag, so clicking the bomb button doesn't make
+the ship stutter. Touch is untouched - a touchscreen only emits `pointermove`
+while a finger is down, so the hover branch is unreachable for it, and the
+smoke test pins that.
+
+Two details carried the feel:
+
+- **No lift for a cursor.** Touch steering lifts the ship 48px above the
+  finger because a thumb hides what's under it. A cursor hides nothing;
+  keeping the lift would have made "put the ship exactly there" impossible
+  on the one input device that's precise enough to want it. `TOUCH_LIFT` now
+  applies to `pointerType === "touch"` only - which also fixed the old
+  click-drag path for mouse users, which had been inheriting the thumb lift
+  for no reason.
+- **`cursor: none` on the playfield.** With zero lift the OS arrow would sit
+  exactly on the ship, reading as clutter. The ship IS the pointer. The HUD
+  buttons and every overlay are DOM elements above the canvas, so the cursor
+  reappears the moment there is anything to click - pause, results, dialogs
+  all keep a normal arrow.
+
+The hover branch checks `rect.width > 0` before engaging: a hidden screen's
+canvas measures 0x0, so menu-time mouse movement can never set a stale drag
+target for the next mission's first frame (`clearMovement` also drops the
+hover flag, so a mission starts deaf until the pointer actually moves).
+
+Verified in real Chromium, not just jsdom: glide the mouse (no button) to 85%
+of the field width, and the ship converges on virtual x 544 for a target of
+544, releases the moment the pointer leaves the canvas, and the computed
+cursor over the canvas is `none`.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3212,7 +3256,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~649 checks.
+  be re-measured after load. ~657 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

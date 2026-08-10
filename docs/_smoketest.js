@@ -4132,6 +4132,61 @@ async function run(){
     SF.audio.setMuted(false);
   }
 
+  /* ---------- hover steering: a Mac trackpad plays like the iPad ---------- */
+  /*
+   * A trackpad reaches the browser as a mouse, so "glide a finger, no click"
+   * is a buttonless pointermove. The ship must follow it while it is over the
+   * playfield, let go when it leaves, and never apply the thumb lift (a
+   * cursor hides nothing). jsdom's MouseEvent has no pointerType, which is
+   * exactly what lets us stamp one on per dispatch. LAST in the suite: it
+   * leaves input state alone afterwards, but no flying block should ever run
+   * with a synthetic pointer still down.
+   */
+  {
+    const cv = id("game");
+    const realRect = cv.getBoundingClientRect;
+    cv.getBoundingClientRect =
+      () => ({ left: 0, top: 0, right: 300, bottom: 400, width: 300, height: 400 });
+    const ptr = (type, name, x, y, target, pointerId) => {
+      const ev = new window.MouseEvent(name, { clientX: x, clientY: y, bubbles: true });
+      Object.defineProperty(ev, "pointerType", { value: type });
+      if(pointerId != null) Object.defineProperty(ev, "pointerId", { value: pointerId });
+      (target || window).dispatchEvent(ev);
+    };
+    const st = SF.input.state;
+    SF.input.clearMovement();
+
+    ptr("mouse", "pointermove", 150, 200);
+    check("a buttonless mouse move over the playfield steers the ship", st.dragging);
+    const mouseY = st.dragY;
+
+    ptr("mouse", "pointermove", 150, 9999);
+    check("steering lets go when the pointer leaves the playfield", !st.dragging);
+
+    ptr("touch", "pointermove", 150, 200);
+    check("a touch pointer never steers from a bare move", !st.dragging);
+
+    ptr("touch", "pointerdown", 150, 200, cv, 7);
+    check("a held finger still steers", st.dragging);
+    check("...with the thumb lift a cursor doesn't get",
+      Math.abs((mouseY - st.dragY) - 48) < 0.001);
+    ptr("touch", "pointerup", 150, 200, null, 7);
+    check("lifting the finger releases the drag", !st.dragging);
+
+    ptr("mouse", "pointerdown", 150, 200, cv, 3);
+    ptr("mouse", "pointermove", 160, 210);
+    ptr("mouse", "pointerup", 160, 210, null, 3);
+    ptr("mouse", "pointermove", 170, 220);
+    check("a click released over the playfield doesn't drop mouse steering", st.dragging);
+
+    check("the playfield hides the OS cursor - the ship is the pointer",
+      /#game\s*\{[^}]*cursor:\s*none/.test(
+        fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
+
+    cv.getBoundingClientRect = realRect;
+    SF.input.clearMovement();
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;
