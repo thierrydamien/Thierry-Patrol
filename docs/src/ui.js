@@ -41,6 +41,74 @@ function money(n){ return "£" + Math.round(n).toLocaleString("en-GB"); }
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+/*
+ * THE IN-GAME DIALOG - the themed replacement for prompt()/confirm().
+ *
+ * A native OS dialog was the single most prototype-feeling moment in the
+ * game: unthemed system chrome over a hand-built UI, and visibly foreign on
+ * an iPhone home-screen install. This is the same overlay language as the
+ * story cards. ask() resolves to the entered string or null; confirmDlg()
+ * to true/false. One dialog at a time - a second request while one is up
+ * auto-cancels the first, which cannot happen from the UI anyway.
+ */
+let dialogResolve = null;
+function dialog(opts){
+  return new Promise(resolve => {
+    if(dialogResolve) dialogResolve(null);
+    dialogResolve = resolve;
+    $("dialogTitle").textContent = opts.title || "";
+    $("dialogText").textContent = opts.text || "";
+    $("dialogText").classList.toggle("hidden", !opts.text);
+    const input = $("dialogInput");
+    input.classList.toggle("hidden", !opts.input);
+    input.value = opts.value || "";
+    input.placeholder = opts.placeholder || "";
+    $("dialogOk").textContent = opts.okLabel || "OK";
+    $("dialogCancel").textContent = opts.cancelLabel || "CANCEL";
+    $("dialogOverlay").querySelector(".dialog-inner").classList.toggle("dialog-danger", !!opts.danger);
+    $("dialogOverlay").classList.remove("hidden");
+    if(opts.input) setTimeout(() => { try { input.focus(); } catch(e){} }, 60);
+  });
+}
+function closeDialog(result){
+  $("dialogOverlay").classList.add("hidden");
+  const r = dialogResolve; dialogResolve = null;
+  if(r) r(result);
+}
+function ask(title, opts){ return dialog(Object.assign({ title, input:true }, opts || {})); }
+function confirmDlg(title, text, opts){
+  return dialog(Object.assign({ title, text, okLabel:"YES" }, opts || {}))
+    .then(v => v !== null);
+}
+
+/*
+ * Post-render glyph fill: innerHTML can't embed a painted canvas, so markup
+ * leaves `.lock-slot` / `[data-glyph]` placeholders and this sweeps them into
+ * drawn icons. One place, so every screen's chrome is painted the same way.
+ */
+function fillGlyphs(root, name, color, px){
+  qa2(root, ".lock-slot").forEach(slot => {
+    slot.appendChild(SF.icons.el("lock", color || "rgba(255,255,255,0.75)",
+      slot.classList.contains("lock-slot-lg") ? 26 : (px || 14)));
+    slot.classList.remove("lock-slot");
+  });
+}
+function qa2(root, sel){ return Array.from(root.querySelectorAll(sel)); }
+
+/** The mute button's speaker, drawn to match the current state. */
+function paintMuteBtn(){
+  const btn = $("muteBtn");
+  let cv = btn.querySelector("canvas");
+  if(!cv){
+    btn.textContent = "";
+    cv = document.createElement("canvas");
+    cv.width = 40; cv.height = 40;
+    cv.style.width = "20px"; cv.style.height = "20px";
+    btn.appendChild(cv);
+  }
+  SF.icons.paint(cv, audio.isMuted() ? "soundOff" : "soundOn", "#fff");
+}
+
 function click(el, fn){
   if(!el) return;
   el.addEventListener("click", (e) => { audio.play("uiClick"); fn(e); });
@@ -1213,10 +1281,19 @@ function renderArmory(){
     const el = document.createElement("button");
     el.className = "armory-tab" + (t.id === armoryTab ? " on" : "");
     el.style.setProperty("--cat", t.color);
-    el.innerHTML = `<span class="at-ic">${t.icon}</span><span>${esc(t.name)}</span>`;
+    // Drawn glyph, not emoji: the tab strip is chrome, and chrome renders
+    // identically on every device (see icons.js).
+    el.appendChild(SF.icons.el(t.id, t.color, 18));
+    const label = document.createElement("span");
+    label.textContent = t.name;
+    el.appendChild(label);
     click(el, () => { armoryTab = t.id; renderArmory(); });
     tabs.appendChild(el);
   });
+  const syncTabFade = () =>
+    tabs.classList.toggle("at-end", tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 4);
+  tabs.onscroll = syncTabFade;
+  syncTabFade();
 
   // Browsing tabs don't pin the ship bay: on STYLE SHOP and MY SHIP the
   // cards already show the ship, and a sticky bay turned scrolling into
@@ -1257,21 +1334,36 @@ function renderShelf(panel, catId){
       + (u.id === beacon ? " beacon" : "");
     const pips = Array.from({length:u.max}, (_,i) => `<span class="pip${i < lvl ? " on" : ""}"></span>`).join("");
     row.innerHTML = `
-      <div class="si-badge">${u.icon}</div>
+      <div class="si-badge" data-glyph="${u.id}"></div>
       <div class="si-main">
         <div class="si-name">${esc(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
         <div class="si-pips">${pips}</div>
         <div class="si-desc">${esc(u.desc)}</div>
         <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(lvl)) : "Not owned yet"}${
           maxed ? "" : ' <span class="si-next">→ ' + esc(u.effect(lvl+1)) + "</span>"}</div>
-        ${part ? `<div class="si-part">🔧 fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
+        ${part ? `<div class="si-part">fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
       </div>`;
     const btn = document.createElement("button");
     btn.innerHTML = maxed ? "★<br>MAX" : money(cost);
-    btn.disabled = maxed || !affordable;
-    click(btn, () => buyUpgrade(u.id));
+    // Only MAXED is truly inert. An unaffordable button stays tappable so the
+    // tap can ANSWER (shake + deny blip) - disabled buttons swallow the click
+    // and read as broken to a kid.
+    btn.disabled = maxed;
+    btn.classList.toggle("cant", !maxed && !affordable);
+    click(btn, () => {
+      if(!buyUpgrade(u.id)){
+        // A tap that silently did nothing reads as a broken button. The row
+        // shakes, the price flashes, and a soft deny blip says "not yet".
+        audio.play("uiDeny");
+        row.classList.remove("denied");
+        void row.offsetWidth;              // restart the animation
+        row.classList.add("denied");
+      }
+    });
     row.appendChild(btn);
     group.appendChild(row);
+    const badge = row.querySelector(".si-badge[data-glyph]");
+    if(badge) badge.appendChild(SF.icons.el(u.id, cat.color, 26));
   });
   panel.appendChild(group);
 }
@@ -1691,7 +1783,7 @@ function drawEasel(){
   const str = PJ.encode(pe.cells);
   if(str){ ctx.save(); ctx.translate(ox, oy); PJ.paint(ctx, S, str); ctx.restore(); }
   // Grid lines last, so they stay visible over the paint.
-  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.strokeStyle = "rgba(255,255,255,0.20)";   // visible even at 0% in daylight
   ctx.lineWidth = 1;
   for(let i = 0; i <= PJ.COLS; i++){
     ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, H); ctx.stroke();
@@ -2077,10 +2169,11 @@ function renderBriefTiers(index){
     card.className = "diff-card" + (locked ? " locked" : "") + (on ? " on" : "");
     card.style.setProperty("--tier", d.color);
     card.innerHTML = `
-      <span class="diff-name">${locked ? "🔒" : d.name}</span>
+      <span class="diff-name">${locked ? '<i class="lock-slot"></i>' : d.name}</span>
       <span class="diff-tag">${locked ? stars + "/" + d.unlockStars + " ★" : d.tag}</span>
       <span class="diff-stars">${locked ? "" :
         [0,1,2].map(i => `<i class="${i < earned ? "on" : ""}">★</i>`).join("")}</span>`;
+    fillGlyphs(card, null, "rgba(255,255,255,0.65)", 16);
     if(!locked) click(card, () => { briefTier = d.id; renderBriefTiers(index); });
     list.appendChild(card);
   });
@@ -2193,7 +2286,7 @@ function renderPilotCard(){
 function buyUpgrade(id){
   const u = UPGRADE_BY_ID[id];
   const cost = P.nextCost(profile, u);
-  if(cost === null || profile.money < cost) return;
+  if(cost === null || profile.money < cost) return false;
   const rankBefore = P.rankFor(profile).name;
   const partsBefore = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
   profile.money -= cost;
@@ -2216,6 +2309,7 @@ function buyUpgrade(id){
   }
   if(P.gearLevel(profile) >= 20) maybeStory("ace");
   else if(partsNow > 0 && partsBefore === 0) maybeStory("firstPart");
+  return true;
 }
 
 /* ---------------------------------------------------------
@@ -2246,7 +2340,7 @@ function renderAchievements(){
     const has = owned.includes(a.id);
     const claimed = !!profile.medalsClaimed[a.id];
     return `<div class="medal${has ? " won" : ""}${has && !claimed ? " owed" : ""}">
-      <div class="medal-disc"><span>${has ? a.icon : "🔒"}</span></div>
+      <div class="medal-disc">${has ? `<span>${a.icon}</span>` : '<i class="lock-slot lock-slot-lg"></i>'}</div>
       <div class="medal-name">${esc(a.name)}</div>
       <div class="medal-desc">${esc(a.desc)}</div>
       ${has
@@ -2257,6 +2351,7 @@ function renderAchievements(){
     </div>`;
   }).join("");
 
+  fillGlyphs($("achievementsList"), null, "rgba(255,255,255,0.55)");
   qa("#achievementsList .medal-claim").forEach(btn => {
     click(btn, () => {
       const paid = P.claimMedal(profile, btn.dataset.medal);
@@ -2392,6 +2487,7 @@ function togglePause(){
   const g = SF.game;
   if(g.state === "playing"){
     g.state = "paused";
+    renderPauseState();
     $("overlayPause").classList.remove("hidden");
   } else if(g.state === "paused"){
     g.state = "playing";
@@ -2423,6 +2519,20 @@ function pauseIfSideways(){
 }
 window.addEventListener("resize", pauseIfSideways);
 window.addEventListener("orientationchange", pauseIfSideways);
+
+/** The pause screen is a save point, not a wall: what you were doing, and
+    how far you'd got before the iPad went down. */
+function renderPauseState(){
+  const run = SF.game.run;
+  if(!run) return;
+  $("pauseGoal").textContent = run.mission.goal || run.mission.subtitle || "";
+  $("pauseObjectives").innerHTML = (run.objectiveDefs || []).map(def => {
+    const met = def.test(run.stats);
+    const prog = def.progress ? def.progress(run.stats) : "";
+    return `<div class="${met ? "met" : ""}">${met ? "★" : "☆"} ${esc(def.label)}${
+      prog && !met ? " — " + esc(prog) : ""}</div>`;
+  }).join("");
+}
 
 /** Keeps the two ability buttons in sync with what the ship has left. */
 function syncAbilityButtons(force){
@@ -2538,18 +2648,17 @@ function showResults(result){
 
   const s = run.stats;
   $("resultLines").innerHTML = `
-    <div class="rl"><span>Score</span><b>${run.score}</b></div>
-    <div class="rl"><span>Money collected</span><b class="money">+£${run.money}</b></div>
+    <div class="rl"><span>Score</span><b data-countup="${run.score}">0</b></div>
+    <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}" data-prefix="+£">+£0</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
     <div class="rl"><span>Pilots rescued</span><b>${(endless || rush) ? s.rescues
       : s.rescues + "/" + s.rescuesTotal}</b></div>
-    <div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>
+    ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
     ${crewLine()}
-    <div class="rl"><span>Wallet</span><b class="money">${money(profile.money)}</b></div>
-    ${(unlocked || []).map(a =>
-      `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect £${(a.pay||0).toLocaleString("en-GB")} in MEDALS</b></div>`).join("")}
+    <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}" data-prefix="£">£0</b></div>
+    ${medalLines(unlocked)}
     ${endless ? wackyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
   renderResultComms(run, completed || (endless && endlessNewBest), stars, prevFamilyBest,
@@ -2558,7 +2667,9 @@ function showResults(result){
   const hasNext = completed && run.missionIndex + 1 < MISSIONS.length;
   $("nextBtn").classList.toggle("hidden", !hasNext);
   $("overlayResults").classList.remove("hidden");
+  runCountUps($("resultLines"));
   renderMenu();
+  holdToasts(1500);   // let the results card land before medals pop over it
   (unlocked || []).forEach(queueToast);
   // First time a campaign boss falls, its tune becomes yours - and the toast
   // says where to go fit it.
@@ -2649,6 +2760,43 @@ function crewLine(){
 }
 
 /** Did this run take the household record for the mission, or how close was it? */
+/*
+ * The earned numbers ROLL in instead of appearing - a settled screen full of
+ * final values reads like a receipt; a half-second climb reads like a payout.
+ * Ease-out so the last coins land gently, and the exact final value is always
+ * written at the end, whatever the frame rate did in between.
+ */
+function runCountUps(root){
+  const els = Array.from(root.querySelectorAll("[data-countup]"));
+  if(!els.length) return;
+  const start = performance.now(), DUR = 550;
+  const step = now => {
+    const t = Math.min(1, (now - start) / DUR);
+    const k = 1 - Math.pow(1 - t, 3);
+    els.forEach(el => {
+      const v = Math.round(Number(el.dataset.countup) * k);
+      el.textContent = (el.dataset.prefix || "") + v.toLocaleString("en-GB");
+    });
+    if(t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/*
+ * One or two medals get their own lines; a bumper haul collapses to a single
+ * summary. A first great run once earned EIGHT medals and the double-height
+ * rows shoved the actual results off the screen.
+ */
+function medalLines(unlocked){
+  const list = unlocked || [];
+  if(list.length > 2){
+    const pay = list.reduce((a, m) => a + (m.pay || 0), 0);
+    return `<div class="rl record"><span>Medals earned</span><b>${list.length} at once! — collect £${pay.toLocaleString("en-GB")} in MEDALS</b></div>`;
+  }
+  return list.map(a =>
+    `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect £${(a.pay||0).toLocaleString("en-GB")} in MEDALS</b></div>`).join("");
+}
+
 function recordLine(run, prevBest){
   const me = profile.callsign || profile.name;
   // "New best!" only when there was a real previous score to beat.
@@ -2668,12 +2816,27 @@ function recordLine(run, prevBest){
 /* ---------------------------------------------------------
    TOASTS
    --------------------------------------------------------- */
-let toastQueue = [], toastShowing = false;
+let toastQueue = [], toastShowing = false, toastHoldUntil = 0;
+/** Nothing may toast over a screen that is still settling - the medal pop
+    used to land on top of the results title in the same instant. */
+function holdToasts(ms){
+  toastHoldUntil = Date.now() + ms;
+  // A toast already mid-flight gets cut: whatever is landing (the results
+  // card) owns the screen now, and a pop-over from three seconds ago
+  // colliding with it is exactly the mess this exists to stop.
+  if(toastShowing){
+    toastShowing = false;
+    $("achievementToast").classList.remove("show");
+    $("achievementToast").classList.add("hidden");
+  }
+  setTimeout(() => { if(!toastShowing) nextToast(); }, ms + 30);
+}
 function queueToast(a){
   toastQueue.push(a);
-  if(!toastShowing) nextToast();
+  if(!toastShowing && Date.now() >= toastHoldUntil) nextToast();
 }
 function nextToast(){
+  if(Date.now() < toastHoldUntil) return;
   const a = toastQueue.shift();
   if(!a){ toastShowing = false; return; }
   toastShowing = true;
@@ -2756,19 +2919,20 @@ if(SF.cloud && SF.cloud.configured()){
     renderCloud();
     if(navigator.clipboard) navigator.clipboard.writeText(c).catch(() => {});
   });
-  click($("cloudJoinBtn"), () => {
-    const entered = prompt("Squad code from the other device?");
+  click($("cloudJoinBtn"), async () => {
+    const entered = await ask("JOIN A SQUAD", { text:"Squad code from the other device?", placeholder:"ABCD-EFGH" });
     if(!entered) return;
     SF.cloud.join(entered)
       .then(() => { renderCloud(); renderProfiles(); })
       .catch(err => { paintCloudStatus({ state:"error", error: String(err.message || err) }); });
   });
-  click($("cloudRestoreBtn"), () => {
+  click($("cloudRestoreBtn"), async () => {
     const list = SF.cloud.backups();
     if(!list.length) return;
     const names = Object.keys(list[0].pilots).join(", ");
-    if(!window.confirm("Put every pilot back to how they were " + ago(list[0].at) +
-                       "?\n\n" + names + "\n\nWhat you have now is kept as a backup too.")) return;
+    if(!await confirmDlg("RESTORE BACKUP",
+        "Put every pilot back to how they were " + ago(list[0].at) +
+        "?\n\n" + names + "\n\nWhat you have now is kept as a backup too.")) return;
     const n = SF.cloud.restoreBackup(0);
     renderCloud(); renderProfiles();
     paintCloudStatus({ state:"ok", error:null });
@@ -2826,7 +2990,7 @@ click($("settingsBtnMenu"), openSettings);
  * there is - and tapping it wipes every cache and hard-reloads, which is
  * the fix a parent can apply without a laptop.
  */
-const BUILD = "2026-08-07.10";
+const BUILD = "2026-08-10.1";
 (function buildStamp(){
   const el = $("setBuild");
   if(!el) return;
@@ -2847,7 +3011,7 @@ const BUILD = "2026-08-07.10";
 click($("settingsCloseBtn"), () => {
   $("settingsOverlay").classList.add("hidden");
   // The in-game mute button shows the same master switch - keep it honest.
-  $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
+  paintMuteBtn();
 });
 click($("setSound"), () => { audio.setMuted(!audio.isMuted()); renderSettings(); });
 click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); renderSettings(); });
@@ -2861,12 +3025,15 @@ click($("setRumble"), () => {
   if(SF.haptics.isEnabled()) SF.haptics.play("uiBuy");
   renderSettings();
 });
-click($("setReset"), () => {
+click($("setReset"), async () => {
   if(!profile) return;
   const who = profile.name;
-  if(!window.confirm("Start " + who + " over from ZERO?\n\nStars, money, upgrades and medals all go" +
-                     " - on every synced device too. This cannot be undone.")) return;
-  if(!window.confirm("Really erase " + who + "'s whole career?")) return;
+  if(!await confirmDlg("RESET " + who.toUpperCase() + "?",
+      "Start " + who + " over from ZERO?\n\nStars, money, upgrades and medals all go" +
+      " - on every synced device too. This cannot be undone.",
+      { danger:true, okLabel:"RESET" })) return;
+  if(!await confirmDlg("LAST CHANCE", "Really erase " + who + "'s whole career?",
+      { danger:true, okLabel:"ERASE IT" })) return;
   // A fresh blank saved now carries the newest savedAt, so the wipe wins the
   // per-pilot merge on every other device instead of being "repaired" by it.
   const fresh = P.blank(who);
@@ -2879,8 +3046,18 @@ click($("setReset"), () => {
   show("screen-menu");
 });
 
-click($("addProfileBtn"), () => {
-  const name = prompt("Pilot's name?");
+click($("dialogOk"), () => {
+  const input = $("dialogInput");
+  closeDialog(input.classList.contains("hidden") ? true : input.value);
+});
+click($("dialogCancel"), () => closeDialog(null));
+$("dialogInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") closeDialog($("dialogInput").value);
+  e.stopPropagation();   // typing a name must not steer the ship
+});
+
+click($("addProfileBtn"), async () => {
+  const name = await ask("NEW PILOT", { text:"What's the pilot's name?", placeholder:"Name", okLabel:"JOIN UP" });
   if(name && name.trim()){ P.addName(name.trim()); renderProfiles(); }
 });
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
@@ -2988,7 +3165,7 @@ click($("resultsMenuBtn"), () => {
 });
 click($("muteBtn"), () => {
   audio.setMuted(!audio.isMuted());
-  $("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
+  paintMuteBtn();
 });
 
 // Ability buttons: pointerdown so they feel instant on touch.
@@ -3016,7 +3193,44 @@ SF.game.onMissionEnd = (result) => {
    BOOT
    --------------------------------------------------------- */
 SF.game.attach($("game"), document.querySelector(".game-frame"), $("screen-game"));
-$("muteBtn").textContent = audio.isMuted() ? "🔇" : "♪";
+paintMuteBtn();
+// The chrome's drawn glyphs: ability buttons and the settings gears. Painted
+// once at boot - they never change shape, only visibility.
+qa(".sb-icon[data-glyph]").forEach(cv => SF.icons.paint(cv, cv.dataset.glyph, "#ffffff"));
+["settingsBtnPicker", "settingsBtnMenu"].forEach(id => {
+  const b = $(id);
+  if(b) b.insertBefore(SF.icons.el("gear", "rgba(255,255,255,0.75)", 13), b.firstChild);
+});
+
+/*
+ * Fullscreen, for the computer. The one genuinely Steam-like affordance the
+ * game lacked on a desktop: it lived in a browser tab with no way in. Shown
+ * only where the API exists and the app isn't already standalone - which
+ * hides it on every iPhone and iPad, where Apple doesn't offer it.
+ */
+(function fullscreenSetup(){
+  const btn = $("fullscreenBtn");
+  if(!btn) return;
+  const root = document.documentElement;
+  const supported = !!(root.requestFullscreen && document.exitFullscreen) &&
+                    !window.navigator.standalone &&
+                    !window.matchMedia("(display-mode: standalone)").matches;
+  if(!supported) return;
+  btn.classList.remove("hidden");
+  const glyph = SF.icons.el("expand", "rgba(255,255,255,0.75)", 13);
+  btn.insertBefore(glyph, btn.firstChild);
+  const paintState = () => {
+    const on = !!document.fullscreenElement;
+    SF.icons.paint(glyph, on ? "contract" : "expand", "rgba(255,255,255,0.75)");
+    btn.lastChild.textContent = on ? "Exit Fullscreen" : "Fullscreen";
+  };
+  click(btn, () => {
+    if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else root.requestFullscreen().catch(() => {});
+  });
+  document.addEventListener("fullscreenchange", paintState);
+  paintState();
+})();
 renderProfiles();
 startTitleLoop();
 SF.game.resize();

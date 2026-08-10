@@ -11,9 +11,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +26,7 @@
     <div id="profileGrid" class="profile-grid"></div>
     <div class="picker-actions">
       <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
-      <button id="settingsBtnPicker" class="ghost-btn">⚙ Settings</button>
+      <button id="settingsBtnPicker" class="ghost-btn btn-with-glyph">Settings</button>
     </div>
   </section>
 
@@ -59,7 +56,10 @@
         <canvas class="mb-icon" width="76" height="76"></canvas>
         <span class="mb-text"><b>CHAMPIONSHIP</b><span id="champSub"></span></span></button>
       <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
-      <button id="settingsBtnMenu" class="ghost-btn">⚙ Settings</button>
+      <button id="settingsBtnMenu" class="ghost-btn btn-with-glyph">Settings</button>
+      <!-- Desktop only: hidden wherever the Fullscreen API is missing (iOS)
+           or the app already runs standalone from the home screen. -->
+      <button id="fullscreenBtn" class="ghost-btn btn-with-glyph hidden">Fullscreen</button>
     </div>
   </section>
 
@@ -211,15 +211,20 @@
 
       <div class="ability-bar">
         <button id="overdriveBtn" class="special-btn overdrive hidden">
-          <span class="sb-icon">🔥</span><span class="sb-count" id="overdriveCount">0</span>
+          <canvas class="sb-icon" width="52" height="52" data-glyph="overdrive"></canvas><span class="sb-count" id="overdriveCount">0</span>
         </button>
         <button id="bombBtn" class="special-btn hidden">
-          <span class="sb-icon">💣</span><span class="sb-count" id="bombCount">0</span>
+          <canvas class="sb-icon" width="52" height="52" data-glyph="bomb"></canvas><span class="sb-count" id="bombCount">0</span>
         </button>
       </div>
 
       <div id="overlayPause" class="overlay hidden">
         <h2>PAUSED</h2>
+        <!-- Kids get interrupted constantly; the pause screen is a save
+             point, not a wall - it says what you were doing and how far
+             you'd got before you put the iPad down. -->
+        <div id="pauseGoal" class="pause-goal"></div>
+        <div id="pauseObjectives" class="pause-objectives"></div>
         <button id="resumeBtn" class="main-btn">RESUME</button>
         <button id="restartBtn" class="ghost-btn">Restart Mission</button>
         <button id="quitBtn" class="ghost-btn">Quit to Menu</button>
@@ -266,8 +271,12 @@
   </div>
 </div>
 
+<!-- First contact is the title, not a void: everything here is local, so
+     the first painted frame already looks like the game. -->
 <div id="loadingOverlay" class="loading-overlay">
-  <div class="loading-text">LOADING...</div>
+  <div class="family-title">A FAMILY SQUADRON</div>
+  <div class="game-title loading-title">THIERRY <span>PATROL</span></div>
+  <div class="loading-text">LOADING</div>
 </div>
 
 <!-- Story beats: full-screen comic panels drawn with the pilot's real ship. -->
@@ -339,6 +348,20 @@
   <span>Patrol flies the tall way up</span>
 </div>
 
+<!-- In-game dialog: the themed replacement for prompt()/confirm(). A native
+     OS dialog is the one place the game stopped being itself. -->
+<div id="dialogOverlay" class="story-overlay hidden">
+  <div class="story-inner dialog-inner">
+    <div id="dialogTitle" class="story-title"></div>
+    <p id="dialogText" class="dialog-text"></p>
+    <input id="dialogInput" type="text" maxlength="16" autocomplete="off" class="hidden">
+    <div class="dialog-actions">
+      <button id="dialogCancel" class="ghost-btn">CANCEL</button>
+      <button id="dialogOk" class="main-btn">OK</button>
+    </div>
+  </div>
+</div>
+
 <div id="achievementToast" class="achievement-toast hidden">
   <div id="at-icon" class="at-icon">🏆</div>
   <div>
@@ -348,6 +371,7 @@
 </div>
 
 <script src="src/core.js"></script>
+<script src="src/icons.js"></script>
 <script src="src/haptics.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/data/config.js"></script>
