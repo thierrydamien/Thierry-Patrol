@@ -68,9 +68,21 @@ class WaveDirector {
     }
   }
 
-  /** How many of this wave actually fly, after the tier's density. */
+  /**
+   * How many of this wave actually fly, after the tier's density and the
+   * field's width.
+   *
+   * The width term answers "I don't want the extra space to just be empty":
+   * wave counts were tuned on the 600-wide tablet field, so a field wider
+   * than that tops the count up in proportion - a 640 desktop field flies
+   * ~7% more ships, which keeps enemies-per-area level instead of thinning
+   * as the sky grows. Clamped at 1 below the reference so phones fly the
+   * exact tuned data, and at 1.2 so a future wider ceiling cannot silently
+   * double the traffic.
+   */
   waveSize(wave){
-    return Math.max(1, Math.round(wave.n * this.density));
+    const widthTopUp = clamp(VW / 600, 1, 1.2);
+    return Math.max(1, Math.round(wave.n * this.density * widthTopUp));
   }
 
   /*
