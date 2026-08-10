@@ -2999,6 +2999,43 @@ slots, so after eight seconds two different seeds had produced identical
 positions - the per-spawn `phase` and `weaveWidth` draws are in the snapshot
 because they are where the stream leaves fingerprints.
 
+## 8bt9. "What happened to the image used for the papa boss?"
+
+A "?" medallion where KING PAPA's face should be, mid-fight, on the deployed
+game. The photo was not missing: `assets/papa.png` was committed, valid
+(512x512 RGBA, 463KB) and unchanged on main. Loading it directly in the
+browser worked. The failure was in the loader.
+
+`papaPhoto()` walked a list of six spellings - `.png`, `.jpg`, `.jpeg`,
+`.webp`, `.PNG`, `.JPG` - so that whatever the family uploads just works. It
+walked that list ONCE and then latched forever, which conflated two very
+different failures: "this spelling does not exist" (permanent, 404s instantly)
+and "that request failed" (transient - a flaky moment, a mid-deploy hiccup,
+or the service worker's cache-first fetch rejecting while briefly offline).
+
+Reproduced by serving a single 503 for the .png:
+
+```
+RESP 503 papa.png   RESP 404 papa.jpg  ... RESP 404 papa.JPG
+--- server is healthy again from here on ---
+(nothing, for eight seconds)
+```
+
+One bad request, and the session had no Papa until somebody reloaded the page.
+
+Three fixes, because the bug had three enablers. The sweep now backs off four
+seconds and goes round again, up to five sweeps, so a hiccup recovers by
+itself while a genuinely absent photo still stops asking (~20s, then quiet).
+The photo is **warmed at boot** instead of first requested the moment the boss
+lands - mid-fight is both the likeliest moment for a hiccup and the most
+visible - and deliberately outside `ASSET_PATHS`, because a family that hasn't
+uploaded a picture yet must not have the whole game gated on it. And
+`cacheFirst` in the service worker now answers a 503 instead of letting the
+fetch throw: a throw escapes into `respondWith` and reaches an `<img>` as
+`onerror`, which is precisely the transient failure this section is about.
+
+Same reproduction after the fix: `503 -> five 404s -> backoff -> 200`.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3013,7 +3050,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~617 checks.
+  be re-measured after load. ~620 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

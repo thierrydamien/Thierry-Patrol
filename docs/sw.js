@@ -65,7 +65,19 @@ async function cacheFirst(req){
   const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
   if(hit) return hit;
-  const fresh = await fetch(req);
-  if(fresh && fresh.ok) cache.put(req, fresh.clone());
-  return fresh;
+  try {
+    const fresh = await fetch(req);
+    if(fresh && fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
+  } catch(err){
+    /*
+     * Offline, and this asset was never cached. The throw used to escape into
+     * respondWith, which the page sees as a network error - i.e. an <img> that
+     * fires onerror. Answering with a plain 503 instead keeps the failure a
+     * normal, retryable HTTP response, which is what the loaders expect.
+     */
+    const stale = await cache.match(req, { ignoreSearch: true });
+    if(stale) return stale;
+    return new Response("", { status: 503, statusText: "offline" });
+  }
 }

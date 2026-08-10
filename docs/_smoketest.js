@@ -240,6 +240,36 @@ async function run(){
       /background-color:\s*#0a0920/.test(css));
   }
 
+  /* ---------- KING PAPA's photo ---------- */
+  /*
+   * The customer's report: "what happened to the image used for the papa
+   * boss?" - a "?" medallion where his face should be. The photo was present,
+   * committed and valid; the loader had walked its list of spellings once and
+   * latched. Reproduced in Chromium by serving ONE 503: it burned all six
+   * candidates in a few frames and never asked again, eight healthy seconds
+   * later.
+   */
+  await sleep(20);   // the boot warm-up is a real image load, so let it land
+  check("Papa's photo is warmed at boot, not first asked for mid-fight",
+    !!SF.render._papaState && SF.render._papaState().ready === true);
+  check("a failed sweep backs off and goes round again instead of latching",
+    (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = src.split("function papaPhoto()")[1].split("\n}")[0];
+      // A retry deadline AND a bounded number of sweeps: without the first it
+      // hammers, without the second a genuinely absent photo never stops.
+      return /papaRetryAt/.test(fn) && /papaSweeps/.test(fn) &&
+             /PAPA_MAX_SWEEPS/.test(src) && /papaTry = 0/.test(fn);
+    })());
+  check("the service worker answers an offline asset instead of throwing",
+    (() => {
+      const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
+      const fn = sw.split("async function cacheFirst")[1].split("\n}")[0];
+      // A throw escapes into respondWith and reaches an <img> as onerror,
+      // which is exactly the transient failure that used to be permanent.
+      return /catch/.test(fn) && /503/.test(fn);
+    })());
+
   /* ---------- data sanity ---------- */
   // Haptics ride on the sound hooks, so a rumble keyed to an event no gameplay
   // code ever fires would be silently dead.
