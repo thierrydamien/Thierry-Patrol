@@ -93,7 +93,10 @@ async function runFrames(n, quiet){
 }
 
 window.alert = () => {};
-window.prompt = () => "TestKid";
+// prompt()/confirm() are BANNED from the game now (in-game dialog instead);
+// stubs that throw make any regression loud.
+window.prompt = () => { throw new Error("window.prompt used - the game has its own dialog"); };
+window.confirm = () => { throw new Error("window.confirm used - the game has its own dialog"); };
 class StubImage {
   set src(v){ this._src = v; setTimeout(() => { if(this.onload) this.onload(); }, 0); }
   get src(){ return this._src; }
@@ -141,7 +144,7 @@ function vibeCount(fn){ const n = vibrations.length; fn(); return vibrations.len
 function probe(name, arg){ fakeNow += 1000; return vibeCount(() => window.SF.audio.play(name, arg)); }
 
 const SRC = [
-  "src/core.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
+  "src/core.js","src/icons.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
@@ -322,6 +325,40 @@ async function run(){
       return /catch/.test(fn) && /503/.test(fn);
     })());
 
+  /* ---------- the polish contract ---------- */
+  /*
+   * The Steam-feel pass, pinned: no native dialogs, no external font, no
+   * developer strings in the game, drawn chrome instead of emoji chrome.
+   */
+  check("the typeface ships with the game, not from a CDN",
+    !/fonts\.googleapis/.test(fs.readFileSync(path.join(__dirname, "index.html"), "utf8")) &&
+    /@font-face/.test(fs.readFileSync(path.join(__dirname, "style.css"), "utf8")) &&
+    fs.existsSync(path.join(__dirname, "assets/fonts/rajdhani-latin-700-normal.woff2")));
+  check("the game never opens a native browser dialog",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return !/window\.(prompt|confirm)\(/.test(u) &&
+                    !/[^.\w]prompt\("/.test(u) && !/[^.\w]confirm\("/.test(u); })());
+  check("no developer path leaks into the game's own text",
+    !/docs\/assets/.test(fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
+  check("the chrome glyphs are drawn, not emoji",
+    SF.icons && SF.icons.names.length >= 18 &&
+    ["guns","armour","ship","extras","paint","parts","pilot","lock","gear",
+     "soundOn","soundOff","bomb","overdrive","expand"].every(n => SF.icons.names.includes(n)));
+  check("every shop upgrade has a drawn glyph of its own",
+    SF.config.UPGRADES.every(u => SF.icons.names.includes(u.id)));
+  check("overlays animate in like the screens do",
+    /overlayIn/.test(fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
+  check("a mouse gets hover answers, gated off touch",
+    /@media \(hover: hover\)/.test(fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
+  check("the deny blip exists for the tap that can't buy",
+    !!SF.audio._sounds.uiDeny);
+  check("Escape pauses on a keyboard",
+    /Escape/.test(fs.readFileSync(path.join(__dirname, "src/input.js"), "utf8")));
+  check("the loading screen is the title card, not a bare LOADING",
+    (() => { const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+             return /loading-title/.test(h) && /A FAMILY SQUADRON/.test(
+               h.split("loadingOverlay")[1].split("</div>\n</div>")[0] || ""); })());
+
   /* ---------- data sanity ---------- */
   // Haptics ride on the sound hooks, so a rumble keyed to an event no gameplay
   // code ever fires would be silently dead.
@@ -468,6 +505,27 @@ async function run(){
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
+  {
+    clickEl(id("addProfileBtn"));
+    await sleep(10);
+    check("adding a pilot opens the game's own dialog, not window.prompt",
+      !id("dialogOverlay").classList.contains("hidden") &&
+      !id("dialogInput").classList.contains("hidden"));
+    id("dialogInput").value = "TestKid";
+    clickEl(id("dialogOk"));
+    await sleep(20);
+    check("the new pilot joins the roster",
+      SF.profile.listNames().includes("TestKid") &&
+      id("dialogOverlay").classList.contains("hidden"));
+    // Cancel must not create anyone.
+    clickEl(id("addProfileBtn"));
+    await sleep(10);
+    id("dialogInput").value = "Nobody";
+    clickEl(id("dialogCancel"));
+    await sleep(20);
+    check("cancelling the dialog creates nobody",
+      !SF.profile.listNames().includes("Nobody"));
+  }
   clickEl(qa("#profileGrid .profile-card")[0]);
   check("menu active after picking a pilot", id("screen-menu").classList.contains("active"));
   check("menu shows the pilot's rank", /CADET|PILOT|LEADER|ACE|COMMANDER|LEGEND/.test(id("menuPilot").textContent));
@@ -984,6 +1042,18 @@ async function run(){
   check("results say the record is still unset, honestly",
     /none yet|record|holds this/i.test(id("resultLines").textContent));
   check("a cleared mission offers the next one", !id("nextBtn").classList.contains("hidden"));
+  // The first great run earns a pile of medals at once. They collapse to one
+  // summary row (eight double-height rows once shoved the results off screen),
+  // and the toast pop is HELD until the card has landed instead of covering
+  // the title in the same instant.
+  check("a bumper medal haul collapses to one summary row", (() => {
+    const rows = qa("#resultLines .rl.record").map(r => r.textContent);
+    const single = rows.filter(t => /Medal earned/.test(t)).length;
+    const summary = rows.some(t => /Medals earned/.test(t) && /at once/.test(t));
+    return summary ? single === 0 : single <= 2;
+  })());
+  check("medal toasts hold while the results card lands",
+    id("achievementToast").classList.contains("hidden"));
   check("wingmen fly under a squadmate's name",
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));
   const marc = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
@@ -2072,14 +2142,27 @@ async function run(){
     check("squad sync lives inside settings",
       !id("setCloud").classList.contains("hidden"));
 
-    // Reset: two confirms, then the pilot really is a rookie again - and the
-    // fresh save is stamped newest, so the wipe wins the squad merge too.
+    /*
+     * Reset: two confirms, then the pilot really is a rookie again - and the
+     * fresh save is stamped newest, so the wipe wins the squad merge too.
+     * The confirms are the game's OWN dialog now, not window.confirm: a
+     * native OS dialog was the most prototype-feeling moment in the game.
+     */
     const before = SF.profile.load("Marc");
     before.money = 4321; SF.profile.save(before);
-    const realConfirm = window.confirm;
-    window.confirm = () => true;
     clickEl(id("setReset"));
-    window.confirm = realConfirm;
+    await sleep(10);
+    check("resetting asks in the game's own dialog, in the danger style",
+      !id("dialogOverlay").classList.contains("hidden") &&
+      /RESET/.test(id("dialogTitle").textContent) &&
+      q(".dialog-inner").classList.contains("dialog-danger"));
+    clickEl(id("dialogOk"));
+    await sleep(10);
+    check("...twice, because this one really is destructive",
+      !id("dialogOverlay").classList.contains("hidden") &&
+      /LAST CHANCE/.test(id("dialogTitle").textContent));
+    clickEl(id("dialogOk"));
+    await sleep(30);
     const wiped = SF.profile.load("Marc");
     check("resetting a pilot wipes the career and stamps it newest",
       wiped.money === SF.profile.blank("Marc").money &&
@@ -3789,12 +3872,15 @@ async function run(){
     check("no runtime errors with five modifiers running at once", errors.length === 0);
 
     SF.game.run.score = 4321;
+    SF.game.run.maxCombo = 0;   // force the comboless case the row must hide for
     const missionsBefore = JSON.stringify(prof.missions);
     SF.game.endMission(false);
     check("the score books as the endless best",
       prof.endlessBest === 4321 && prof.endlessLongest >= 1);
     check("a wacky run never touches the campaign records",
       JSON.stringify(prof.missions) === missionsBefore && prof.lastMission !== "wacky");
+    check("a comboless run does not brag about x0",
+      !/Best combo/.test(id("resultLines").textContent));
     check("the results celebrate the flight instead of mourning it",
       id("resultTitle").textContent === "WHAT A FLIGHT!" &&
       /NEW RECORD/.test(id("resultSubtitle").textContent) &&
@@ -3976,6 +4062,11 @@ async function run(){
 
     clickEl(id("pauseBtn"));
     check("the game pauses", SF.game.state === "paused");
+    check("the pause screen says what you were doing",
+      id("pauseGoal").textContent.length > 3 &&
+      qa("#pauseObjectives div").length === SF.game.run.objectiveDefs.length);
+    check("fullscreen stays hidden where the API doesn't exist",
+      id("fullscreenBtn").classList.contains("hidden"));
     await runFrames(400);   // ~13 simulated seconds, comfortably past both buffs
     check("the mission clock stops dead while paused", SF.game.now() === clockBefore);
     check("a 9s powerup survives a 13s pause", SF.game.now() < p.tempRapidUntil);

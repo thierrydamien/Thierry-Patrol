@@ -1879,7 +1879,7 @@ function papaHead(ctx, R, opts){
     ctx.fillText("?", 0, R*0.38);
     if(R > 60){
       ctx.font = "bold " + Math.round(R*0.20) + "px Rajdhani, Arial, sans-serif";
-      ctx.fillText("upload docs/assets/papa.png", 0, R*0.72);
+      ctx.fillText("PAPA'S PHOTO GOES HERE!", 0, R*0.72);
     }
   }
   if(o.blush > 0.02){
@@ -2040,7 +2040,7 @@ function drawPapaBoss(ctx, boss, bx, by, S, damage, timeMs){
     ctx.font = "bold " + Math.round(R*1.1) + "px Rajdhani, Arial, sans-serif";
     ctx.fillText("?", 0, R*0.38);
     ctx.font = "bold " + Math.round(R*0.20) + "px Rajdhani, Arial, sans-serif";
-    ctx.fillText("upload docs/assets/papa.png", 0, R*0.72);
+    ctx.fillText("PAPA'S PHOTO GOES HERE!", 0, R*0.72);
   }
   // Damage reads as a slow blush: the more you bop him, the pinker he gets.
   if(damage > 0.05){

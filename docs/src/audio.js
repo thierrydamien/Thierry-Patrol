@@ -147,6 +147,8 @@ const SOUNDS = {
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},
+  // Two falling notes: "not yet". The polite opposite of uiBuy's rising three.
+  uiDeny:     { minGap: 180, fn: () => { [330,262].forEach((f,i)=>tone(f,0.09,"square",0.04,null,i*0.07)); }},
   star:       { minGap: 90, fn: (n) => { tone(700 + (n||0)*180, 0.16, "triangle", 0.07, null); }},
 };
 

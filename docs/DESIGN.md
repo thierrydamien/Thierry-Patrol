@@ -3113,6 +3113,63 @@ the extra-dense compressed case, the wide field is the design reference. The
 top-up levels desktop with iPad; it does not try to make the wide sky feel
 like a phone's, because the tuned game is the tablet's.
 
+## 8bt12. The Steam-feel pass: twelve pieces of finish
+
+A full review pass against one question - "would this pass for a released
+game, not a passion project?" - and twelve fixes from it, roughly in the
+order a player meets them:
+
+1. **The typeface ships with the game.** Rajdhani came from Google Fonts,
+   which the service worker cannot cache; an installed app played offline
+   fell back to Arial and lost the whole typographic identity. Two woff2
+   files in `assets/fonts` ride the same cache-first path as the music.
+2. **The chrome is drawn, not emoji.** Second half of the 8c4e36e sweep:
+   armory tabs, all fourteen shop-upgrade tiles, ability buttons, locks, the
+   settings gear, the mute speaker and the fullscreen arrows are canvas
+   glyphs in the menu icons' neon line style (`icons.js`). Emoji renders
+   differently per platform; these are identical everywhere. Deliberately
+   kept as emoji: earned-medal stickers and toast icons - a sticker in a
+   drawn disc is charm, and 27 bespoke glyphs would be effort spent making
+   the game less charming.
+3. **The game never opens a native dialog.** prompt()/confirm() - the single
+   most prototype-feeling moments - are replaced by an in-game dialog in the
+   story-overlay language, promise-based (`ask`/`confirmDlg`), with a danger
+   style for the two-step pilot reset. The suite BANS the natives: its stubs
+   now throw.
+4. **The results screen stopped colliding with itself.** Medal toasts hold
+   for 1.5s (and cut any toast already mid-flight) so the card lands first; a
+   bumper haul collapses to one "5 at once!" row where eight double-height
+   rows used to shove the results off screen; a comboless run no longer
+   prints "x0".
+5. **Overlays animate like screens.** One shared 180ms fade-and-settle for
+   pause/results/story/settings/dialog, next to navigation that already
+   moved. The armory's sticky Back gets the briefing bar's full-bleed
+   gradient underlay instead of floating translucently through card text.
+6. **Desktop answers the mouse.** Hover states across every interactive
+   surface, gated on `(hover:hover)` so touch never sees them; Esc already
+   paused; a fullscreen toggle appears only where the API exists (never on
+   iOS, never in an installed app).
+7. **No developer strings in the game.** The Papa placeholder said "upload
+   docs/assets/papa.png" - a repo path, mid-boss-fight. It says "PAPA'S
+   PHOTO GOES HERE!" now.
+8. **Numbers roll.** Score, money collected and wallet count up over half a
+   second (ease-out, exact final value guaranteed); an unaffordable shop tap
+   shakes the row, flashes the price and plays a two-falling-notes deny blip
+   - the button stays tappable BECAUSE the answer is the point; a disabled
+   button that swallows the tap reads as broken to a kid.
+9. **Loading is the title card.** First contact was a black void with
+   pulsing text; the title art is local, so the first painted frame is now
+   the game.
+10. **Type-scale nudges.** The 9px armory tab labels (smallest text in the
+    game) up to 10px; the HUD's monospace money/score stays - tabular digits
+    are the right tool there.
+11. **Pause is a save point.** Goal line plus live objective progress
+    ("Rescue every stranded pilot — 0/3"), because kids get interrupted
+    constantly and "PAUSED / RESUME" told them nothing.
+12. **Dim states lifted.** The medals ring is visible at 0%, locked medal
+    cards read in daylight, and the armory tab strip fades at its right edge
+    until you reach the end - the fifth tab used to be a secret.
+
 ## 9. What I'd do next
 
 Roughly in value order:
