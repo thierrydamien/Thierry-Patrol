@@ -42,6 +42,16 @@ const assets = {};
 let assetsReady = false;
 
 function loadAssets(cb){
+  /*
+   * Warm Papa's photo at boot, deliberately OUTSIDE the gate below. It used to
+   * be first requested the moment KING PAPA landed - mid-fight, the worst
+   * moment for a hiccup and the most visible - and now it is fetched (and
+   * service-worker cached) while the pilot picker is still up. It must not
+   * join ASSET_PATHS: a family that hasn't uploaded a photo yet would fail the
+   * `ok` flag and gate the whole game on a picture it is designed to live
+   * without.
+   */
+  papaPhoto();
   const keys = Object.keys(ASSET_PATHS);
   let remaining = keys.length, ok = true;
   keys.forEach(key => {
@@ -1800,24 +1810,50 @@ function drawFinaleIntro(ctx, timeMs){
  */
 let papaImg = null, papaImgReady = false;
 /*
- * Tries each spelling in turn and keeps the first that loads, so whatever
- * the family actually uploads works: no renaming, no converting, no coming
- * back to ask which extension the code wanted. A 404 just falls through to
- * the next candidate; running out of candidates leaves the "?" medallion up.
+ * Tries each spelling in turn and keeps the first that loads, so whatever the
+ * family actually uploads works: no renaming, no converting, no coming back to
+ * ask which extension the code wanted.
+ *
+ * THE SWEEP HAS TO REPEAT, and that is the whole point of the retry state
+ * below. It used to walk the list once and then latch the "?" medallion
+ * forever, which conflated two very different things: "this spelling does not
+ * exist" (permanent, and 404s instantly) and "that request failed" (transient
+ * - a flaky moment, a mid-deploy hiccup, or the service worker's cache-first
+ * fetch rejecting while briefly offline). One transient failure on the .png
+ * therefore cost the WHOLE SESSION Papa's face: reproduced by serving a single
+ * 503, after which the loader burned through all six candidates in a few
+ * frames and never asked again, eight healthy seconds later. The kids got a
+ * "?" until somebody reloaded the page.
+ *
+ * So a failed sweep now backs off and tries the list again, a handful of times
+ * before accepting that the photo genuinely isn't there. Wall clock on
+ * purpose: this is asset loading, not gameplay, and it has to keep ticking
+ * while the game is paused.
  */
 const PAPA_SRCS = ["assets/papa.png", "assets/papa.jpg", "assets/papa.jpeg",
                    "assets/papa.webp", "assets/papa.PNG", "assets/papa.JPG"];
-let papaTry = 0;
+const PAPA_RETRY_MS = 4000;    // between full sweeps
+const PAPA_MAX_SWEEPS = 5;     // ~20s of trying, then it really is missing
+let papaTry = 0, papaSweeps = 0, papaRetryAt = 0;
 function papaPhoto(){
   if(papaImgReady) return papaImg;
-  if(papaImg || papaTry >= PAPA_SRCS.length) return null;
+  if(papaImg) return null;                       // one already in flight
+  if(papaTry >= PAPA_SRCS.length){
+    if(papaSweeps >= PAPA_MAX_SWEEPS) return null;
+    if(Date.now() < papaRetryAt) return null;
+    papaTry = 0; papaSweeps++;                   // go round again
+  }
   try {
     const img = new Image();
     papaImg = img;
     img.onload = () => { papaImgReady = true; };
-    img.onerror = () => { papaImg = null; papaTry++; };   // next spelling
+    img.onerror = () => {
+      papaImg = null;
+      papaTry++;                                 // next spelling
+      if(papaTry >= PAPA_SRCS.length) papaRetryAt = Date.now() + PAPA_RETRY_MS;
+    };
     img.src = PAPA_SRCS[papaTry];
-  } catch(e){ papaTry = PAPA_SRCS.length; }
+  } catch(e){ papaTry = PAPA_SRCS.length; papaSweeps = PAPA_MAX_SWEEPS; }
   return null;
 }
 /**
@@ -2616,6 +2652,8 @@ function drawHud(ctx, game){
 
 SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
+  // exposed so the smoke test can watch the retry sweep rather than guess
+  _papaPhoto: papaPhoto, _papaState: () => ({ ready: papaImgReady, tryIdx: papaTry, sweeps: papaSweeps }),
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout,
