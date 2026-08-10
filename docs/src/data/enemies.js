@@ -502,13 +502,21 @@ const FORMATIONS = {
   /** Evenly spaced rank across most of the width. */
   line(n, VW){
     const usable = VW - MARGIN*2;
-    const gap = Math.min(84, usable / Math.max(1, n - 1));
+    // The gap cap grows with the field: a fixed 84 left a five-ship rank
+    // spanning 88% of a phone but 53% of a desktop's 640 - the one shape
+    // that ignored the width it was given. Phones are unchanged (the cap
+    // only starts moving past ~580 wide).
+    const cap = Math.max(84, VW * 0.145);
+    const gap = Math.min(cap, usable / Math.max(1, n - 1));
     const startX = VW/2 - gap*(n-1)/2;
     return Array.from({length:n}, (_,i) => ({ x: startX + i*gap, y: -40, delay: i*0.07 }));
   },
   /** Classic arrowhead. Wider field = wider wings, so it threatens more lanes. */
   vee(n, VW){
-    const gap = 62, out = [];
+    // Width-aware for the same reason as line's cap: a fixed 62 drew the
+    // same phone-sized arrowhead in the middle of a 640 field. Unchanged
+    // below ~590 wide.
+    const gap = Math.max(62, VW * 0.105), out = [];
     for(let i = 0; i < n; i++){
       const side = i % 2 === 0 ? -1 : 1;
       const rank = Math.floor(i/2) + 1;

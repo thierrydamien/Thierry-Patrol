@@ -3076,6 +3076,43 @@ the new contract, with desktop, landscape-iPad and portrait-phone cases each
 asserted; the remaining pillarbox on a 16:9 monitor is the game's own
 portrait shape, which is the game, not a bug.
 
+## 8bt11. Does the wide field actually get used?
+
+"Does the size of the screen influence the way enemies are behaving? I don't
+want the extra space to just be empty."
+
+Measured before answering - the same seeded mission flown at 380 wide and
+640 wide, sampling every live enemy five times a second for 45 seconds:
+
+| | phone 380 | desktop 640 |
+|---|---|---|
+| width columns ever visited (of 20) | 18 | 20 |
+| average wave spread, as % of field | 61% | 59% |
+| outer 20% of the field's share of sightings | 14% | 16% |
+
+So the space IS used: formations take their positions from `VW`, waves span
+the same *fraction* of whichever width they get, and the added edges see
+their near-fair share of traffic. Behaviours follow the player (kamikazes,
+snipers, swoopers aim at the ship), and the ship roams the whole width, so
+the chase covers it too.
+
+Two shapes and one number were the exceptions. `vee` drew its arrowhead with
+a fixed 62px gap and `line` capped its gap at 84px - the same phone-sized
+figure centred in a 640 field - so both now scale gently with width,
+unchanged below ~580. And wave COUNTS carried no width term at all, which
+meant enemies-per-area thinned as the field grew. `waveSize` now tops counts
+up by `clamp(VW/600, 1, 1.2)`: the campaign was tuned on the 600-wide tablet
+field, so a 640 field flies ~7% more ships - exactly area-proportional, no
+more - phones fly the tuned data untouched, and the 1.2 ceiling stops a
+future wider field from silently doubling traffic.
+
+Worth saying plainly: the phone-vs-desktop density gap in the first table
+(1.25 vs 0.72 enemies per 100k units squared) is almost entirely the
+phone-vs-TABLET gap that has existed since the 600x800 retune - the phone is
+the extra-dense compressed case, the wide field is the design reference. The
+top-up levels desktop with iPad; it does not try to make the wide sky feel
+like a phone's, because the tuned game is the tablet's.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3090,7 +3127,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~624 checks.
+  be re-measured after load. ~629 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

@@ -230,6 +230,37 @@ async function run(){
     defineSize(390, 620);
     check("a portrait phone still gets a phone-shaped field",
       SF.field.measure() >= 380 && SF.field.measure() < 640);
+
+    /*
+     * "I don't want the extra space to just be empty because enemies aren't
+     * using it." Measured: eight of ten formations already take their
+     * positions from VW; these pin the two that didn't, plus the count
+     * top-up that keeps enemies-per-area level past the 600-wide tuning
+     * reference.
+     */
+    const F = SF.enemyData.FORMATIONS;
+    const span = slots => Math.max(...slots.map(sl => sl.x)) - Math.min(...slots.map(sl => sl.x));
+    check("a line rank widens with the field instead of capping at phone width",
+      span(F.line(5, 640)) > span(F.line(5, 400)) * 1.05);
+    check("...while a phone's line is exactly the tuned shape", span(F.line(5, 400)) === 300);
+    check("a vee's wings widen with the field too",
+      span(F.vee(8, 640)) > span(F.vee(8, 400)) * 1.05);
+    check("every formation stays inside a 640 field",
+      Object.keys(F).every(k => F[k](12, 640).every(sl => sl.x >= 0 && sl.x <= 640)));
+    check("a wide field tops the wave counts up to hold enemies-per-area", (() => {
+      // Direct: build a director on a desktop-measured field and compare.
+      defineSize(1920, 1040);
+      SF.field.refresh();
+      const wide = new SF.systems.WaveDirector(
+        { waves: [], objectives: [] }, SF.config.DIFFICULTY_BY_ID.pilot, SF.game.world);
+      const wideN = wide.waveSize({ n: 10 });
+      defineSize(390, 620);
+      SF.field.refresh();
+      const phone = new SF.systems.WaveDirector(
+        { waves: [], objectives: [] }, SF.config.DIFFICULTY_BY_ID.pilot, SF.game.world);
+      const phoneN = phone.waveSize({ n: 10 });
+      return wideN === 11 && phoneN === 10;   // +7% at 640, tuned data on phones
+    })());
     SF.field.refresh();
     check("the harness field is back where the rest of the suite expects it",
       SF.entityConst.VW === before);
