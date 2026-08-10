@@ -254,9 +254,9 @@ Two systems, one idea: the numbers should show up somewhere you can look at.
 
 **One screen, not two.** The hangar and the Armory are the same screen, because
 buying a part and seeing it appear are the same moment - a navigation step
-between them puts the payoff somewhere the purchase isn't. The ship bay is
-`position: sticky` inside the scrolling `.screen`, so it stays on the glass
-while you shop. The shelves are tabs rather than one long scroll: four
+between them puts the payoff somewhere the purchase isn't. The ship bay sits at
+the top of that one screen and scrolls with it (see 8x - it used to be sticky).
+The shelves are tabs rather than one long scroll: four
 categories plus a parts ladder and a pilot tab, one on screen at a time, which
 gets a whole shelf onto an iPad with no scrolling at all. The pilot tab's
 markup lives in a `<template>` and is cloned on demand, so the ids it owns
@@ -1803,6 +1803,7 @@ the identity, and a giant vertical stripe was just furniture.
 part changes the ship you're looking at. On browsing tabs (STYLE SHOP, MY
 SHIP) the cards already show the ship, and a sticky bay turned scrolling
 into peering through a letterbox. The bay unpins on those two tabs.
+(Superseded - see 8x, it now unpins everywhere.)
 
 **"Anything else?" - renamed to STYLE SHOP, and two shelves added:**
 - **Nose art**: three decals (thunderbolt, ace star, shark fangs) painted
@@ -3170,6 +3171,33 @@ order a player meets them:
     cards read in daylight, and the armory tab strip fades at its right edge
     until you reach the end - the fifth tab used to be a secret.
 
+## 8x. "I don't want the ship frozen at the top of the screen"
+
+The Armory's ship bay had been `position: sticky; top: 0` since 8d, on the
+argument that buying a part and seeing it land on the hull are the same
+moment, so the hull should never leave the glass. That argument had already
+been half-retracted once: 8bt (the STYLE SHOP pass) unpinned the bay on the
+two browsing tabs because a sticky bay "turned scrolling into peering
+through a letterbox." A conditional pin is a smell - it means the pin is
+losing the argument on some screens and nobody wants to say so.
+
+On a wide desktop window it lost outright. The bay is `aspect-ratio: 620/340`
+at full container width, capped at `32vh`; pinned, it froze roughly the top
+third of the screen, and because it needs an opaque background (a translucent
+one let shelf text scroll up *through* the "next part to fit" line) it
+hard-clipped every card sliding under it. The customer's screenshot showed an
+upgrade card guillotined mid-sentence at "Now: 6-way fire."
+
+So the bay is `position: static` on every tab. What made the pin defensible in
+the first place survives without it: fitting a part already fires a toast
+(`FITTED: <part name>`), which announces the change wherever you happen to be
+scrolled, and the shelves are tabs rather than one long list, so a shelf on a
+phone is a short scroll back to the ship rather than an expedition.
+
+Deleted with it: the `unpinned` class, the `#screen-armory.unpinned` rule, and
+the tab-conditional `classList.toggle` in `renderArmory`. Three moving parts
+whose only job was to decide when the fourth one was wrong.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3184,7 +3212,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~629 checks.
+  be re-measured after load. ~649 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

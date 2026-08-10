@@ -2371,8 +2371,16 @@ async function run(){
         /\.paint-editor\s*\{[^}]*var\(--sa-bottom/.test(easelCss));
     }
 
-    check("the ship bay unpins on the browsing tabs",
-      id("screen-armory").classList.contains("unpinned"));
+    // The bay used to be position:sticky, which froze the ship across the top
+    // of the Armory and hard-clipped the cards scrolling under it.
+    check("the ship bay scrolls with the page instead of freezing at the top",
+      (() => {
+        const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+        const bay = css.match(/\n\.armory-top\s*\{([^}]*)\}/);
+        return !!bay && !/sticky|fixed/.test(bay[1]) &&
+          !/unpinned/.test(css) &&
+          !/unpinned/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8"));
+      })());
     check("the accent line is gone from the shelves",
       !/border-left:5px solid var\(--cat/.test(
         fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
