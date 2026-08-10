@@ -4183,6 +4183,33 @@ async function run(){
       /#game\s*\{[^}]*cursor:\s*none/.test(
         fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
 
+    /*
+     * Fullscreen letterboxes the playfield on a laptop display, and losing
+     * steering to those black bars was the complaint that started this: the
+     * ship went dead and the cursor was invisible and hard to find again. In
+     * fullscreen the bars steer too, clamped to the field edge.
+     */
+    const doc = window.document;
+    const setFs = el => Object.defineProperty(doc, "fullscreenElement",
+      { value: el, configurable: true });
+    setFs(doc.documentElement);
+    ptr("mouse", "pointermove", 150, 200);
+    ptr("mouse", "pointermove", -400, 200);
+    check("fullscreen keeps steering out on the letterbox bars", st.dragging);
+    check("...parking the ship against the near edge, not drifting off",
+      st.dragX === 0);
+    ptr("mouse", "pointermove", 99999, 99999);
+    check("...and the same on the far corner",
+      st.dragging && st.dragX === SF.entityConst.VW);
+    delete doc.fullscreenElement;
+    ptr("mouse", "pointermove", 150, 200);
+    ptr("mouse", "pointermove", -400, 200);
+    check("windowed still lets go once the pointer leaves the playfield",
+      !st.dragging);
+    check("the letterbox bars hide the cursor with the rest of the sky",
+      /:fullscreen\s+#screen-game\s*\{[^}]*cursor:\s*none/.test(
+        fs.readFileSync(path.join(__dirname, "style.css"), "utf8")));
+
     cv.getBoundingClientRect = realRect;
     SF.input.clearMovement();
   }

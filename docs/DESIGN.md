@@ -3242,6 +3242,41 @@ of the field width, and the ship converges on virtual x 544 for a target of
 544, releases the moment the pointer leaves the canvas, and the computed
 cursor over the canvas is `none`.
 
+### 8y2. The letterbox bars are part of the game
+
+First report from the customer: *"when the cursor goes out of the screen it
+becomes difficult to come back."* The culprit was the release rule above -
+disengaging the moment the pointer left the canvas - meeting the shape of a
+fullscreen laptop display. The playfield is 3:4; a 1440x900 screen shows it as
+a 720-wide box with a **360px black bar on each side**. Half the screen is bar.
+The pointer wanders onto one, the ship goes dead mid-fight, and finding an
+invisible cursor to get back is worse than whatever caused the drift.
+
+The instinct is Pointer Lock, and it's the wrong tool here. Locking takes every
+mouse event hostage - the bomb, overdrive, pause and mute buttons are DOM
+elements over the canvas, and a locked pointer can't click any of them, so
+solving a steering annoyance would have cost the whole HUD. It also brings Esc
+handling, a permission prompt on Safari, and relative-motion drift.
+
+The cheap answer is the honest one: **in fullscreen there is nowhere else to
+be, so everywhere steers.** One condition on the hover branch - if
+`document.fullscreenElement` is set, skip the rect test - and
+`pointerToVirtual`'s existing clamp does the rest, parking the ship on the
+nearest wall while the pointer sits out on a bar. The cursor is confined by
+fullscreen itself, which is what the request was really asking for. Windowed
+mode keeps the rect test, because past a window's edge are the browser's own
+controls and other apps, and nobody is flying with those.
+
+`cursor: none` moved up with it: hiding the arrow only over the canvas would
+have left it visible on the bars, which are now playfield. It's hidden across
+`#screen-game` in fullscreen, and the buttons and any open overlay take it back
+- the only things out there to click.
+
+Measured in real Chromium at 1440x900, actually fullscreen: 360px bars each
+side, `cursor: none` on the screen, and with the pointer parked at the far
+right edge of the display the ship holds the right wall at x 616 of a 640-wide
+field, still steering (x 24 on the left).
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3256,7 +3291,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~657 checks.
+  be re-measured after load. ~662 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
