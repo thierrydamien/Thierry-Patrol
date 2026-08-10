@@ -212,6 +212,27 @@ async function run(){
     window.document.documentElement.style.removeProperty("--sa-bottom");
     SF.field.refresh();
     check("removing the insets restores the original field", SF.entityConst.VW === before);
+
+    /*
+     * Landscape windows are not phones waiting to be rotated. A desktop
+     * window or landscape iPad never turns, so the height binds and the
+     * field takes the widest tuned shape - measured before the fix, a
+     * 1920x1040 monitor flew a 433-wide phone field on 29% of the screen.
+     */
+    const defineSize = (w, h) => {
+      Object.defineProperty(window.HTMLElement.prototype, "clientWidth",  { configurable:true, get(){ return w; } });
+      Object.defineProperty(window.HTMLElement.prototype, "clientHeight", { configurable:true, get(){ return h; } });
+    };
+    defineSize(1920, 1040);
+    check("a desktop window gets the full 640-wide field", SF.field.measure() === 640);
+    defineSize(1024, 744);
+    check("a landscape iPad gets it too", SF.field.measure() === 640);
+    defineSize(390, 620);
+    check("a portrait phone still gets a phone-shaped field",
+      SF.field.measure() >= 380 && SF.field.measure() < 640);
+    SF.field.refresh();
+    check("the harness field is back where the rest of the suite expects it",
+      SF.entityConst.VW === before);
   }
 
   /*
@@ -701,11 +722,17 @@ async function run(){
       return keptPlaying && paused;
     })());
 
-    /* The field is read once at load and everything derives from it, so
-       reading innerWidth/innerHeight literally left a phone that loaded in
-       landscape stuck with a 640-wide field for the whole session. */
-    check("the playfield is sized from the short edge, whichever way it is held",
-      /Math\.min\(vw, vh\)/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")) &&
+    /*
+     * This check used to pin the opposite rule ("sized from the short edge,
+     * whichever way it is held") - the rotated-phone model, which quietly
+     * shrank desktops and landscape iPads to phone-shaped fields. The phone
+     * problem it guarded against (loading sideways and keeping a 640 field
+     * for the whole session) is covered differently now: the sub-500px
+     * rotate nag blocks play until the phone is upright, and the field is
+     * re-measured at mission launch, after the rotation. What must hold for
+     * everyone is only that the field stays inside the tuned range.
+     */
+    check("the playfield always lands inside the tuned range",
       SF.entityConst.VW >= 380 && SF.entityConst.VW <= 640);
     /* The field lands in the screen MINUS the status bar and home indicator -
        ~93px of difference on an iPhone, which was the entire remaining gap.

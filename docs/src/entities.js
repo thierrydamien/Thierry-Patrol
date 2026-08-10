@@ -75,15 +75,31 @@ function pickFieldWidth(){
     } catch(e){ return 0; }
   };
 
-  // The short edge is the width and the long edge the height, whichever way
-  // the device is being held: portrait is the only orientation this is played
-  // in, and reading innerWidth/innerHeight literally left a phone that loaded
-  // sideways stuck with a landscape-shaped field for the whole session.
+  /*
+   * Which way is this screen REALLY facing?
+   *
+   * A portrait window reads its short edge as the field width, as ever. A
+   * landscape window used to be modelled as a phone waiting to be rotated -
+   * short edge as width, long edge as height - which is right for a phone
+   * (the rotate nag then makes the player turn it) and wrong for everything
+   * else: a desktop window and a landscape iPad never rotate. Measured, that
+   * model gave a 1920x1040 monitor a 433-wide phone field using 29% of the
+   * screen, which is exactly the "optimised for a phone" complaint.
+   *
+   * In a landscape window the HEIGHT is the binding edge and width is
+   * abundant, so the field takes the widest shape the game is tuned for -
+   * the 640 ceiling every formation, boss arena and difficulty pass was
+   * validated against. Wider than that is a gameplay retune, not a sizing
+   * fix. A landscape window always has room for it: a 640x800 field at full
+   * height needs width = 0.8 x height, and landscape means width > height.
+   *
+   * Phones still end up portrait-shaped: the sub-500px rotate nag blocks
+   * play until the phone is turned, and the field is re-measured at mission
+   * launch - after the rotation - so the sideways number never flies.
+   */
   const portrait = vh >= vw;
-  const w = Math.min(vw, vh);
-  const h = Math.max(vw, vh) -
-            (portrait ? inset("top") + inset("bottom")
-                      : inset("left") + inset("right"));
+  const w = portrait ? vw : vw - inset("left") - inset("right");
+  const h = (portrait ? vh : vh) - inset("top") - inset("bottom");
 
   /*
    * The clamp is now only a safety net for something pathological, not the
