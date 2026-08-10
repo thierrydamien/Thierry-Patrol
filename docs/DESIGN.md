@@ -3036,6 +3036,46 @@ fetch throw: a throw escapes into `respondWith` and reaches an `<img>` as
 
 Same reproduction after the fix: `503 -> five 404s -> backoff -> 200`.
 
+## 8bt10. Landscape windows are not phones waiting to be rotated
+
+"The screen size of the game is optimised for a phone. Would it be possible
+to make it larger on an iPad or a computer?"
+
+Measured before touching anything, launching a real mission per screen:
+
+| screen | field | frame | of the usable screen |
+|---|---|---|---|
+| iPhone 14 portrait | 409 | 390x763 | 100% |
+| iPad portrait | 627 | 768x980 | 100% |
+| iPad landscape | 600 | 543x724 | 53% |
+| laptop 1366x728 | 426 | 388x728 | 28% |
+| desktop 1920x1040 | 433 | 563x1040 | 29% |
+
+Height already filled everywhere - the waste was WIDTH. `pickFieldWidth()`
+modelled every landscape window as a phone waiting to be rotated (short edge
+as field width), which is right for a phone - the rotate nag then makes the
+player turn it - and wrong for everything else: a desktop window and a
+landscape iPad never rotate. So a 1920x1040 monitor flew a 433-wide phone
+field in a thin column.
+
+The rule now matches reality: in a landscape window the height is the
+binding edge and width is abundant, so the field takes the WIDEST shape the
+game is tuned for - the 640 ceiling that every formation, boss arena and
+difficulty pass was validated against. Wider than 640 would be a gameplay
+retune, not a sizing fix, and a landscape window always has room for it
+(640x800 at full height needs width = 0.8 x height). After: laptop 582x728
+(+50% linear, area more than doubled), desktop 832x1040, iPad landscape
+579x724, and portrait screens byte-identical.
+
+The phone case this model existed for is covered by two other mechanisms
+now: the sub-500px rotate nag blocks play until the phone is upright, and
+the field re-measures at mission launch - after the rotation - so the
+sideways number never flies a mission. The suite check that pinned the old
+rule ("sized from the short edge, whichever way it is held") is rewritten to
+the new contract, with desktop, landscape-iPad and portrait-phone cases each
+asserted; the remaining pillarbox on a 16:9 monitor is the game's own
+portrait shape, which is the game, not a bug.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3050,7 +3090,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~620 checks.
+  be re-measured after load. ~624 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
