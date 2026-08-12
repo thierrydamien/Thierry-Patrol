@@ -27,6 +27,105 @@ const TOUCH_LIFT = 48;   // keeps a thumb clear of the (now larger) ship
 let dragPointerId = null;
 let hoverSteer = false;  // mouse steering with no button held (see pointermove)
 
+/* ---------------------------------------------------------
+   POINTER LOCK - fullscreen that actually holds on
+   ---------------------------------------------------------
+ * Steering everywhere on screen (§8y2) fixed the letterbox bars but left the
+ * real edges: run the cursor off the bottom of a Mac and the Dock slides up
+ * over the game; run it off the top and the menu bar and the browser's "Exit
+ * Full Screen" button are waiting. Neither is something a page can veto - the
+ * Dock answers to the OS cursor, and there is no web API that reaches it.
+ *
+ * The only lever a page actually has is to make there BE no OS cursor.
+ * Pointer lock hands us raw movement deltas instead, and we keep the cursor
+ * ourselves, clamped to the window - so it cannot arrive at an edge, cannot
+ * summon the Dock, and cannot reach anything that would drop fullscreen.
+ *
+ * §8y2 rejected pointer lock for a real reason: it takes every mouse event
+ * hostage, and the pause, mute and ability buttons are DOM elements over the
+ * canvas. That cost is paid back below - we own the cursor, so we can hit-test
+ * it against the HUD ourselves and synthesise the press. The buttons keep
+ * working; they just answer to our cursor rather than the system's.
+ */
+const INTERACTIVE = "button, a, input, select, textarea, [role=button]";
+let locked = false;              // the OS cursor is ours
+let lockX = 0, lockY = 0;        // our cursor, in client coordinates
+let reticle = null, hovered = null;
+let releasing = false;           // we asked for the unlock - not an Esc
+
+function lockSupported(){
+  return !!(document.documentElement.requestPointerLock && document.exitPointerLock);
+}
+
+/**
+ * Requested right after fullscreen is granted, and again on any click made
+ * while fullscreen without it (coming back from another tab drops the lock,
+ * and re-taking it needs a fresh gesture).
+ */
+function lockPointer(){
+  if(!lockSupported() || locked || !document.fullscreenElement) return;
+  lockX = window.innerWidth/2;
+  lockY = window.innerHeight*0.72;      // near the ship, so nothing jumps
+  try {
+    const r = document.fullscreenElement.requestPointerLock();
+    if(r && r.catch) r.catch(() => {});
+  } catch(e){ /* Safari can refuse; fullscreen still works, just unlocked */ }
+}
+function unlockPointer(){
+  if(!locked) return;
+  releasing = true;
+  try { document.exitPointerLock(); } catch(e){}
+}
+function isPointerLocked(){ return locked; }
+
+/** A ring that appears only over something clickable - see hover(). */
+function place(){
+  if(!reticle) return;
+  reticle.style.left = lockX + "px";
+  reticle.style.top  = lockY + "px";
+}
+function showReticle(on){
+  if(!on && !reticle) return;
+  if(!reticle){
+    reticle = document.createElement("div");
+    reticle.id = "vcursor";
+    reticle.setAttribute("aria-hidden", "true");
+    document.body.appendChild(reticle);
+  }
+  reticle.classList.toggle("on", !!on);
+}
+/*
+ * The cursor is ours now, so :hover never fires. `vhover` stands in for it:
+ * without some feedback, aiming an invisible cursor at a button is guesswork.
+ */
+function hover(raw){
+  const el = raw && raw.closest ? raw.closest(INTERACTIVE) : null;
+  if(el !== hovered){
+    if(hovered) hovered.classList.remove("vhover");
+    hovered = el;
+    if(hovered) hovered.classList.add("vhover");
+    showReticle(!!hovered);
+  }
+  place();
+}
+
+/*
+ * Press whatever is under our cursor. The HUD is a mix by design - the
+ * ability buttons listen for pointerdown so they fire instantly under a
+ * thumb, everything else listens for click - so send both. No control in the
+ * game listens for both, so nothing fires twice.
+ */
+function press(el){
+  const base = { bubbles:true, cancelable:true, clientX:lockX, clientY:lockY };
+  try {
+    const pe = { ...base, pointerId:1, pointerType:"mouse", isPrimary:true };
+    el.dispatchEvent(new PointerEvent("pointerdown", pe));
+    el.dispatchEvent(new PointerEvent("pointerup", pe));
+  } catch(e){ /* PointerEvent constructor missing: the click below still lands */ }
+  if(el.focus) el.focus();
+  if(el.click) el.click();
+}
+
 function keyDown(e){
   const k = e.key;
   if(k === "ArrowLeft" || k === "a" || k === "A") state.left = true;
@@ -35,7 +134,13 @@ function keyDown(e){
   if(k === "ArrowDown" || k === "s" || k === "S") state.down = true;
   if(k === "b" || k === "B" || k === " ") state.bombPressed = true;
   if(k === "v" || k === "V" || k === "Shift") state.overdrivePressed = true;
-  if(k === "p" || k === "P" || k === "Escape") state.pausePressed = true;
+  /*
+   * In fullscreen, Escape is the one way out and it means exactly that - it
+   * must not also pause on the way. `p` still pauses, and outside fullscreen
+   * Escape keeps its old job.
+   */
+  if(k === "p" || k === "P" || (k === "Escape" && !document.fullscreenElement))
+    state.pausePressed = true;
   if(k === " " || k === "ArrowUp" || k === "ArrowDown") e.preventDefault();
 }
 function keyUp(e){
@@ -70,9 +175,11 @@ function attach(canvasEl, vw, vh){
   window.addEventListener("keydown", keyDown);
   window.addEventListener("keyup", keyUp);
   canvas.addEventListener("pointerdown", e => {
+    if(locked) return;                       // clientX is meaningless under lock
     state.dragging = true; dragPointerId = e.pointerId; pointerToVirtual(e.clientX, e.clientY, liftFor(e));
   });
   window.addEventListener("pointermove", e => {
+    if(locked) return;                       // the locked handler steers instead
     if(state.dragging && e.pointerId === dragPointerId){
       pointerToVirtual(e.clientX, e.clientY, liftFor(e));
       return;
@@ -118,6 +225,53 @@ function attach(canvasEl, vw, vh){
   };
   window.addEventListener("pointerup", end);
   window.addEventListener("pointercancel", end);
+
+  /* ---- locked steering ------------------------------------------------ */
+  /*
+   * Under lock the event carries deltas, not a position, so we integrate our
+   * own and clamp it to the window. That clamp is the whole feature: the
+   * cursor stops one pixel short of every screen edge, so the Dock is never
+   * asked to appear and the browser's exit affordances are never reachable.
+   * The ship is clamped again inside pointerToVirtual, so it still parks on
+   * the nearest wall while the cursor sits out on a letterbox bar.
+   */
+  window.addEventListener("mousemove", e => {
+    if(!locked) return;
+    lockX = clamp(lockX + (e.movementX || 0), 0, window.innerWidth  - 1);
+    lockY = clamp(lockY + (e.movementY || 0), 0, window.innerHeight - 1);
+    hoverSteer = true; state.dragging = true;
+    pointerToVirtual(lockX, lockY, 0);
+    hover(document.elementFromPoint(lockX, lockY));
+  });
+
+  window.addEventListener("mousedown", e => {
+    if(!locked){
+      // Fullscreen without the lock: a tab switch dropped it, and taking it
+      // back needs a gesture. This click is one.
+      if(document.fullscreenElement) lockPointer();
+      return;
+    }
+    const under = document.elementFromPoint(lockX, lockY);
+    const hit = under && under.closest ? under.closest(INTERACTIVE) : null;
+    if(hit){ e.preventDefault(); press(hit); }
+  });
+
+  document.addEventListener("pointerlockchange", () => {
+    locked = !!document.pointerLockElement;
+    if(locked){ releasing = false; return; }
+    hover(null); showReticle(false);
+    state.dragging = false; hoverSteer = false;
+    if(releasing){ releasing = false; return; }
+    /*
+     * The lock went away and we didn't ask for it. On a desktop that means
+     * Escape - the one exit we promised - so take fullscreen down with it,
+     * and the player is out in a single press rather than two. A tab switch
+     * lands here too, and there the right answer is to stay in fullscreen and
+     * re-lock on their next click (see mousedown above).
+     */
+    if(!document.hidden && document.fullscreenElement)
+      document.exitFullscreen().catch(() => {});
+  });
 }
 
 /** Consumed once per frame by the game so a press fires exactly one action. */
@@ -129,5 +283,6 @@ function clearMovement(){
   state.dragging = false; hoverSteer = false;
 }
 
-SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement };
+SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+             lockPointer, unlockPointer, isPointerLocked, lockSupported };
 })();

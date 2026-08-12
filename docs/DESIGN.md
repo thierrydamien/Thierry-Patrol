@@ -3440,6 +3440,79 @@ the first place. At 0.5x, sat in the nozzle rather than above it, it reads as
 an engine. Worth writing down twice: on a 42px sprite, anything bright is
 bigger than it looks.
 
+### 8y3. Fullscreen that holds on: taking the cursor
+
+Third report from the customer, and the sharpest: *once fullscreen is on,
+nothing but Escape should get you out of it - and running the cursor to the
+bottom of a Mac must not pop the Dock over the game.*
+
+§8y2 made the letterbox bars steer, which fixed everything **inside** the
+screen. What it couldn't touch was the edges. Push the cursor off the bottom
+of a Mac and the Dock slides up over the playfield; push it off the top and
+the menu bar and the browser's own *Exit Full Screen* button are sitting
+there. Both belong to the OS, and **there is no web API that reaches either**.
+A page cannot ask the Dock to stay down.
+
+The only lever a page actually has is to arrange for there to be no OS cursor
+at all. That is Pointer Lock: the system cursor goes away, the page gets raw
+`movementX/movementY` deltas, and the cursor position becomes something we
+keep ourselves. Clamped to the window, it can never arrive at an edge - so the
+Dock is never asked for, the menu bar never reveals, and nothing that would
+drop fullscreen is reachable.
+
+§8y2 considered pointer lock and rejected it, for a reason that was correct at
+the time: *"locking takes every mouse event hostage - the bomb, overdrive,
+pause and mute buttons are DOM elements over the canvas, and a locked pointer
+can't click any of them, so solving a steering annoyance would have cost the
+whole HUD."* The difference now is that the annoyance is no longer a steering
+annoyance - it's the Dock, and nothing else solves it. So the HUD had to be
+paid for rather than avoided.
+
+**Paying for the HUD.** We own the cursor now, which means we can do the two
+things the browser was doing with it. `document.elementFromPoint` at our own
+coordinates finds what is under it; a synthetic `pointerdown` + `pointerup` +
+`click` presses it. Both are sent because the HUD is deliberately mixed - the
+ability buttons listen for `pointerdown` so they fire instantly under a thumb,
+everything else listens for `click` - and no control listens for both, so
+nothing double-fires. `:hover` can never fire again either, so a `.vhover`
+class stands in for it, and a ring (`#vcursor`) is drawn at our position,
+shown only when it is over something clickable. Everywhere else the ship is
+still the pointer, which is what §8y2 established and what `cursor:none`
+already assumed.
+
+**The Escape contract.** Escape belongs to the browser: it drops the pointer
+lock, and no page can prevent that. Left alone it would take two presses to
+get out - one for the lock, another for fullscreen - so an unlock we did not
+ask for is treated as the Escape it almost always is, and fullscreen comes
+down with it. A `releasing` flag distinguishes that from the unlock we request
+ourselves when the player uses the Exit Fullscreen button, which must not
+bounce back through `exitFullscreen` underneath the first one. A tab switch
+also lands in that handler, and there the right answer is different again:
+stay in fullscreen, and re-take the lock on the player's next click, because
+re-locking needs a fresh gesture.
+
+Escape also stopped pausing while fullscreen. It has one job there now, and a
+key that both leaves and pauses would leave the game paused behind a window
+the player was trying to get out of. `p` still pauses.
+
+**Both calls ride one click.** `requestFullscreen()` and `requestPointerLock()`
+are both gated on a user gesture, and the gesture has expired by the time
+fullscreen settles on its own - so the lock is requested from the fullscreen
+button's own handler, chained onto the promise.
+
+**What this still cannot do.** F11 and ⌘⌃F are handled above the page and will
+still leave fullscreen; no page can intercept them. What the lock removes is
+every *pointer* route out - which is the one the customer was actually hitting.
+
+Verified in real Chromium at 1440x900, genuinely fullscreen and genuinely
+locked: driving the cursor hard into the bottom-right corner keeps both
+fullscreen and the lock, with the ship parked on the far corner at 555,766 of
+a 640x854 field; the ring appears over the pause button and pressing it pauses;
+RESUME on the pause overlay is reachable and resumes. Escape's *own* half is
+the browser's and can't be synthesised headlessly, so the jsdom suite pins our
+half instead - that an unlock nobody asked for takes fullscreen with it, and
+that one we asked for doesn't.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3454,7 +3527,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~701 checks.
+  be re-measured after load. ~711 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

@@ -3219,11 +3219,29 @@ qa(".sb-icon[data-glyph]").forEach(cv => SF.icons.paint(cv, cv.dataset.glyph, "#
     SF.icons.paint(glyph, on ? "contract" : "expand", "rgba(255,255,255,0.75)");
     btn.lastChild.textContent = on ? "Exit Fullscreen" : "Fullscreen";
   };
+  /*
+   * Going fullscreen also takes the cursor (SF.input, POINTER LOCK). It has to
+   * be asked for here rather than inside the input layer, because both calls
+   * have to ride the same click: a browser will only hand over the pointer on
+   * a fresh user gesture, and by the time fullscreen has settled on its own
+   * that gesture has expired.
+   */
   click(btn, () => {
-    if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else root.requestFullscreen().catch(() => {});
+    if(document.fullscreenElement){
+      SF.input.unlockPointer();
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    const r = root.requestFullscreen();
+    if(r && r.then) r.then(() => SF.input.lockPointer()).catch(() => {});
+    else SF.input.lockPointer();
   });
-  document.addEventListener("fullscreenchange", paintState);
+  document.addEventListener("fullscreenchange", () => {
+    // Leaving fullscreen by any route hands the cursor back; keeping it would
+    // strand the player with an invisible pointer in a windowed page.
+    if(!document.fullscreenElement) SF.input.unlockPointer();
+    paintState();
+  });
   paintState();
 })();
 renderProfiles();

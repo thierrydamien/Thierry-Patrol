@@ -4417,6 +4417,77 @@ async function run(){
       lum(art.paletteFor("#c0392b", false).base) * 1.25);
   }
 
+  /* ---------- fullscreen keeps hold of the cursor ---------- */
+  {
+    /*
+     * The steering itself needs a real pointer lock and is checked in
+     * Chromium (see DESIGN §8y3) - jsdom has no lock to take. What IS
+     * checkable here is the contract around it: the Escape promise, the
+     * exported surface, and the rule that an unlock nobody asked for takes
+     * fullscreen down with it.
+     */
+    const doc = window.document;
+    const setFs = el => Object.defineProperty(doc, "fullscreenElement",
+      { value: el, configurable: true });
+    const setLock = el => Object.defineProperty(doc, "pointerLockElement",
+      { value: el, configurable: true });
+    const key = k => window.dispatchEvent(new window.KeyboardEvent("keydown", { key: k }));
+
+    check("the input layer can be asked for the cursor",
+      typeof SF.input.lockPointer === "function" &&
+      typeof SF.input.unlockPointer === "function" &&
+      typeof SF.input.isPointerLocked === "function");
+
+    delete doc.fullscreenElement;
+    SF.input.consumePause();
+    key("Escape");
+    check("windowed, Escape still pauses the way it always did", SF.input.consumePause());
+
+    setFs(doc.documentElement);
+    SF.input.consumePause();
+    key("Escape");
+    check("in fullscreen, Escape means leave - it doesn't also pause",
+      !SF.input.consumePause());
+    key("p");
+    check("...and p is still there to pause with", SF.input.consumePause());
+
+    /*
+     * An unlock we didn't ask for is Escape (the browser owns that key), so
+     * fullscreen has to come down in the same press - otherwise the player
+     * presses it once, loses the cursor lock, and is left in a fullscreen
+     * window they now have to escape a second time.
+     */
+    let exited = 0;
+    doc.exitFullscreen = () => { exited++; return Promise.resolve(); };
+    setLock(doc.documentElement);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    check("taking the cursor is noticed", SF.input.isPointerLocked());
+    setLock(null);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    check("an unlock nobody asked for drops fullscreen with it", exited === 1);
+    check("...and lets go of the ship rather than leaving it stuck on a wall",
+      !SF.input.state.dragging);
+
+    // ...but when WE release it (the Exit Fullscreen button), that same
+    // handler must not fire a second exitFullscreen underneath the first.
+    setLock(doc.documentElement);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    SF.input.unlockPointer();
+    setLock(null);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    check("a release we asked for doesn't bounce back through exitFullscreen",
+      exited === 1);
+
+    const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+    check("our own cursor has something to draw", /#vcursor\s*\{/.test(css));
+    check("...and a stand-in for the :hover that can never fire",
+      /\.vhover\s*\{/.test(css));
+
+    delete doc.fullscreenElement;
+    delete doc.pointerLockElement;
+    SF.input.clearMovement();
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;
