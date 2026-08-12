@@ -341,6 +341,51 @@ const BEHAVIOURS = {
     e.y += e.vy * dt;
     e.x += Math.sin(e.phase += dt) * 28 * dt;
   },
+
+  /*
+   * THE TITHE SERPENT's head: a sinuous roam of the upper garden, never
+   * leaving. It writes its path into e.trailPts every frame; the rings
+   * behind it just read that tape. Hunger (steering at nearby coins) is
+   * layered on by game.js, which can see the pickups - this is only how a
+   * serpent swims.
+   */
+  serpentHead(e, dt, c){
+    e.trailPts = e.trailPts || [];
+    e.phase += dt;
+    // A lissajous wander with a slow drift, clamped to the garden's canopy.
+    const tx = c.VW*0.5 + Math.sin(e.phase*0.62) * c.VW*0.36;
+    const ty = 200 + Math.sin(e.phase*0.47 + 1.7) * 130;
+    const hx = (e.huntX !== undefined && e.huntX !== null) ? e.huntX : tx;
+    const hy = (e.huntY !== undefined && e.huntY !== null) ? e.huntY : ty;
+    const dx = hx - e.x, dy = hy - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const sp = e.speed * (e.hungry ? 1.7 : 1);
+    e.x += dx/d * sp * dt;
+    e.y += dy/d * sp * dt;
+    e.x = clamp(e.x, 30, c.VW - 30);
+    e.y = clamp(e.y, 70, 430);
+    e.trailPts.push({ x: e.x, y: e.y });
+    if(e.trailPts.length > 720) e.trailPts.shift();
+  },
+
+  /** A ring of the serpent: reads its place off the head's tape. */
+  serpentSeg(e, dt, c){
+    const head = e.headRef;
+    if(!head || !head.alive || !head.trailPts){
+      // Orphaned ring: the head is gone, so it tumbles out of the garden.
+      e.y += 160 * dt;
+      return;
+    }
+    const gap = 11;                                 // tape samples per ring
+    const idx = head.trailPts.length - 1 - gap * (e.segIndex + 1);
+    if(idx >= 0){
+      const pt = head.trailPts[idx];
+      e.x = pt.x; e.y = pt.y;
+    } else {
+      // Not enough tape yet (just spawned): trail straight behind the head.
+      e.x = head.x; e.y = head.y - (e.segIndex + 1) * 24;
+    }
+  },
 };
 
 /* ---------------------------------------------------------
@@ -486,6 +531,27 @@ const ENEMY_TYPES = {
     hazard:true, tough:true,
     toughSeconds:5,            // five seconds of concentrated fire, at any gear level
     splitsInto:{ type:"asteroid", n:3 },
+  },
+  /*
+   * THE TITHE SERPENT (Act 4). One creature in a fleet of machines - a head
+   * that roams the garden eating YOUR coins, and a tail of rings that grows
+   * a segment per mouthful. Rings are armoured except the one glowing weak
+   * ring that cycles; the head itself only opens up once the tail is short.
+   * All of the serpent's LOGIC (eating, growing, the weak ring, the
+   * disgorge) lives in game.js's run.serpent block; these entries give the
+   * pieces bodies, art and hit-boxes.
+   */
+  serpent: {
+    name:"Tithe Serpent", behaviour:"serpentHead", hp:70, r:17, size:56, speed:120,
+    score:400, money:0, tint:"#2fbf9a", fire:null,
+    armoured:true, tough:true,
+    toughSeconds:6,
+  },
+  serpentSeg: {
+    name:"Serpent Ring", behaviour:"serpentSeg", hp:60, r:14, size:44, speed:0,
+    score:60, money:4, tint:"#2fbf9a", fire:null,
+    armoured:true,
+    toughSeconds:1.5,
   },
 };
 

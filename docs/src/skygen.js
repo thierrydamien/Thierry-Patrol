@@ -158,6 +158,43 @@ const SKIES = [
     props:[ {k:"sun",    x:0.50, y:0.30, r:0.20, color:"#ff6b4a"},
             {k:"rocks",  x:0.22, y:0.70, r:0.20, n:24},
             {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
+
+  /* --- Act 4. Through the crack the Devourer left. Not "more space":
+     somewhere space doesn't quite work - and, at the end, the place where
+     space gets MADE. --- */
+
+  { name:"The Undertow",  clouds:["#155e75","#2dd4bf","#0b1c3c"], dust:"#020810", star:"#ccfbf1",
+    density:0.95, stars:0.85, bright:2,
+    props:[ {k:"planet", x:0.78, y:0.28, r:0.17, lit:"#2a9db0", dark:"#062030", crescent:true},
+            {k:"galaxy", x:0.20, y:0.62, r:0.24},
+            {k:"planet", x:0.16, y:0.16, r:0.045, lit:"#7fd8d0", dark:"#0e3a3a", craters:true} ] },
+
+  { name:"The Chorus",    clouds:["#c026d3","#f59e0b","#4a0450"], dust:"#0e0312", star:"#fdf4ff",
+    density:1.05, stars:0.9, bright:4,
+    props:[ {k:"galaxy", x:0.72, y:0.20, r:0.26},
+            {k:"planet", x:0.18, y:0.74, r:0.11, lit:"#d879e8", dark:"#3a0d44", rings:true},
+            {k:"sun",    x:0.14, y:0.24, r:0.028, color:"#ffd9f4"} ] },
+
+  { name:"The Foundry",   clouds:["#7c2d12","#f97316","#1c0a04"], dust:"#0d0502", star:"#ffedd5",
+    density:1.2, stars:0.6, bright:2,
+    props:[ {k:"planet", x:0.80, y:0.66, r:0.21, lit:"#c96a2a", dark:"#2a1004", bands:true},
+            {k:"rocks",  x:0.24, y:0.28, r:0.19, n:20},
+            {k:"sun",    x:0.68, y:0.16, r:0.04, color:"#ffb46b"} ] },
+
+  { name:"The Serpent's Garden", clouds:["#047857","#22d3ee","#032f2b"], dust:"#02100b", star:"#d1fae5",
+    density:1.0, stars:0.95, bright:3,
+    props:[ {k:"planet", x:0.24, y:0.30, r:0.15, lit:"#2fbf9a", dark:"#083328", rings:true},
+            {k:"galaxy", x:0.78, y:0.70, r:0.22},
+            {k:"planet", x:0.86, y:0.18, r:0.05, lit:"#9fe8cf", dark:"#1d4038", craters:true} ] },
+
+  /* The workshop's own twilight: graphite, one warm lamp, almost no stars.
+     The finale overpaints it live (blueprint flashes, act-palette repaints),
+     so the base sky stays deliberately quiet - it is the canvas, not the
+     painting. */
+  { name:"Behind the Sky", clouds:["#3d3a55","#c9b458","#15131f"], dust:"#0a0a12", star:"#e2e8f0",
+    density:0.5, stars:0.55, bright:1,
+    props:[ {k:"galaxy", x:0.30, y:0.24, r:0.20},
+            {k:"planet", x:0.80, y:0.76, r:0.09, lit:"#6b6787", dark:"#191627", crescent:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */

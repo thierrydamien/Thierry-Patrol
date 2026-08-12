@@ -355,7 +355,9 @@ function achievementStats(p){
     endlessBest: p.endlessBest || 0,
     endlessLongest: p.endlessLongest || 0,
     bossRushBest: p.bossRushBest || 0,
-    devourerDown: !!(p.missions[18] && p.missions[18].cleared),
+    // 23, not 18: act 3 renumbered the Devourer and this check never moved -
+    // the medal was quietly awarded for clearing the Trench Run instead.
+    devourerDown: !!(p.missions[23] && p.missions[23].cleared),
   };
 }
 

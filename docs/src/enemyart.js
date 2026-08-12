@@ -191,6 +191,56 @@ function thruster(ctx, x, y, w, len, p){
    nose pointing to +y.
    --------------------------------------------------------- */
 const SHAPES = {
+  /*
+   * THE TITHE SERPENT's head - the only creature in a fleet of machines,
+   * which is the point: it doesn't fly the garden, it LIVES there. A blunt
+   * diamond skull, big lantern eyes, and a jaw cracked open exactly one
+   * coin wide. The body rings are drawn by the renderer from the same
+   * palette; this painter is just the face a kid learns to chase.
+   */
+  serpent(ctx, S, p){
+    // skull: blunt diamond, nose toward the player (+y)
+    hull(ctx, [0,S*0.42, S*0.30,S*0.10, S*0.24,-S*0.26, -S*0.24,-S*0.26,
+               -S*0.30,S*0.10], p, S);
+    // brow ridges
+    ctx.strokeStyle = p.shade; ctx.lineWidth = S*0.05; ctx.lineCap = "round";
+    [-1,1].forEach(sd => {
+      ctx.beginPath();
+      ctx.moveTo(sd*S*0.06, S*0.02);
+      ctx.quadraticCurveTo(sd*S*0.20, S*0.06, sd*S*0.24, -S*0.06);
+      ctx.stroke();
+    });
+    ctx.lineCap = "butt";
+    // lantern eyes - the glow that reads at combat size
+    [-1,1].forEach(sd => {
+      const g = ctx.createRadialGradient(sd*S*0.13, S*0.10, 0, sd*S*0.13, S*0.10, S*0.10);
+      g.addColorStop(0, "#fff7d8");
+      g.addColorStop(0.45, p.lit);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(sd*S*0.13, S*0.10, S*0.10, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#1a2c26";
+      ctx.beginPath(); ctx.arc(sd*S*0.13, S*0.11, S*0.035, 0, Math.PI*2); ctx.fill();
+    });
+    // the jaw, cracked one coin wide - with the coin
+    ctx.fillStyle = p.deep;
+    ctx.beginPath();
+    ctx.moveTo(-S*0.14, S*0.34); ctx.lineTo(S*0.14, S*0.34);
+    ctx.lineTo(S*0.09, S*0.46); ctx.lineTo(-S*0.09, S*0.46);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd23f";
+    ctx.beginPath(); ctx.arc(0, S*0.40, S*0.055, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#8a5406"; ctx.lineWidth = Math.max(1, S*0.015);
+    ctx.beginPath(); ctx.arc(0, S*0.40, S*0.055, 0, Math.PI*2); ctx.stroke();
+    // fangs
+    ctx.fillStyle = "#e8f2ee";
+    [-1,1].forEach(sd => {
+      ctx.beginPath();
+      ctx.moveTo(sd*S*0.12, S*0.34); ctx.lineTo(sd*S*0.075, S*0.34);
+      ctx.lineTo(sd*S*0.10, S*0.43); ctx.closePath(); ctx.fill();
+    });
+  },
+
   /* --- the plain shooters: a family of darts, growing heavier --- */
   grunt(ctx, S, p){
     hull(ctx, [0,S*0.44, S*0.20,S*0.02, S*0.30,-S*0.20, 0,-S*0.30,

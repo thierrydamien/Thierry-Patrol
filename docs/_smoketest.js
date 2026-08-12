@@ -371,8 +371,8 @@ async function run(){
       .every(k => !SF.haptics._patterns[k]));
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("23 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 23 &&
+  check("28 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 28 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   /*
    * The opening card is the only instruction a child actually gets mid-flight,
@@ -1786,7 +1786,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,15,17,20,23");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,15,17,20,23,28");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -3033,8 +3033,11 @@ async function run(){
       D && D.finale === true && D.phases.length === 5 &&
       D.size > SF.missions.BOSSES.leviathan.size * 1.35 &&
       D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
-    check("the finale mission closes the campaign",
-      SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "devourer" &&
+    // Two finales now: the Devourer closes act 3 at 23, THE FORGERY closes
+    // the whole campaign at 28.
+    check("each finale closes its act",
+      SF.missions.MISSIONS.find(m => m.id === 23).boss === "devourer" &&
+      SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "forgery" &&
       SF.missions.MISSIONS.find(m => m.id === 22).boss === undefined);
     check("beating it awards the last tune and the last medal",
       SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 23) &&

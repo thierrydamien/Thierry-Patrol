@@ -926,6 +926,8 @@ const SECTORS = [
   { at:13, name:"WARDEN SPACE" },    // 14-15: the jailer's ground
   { at:16, name:"THE TRENCHES" },    // 17-18: their fortress
   { at:19, name:"THEIR STAR" },      // 20-22: the dark, and the end
+  { at:23, name:"THE CRACK" },       // 24-27: where space stops behaving
+  { at:26, name:"THE WORKSHOP" },    // 28: where space gets made
 ];
 
 function renderMissions(){

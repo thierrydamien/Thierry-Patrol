@@ -46,6 +46,16 @@ const OBJECTIVES = {
   convoy:    { label:"Bring the hauler home", icon:"🛡️",
                test: s => s.convoyTotal > 0 && s.convoyLost === 0,
                progress: s => s.convoyLost ? "lost" : "safe" },
+  /* --- Act 4 --- */
+  denyParts: { label:"Stop 10 parts on the belts", icon:"🛠",
+               test: s => (s.partsDenied || 0) >= 10,
+               progress: s => (s.partsDenied || 0) + "/10" },
+  serpent:   { label:"Slay the Tithe Serpent", icon:"🐍",
+               test: s => !!s.serpentSlain,
+               progress: s => s.serpentSlain ? "done" : (s.serpentAte ? s.serpentAte + " coins eaten" : "") },
+  paintSix:  { label:"Paint 6 sketches to your side", icon:"🖌",
+               test: s => (s.painted || 0) >= 6,
+               progress: s => (s.painted || 0) + "/6" },
 };
 
 /* ---------------------------------------------------------
@@ -184,6 +194,37 @@ const BOSSES = {
    * Phase five is the payoff: every pilot this squadron ever pulled out of
    * the dark flies in to help (see finale.js).
    */
+  /*
+   * THE FORGERY - the Act 4 finale, and the only boss that isn't one of
+   * THEM. It is the workshop itself playing the game back: a titan welded
+   * out of every hull the campaign has beaten, and that is only its first
+   * act (see backstage.js for what crawls out of the wreck). This def
+   * covers the welded-titan phase; the standard controller runs it with a
+   * remix pool drawn from every earlier fight.
+   */
+  forgery: {
+    name: "THE FORGERY", epithet: "it plays your game back at you",
+    forge: true,
+    hp: 2400, fightSeconds: 55, size: 300, tint: "#e8c14a", entryY: 190,
+    armoured: true,
+    weakPoints: [
+      // Three welds hold the stolen hulls together. Each one silences a
+      // stolen attack - the fight is an un-welding.
+      { id:"leftWeld",  x:-86, y: 10, r:22, hp:200, disables:"clawSweep" },
+      { id:"rightWeld", x: 86, y: 10, r:22, hp:200, disables:"sweepBeam" },
+      { id:"coreWeld",  x:  0, y:-38, r:24, hp:260, disables:"callMinions" },
+    ],
+    phases: [
+      { at:1.00, speed: 70, telegraph:0.65, gap:[1.6,2.2],
+        attacks:["spreadVolley","chargeRam","ringBurst"] },
+      { at:0.72, speed:100, telegraph:0.55, gap:[1.2,1.7],
+        attacks:["sweepBeam","tractorPull","mineField","aimedBurst"] },
+      { at:0.44, speed:132, telegraph:0.45, gap:[1.0,1.4],
+        attacks:["clawSweep","spiralArms","callMinions","blink"] },
+      { at:0.18, speed:170, telegraph:0.36, gap:[0.8,1.1],
+        attacks:["ringBurst","sweepBeam","spiralArms","aimedBurst"], enrage:true },
+    ],
+  },
   devourer: {
     name: "THE DEVOURER", epithet: "it ate their star. ours is next.",
     finale: true,
@@ -962,6 +1003,145 @@ const MISSIONS = [
     ],
     boss: "devourer",
     objectives: ["complete","rescueAll","keepLives"],
+  },
+
+  /* =========================================================
+     ACT 4 - BEHIND THE SKY
+     The Devourer's fall cracked the sky, and the crack leads
+     somewhere space doesn't quite work. Each stop breaks one
+     rule the first three acts taught; the last stop is where
+     the rules are made.
+     ========================================================= */
+  {
+    id:24, name:"The Undertow", subtitle:"Gravity gone wrong",
+    brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
+    goal:"Whirlpools bend your shots!",
+    face:"shard",              // glass rain caught in the whirlpools
+    wells:true,
+    waves: [
+      w(1,   "grunt",    7, "line"),
+      w(9,   "weaver",   7, "arc"),
+      w(17,  "striker",  4, "vee"),
+      w(25,  "swooper",  6, "pincer"),
+      w(33,  "carrier",  1, "column"),
+      w(38,  "asteroid", 6, "scatter"),      // rocks in a whirlpool: chaos, the fun kind
+      w(41,  "shard",    5, "scatter"),
+      w(44,  "weaver",   8, "twinColumns"),
+      w(52,  "striker",  5, "sides"),
+      w(60,  "grunt",   10, "wall"),
+      w(68,  "swooper",  7, "arc", { elite:1 }),
+      w(76,  "carrier",  1, "column"),
+      w(80,  "boulder",  1, "column"),
+      w(84,  "sniper",   3, "sides"),
+      w(92,  "weaver",   9, "tripleColumns", { elite:1 }),
+      w(100, "striker",  6, "pincer"),
+      w(108, "grunt",   12, "wall"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:25, name:"The Chorus", subtitle:"They fire on the beat",
+    brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
+    goal:"They fire ON THE BEAT — weave!",
+    face:"bomber",             // the beat is a drumline of falling bombs
+    beat:true,
+    waves: [
+      w(1,   "grunt",    8, "arc"),
+      w(9,   "striker",  4, "line"),
+      w(17,  "striker",  5, "vee"),
+      w(25,  "turret",   2, "sides"),
+      w(31,  "interceptor", 6, "pincer"),
+      w(36,  "bomber",   3, "arc"),
+      w(39,  "carrier",  1, "column"),
+      w(44,  "striker",  6, "twinColumns", { elite:1 }),   // the first conductor
+      w(52,  "sniper",   3, "arc"),
+      w(58,  "weaver",   8, "wall"),
+      w(66,  "turret",   3, "sides"),
+      w(72,  "striker",  6, "tripleColumns", { elite:1 }),
+      w(80,  "interceptor", 8, "scatter"),
+      w(88,  "carrier",  1, "column"),
+      w(92,  "striker",  8, "wall", { elite:2 }),          // the full choir
+      w(100, "grunt",   12, "pincer"),
+      w(108, "sniper",   4, "sides"),
+    ],
+    objectives: ["complete","kill90","rescueAll"],
+  },
+  {
+    id:26, name:"The Foundry", subtitle:"Stop the production line",
+    brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
+    goal:"Shoot the parts on the belts!",
+    face:"shielder",           // the machine guards its belts
+    foundry:true,
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(10,  "turret",   2, "sides"),
+      w(18,  "brute",    3, "twinColumns"),
+      w(26,  "striker",  5, "arc"),
+      w(34,  "carrier",  1, "column"),
+      w(40,  "shielder", 1, "column"),
+      w(42,  "grunt",    9, "pincer"),
+      w(50,  "brute",    4, "tripleColumns"),
+      w(58,  "mender",   1, "column"),
+      w(60,  "striker",  6, "wall"),
+      w(68,  "turret",   3, "sides"),
+      w(76,  "carrier",  1, "column"),
+      w(82,  "brute",    4, "vee", { elite:1 }),
+      w(90,  "grunt",   11, "scatter"),
+      w(98,  "shielder", 1, "column"),
+      w(100, "striker",  7, "twinColumns"),
+      w(108, "brute",    5, "wall", { elite:1 }),
+    ],
+    objectives: ["complete","denyParts","rescueAll"],
+  },
+  {
+    id:27, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
+    goal:"It EATS coins — hit the glow ring!",
+    face:"serpent",            // the garden's owner, and the level's
+    serpent:true,
+    waves: [
+      w(1,   "weaver",   7, "arc"),
+      w(9,   "grunt",    8, "vee"),
+      w(17,  "swooper",  6, "pincer"),
+      w(25,  "hive",     1, "column"),
+      w(33,  "carrier",  1, "column"),
+      w(39,  "splitter", 4, "scatter"),
+      w(43,  "thief",    2, "sides"),
+      w(47,  "weaver",   8, "twinColumns"),
+      w(55,  "swooper",  7, "arc", { elite:1 }),
+      w(63,  "mender",   1, "column"),
+      w(65,  "grunt",   10, "wall"),
+      w(73,  "hive",     1, "column"),
+      w(79,  "carrier",  1, "column"),
+      w(85,  "splitter", 5, "pincer"),
+      w(93,  "weaver",   9, "tripleColumns", { elite:1 }),
+      w(101, "swooper",  8, "wall"),
+    ],
+    objectives: ["complete","serpent","rescueAll"],
+  },
+  {
+    id:28, name:"Behind the Sky", subtitle:"Where the game is made",
+    brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
+    goal:"The workshop is awake. Fly!",
+    face:"rival",
+    backstage:true,
+    /*
+     * Short on purpose, like the Devourer's: the waves are the approach, and
+     * backstage.js owns everything after them - the remixes, the fake
+     * endings, and the three-act boss. What spawns here is a taste of every
+     * act, about to be replayed back at the player in sketch form.
+     */
+    waves: [
+      w(1,   "grunt",   10, "vee"),
+      w(9,   "weaver",   8, "twinColumns"),
+      w(17,  "striker",  6, "arc", { elite:1 }),
+      w(25,  "swooper",  8, "pincer"),
+      w(33,  "carrier",  2, "twinColumns"),
+      w(39,  "brute",    4, "wall", { elite:1 }),
+      w(47,  "interceptor", 10, "scatter"),
+    ],
+    boss: "forgery",
+    objectives: ["complete","paintSix","rescueAll"],
   },
 ];
 

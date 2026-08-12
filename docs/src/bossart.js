@@ -501,6 +501,75 @@ const HULLS = {
 };
 
 /** True if this boss has hull art of its own. */
+/*
+ * THE FORGERY - Act 4's finale, phase one: a titan WELDED out of the hulls
+ * of every boss the campaign has beaten. Not a new monster - a wrong one:
+ * the Marauder for a left arm, the Warden for a right, the Phantom's lenses
+ * for a head, the Sentinel's deck for a chest, the Leviathan's bulk for a
+ * skirt, all stitched with glowing gold weld seams at the weak points. It
+ * should read instantly as "everything you already killed, put back wrong".
+ * Each stolen hull keeps its own colours on purpose; only the welds and a
+ * thin gold wash say one hand bolted it together.
+ */
+HULLS.forgery = function(ctx, boss, S, damage, timeMs){
+  const A = S/300;
+  const sub = (id, x, y, scale, rot) => {
+    if(!HULLS[id]) return;
+    ctx.save();
+    ctx.translate(x*A, y*A);
+    if(rot) ctx.rotate(rot);
+    // Sub-painters read a couple of live fields; hand them a calm fake so a
+    // stolen hull never runs its own theatrics inside the titan.
+    try {
+      HULLS[id](ctx, { defId:id, charge:0, flash:0, blink:0,
+                       wounds: boss.wounds || [], phase: null, phaseIndex: 0 },
+                S*scale, Math.min(0.4, damage*0.6), timeMs);
+    } catch(e){ /* a stolen hull must never break the titan */ }
+    ctx.restore();
+  };
+
+  // Back to front: skirt, chest, arms, head.
+  sub("leviathan", 0,  84, 0.52, 0);
+  sub("sentinel",  0,  -6, 0.60, 0);
+  sub("marauder", -92, 16, 0.46, -0.28);
+  sub("warden",    92, 16, 0.46,  0.28);
+  sub("phantom",   0, -86, 0.34, 0);
+
+  // A thin gold wash bonds the patchwork into one machine.
+  ctx.save();
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = "rgba(232,193,74,0.10)";
+  ctx.fillRect(-S*0.9, -S*0.7, S*1.8, S*1.4);
+  ctx.restore();
+
+  // The welds: stitched gold seams over the three joints (the weak points),
+  // breathing slightly so the titan reads as barely holding together.
+  const seam = (x, y, len, rot) => {
+    ctx.save();
+    ctx.translate(x*A, y*A); ctx.rotate(rot);
+    ctx.strokeStyle = "rgba(232,193,74," + (0.55 + Math.sin(timeMs/260)*0.2).toFixed(3) + ")";
+    ctx.lineWidth = Math.max(2, S*0.014);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    const n = 5, step = len*A/n;
+    for(let i=0;i<=n;i++) ctx.lineTo(-len*A/2 + i*step, (i%2 ? 1 : -1)*S*0.016);
+    ctx.stroke();
+    ctx.restore();
+  };
+  seam(-86, 10, 64, -0.5);
+  seam( 86, 10, 64,  0.5);
+  seam(  0,-38, 70,  0);
+  // Weld nodes glow where the fight will pry it apart.
+  [[-86,10],[86,10],[0,-38]].forEach(([wx, wy]) => {
+    const g = ctx.createRadialGradient(wx*A, wy*A, 0, wx*A, wy*A, S*0.075);
+    g.addColorStop(0, "rgba(255,230,150,0.85)");
+    g.addColorStop(0.5, "rgba(232,193,74,0.30)");
+    g.addColorStop(1, "rgba(232,193,74,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(wx*A, wy*A, S*0.075, 0, TAU); ctx.fill();
+  });
+};
+
 function has(id){ return !!HULLS[id]; }
 
 /** Draws the boss's hull, centred on the current transform origin. */
