@@ -1370,3 +1370,6 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
   background: rgba(110,200,255,0.28); border-radius: 4px;
 }
 .screen::-webkit-scrollbar-track, .armory-panel::-webkit-scrollbar-track, .overlay::-webkit-scrollbar-track { background: transparent; }
+
+/* The campaign header's one-line legend for the record chips. */
+.map-legend { font-style: normal; color: var(--ink-faint); }

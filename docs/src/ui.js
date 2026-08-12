@@ -187,10 +187,12 @@ function drawTitleArt(canvasId, p, t){
   ctx.restore();
 
   // The hero: their ship if we know who is flying, a stock one otherwise.
+  // Parked a touch higher and smaller than it used to be: a fully-kitted
+  // hull's wingtips were sitting behind the PATROL wordmark.
   const levels = p ? SF.shipart.levelsOf(p) : {};
   const col = p ? p.shipColor : "#f5a623";
   const bob = Math.sin(t*1.1)*H*0.006;
-  SF.shipart.drawShip(ctx, W*0.66, H*0.22 + bob, W*0.28, { color: col, levels, t: t + 1.1, idle:false, tune: p && p.tune });
+  SF.shipart.drawShip(ctx, W*0.68, H*0.185 + bob, W*0.25, { color: col, levels, t: t + 1.1, idle:false, tune: p && p.tune });
 
   // A wing of three behind it, small, for depth - each on its own rhythm.
   [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz], i) => {
@@ -603,6 +605,66 @@ function buildSky(W, H){
     c.fillRect(skyRand(i+380)*W, skyRand(i+420)*H, sz, sz);
   }
   c.globalAlpha = 1;
+
+  /*
+   * The locked reaches. The top half of the map was near-solid navy - moody,
+   * but it read as unfinished rather than unknown. Everything here stays
+   * under ~0.14 alpha: enemy space should feel occupied, never bright.
+   */
+  // Cold thin wisps through the middle heights the route hasn't reached.
+  c.globalAlpha = 0.10;
+  [["#4c5f96", 0.62, 0.30, 0.30], ["#5b4a86", 0.28, 0.42, 0.26]]
+    .forEach(([col, x, y, r]) => {
+      const g = c.createRadialGradient(x*W, y*H, 0, x*W, y*H, r*W);
+      g.addColorStop(0, col); g.addColorStop(1, col + "00");
+      c.fillStyle = g;
+      c.save(); c.translate(x*W, y*H); c.scale(1.8, 0.5); c.translate(-x*W, -y*H);
+      c.fillRect(x*W - r*W*2, y*H - r*W, r*W*4, r*W*2);
+      c.restore();
+    });
+  c.globalAlpha = 1;
+  // A watch-station holding the approach to their star: a dark hex on a
+  // spine, lit windows, a red beacon. The tease, not a threat.
+  (function watchStation(cx, cy, s){
+    c.fillStyle = "#0b0e1e";
+    c.strokeStyle = "rgba(170,180,220,0.30)";
+    c.lineWidth = 1.2;
+    c.beginPath();
+    for(let i=0;i<6;i++){
+      const a = i/6*Math.PI*2 + Math.PI/6;
+      c.lineTo(cx + Math.cos(a)*s, cy + Math.sin(a)*s);
+    }
+    c.closePath(); c.fill(); c.stroke();
+    c.fillRect(cx - s*0.14, cy - s*2.1, s*0.28, s*1.2);   // the spine
+    c.fillRect(cx - s*1.9, cy - s*0.12, s*1.0, s*0.24);   // a docking arm
+    c.strokeStyle = "rgba(170,180,220,0.16)";
+    c.strokeRect(cx - s*1.9, cy - s*0.12, s*1.0, s*0.24);
+    // Somebody's home: three lit windows and the mast beacon.
+    c.fillStyle = "rgba(255,200,120,0.55)";
+    [[-0.4, -0.1], [0.1, 0.25], [0.45, -0.3]].forEach(([wx, wy]) =>
+      c.fillRect(cx + wx*s, cy + wy*s, 1.6, 1.6));
+    const halo = c.createRadialGradient(cx, cy - s*2.2, 0, cx, cy - s*2.2, s*1.6);
+    halo.addColorStop(0, "rgba(255,90,90,0.45)");
+    halo.addColorStop(1, "rgba(255,90,90,0)");
+    c.fillStyle = halo;
+    c.fillRect(cx - s*1.6, cy - s*3.8, s*3.2, s*3.2);
+    c.fillStyle = "rgba(255,110,110,0.9)";
+    c.beginPath(); c.arc(cx, cy - s*2.2, 1.8, 0, Math.PI*2); c.fill();
+  })(W*0.11, H*0.155, W*0.034);
+  // A drift of wreck-line rocks where the dead sectors sit.
+  c.fillStyle = "#0f1322";
+  c.strokeStyle = "rgba(160,175,210,0.10)";
+  for(let i=0;i<9;i++){
+    const rx2 = (0.30 + skyRand(i+600)*0.34)*W, ry2 = (0.20 + skyRand(i+640)*0.14)*H;
+    const rr2 = 2.5 + skyRand(i+680)*5;
+    c.beginPath();
+    for(let kk=0;kk<6;kk++){
+      const a = kk/6*Math.PI*2;
+      c.lineTo(rx2 + Math.cos(a)*rr2*(0.7+skyRand(i*7+kk)*0.5),
+               ry2 + Math.sin(a)*rr2*(0.7+skyRand(i*9+kk)*0.5));
+    }
+    c.closePath(); c.fill(); c.stroke();
+  }
   return cv;
 }
 
@@ -868,7 +930,10 @@ const SECTORS = [
 
 function renderMissions(){
   const stars = P.totalStars(profile);
-  $("missionStars").textContent = stars + " / " + (MISSIONS.length*3) + " ★ collected";
+  // The second half explains the little initial chips on the stops - they
+  // were the one mark on the map the map never explained.
+  $("missionStars").innerHTML = stars + " / " + (MISSIONS.length*3) + " ★ collected" +
+    (P.listNames().length > 1 ? ' <i class="map-legend">· a chip on a stop = who holds its record</i>' : "");
 
   // Size the map to the campaign, not the other way round.
   const cv = $("campaignCanvas");
@@ -1992,6 +2057,75 @@ function startHangarLoop(){
   hangar.raf = requestAnimationFrame(step);
 }
 
+/*
+ * The bay itself, cached per size. The ship used to float in a featureless
+ * void - one radial "floor light" was the whole room. A commercial hangar
+ * shot has a place in it: a spotlight cone from the ceiling rig, a landing
+ * pad with survey ticks, gantry rails up the walls. All of it stays close
+ * to the panel's own darkness so the ship remains the only bright thing.
+ */
+const bay = { cv: null, key: "" };
+function bayBackdrop(W, H){
+  const key = W + "x" + H;
+  if(bay.key === key) return bay.cv;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  const TAU2 = Math.PI*2;
+
+  // Walls: a touch lighter than the panel toward the deck, so there IS a room.
+  const wall = c.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, "rgba(8,12,30,0.5)");
+  wall.addColorStop(0.7, "rgba(12,17,40,0.3)");
+  wall.addColorStop(1, "rgba(22,30,60,0.5)");
+  c.fillStyle = wall; c.fillRect(0, 0, W, H);
+
+  // Ceiling rig: a soft light cone down onto the pad.
+  const cone = c.createLinearGradient(0, 0, 0, H*0.85);
+  cone.addColorStop(0, "rgba(150,190,255,0.11)");
+  cone.addColorStop(1, "rgba(150,190,255,0)");
+  c.fillStyle = cone;
+  c.beginPath();
+  c.moveTo(W*0.40, 0); c.lineTo(W*0.60, 0);
+  c.lineTo(W*0.82, H*0.85); c.lineTo(W*0.18, H*0.85);
+  c.closePath(); c.fill();
+
+  // The landing pad: two survey rings and tick marks, drawn as squashed
+  // circles (translate/scale beats ellipse() - the test harness's canvas
+  // build predates it).
+  const px = W/2, py = H*0.80, rx = W*0.295, squash = 0.30;
+  const ring = (r, style, lw) => {
+    c.save(); c.translate(px, py); c.scale(1, squash);
+    c.strokeStyle = style; c.lineWidth = lw;
+    c.beginPath(); c.arc(0, 0, r, 0, TAU2); c.stroke();
+    c.restore();
+  };
+  ring(rx, "rgba(110,200,255,0.15)", 2);
+  ring(rx*0.7, "rgba(110,200,255,0.08)", 1.5);
+  c.save(); c.translate(px, py); c.scale(1, squash);
+  c.strokeStyle = "rgba(255,210,63,0.20)"; c.lineWidth = 2.5;
+  for(let i=0;i<10;i++){
+    const a = i/10*TAU2;
+    c.beginPath();
+    c.moveTo(Math.cos(a)*rx*0.95, Math.sin(a)*rx*0.95);
+    c.lineTo(Math.cos(a)*rx*1.05, Math.sin(a)*rx*1.05);
+    c.stroke();
+  }
+  c.restore();
+
+  // Gantry rails up the walls, riveted. Barely there.
+  [[W*0.05], [W*0.95]].forEach(([gx]) => {
+    c.strokeStyle = "rgba(255,255,255,0.06)"; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(gx, H*0.10); c.lineTo(gx, H*0.88); c.stroke();
+    c.fillStyle = "rgba(255,255,255,0.08)";
+    for(let y=H*0.14; y<H*0.86; y+=H*0.12) c.fillRect(gx-1.5, y, 3, 3);
+  });
+
+  bay.cv = cv; bay.key = key;
+  return cv;
+}
+
 function drawHangar(){
   const ctx = hangar.ctx;
   if(!ctx || !profile) return;
@@ -1999,6 +2133,32 @@ function drawHangar(){
   const cv = ctx.canvas;
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
+
+  const backdrop = bayBackdrop(W, H);
+  if(backdrop) ctx.drawImage(backdrop, 0, 0);
+
+  // The pad's status beacons breathe on the live clock - the one moving
+  // thing the cached backdrop can't carry.
+  const blink = 0.5 + Math.sin(hangar.t*2.2)*0.5;
+  [[W*0.155, H*0.815], [W*0.845, H*0.785]].forEach(([bx, by], i) => {
+    ctx.fillStyle = i ? `rgba(110,200,255,${0.25 + blink*0.35})`
+                      : `rgba(255,210,63,${0.6 - blink*0.35})`;
+    ctx.beginPath(); ctx.arc(bx, by, 2.5, 0, Math.PI*2); ctx.fill();
+  });
+
+  // Parked, not floating: a soft shadow on the pad under each hull.
+  const padShadow = (sx, r) => {
+    ctx.save();
+    ctx.translate(sx, H*0.80); ctx.scale(1, 0.3);
+    const sh = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+    sh.addColorStop(0, "rgba(0,0,0,0.42)");
+    sh.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = sh;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  };
+  if(hangar.compare){ padShadow(W*0.28, W*0.14); padShadow(W*0.72, W*0.14); }
+  else padShadow(W/2, W*0.20);
 
   // A floor light so the ship reads as parked in a bay rather than floating.
   const g = ctx.createRadialGradient(W/2, H*0.62, 8, W/2, H*0.62, W*0.55);
