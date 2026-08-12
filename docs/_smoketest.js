@@ -4377,6 +4377,46 @@ async function run(){
     fx.reset();
   }
 
+  /* ---------- the fleet catches the light ---------- */
+  {
+    const art = SF.enemyArt;
+    const lum = css => {
+      const m = String(css).match(/\d+/g).map(Number);
+      return 0.299*m[0] + 0.587*m[1] + 0.114*m[2];
+    };
+    const P = art.paletteFor("#4ade80", false);
+    const E = art.paletteFor("#4ade80", true);
+
+    check("a hull carries a lit edge", /^rgba\(/.test(P.rim));
+    check("...and a cool counter-light for the edge coming at you",
+      /^rgba\(/.test(P.rimCool) && P.rimCool !== P.rim);
+    check("an elite's rim is its own gold, not the fleet's white", E.rim !== P.rim);
+    /*
+     * The shaded half used to run 0.42 toward black, scoring 0.56 of the lit
+     * side - dark enough that on empty space the bottom of a hull became a
+     * hole rather than a surface. The floor here fails that old constant.
+     */
+    check("the dark side of a hull stays a colour, not a hole",
+      lum(P.shade) > lum(P.base)*0.60);
+    check("...and so does the deepest plate", lum(P.deep) > lum(P.base)*0.34);
+    check("the canopy has a colour to glow with", /^\d+,\d+,\d+$/.test(P.glassRgb));
+
+    // rimLight() clips and restores around two extra strokes; a stray save
+    // or a bad path there throws inside the rasteriser, which returns null.
+    const ids = Object.keys(art.SHAPES);
+    check("every archetype still rasterises with the lighting on",
+      ids.length > 15 && ids.every(id => !!art.spriteFor(id, "#4ade80", false)));
+    check("...and every archetype as an elite",
+      ids.every(id => !!art.spriteFor(id, "#f43f5e", true)));
+
+    const T = SF.enemyData.ENEMY_TYPES;
+    check("every enemy wears its own colour - none falls through to the default brick",
+      Object.keys(T).every(id => /^#[0-9a-f]{6}$/i.test(T[id].tint || "")));
+    check("the Grunt, the one you meet most, is no longer the dimmest thing out there",
+      lum(art.paletteFor(T.grunt.tint, false).base) >
+      lum(art.paletteFor("#c0392b", false).base) * 1.25);
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

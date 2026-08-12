@@ -41,14 +41,24 @@ function paletteFor(tint, elite){
   return {
     lit:    mix(c, 255, 0.42),
     base:   mix(c, 255, 0.06),
-    shade:  mix(c, 0,   0.42),
-    deep:   mix(c, 0,   0.68),
+    /*
+     * The shaded half used to run to 0.42/0.68 toward black, which models
+     * nicely on a light background and disappears on this game's. Space IS
+     * the background here, so the dark side of a hull has to stay a colour
+     * rather than becoming a hole.
+     */
+    shade:  mix(c, 0,   0.34),
+    deep:   mix(c, 0,   0.58),
     line:   "rgba(10,12,20,0.85)",
     metal:  "#8c96a8",
     metalD: "#4a5262",
     glass:  elite ? "#fff2c0" : "#bde9ff",
+    glassRgb: elite ? "255,226,140" : "150,225,255",
     glow:   elite ? "#ffd23f" : tint || "#ff8a3d",
     trim:   elite ? "#ffd23f" : mix(c, 255, 0.72),
+    // Key light from the top-left, and a cool counter-light off the sky.
+    rim:     elite ? "rgba(255,236,170,0.92)" : "rgba(255,250,238,0.82)",
+    rimCool: "rgba(126,188,255,0.34)",
   };
 }
 
@@ -62,7 +72,43 @@ function poly(ctx, pts){
   }
   ctx.closePath();
 }
-/** Fill with a top-left lit gradient, then outline. The house style. */
+/*
+ * Rim light, and the reason these ships stop reading as cutouts.
+ *
+ * The hull gradient models the form, but the only thing separating a ship
+ * from the sky was a near-black outline - which works over a bright nebula
+ * and does nothing at all over empty space, where the silhouette simply
+ * dissolves. A lit edge solves both problems at once: it draws the shape AND
+ * it puts the fleet under one light.
+ *
+ * The trick is cheap and works on any polygon: clip to the shape, then stroke
+ * the same outline shifted a little AWAY from the light. On the edges facing
+ * the light the shifted line lands inside the hull and shows; on the far
+ * edges it lands outside and the clip eats it. No per-edge normals, no
+ * winding maths, and it's all baked into the cached sprite anyway.
+ */
+function rimLight(ctx, pts, p, S){
+  const d = S*0.024;
+  ctx.save();
+  poly(ctx, pts); ctx.clip();
+  ctx.translate(d, d);                          // key light: top-left
+  poly(ctx, pts);
+  ctx.strokeStyle = p.rim; ctx.lineWidth = S*0.044; ctx.stroke();
+  ctx.restore();
+  /*
+   * A cool counter-light on the opposite edges at half strength. These ships
+   * fly nose-down, so this is the edge coming at the player - and it's the
+   * one the eye tracks when deciding whether something is about to arrive.
+   */
+  ctx.save();
+  poly(ctx, pts); ctx.clip();
+  ctx.translate(-d*0.85, -d*0.85);
+  poly(ctx, pts);
+  ctx.strokeStyle = p.rimCool; ctx.lineWidth = S*0.042; ctx.stroke();
+  ctx.restore();
+}
+
+/** Fill with a top-left lit gradient, outline, then catch the light. */
 function hull(ctx, pts, p, S){
   const g = ctx.createLinearGradient(-S*0.4, -S*0.4, S*0.35, S*0.4);
   g.addColorStop(0, p.lit);
@@ -71,18 +117,33 @@ function hull(ctx, pts, p, S){
   poly(ctx, pts);
   ctx.fillStyle = g; ctx.fill();
   ctx.strokeStyle = p.line; ctx.lineWidth = S*0.026; ctx.stroke();
+  rimLight(ctx, pts, p, S);
 }
 function plate(ctx, pts, p, S, colour){
   poly(ctx, pts);
   ctx.fillStyle = colour || p.deep; ctx.fill();
 }
+/*
+ * A canopy that is lit rather than painted. The glass used to be a flat disc
+ * with a white dot on it, which at 42px on screen is just a pale blob; giving
+ * it a halo and a hot core makes it the one small bright thing on the hull,
+ * and a bright point is what the eye finds first on a dark sky.
+ */
 function cockpit(ctx, x, y, rx, ry, p){
   ctx.save();
   ctx.translate(x, y); ctx.scale(1, ry/rx);
+  const halo = ctx.createRadialGradient(0, 0, rx*0.4, 0, 0, rx*2.4);
+  halo.addColorStop(0, "rgba(" + p.glassRgb + ",0.5)");
+  halo.addColorStop(0.5, "rgba(" + p.glassRgb + ",0.16)");
+  halo.addColorStop(1, "rgba(" + p.glassRgb + ",0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(0, 0, rx*2.4, 0, TAU); ctx.fill();
   ctx.fillStyle = p.glass;
   ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.beginPath(); ctx.arc(-rx*0.28, -rx*0.3, rx*0.42, 0, TAU); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath(); ctx.arc(0, 0, rx*0.34, 0, TAU); ctx.fill();
   ctx.restore();
 }
 /*
@@ -94,8 +155,8 @@ function cockpit(ctx, x, y, rx, ry, p){
 function thruster(ctx, x, y, w, len, p){
   const cy = y - len*0.34;
   const g = ctx.createRadialGradient(x, cy, 0, x, cy, len*0.8);
-  g.addColorStop(0, "rgba(255,232,180,0.80)");
-  g.addColorStop(0.35, "rgba(255,164,86,0.34)");
+  g.addColorStop(0, "rgba(255,240,206,0.95)");
+  g.addColorStop(0.32, "rgba(255,172,92,0.5)");
   g.addColorStop(1, "rgba(255,120,60,0)");
   ctx.fillStyle = g;
   ctx.save();
@@ -104,6 +165,24 @@ function thruster(ctx, x, y, w, len, p){
   ctx.restore();
   ctx.fillStyle = p.metalD;
   ctx.fillRect(x - w*0.85, y - w*0.42, w*1.7, w*0.84);
+  /*
+   * A hot spot in the mouth of the nozzle. The bloom above carries the shape
+   * of the exhaust but its brightest point is soft, and at 42px on screen a
+   * soft peak is no peak - the engine only reads as lit if one genuinely
+   * white pixel sits on the metal.
+   *
+   * It has to stay SMALL. The first version was a little over half the nozzle
+   * width and every ship in the fleet looked like it was wearing a pale
+   * bubble on its head - the same failure the exhaust itself had, which is
+   * how this thruster ended up diffuse in the first place.
+   */
+  const cr = w*0.5, cyy = y - w*0.16;
+  const core = ctx.createRadialGradient(x, cyy, 0, x, cyy, cr);
+  core.addColorStop(0, "rgba(255,255,255,0.8)");
+  core.addColorStop(0.5, "rgba(255,214,150,0.3)");
+  core.addColorStop(1, "rgba(255,170,90,0)");
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(x, cyy, cr, 0, TAU); ctx.fill();
 }
 
 /* ---------------------------------------------------------

@@ -351,7 +351,13 @@ const BEHAVIOURS = {
 const ENEMY_TYPES = {
   grunt: {
     name:"Grunt", behaviour:"dive", hp:1, r:13, size:42, speed:138,
-    score:5, money:6, tint:null,
+    /*
+     * The only ship in the roster that had no tint of its own, so it fell
+     * through to the default brick red - the darkest thing on the board, and
+     * worn by the enemy you meet most often. A Grunt should be plain, not
+     * invisible.
+     */
+    score:5, money:6, tint:"#e35844",
     fire:{ pattern:"straight", every:[2.0,3.4], speed:255 },
   },
   weaver: {

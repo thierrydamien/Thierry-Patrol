@@ -3384,6 +3384,62 @@ Banner text (`ELITE DOWN`, `PHASE 2`) shares the pool and keeps its old
 straight rise; the test asserts it never turns back, because the gravity
 branch is one stray field away from making the whole HUD fall over.
 
+## 8z3. The fleet catches the light
+
+Item 2 of the visual-quality review: *"the small enemies are flat, muddy
+brown-grey triangles with almost no interior detail, and on dark skies they
+nearly vanish. They need rim-light on the leading edges, a lit cockpit, and
+visible engine glow. A brighter accent colour per enemy family would help."*
+
+Half of that had already been overtaken by events - the review predates the
+drawn-art roster, and the fleet is nineteen distinct silhouettes in bright,
+per-archetype colours, not brown triangles. Rendering the whole roster at real
+game size on a black sky showed what IS still true, and it was the important
+half: **nothing on these ships catches any light.**
+
+The hull gradient models form, but the only thing separating a ship from the
+background was a near-black outline. That works over a bright nebula and does
+precisely nothing over empty space - the silhouette dissolves into it. So:
+
+**Rim light.** The edges facing the light get a bright band on the inside, and
+the opposite edges a cool one at half strength. The cheap trick that does this
+for an arbitrary polygon: clip to the shape, then stroke the same outline
+shifted slightly *away* from the light. On the lit edges the shifted line
+lands inside the hull and shows; on the far edges it lands outside and the
+clip eats it. No per-edge normals, no winding maths. The cool counter-light
+falls on the nose - these ships fly nose-down, so that is the edge coming at
+the player, and the one the eye tracks to judge whether something is about to
+arrive.
+
+**A canopy that is lit rather than painted.** The glass was a flat disc with a
+white dot, which at 42px on screen is a pale blob. It now has a tinted halo
+and a hot core, making it the one small bright point on the hull - and a
+bright point is what the eye finds first on a dark sky.
+
+**The dark side stopped being a hole.** `shade` and `deep` ran 0.42 and 0.68
+toward black. That is good modelling for a light background, and this game's
+background is space. Pulled back to 0.34 and 0.58, so the unlit half is still
+a surface.
+
+**The Grunt got a colour.** It was the one archetype in the roster with
+`tint:null`, falling through to the default brick red - the darkest ship on
+the board, worn by the enemy you meet most often. A Grunt should read as
+plain, not as invisible.
+
+All of it is baked into the per-type sprite cache, so the per-frame cost is
+still one `drawImage`.
+
+### The horns, again
+
+The engine got a white-hot spot in the nozzle mouth, because the exhaust
+bloom's brightest point is soft and a soft peak is no peak at 42px. The first
+attempt sized it at ~1.15x the nozzle width, and every ship in the fleet came
+out wearing a pale bubble on its head - which is, almost exactly, the failure
+recorded in the comment above `thruster` about why that exhaust is diffuse in
+the first place. At 0.5x, sat in the nozzle rather than above it, it reads as
+an engine. Worth writing down twice: on a 42px sprite, anything bright is
+bigger than it looks.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3398,7 +3454,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~691 checks.
+  be re-measured after load. ~701 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
