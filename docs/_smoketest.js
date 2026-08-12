@@ -4214,6 +4214,71 @@ async function run(){
     SF.input.clearMovement();
   }
 
+  /* ---------- enemy fire reads as directional ---------- */
+  {
+    /*
+     * Enemy bolts trail a tail down their velocity so a shot telegraphs where
+     * it is going, not just where it is. The canvas stub draws nothing, so
+     * the assertions ride on the transform the renderer asks for: a tail is
+     * one rotate() plus one drawImage(), and the rotation has to aim the
+     * sprite's +Y (its tail end) AWAY from the direction of travel.
+     */
+    const tails = [];
+    let ang = 0;
+    const probe = {
+      canvas:{ width:1, height:1 }, globalAlpha:1, globalCompositeOperation:"source-over",
+      fillStyle:"", createLinearGradient:() => ({ addColorStop(){} }),
+      createRadialGradient:() => ({ addColorStop(){} }),
+      save(){}, restore(){ ang = 0; }, translate(){}, scale(){}, beginPath(){}, closePath(){},
+      moveTo(){}, lineTo(){}, arc(){}, ellipse(){}, fill(){}, stroke(){}, fillRect(){},
+      rotate(a){ ang = a; },
+      drawImage(img, x, y, w, h){
+        // Tails are the only stretched draw in this path; bolts blit 1:1.
+        if(h !== undefined) tails.push({ ang, w, h });
+      },
+    };
+    const shot = (vx, vy, r) => ({ alive:true, x:200, y:200, vx, vy, r:r||4, kind:"bolt" });
+    const draw = list => {
+      tails.length = 0;
+      SF.render.drawBullets(probe, { bullets:{ items:[] }, enemyBullets:{ items:list } });
+      return tails;
+    };
+    // The sprite's tail end is its local +Y, which rotate(a) sends to
+    // (-sin a, cos a). Behind the bolt means pointing against the velocity.
+    const behind = (t, vx, vy) =>
+      (-Math.sin(t.ang))*vx + Math.cos(t.ang)*vy < -0.9 * Math.hypot(vx, vy);
+
+    let t = draw([shot(0, 300)]);
+    check("a falling enemy bolt trails a tail", t.length === 1);
+    check("the tail streams behind a bolt coming straight down",
+      t.length === 1 && behind(t[0], 0, 300));
+
+    t = draw([shot(-300, 0)]);
+    check("a bolt fired sideways trails sideways, not down",
+      t.length === 1 && behind(t[0], -300, 0));
+
+    t = draw([shot(220, -220)]);
+    check("a bolt fired back up the screen trails the other way",
+      t.length === 1 && behind(t[0], 220, -220));
+
+    check("a barely-moving orb gets no tail to lie about its speed",
+      draw([shot(6, 8)]).length === 0);
+
+    const slow = draw([shot(0, 90)])[0], fast = draw([shot(0, 600)])[0];
+    check("a faster shot wears a longer tail", fast.h > slow.h * 1.4);
+
+    const small = draw([shot(0, 400, 4)])[0], big = draw([shot(0, 400, 12)])[0];
+    check("a fat bolt wears a fat tail", big.w > small.w && big.h > small.h);
+
+    check("the tail is tinted, never the white of your own fire",
+      !/enemyTail[\s\S]{0,700}rgba\(255,255,255/.test(
+        fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
+
+    check("the death rewind records bolt velocity, so the replay trails too",
+      /f\.ebullets\[n\]\s*=\s*\{[^}]*vx:/.test(
+        fs.readFileSync(path.join(__dirname, "src/rewind.js"), "utf8")));
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

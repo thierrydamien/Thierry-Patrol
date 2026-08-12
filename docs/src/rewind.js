@@ -83,7 +83,9 @@ function build(){
       f.enemies[n] = { alive:false, x:0, y:0, size:0, r:0, spawnAnim:1, typeId:"grunt", type:null,
                        elite:false, flash:0, hp:1, maxHp:1, spin:0, fuse:0, state:0, charge:0,
                        shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null };
-    for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, r:4, kind:"bolt" };
+    // vx/vy ride along because the bolt renderer trails a tail down them, and
+    // "which way was it going" is the whole point of watching the replay.
+    for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, vx:0, vy:1, r:4, kind:"bolt" };
     for(let n = 0; n < MAX_B;  n++) f.bullets[n]  = { alive:false, x:0, y:0, vx:0, vy:1, tier:0, fromDrone:false };
     tape[i] = f;
   }
@@ -146,6 +148,7 @@ function record(dt, world){
     if(!b.alive) continue;
     const d = f.ebullets[n++];
     d.alive = true; d.x = b.x; d.y = b.y; d.r = b.r; d.kind = b.kind;
+    d.vx = b.vx; d.vy = b.vy;
   }
   for(let i = n; i < f.ebn; i++) f.ebullets[i].alive = false;
   f.ebn = n;

@@ -750,9 +750,47 @@ function enemyBolt(kind, r){
   c.fillStyle = halo; c.fillRect(0, 0, m*2, m*2);
   c.fillStyle = "rgb(" + col + ")";
   c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
-  c.fillStyle = "rgba(255,255,255,0.9)";
-  c.beginPath(); c.arc(m - R*0.15, m - R*0.2, R*0.45, 0, TAU); c.fill();
+  /*
+   * A white-hot centre, concentric rather than an offset highlight. Offset
+   * reads as a lit ball with a light source somewhere; centred reads as
+   * something burning - and it puts the brightest pixel exactly on the point
+   * that will actually hit you, which is the pixel you want to be tracking.
+   */
+  const hot = c.createRadialGradient(m, m, 0, m, m, R*0.82);
+  hot.addColorStop(0, "rgba(255,255,255,0.98)");
+  hot.addColorStop(0.42, "rgba(255,255,255,0.6)");
+  hot.addColorStop(1, "rgba(255,255,255,0)");
+  c.fillStyle = hot;
+  c.beginPath(); c.arc(m, m, R*0.82, 0, TAU); c.fill();
   enemyBoltCache[key] = cv;
+  return cv;
+}
+
+/*
+ * The tail that trails an enemy bolt, drawn behind it along its travel.
+ * Enemy fire used to be a dot, and a dot tells you where a shot IS but not
+ * where it is GOING - which is the only question that matters when you are
+ * choosing which way to dodge. The tail is tinted with the bolt's own colour
+ * and never white, so at a glance it can't be mistaken for your own fire.
+ */
+const enemyTailCache = {};
+function enemyTail(kind){
+  if(enemyTailCache[kind]) return enemyTailCache[kind];
+  const cv = document.createElement("canvas");
+  cv.width = 16; cv.height = 48;
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  const col = kind === "orb" ? "255,124,229" : "255,93,115";
+  const g = c.createLinearGradient(0, 0, 0, 48);
+  g.addColorStop(0, "rgba(" + col + ",0.6)");
+  g.addColorStop(0.5, "rgba(" + col + ",0.2)");
+  g.addColorStop(1, "rgba(" + col + ",0)");
+  c.fillStyle = g;
+  // A wedge, full width at the bolt and pinched to nothing at the far end.
+  c.beginPath();
+  c.moveTo(1, 0); c.lineTo(15, 0); c.lineTo(8.7, 48); c.lineTo(7.3, 48);
+  c.closePath(); c.fill();
+  enemyTailCache[kind] = cv;
   return cv;
 }
 
@@ -784,7 +822,29 @@ function drawBullets(ctx, world){
   for(let i=0;i<ebs.length;i++){
     const b = ebs[i];
     if(!b.alive) continue;
-    const spr = enemyBolt(b.kind === "orb" ? "orb" : "aimed", b.r);
+    const kind = b.kind === "orb" ? "orb" : "aimed";
+    const sp = Math.hypot(b.vx || 0, b.vy || 0);
+    /*
+     * Only a bolt that is genuinely travelling earns a tail: hang a long
+     * comet trail off a slow drifting orb and it looks fast, which is a lie
+     * about how much time you have. Length follows speed for the same
+     * reason, so how quick a shot looks is how quick it is.
+     */
+    const tail = sp > 40 ? enemyTail(kind) : null;
+    if(tail){
+      const len = (9 + Math.min(sp, 620)*0.055) * (b.r/4);
+      // Wide enough at the base to read as the bolt's own wake. Narrower than
+      // the bolt and it looks like a pin stuck through it.
+      const w = b.r*2.6;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.translate(b.x, b.y);
+      // The sprite's tail runs down its +Y; aim that AWAY from the travel.
+      ctx.rotate(Math.atan2(b.vx, -b.vy));
+      ctx.drawImage(tail, -w/2, 0, w, len);
+      ctx.restore();
+    }
+    const spr = enemyBolt(kind, b.r);
     if(spr) ctx.drawImage(spr, b.x - spr.width/2, b.y - spr.height/2);
     else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(b.x-b.r*0.6, b.y-b.r, b.r*1.2, b.r*2); }
   }

@@ -3277,6 +3277,41 @@ side, `cursor: none` on the screen, and with the pointer parked at the far
 right edge of the display the ship holds the right wall at x 616 of a 640-wide
 field, still steering (x 24 on the left).
 
+## 8z. Enemy fire that says where it's going
+
+From the visual-quality review, the smallest of the seven items: *"enemy
+bullets are soft red dots — a hot core with a directional streak would look
+better and telegraph direction."* (The other half of that item, the vignette,
+the Steam-feel pass had already done.)
+
+The gameplay argument is stronger than the looks argument. A dot tells you
+where a shot **is**. Deciding which way to dodge needs to know where it is
+**going**, and until now the only way to get that was to watch the dot for a
+few frames and integrate by eye — fine for one bolt, hopeless for a screen of
+them. So each bolt now trails a tinted wedge down its own velocity:
+
+- **Aimed along the real velocity**, not down the screen. Sideways sweeps and
+  the shots that come back up at you read correctly, which is exactly when a
+  guess based on "enemy fire falls" gets you killed.
+- **Length follows speed**, capped. A slow drifting orb with a long comet
+  trail looks fast, and looking fast is a lie about how much time you have.
+  Below 40 px/s there's no tail at all — a near-stationary orb showing a
+  direction it isn't really committed to is worse than showing nothing.
+- **Tinted with the bolt's own colour, never white.** Your own fire streaks
+  white; enemy fire had better not, or the one glance you get goes wrong.
+- **Width follows the collision radius**, so the big slow shells look heavy.
+
+The core changed with it: the white highlight used to sit off-centre, which
+draws as a lit ball with a light source somewhere. Concentric draws as
+something burning — and it puts the brightest pixel exactly on the point that
+will actually hit you, which is the pixel worth tracking.
+
+The death rewind needed one extra field. Its tape stored enemy bullets as
+position and radius only, so the replay would have been the one place with no
+tails — the one place where "which way was it coming from" is the entire
+question being asked. Velocity now rides along, as it already did for player
+bullets.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3291,7 +3326,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~662 checks.
+  be re-measured after load. ~671 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases
