@@ -3312,6 +3312,78 @@ tails — the one place where "which way was it coming from" is the entire
 question being asked. Velocity now rides along, as it already did for player
 bullets.
 
+## 8z2. Explosions that happen in stages
+
+Item 3 of the visual-quality review: *"chunky multi-stage explosions (flash →
+fireball → smoke puffs → expanding ring), a brief glow kick when something big
+dies, and styled damage numbers that pop and fall."*
+
+The effects layer already had the ingredients - fireball, embers, debris,
+smoke, shock ring, and an additive pass for anything hot. What it didn't have
+was **time**. Every emitter fired on the death frame, so all of it appeared at
+once and burned down together, which is exactly what makes a game explosion
+read as a puff. A real one is a sequence: the flash is instant, the fireball
+takes a beat to bloom, and the smoke is what's left when the fire has burned
+down.
+
+So a death is now staged across about a quarter of a second - white pop and
+thrown wreckage immediately, fireball at 35ms, embers at 140ms, smoke at
+220ms - plus, on a big kill, a hard white shock ring, the coloured ring
+rolling out behind it at 60ms, and three secondaries popping out of step
+around the wreck. One fireball is a puff however big you make it; three going
+off at different moments is what reads as something coming apart.
+
+### The constraint that shaped the implementation
+
+The obvious way to stage this is a queue of deferred emissions. That would
+have been a bug. Every emitter in `fx.js` draws its randomness from the
+**seeded simulation stream** (§ core.js), and deferring an emission to a later
+frame reorders that stream - which is the exact failure this codebase has now
+recorded five times, each one breaking something minutes away from the change.
+
+So nothing is deferred. Particles are all born on the death frame, in the
+original order, drawing the same numbers they always did; they simply carry a
+`delay` and hold still, unaged and unlit, until their turn comes. The five
+original emitter calls are deliberately left in their original order for the
+same reason - the delays are the only new thing about them.
+
+The new flourishes (secondary offsets, their timings, the sideways drift on a
+damage number) draw from `Math.random` through a small `mrand` helper, which is
+what core.js asks decoration to do. That is not a stylistic preference here:
+it's what lets the whole feature ship without moving a single seeded draw.
+`fireball` grew one optional argument to swap its random source, so a
+decorative pop can reuse it without touching the stream.
+
+The smoke test pins this directly rather than trusting the comment: it seeds,
+runs a big explosion, and counts how many draws the stream advanced, then
+asserts the number matches the five emitters called on their own. A flourish
+that reached for `rand` would fail it.
+
+### The glow kick
+
+The fireball is made of small hot cores and reads as *detail*. A big death also
+wants one wide, shapeless burst of brightness, so `bloom` is a soft dome of
+light with a fast attack and a long decay. First pass had it at full strength
+and the first 100ms clipped to a featureless white disc - the explosion was
+happening inside a blank circle. At 0.6 alpha the fireball's structure shows
+through, which is the point of having one.
+
+### Damage numbers
+
+They were plain white text sliding upward at a constant size - the one thing
+on the playfield that still looked like a debug readout. Now they pop
+(overshooting to 1.7x and settling back over ~150ms) and arc: thrown up,
+pulled down by gravity, drifting slightly aside so two hits don't stack. Size
+and heat follow the damage, so a heavy round is legible as a heavy round
+without reading the digits.
+
+The first version eased down from the overshoot immediately and was over
+inside two frames - invisible. A pop has to be *held* to be seen at all.
+
+Banner text (`ELITE DOWN`, `PHASE 2`) shares the pool and keeps its old
+straight rise; the test asserts it never turns back, because the gravity
+branch is one stray field away from making the whole HUD fall over.
+
 ## 9. What I'd do next
 
 Roughly in value order:
@@ -3326,7 +3398,7 @@ Roughly in value order:
   mission with a bot, asserting on stars, money, kills, pooling and save
   migration, and checks the rumble table against a recording stub in place of
   the vibration motor jsdom doesn't have, and pins the playfield's ability to
-  be re-measured after load. ~671 checks.
+  be re-measured after load. ~691 checks.
 - Visual checks are done with Chromium screenshots at iPad and phone sizes
   (throwaway harness, not checked in — see the README). The haptics work was
   checked with `navigator.vibrate` both present and absent, since the two cases

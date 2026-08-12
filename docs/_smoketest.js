@@ -4279,6 +4279,104 @@ async function run(){
         fs.readFileSync(path.join(__dirname, "src/rewind.js"), "utf8")));
   }
 
+  /* ---------- explosions land in stages ---------- */
+  {
+    const fx = SF.fx, P = fx._pools.particles.items;
+    const live = kind => P.filter(p => p.alive && (!kind || p.kind === kind));
+
+    fx.reset();
+    fx.explosion(100, 100, 40, "#ffb03d", true);
+    const now = live().filter(p => p.delay === 0);
+    const later = live().filter(p => p.delay > 0);
+    check("a death puts something on screen the instant it happens", now.length > 0);
+    check("...and holds the rest back for later", later.length > 0);
+    check("the flash is instant, the smoke is not",
+      live("flash").every(p => p.delay === 0) &&
+      live("smoke").every(p => p.delay > 0));
+    check("the fireball blooms after the flash, before the smoke",
+      live("fire").some(p => p.delay > 0 && p.delay < live("smoke")[0].delay));
+
+    // A staged particle is alive but frozen: it must not age or drift while
+    // it waits, or it would arrive already half-dead and in the wrong place.
+    const waiting = live("smoke")[0];
+    const x0 = waiting.x, d0 = waiting.delay;
+    fx.update(0.05, 0);
+    check("a waiting particle doesn't age or drift", waiting.life === 0 && waiting.x === x0);
+    check("...but its clock is running", waiting.delay < d0);
+    fx.update(d0, 0);
+    fx.update(1/60, 0);
+    check("...and it moves once its turn comes", waiting.life > 0);
+
+    fx.reset();
+    fx.explosion(100, 100, 40, "#ffb03d", true);
+    check("a big death gets the glow kick", live("bloom").length > 0);
+    check("...and secondaries that go off out of step with each other",
+      new Set(live("fire").filter(p => p.delay > 0.05).map(p => Math.round(p.delay*1000))).size > 1);
+    fx.reset();
+    fx.explosion(100, 100, 20, "#ffb03d", false);
+    check("a small death stays small - no glow kick, no secondaries",
+      live("bloom").length === 0);
+
+    /*
+     * The invariant behind all of the above: decoration must not move the
+     * seeded simulation stream (core.js). Measured by seeding, running the
+     * effect, and counting how many draws it took to reach the same value
+     * again - a big death's flourishes have to cost exactly zero.
+     */
+    const seededDraws = fn => {
+      SF.core.seedSim(99); fn();
+      const after = SF.core.rand(0, 1);
+      SF.core.seedSim(99);
+      for(let i = 0; i < 600; i++) if(SF.core.rand(0, 1) === after) return i;
+      return -1;
+    };
+    const viaEmitters = seededDraws(() => {
+      fx.fireball(0, 0, 7, 40); fx.sparks(0, 0, 18, "#f00", 240);
+      fx.embers(0, 0, 10); fx.debris(0, 0, 12, "#f00"); fx.smoke(0, 0, 8);
+    });
+    const viaExplosion = seededDraws(() => fx.explosion(0, 0, 40, "#f00", true));
+    check("the five emitters still draw from the seeded stream", viaEmitters > 0);
+    check("a big death's extra flourishes cost the simulation nothing",
+      viaExplosion === viaEmitters);
+    check("a damage number's drift is decoration too",
+      seededDraws(() => fx.damageNumber(0, 0, 5, false)) === 1);
+  }
+
+  /* ---------- damage numbers pop and fall ---------- */
+  {
+    const fx = SF.fx, T = fx._pools.texts.items;
+    fx.reset();
+    fx.damageNumber(100, 200, 4, false);
+    const n = T.find(t => t.alive);
+    check("a damage number is thrown upward, not slid", n.vy < -80);
+    check("...and pulled back down", n.gravity > 0);
+    check("...and told to pop", n.pop > 0);
+
+    let peak = n.y;
+    for(let i = 0; i < 60 && n.alive; i++){ fx.update(1/60, 0); peak = Math.min(peak, n.y); }
+    check("it arcs: rises clear of the hull, then falls back past it",
+      peak < 200 - 8 && n.y > peak + 8);
+
+    fx.reset();
+    fx.damageNumber(0, 0, 1, false);
+    const small = T.find(t => t.alive).size;
+    fx.reset();
+    fx.damageNumber(0, 0, 9, false);
+    const heavy = T.find(t => t.alive).size;
+    check("a heavy round prints a bigger number than a scratch", heavy > small + 4);
+
+    // The banner text shares the pool; its old straight rise must survive.
+    fx.reset();
+    fx.text(100, 200, "ELITE DOWN", "#ffd23f", 17, true);
+    const b = T.find(t => t.alive);
+    check("banner text doesn't pop or fall - it still rises and eases out",
+      b.pop === 0 && b.gravity === 0);
+    let last = b.y, rose = true;
+    for(let i = 0; i < 50 && b.alive; i++){ fx.update(1/60, 0); if(b.y > last) rose = false; last = b.y; }
+    check("...all the way up, never turning back", rose);
+    fx.reset();
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

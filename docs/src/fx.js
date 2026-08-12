@@ -14,20 +14,44 @@ const SF = window.SF;
 const { Pool, rand, randInt, clamp, TAU } = SF.core;
 
 const particles  = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,life:0,max:1,size:2,color:"#fff",
-                                     kind:"spark", drag:0.94, gravity:0, spin:0, angle:0 }), 900);
-const texts      = new Pool(() => ({ alive:false, x:0,y:0,vy:-34,life:0,max:0.9,text:"",color:"#fff",size:14,bold:true }), 80);
-const rings      = new Pool(() => ({ alive:false, x:0,y:0,life:0,max:0.45,r0:6,r1:60,color:"#fff",width:3 }), 40);
+                                     kind:"spark", drag:0.94, gravity:0, spin:0, angle:0, delay:0 }), 900);
+const texts      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:-34,gravity:0,pop:0,
+                                     life:0,max:0.9,text:"",color:"#fff",size:14,bold:true }), 80);
+const rings      = new Pool(() => ({ alive:false, x:0,y:0,life:0,max:0.45,r0:6,r1:60,color:"#fff",width:3,delay:0 }), 40);
 
 let shakeMag = 0, shakeDecay = 26;
 let flashAlpha = 0, flashColor = "255,60,80";
 let hitStopUntil = 0;
 let nowMs = 0;
 
+/*
+ * STAGING.
+ *
+ * A real explosion doesn't happen all at once - the flash is instant, the
+ * fireball takes a beat to bloom, and the smoke is what's left when the fire
+ * has burned down. Emitting all of it on one frame is what makes a game
+ * explosion read as a puff.
+ *
+ * The staging must not touch WHEN the random numbers are drawn, only when the
+ * result becomes visible: every emitter here draws from the seeded simulation
+ * stream (see core.js), and deferring a draw to a later frame would reorder
+ * that stream and move gameplay far away from here. So the particles are all
+ * born on the death frame exactly as before, and simply hold still and stay
+ * invisible until their delay runs out.
+ *
+ * `spawnDelay` is stamped onto everything spawned inside an `at()` block,
+ * which keeps six public emitter signatures unchanged.
+ */
+let spawnDelay = 0;
+function at(d, fn){ const prev = spawnDelay; spawnDelay = d; fn(); spawnDelay = prev; }
+function pspawn(){ const p = particles.spawn(); p.delay = spawnDelay; return p; }
+function rspawn(){ const r = rings.spawn();     r.delay = spawnDelay; return r; }
+
 /* ---------------------------------------------------------
    EMITTERS
    --------------------------------------------------------- */
 function spark(x, y, vx, vy, color, life, size){
-  const p = particles.spawn();
+  const p = pspawn();
   p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.color=color; p.life=0; p.max=life; p.size=size;
   p.kind="spark"; p.drag=0.93; p.gravity=0; p.spin=0; p.angle=0;
   return p;
@@ -58,11 +82,26 @@ function impact(x, y, vx, vy, color, n){
   }
 }
 
-/** Rolling fireball cores - the orange heart of an explosion. */
-function fireball(x, y, n, size){
+/*
+ * Decoration's own random source. core.js asks cosmetic code to draw from
+ * Math.random so it can never perturb the seeded simulation stream; the
+ * emitters below predate that rule and still draw from `rand`, which is
+ * harmless as long as they are called in a fixed order. Anything NEW here
+ * takes this instead, so adding a flourish can't move a spawn point three
+ * minutes later in the mission.
+ */
+function mrand(a, b){ return a + Math.random()*(b - a); }
+
+/**
+ * Rolling fireball cores - the orange heart of an explosion. `rnd` swaps the
+ * random source: purely decorative callers pass `mrand` to stay off the
+ * simulation stream.
+ */
+function fireball(x, y, n, size, rnd){
+  const rand = rnd || SF.core.rand;
   for(let i=0;i<n;i++){
     const a = rand(0, TAU), d = rand(0, size*0.4);
-    const p = particles.spawn();
+    const p = pspawn();
     p.x=x+Math.cos(a)*d; p.y=y+Math.sin(a)*d;
     p.vx=Math.cos(a)*rand(10,60); p.vy=Math.sin(a)*rand(10,60)-20;
     p.life=0; p.max=rand(0.28,0.55); p.size=rand(size*0.22, size*0.4);
@@ -74,7 +113,7 @@ function fireball(x, y, n, size){
 function embers(x, y, n){
   for(let i=0;i<n;i++){
     const a = rand(0, TAU), s = rand(30, 150);
-    const p = particles.spawn();
+    const p = pspawn();
     p.x=x; p.y=y; p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s - 40;
     p.color = Math.random() < 0.5 ? "#ffd23f" : "#ff8a3d";
     p.life=0; p.max=rand(0.5,1.1); p.size=rand(1.2,2.6);
@@ -86,7 +125,7 @@ function embers(x, y, n){
 function debris(x, y, n, color){
   for(let i=0;i<n;i++){
     const a = rand(0, TAU), s = rand(40, 190);
-    const p = particles.spawn();
+    const p = pspawn();
     p.x=x; p.y=y; p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s - 30;
     p.color=color; p.life=0; p.max=rand(0.5,1.0); p.size=rand(2.5,5.5);
     p.kind="debris"; p.drag=0.985; p.gravity=210; p.angle=rand(0,TAU); p.spin=rand(-9,9);
@@ -95,7 +134,7 @@ function debris(x, y, n, color){
 
 function smoke(x, y, n, color){
   for(let i=0;i<n;i++){
-    const p = particles.spawn();
+    const p = pspawn();
     p.x=x+rand(-6,6); p.y=y+rand(-6,6); p.vx=rand(-18,18); p.vy=rand(10,44);
     p.color=color||"#6b6b78"; p.life=0; p.max=rand(0.5,1.1); p.size=rand(3,7);
     p.kind="smoke"; p.drag=0.97; p.gravity=0; p.spin=0; p.angle=0;
@@ -104,21 +143,60 @@ function smoke(x, y, n, color){
 
 /** Expanding shockwave ring - reserved for big events so it stays special. */
 function ring(x, y, r1, color, width, life){
-  const r = rings.spawn();
+  const r = rspawn();
   r.x=x; r.y=y; r.life=0; r.max=life||0.45; r.r0=6; r.r1=r1; r.color=color; r.width=width||3;
 }
 
-/** The standard enemy death: white pop, fireball, wreckage, embers, smoke. */
+/**
+ * A soft dome of light that swells and dies - the glow kick under a big
+ * death. The fireball is made of small hot cores and reads as detail; this is
+ * the one wide, shapeless burst of brightness, and it's most of why a big
+ * kill should land differently from a small one with the sound off.
+ */
+function bloom(x, y, size, life){
+  const p = pspawn();
+  p.x=x; p.y=y; p.life=0; p.max=life||0.34; p.size=size;
+  p.kind="bloom"; p.color="#fff"; p.vx=0; p.vy=0; p.drag=1; p.gravity=0; p.spin=0; p.angle=0;
+}
+
+/**
+ * The standard enemy death, staged across about a quarter of a second: white
+ * pop and thrown wreckage on the frame itself, the fireball a beat later,
+ * embers as it burns down, smoke last of all.
+ *
+ * The five emitters are still called in their original order, and still draw
+ * the same count of simulation randoms - reordering them would reorder every
+ * seeded draw downstream of this death. Only the delays are new; the extra
+ * flourishes below take `mrand` so they stay off that stream entirely.
+ */
 function explosion(x, y, size, color, big){
-  fireball(x, y, big ? 7 : 4, size);
+  at(0.035, () => fireball(x, y, big ? 7 : 4, size));
   sparks(x, y, big ? 18 : 10, color, big ? 240 : 160);
-  embers(x, y, big ? 10 : 5);
+  at(0.14, () => embers(x, y, big ? 10 : 5));
   debris(x, y, big ? 12 : 6, color);
-  smoke(x, y, big ? 8 : 3);
-  const flash = particles.spawn();
+  at(0.22, () => smoke(x, y, big ? 8 : 3));
+  const flash = pspawn();
   flash.x=x; flash.y=y; flash.life=0; flash.max=0.14; flash.size=size*0.75;
   flash.color="#ffffff"; flash.kind="flash"; flash.vx=0; flash.vy=0; flash.drag=1; flash.gravity=0;
-  if(big) ring(x, y, size*1.9, color, 3, 0.5);
+  if(big){
+    bloom(x, y, size*1.7, 0.32);
+    // A hard white shock first, the coloured one rolling out behind it.
+    ring(x, y, size*1.15, "#ffffff", 2.5, 0.22);
+    at(0.06, () => ring(x, y, size*1.9, color, 3, 0.5));
+    /*
+     * Secondaries around the wreck. One fireball is a puff however big you
+     * make it; three more going off out of step is what reads as something
+     * coming apart.
+     */
+    for(let i=0;i<3;i++){
+      const a = mrand(0, TAU), d = size*mrand(0.3, 0.75);
+      const px = x + Math.cos(a)*d, py = y + Math.sin(a)*d*0.8;
+      at(0.09 + i*0.07 + mrand(0, 0.04), () => {
+        fireball(px, py, 2, size*0.5, mrand);
+        bloom(px, py, size*0.65, 0.2);
+      });
+    }
+  }
 }
 
 /**
@@ -130,13 +208,13 @@ function firework(x, y, color){
   const N = 40;
   for(let i=0;i<N;i++){
     const a = (i/N)*TAU + rand(-0.07, 0.07), s = rand(110, 235);
-    const p = particles.spawn();
+    const p = pspawn();
     p.x=x; p.y=y; p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s;
     p.color = Math.random() < 0.2 ? "#ffffff" : color;
     p.life=0; p.max=rand(0.65, 1.15); p.size=rand(1.5, 2.7);
     p.kind="ember"; p.drag=0.955; p.gravity=95; p.spin=0; p.angle=rand(0,TAU);
   }
-  const flash = particles.spawn();
+  const flash = pspawn();
   flash.x=x; flash.y=y; flash.life=0; flash.max=0.12; flash.size=26;
   flash.color="#ffffff"; flash.kind="flash"; flash.vx=0; flash.vy=0; flash.drag=1; flash.gravity=0;
   ring(x, y, 54, color, 2, 0.4);
@@ -144,7 +222,7 @@ function firework(x, y, color){
 
 /** Muzzle flash: a four-point star, rotated a little every shot. */
 function muzzle(x, y, color, scale){
-  const p = particles.spawn();
+  const p = pspawn();
   p.x=x; p.y=y; p.life=0; p.max=0.05; p.size=(scale||1)*6.5;
   p.color=color||"#ffe9a8"; p.kind="muzzle"; p.vx=0; p.vy=-40; p.drag=1; p.gravity=0;
   p.angle=rand(-0.4,0.4); p.spin=0;
@@ -154,13 +232,28 @@ function text(x, y, str, color, size, rise){
   const t = texts.spawn();
   t.x=x; t.y=y; t.text=str; t.color=color||"#fff"; t.size=size||14;
   t.life=0; t.max= rise ? 1.3 : 0.9; t.vy = rise ? -46 : -34;
+  t.vx=0; t.gravity=0; t.pop=0;         // banners rise straight and steady
 }
 
-/** Small drifting number on a hit - reads as "my shots are doing something". */
+/**
+ * The number that floats off a hit. It pops - overshooting its size in the
+ * first 60ms and settling back - and then arcs: thrown upward, pulled down,
+ * drifting slightly aside. A number that only slides up reads as UI printed
+ * over the fight; one that is thrown off the hull reads as part of it.
+ *
+ * Size and heat follow the damage, so a heavy round is legible as a heavy
+ * round without anyone reading the digits. Sideways drift is Math.random -
+ * it exists to stop two numbers landing on top of each other, and has no
+ * business in the simulation stream.
+ */
 function damageNumber(x, y, amount, crit){
   const t = texts.spawn();
-  t.x=x+rand(-4,4); t.y=y; t.text=String(amount); t.color = crit ? "#ffd23f" : "rgba(255,255,255,0.9)";
-  t.size = crit ? 18 : 14; t.life=0; t.max=0.55; t.vy=-52;
+  const heavy = Math.min(1, Math.max(0, (amount - 1) / 8));
+  t.x=x+rand(-4,4); t.y=y; t.text=String(amount);
+  t.color = crit ? "#ffd23f" : (heavy > 0.45 ? "#ffe9a8" : "rgba(255,255,255,0.92)");
+  t.size = (crit ? 18 : 13) + heavy*7;
+  t.life=0; t.max = crit ? 0.85 : 0.7;
+  t.vy = -118; t.gravity = 430; t.vx = mrand(-26, 26); t.pop = 1;
 }
 
 /* ---------------------------------------------------------
@@ -196,6 +289,8 @@ function update(dt, timeMs){
   for(let i=0;i<items.length;i++){
     const p = items[i];
     if(!p.alive) continue;
+    // Staged: born on the death frame, but frozen and unlit until its turn.
+    if(p.delay > 0){ p.delay -= dt; continue; }
     p.life += dt;
     if(p.life >= p.max){ p.alive = false; continue; }
     p.x += p.vx*dt; p.y += p.vy*dt;
@@ -210,13 +305,17 @@ function update(dt, timeMs){
     if(!t.alive) continue;
     t.life += dt;
     if(t.life >= t.max){ t.alive = false; continue; }
+    t.x += t.vx*dt;
     t.y += t.vy*dt;
-    t.vy *= Math.pow(0.94, dt*60);
+    t.vy = t.gravity ? t.vy + t.gravity*dt          // thrown: arcs up, then falls
+                     : t.vy * Math.pow(0.94, dt*60); // banner: rises and eases out
+    t.vx *= Math.pow(0.93, dt*60);
   }
   const rs = rings.items;
   for(let i=0;i<rs.length;i++){
     const r = rs[i];
     if(!r.alive) continue;
+    if(r.delay > 0){ r.delay -= dt; continue; }
     r.life += dt;
     if(r.life >= r.max) r.alive = false;
   }
@@ -253,13 +352,32 @@ const fireGrad = (() => {          // one radial fireball sprite, drawn once
   return c;
 })();
 
+/*
+ * The glow kick's sprite: white at the heart, warm through the middle, gone
+ * by the rim. Wider and softer than the fireball, and drawn additively over
+ * it, so a big death briefly lights the sky around itself.
+ */
+const bloomGrad = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d");
+  if(g){
+    const gr = g.createRadialGradient(32,32,0, 32,32,32);
+    gr.addColorStop(0, "rgba(255,255,255,0.95)");
+    gr.addColorStop(0.18, "rgba(255,226,170,0.6)");
+    gr.addColorStop(0.5, "rgba(255,150,70,0.22)");
+    gr.addColorStop(1, "rgba(255,110,50,0)");
+    g.fillStyle = gr; g.fillRect(0,0,64,64);
+  }
+  return c;
+})();
+
 function drawParticles(ctx){
   const items = particles.items;
 
   // Pass 1: matter.
   for(let i=0;i<items.length;i++){
     const p = items[i];
-    if(!p.alive) continue;
+    if(!p.alive || p.delay > 0) continue;
     const t = 1 - p.life/p.max;
     if(p.kind === "smoke"){
       ctx.globalAlpha = t*0.45;
@@ -282,9 +400,22 @@ function drawParticles(ctx){
   ctx.globalCompositeOperation = "lighter";
   for(let i=0;i<items.length;i++){
     const p = items[i];
-    if(!p.alive) continue;
+    if(!p.alive || p.delay > 0) continue;
     const t = 1 - p.life/p.max;
-    if(p.kind === "flash"){
+    if(p.kind === "bloom"){
+      /*
+       * Fast attack, long decay. Swelling in from nothing would read as a
+       * balloon inflating; light arrives all at once and then dies back, so
+       * it opens near full size in the first frames and fades from there.
+       */
+      const k = p.life/p.max;
+      const s = p.size*(0.55 + Math.min(1, k*5)*0.45 + k*0.35);
+      // Kept well under 1: the flash, the fireball and this all stack
+      // additively, and at full strength the first 100ms clipped to a
+      // featureless white disc that hid the explosion happening inside it.
+      ctx.globalAlpha = (1-k)*(1-k)*0.6;
+      ctx.drawImage(bloomGrad, p.x - s, p.y - s, s*2, s*2);
+    } else if(p.kind === "flash"){
       ctx.globalAlpha = t;
       ctx.fillStyle = p.color;
       ctx.beginPath();
@@ -337,7 +468,7 @@ function drawParticles(ctx){
   const rs = rings.items;
   for(let i=0;i<rs.length;i++){
     const r = rs[i];
-    if(!r.alive) continue;
+    if(!r.alive || r.delay > 0) continue;
     const t = r.life/r.max;
     ctx.globalAlpha = (1-t)*0.85;
     ctx.strokeStyle = r.color;
@@ -359,12 +490,32 @@ function drawTexts(ctx){
     const k = 1 - t.life/t.max;
     ctx.globalAlpha = Math.min(1, k*1.7);
     ctx.font = "bold " + t.size + "px Rajdhani, Arial, sans-serif";
+    /*
+     * The pop: overshoot to 1.45x and snap back over the first ~70ms. Text
+     * that simply appears at its final size is the thing that makes damage
+     * numbers look like a debug readout; the overshoot is the whole trick,
+     * and it costs one transform on a handful of glyphs.
+     */
+    const popped = t.pop > 0 && t.life < 0.2;
+    if(popped){
+      // Out to 1.7x in 45ms, then settle back to 1 over the next 150ms. The
+      // first version eased straight down from the overshoot and was over
+      // inside two frames - the pop has to be held to be seen at all.
+      const s = t.life < 0.045
+        ? 0.55 + 1.15*SF.core.easeOutCubic(t.life/0.045)
+        : 1 + 0.7*(1 - SF.core.easeOutCubic((t.life - 0.045)/0.155));
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.scale(s, s);
+    }
+    const x = popped ? 0 : t.x, y = popped ? 0 : t.y;
     // Outlined, because floating numbers live over explosions.
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(6,8,18,0.7)";
-    ctx.strokeText(t.text, t.x, t.y);
+    ctx.strokeText(t.text, x, y);
     ctx.fillStyle = t.color;
-    ctx.fillText(t.text, t.x, t.y);
+    ctx.fillText(t.text, x, y);
+    if(popped) ctx.restore();
   }
   ctx.globalAlpha = 1;
   ctx.textAlign = "left";
@@ -381,7 +532,7 @@ SF.fx = {
   // wind with it, where the omnidirectional `sparks` puff would read as rain.
   spark,
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
-  firework,
+  firework, bloom,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },
