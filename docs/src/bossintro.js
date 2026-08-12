@@ -27,27 +27,49 @@ const BEATS = [
   { id:"alarm", dur: 1.5 },   // klaxon. the sky dims. letterbox slides in.
   { id:"rise",  dur: 2.4 },   // it comes down, slow and heavy
   { id:"name",  dur: 2.2 },   // WHO it is, in its own colour
+  { id:"out",   dur: 0.4 },   // bars and veil ease away - over live gameplay
 ];
+/*
+ * The fight resumes at the START of 'out': update() hands control back there,
+ * so game.js stops driving the timeline, and the outro runs on the mission
+ * clock instead. Bars fading over the first swings of the fight is the point
+ * - a hard cut to nothing looked like a dropped frame.
+ */
+const OUT = BEATS[BEATS.length - 1].dur;
 const TOTAL = BEATS.reduce((n, b) => n + b.dur, 0);
+const MAIN = TOTAL - OUT;
 
 let intro = null;    // { t }
+let outAt = 0;       // mission-clock ms when the outro began; 0 = none
 
-function reset(){ intro = null; }
-function active(){ return !!intro; }
-function progress(){ return intro ? clamp(intro.t / TOTAL, 0, 1) : 1; }
+function simNow(){ return SF.game && SF.game.now ? SF.game.now() : 0; }
+function outActive(){ return outAt > 0 && simNow() - outAt < OUT*1000; }
+
+function reset(){ intro = null; outAt = 0; }
+function active(){ return !!intro || outActive(); }
+function progress(){
+  if(intro) return clamp(intro.t / TOTAL, 0, 1);
+  if(outActive()) return clamp((MAIN + (simNow() - outAt)/1000) / TOTAL, 0, 1);
+  return 1;
+}
 
 function beat(){
-  if(!intro) return null;
-  let t = intro.t;
-  for(let i = 0; i < BEATS.length; i++){
-    if(t < BEATS[i].dur) return { id: BEATS[i].id, k: t / BEATS[i].dur, i };
-    t -= BEATS[i].dur;
+  if(intro){
+    let t = intro.t;
+    for(let i = 0; i < BEATS.length; i++){
+      if(t < BEATS[i].dur) return { id: BEATS[i].id, k: t / BEATS[i].dur, i };
+      t -= BEATS[i].dur;
+    }
+    return null;
   }
+  if(outActive())
+    return { id:"out", k: clamp((simNow() - outAt) / (OUT*1000), 0, 1), i: BEATS.length - 1 };
   return null;
 }
 
 function begin(){
   intro = { t: 0 };
+  outAt = 0;
   audio.play("bossWake");
   return intro;
 }
@@ -83,7 +105,8 @@ function update(dt, boss){
   // turned down.
   if(b && b.id === "rise") fx.shake(1.5 + b.k*4);
 
-  if(intro.t >= TOTAL){ intro = null; return true; }
+  // Hand the fight back as 'out' begins; the outro finishes on its own clock.
+  if(intro.t >= MAIN){ intro = null; outAt = Math.max(1, simNow()); return true; }
   return false;
 }
 
@@ -93,5 +116,5 @@ function hexToRgbStr(hex){
   return ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255);
 }
 
-SF.bossintro = { reset, begin, active, beat, progress, update, TOTAL, hexToRgbStr };
+SF.bossintro = { reset, begin, active, beat, progress, update, TOTAL, OUT, hexToRgbStr };
 })();

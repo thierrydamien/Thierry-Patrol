@@ -195,8 +195,11 @@ function tiled(ctx, H, y, fn){
    coloured haze - the difference between "a nebula" and
    "somewhere".
    --------------------------------------------------------- */
-function drawPlanet(ctx, W, H, p, rand){
+function drawPlanet(ctx, W, H, p, rand, lightDir){
   const cx = p.x*W, cy = p.y*H, r = p.r*W;
+  // Unit vector toward the sky's bright core - the nebula is the light source,
+  // so the lit limb agrees with the brightest sky behind it.
+  const lx = lightDir[0], ly = lightDir[1], lang = Math.atan2(ly, lx);
   const paint = yy => {
     ctx.save();
     if(p.rings){                                   // back half of the ring
@@ -207,7 +210,7 @@ function drawPlanet(ctx, W, H, p, rand){
       ctx.beginPath(); ctx.arc(0, 0, r*1.55, Math.PI, TAU); ctx.stroke();
       ctx.restore();
     }
-    const g = ctx.createRadialGradient(cx - r*0.42, yy - r*0.45, r*0.05, cx, yy, r);
+    const g = ctx.createRadialGradient(cx + lx*r*0.62, yy + ly*r*0.62, r*0.05, cx, yy, r);
     g.addColorStop(0, p.lit);
     g.addColorStop(0.55, p.dark);
     g.addColorStop(1, "#020309");
@@ -230,18 +233,26 @@ function drawPlanet(ctx, W, H, p, rand){
       }
     }
     if(p.crescent){                                // heavy shadow: a lit sliver only
-      const sg = ctx.createLinearGradient(cx - r, yy - r, cx + r*0.65, yy + r*0.8);
+      const sg = ctx.createLinearGradient(cx + lx*r, yy + ly*r, cx - lx*r, yy - ly*r);
       sg.addColorStop(0, "rgba(0,0,0,0)");
       sg.addColorStop(0.42, "rgba(0,0,0,0.72)");
       sg.addColorStop(1, "rgba(0,0,0,0.94)");
       ctx.fillStyle = sg;
       ctx.fillRect(cx - r, yy - r, r*2, r*2);
     }
+    // Soft limb glow on the core-facing edge. Drawn after the crescent so a
+    // mostly-dark body still keeps a lit rim - the cue that says "sphere",
+    // not "hole". Kept faint: scenery must never compete with bullets.
+    const lg = ctx.createRadialGradient(cx + lx*r, yy + ly*r, r*0.15, cx + lx*r, yy + ly*r, r*1.05);
+    lg.addColorStop(0, rgba(p.lit, 0.32));
+    lg.addColorStop(1, rgba(p.lit, 0));
+    ctx.fillStyle = lg;
+    ctx.fillRect(cx - r, yy - r, r*2, r*2);
     ctx.restore();
 
-    ctx.strokeStyle = rgba(p.lit, 0.42);           // rim light
+    ctx.strokeStyle = rgba(p.lit, 0.42);           // rim light, centred on the core
     ctx.lineWidth = Math.max(1, r*0.02);
-    ctx.beginPath(); ctx.arc(cx, yy, r, -2.5, -0.7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, yy, r, lang - 0.9, lang + 0.9); ctx.stroke();
 
     if(p.rings){                                   // front half, over the disc
       ctx.save();
@@ -298,48 +309,52 @@ function drawGalaxy(ctx, W, H, p, rand){
  * mission before the finale is spent looking at what is coming.
  */
 function drawDevourerSilhouette(ctx, W, H, p){
-  const cx = W*p.x, cy = H*p.y, R = W*p.r;
-  ctx.save();
-  // The eclipse it casts: everything behind it goes darker.
-  const shade = ctx.createRadialGradient(cx, cy, R*0.4, cx, cy, R*2.4);
-  shade.addColorStop(0, "rgba(0,0,0,0.85)");
-  shade.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(cx - R*2.4, cy - R*2.4, R*4.8, R*4.8);
+  const cx = W*p.x, R = W*p.r;
+  // Tiled like every other prop: the 2.4R eclipse shade reaches past the
+  // canvas edge, and an untiled clip there put a hard shadow line on the wrap.
+  tiled(ctx, H, H*p.y, cy => {
+    ctx.save();
+    // The eclipse it casts: everything behind it goes darker.
+    const shade = ctx.createRadialGradient(cx, cy, R*0.4, cx, cy, R*2.4);
+    shade.addColorStop(0, "rgba(0,0,0,0.85)");
+    shade.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(cx - R*2.4, cy - R*2.4, R*4.8, R*4.8);
 
-  // Hull: a squat hexagonal bulk with shoulder arms.
-  ctx.fillStyle = "#05060e";
-  ctx.beginPath();
-  ctx.moveTo(cx - R,       cy - R*0.28);
-  ctx.lineTo(cx - R*0.52,  cy - R*0.78);
-  ctx.lineTo(cx + R*0.52,  cy - R*0.78);
-  ctx.lineTo(cx + R,       cy - R*0.28);
-  ctx.lineTo(cx + R*0.66,  cy + R*0.72);
-  ctx.lineTo(cx - R*0.66,  cy + R*0.72);
-  ctx.closePath(); ctx.fill();
-  [-1, 1].forEach(s => {
+    // Hull: a squat hexagonal bulk with shoulder arms.
+    ctx.fillStyle = "#05060e";
     ctx.beginPath();
-    ctx.moveTo(cx + s*R*0.88, cy - R*0.34);
-    ctx.lineTo(cx + s*R*1.5,  cy - R*0.10);
-    ctx.lineTo(cx + s*R*1.42, cy + R*0.30);
-    ctx.lineTo(cx + s*R*0.80, cy + R*0.34);
+    ctx.moveTo(cx - R,       cy - R*0.28);
+    ctx.lineTo(cx - R*0.52,  cy - R*0.78);
+    ctx.lineTo(cx + R*0.52,  cy - R*0.78);
+    ctx.lineTo(cx + R,       cy - R*0.28);
+    ctx.lineTo(cx + R*0.66,  cy + R*0.72);
+    ctx.lineTo(cx - R*0.66,  cy + R*0.72);
     ctx.closePath(); ctx.fill();
-  });
+    [-1, 1].forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(cx + s*R*0.88, cy - R*0.34);
+      ctx.lineTo(cx + s*R*1.5,  cy - R*0.10);
+      ctx.lineTo(cx + s*R*1.42, cy + R*0.30);
+      ctx.lineTo(cx + s*R*0.80, cy + R*0.34);
+      ctx.closePath(); ctx.fill();
+    });
 
-  // Cold running lights along the shoulders, and the eye.
-  ctx.fillStyle = "rgba(120,180,255,0.5)";
-  for(let i = 0; i < 9; i++){
-    const t = i/8;
-    ctx.fillRect(cx - R*0.52 + t*R*1.04, cy - R*0.74, R*0.03, R*0.03);
-  }
-  ctx.globalCompositeOperation = "lighter";
-  const eye = ctx.createRadialGradient(cx, cy + R*0.02, 0, cx, cy + R*0.02, R*0.42);
-  eye.addColorStop(0, "rgba(255,70,90,0.85)");
-  eye.addColorStop(0.4, "rgba(255,40,70,0.25)");
-  eye.addColorStop(1, "rgba(255,0,40,0)");
-  ctx.fillStyle = eye;
-  ctx.beginPath(); ctx.arc(cx, cy + R*0.02, R*0.42, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+    // Cold running lights along the shoulders, and the eye.
+    ctx.fillStyle = "rgba(120,180,255,0.5)";
+    for(let i = 0; i < 9; i++){
+      const t = i/8;
+      ctx.fillRect(cx - R*0.52 + t*R*1.04, cy - R*0.74, R*0.03, R*0.03);
+    }
+    ctx.globalCompositeOperation = "lighter";
+    const eye = ctx.createRadialGradient(cx, cy + R*0.02, 0, cx, cy + R*0.02, R*0.42);
+    eye.addColorStop(0, "rgba(255,70,90,0.85)");
+    eye.addColorStop(0.4, "rgba(255,40,70,0.25)");
+    eye.addColorStop(1, "rgba(255,0,40,0)");
+    ctx.fillStyle = eye;
+    ctx.beginPath(); ctx.arc(cx, cy + R*0.02, R*0.42, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
 }
 
 function drawRocks(ctx, W, H, p, rand){
@@ -363,22 +378,40 @@ function drawRocks(ctx, W, H, p, rand){
   });
 }
 
-function build(missionIndex, W, H){
+// One scratch canvas shared by every build(): props composite here at full
+// alpha before being dimmed and blitted. Reused, not per-prop - at dpr 2 a
+// throwaway canvas per prop would dominate the ~170ms build budget.
+let propLayer = null;
+
+/*
+ * Contract: returns null for a photo-backed mission (the renderer pans the
+ * painted artwork instead). Otherwise the canvas is W*dpr x H*dpr device
+ * pixels, drawn in logical W x H coordinates via ctx.scale(dpr, dpr) - the
+ * vertical wrap is seamless at logical H whatever the dpr. Callers keep
+ * their tiling math in logical units and blit with an explicit destination
+ * size: drawImage(sky, 0, y, W, H), and again at y - H.
+ */
+function build(missionIndex, W, H, dpr = 1){
   const sky = SKIES[missionIndex % SKIES.length];
   if(sky.photo) return null;                       // the renderer uses the artwork
   const rand = rngFor(missionIndex*137 + 7);
   const cv = document.createElement("canvas");
-  cv.width = W; cv.height = H;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   const ctx = cv.getContext("2d");
   if(!ctx) return cv;
+  ctx.scale(dpr, dpr);
 
   // Base: essentially black. Real deep-space photographs are mostly empty and
   // the nebula is an event in the frame - filling the whole canvas with colour
-  // is what made the first attempt look like wallpaper.
+  // is what made the first attempt look like wallpaper. The tints peak just
+  // inside the edges, not at them: row 0 must equal row H or the wrap carries
+  // a hard colour step through every scroll.
   const base = ctx.createLinearGradient(0, 0, 0, H);
-  base.addColorStop(0, rgba(sky.clouds[2], 0.22));
+  base.addColorStop(0, "#03030a");
+  base.addColorStop(0.06, rgba(sky.clouds[2], 0.22));
   base.addColorStop(0.5, "#03030a");
-  base.addColorStop(1, rgba(sky.clouds[0], 0.14));
+  base.addColorStop(0.94, rgba(sky.clouds[0], 0.14));
+  base.addColorStop(1, "#03030a");
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, W, H);
 
@@ -513,27 +546,48 @@ function build(missionIndex, W, H){
     });
   }
   /* --- furniture ---------------------------------------------------------
-     Drawn after the stars, because a planet is much nearer than they are. */
-  // Held back to 62%: at full strength a gas giant filled the playfield and
-  // bullets stopped reading against its bands. Scenery has to stay scenery.
-  ctx.save();
-  ctx.globalAlpha = 0.62;
-  (sky.props || []).forEach(pr => {
-    if(pr.k === "planet") drawPlanet(ctx, W, H, pr, rand);
-    else if(pr.k === "sun") drawSun(ctx, W, H, pr);
-    else if(pr.k === "galaxy") drawGalaxy(ctx, W, H, pr, rand);
-    else if(pr.k === "rocks") drawRocks(ctx, W, H, pr, rand);
-    else if(pr.k === "devourer") drawDevourerSilhouette(ctx, W, H, pr);
-  });
-  ctx.restore();
+     Drawn after the stars, because a planet is much nearer than they are.
+     Props render at FULL alpha into the shared scratch layer, get pulled
+     down in place (source-atop black keeps coverage, cuts brightness ~35%),
+     then blit over the sky opaquely. The old way - 62% globalAlpha on the
+     whole pass - kept scenery dim but let stars and nebula shine straight
+     through solid bodies, and every planet read as a ghost hologram. Same
+     dimness, real occlusion; scenery still never competes with bullets. */
+  const props = sky.props || [];
+  if(props.length){
+    if(!propLayer) propLayer = document.createElement("canvas");
+    if(propLayer.width !== cv.width) propLayer.width = cv.width;
+    if(propLayer.height !== cv.height) propLayer.height = cv.height;
+    const px = propLayer.getContext("2d");
+    if(px){
+      px.setTransform(dpr, 0, 0, dpr, 0, 0);       // reused canvas: reset, then logical coords
+      px.clearRect(0, 0, W, H);
+      // Planets light from the nearer nebula core (computed from the base
+      // position, not per wrap copy, so the tiled copies match).
+      const coreDir = (x, y) => {
+        const c = (cores[0].x-x)*(cores[0].x-x) + (cores[0].y-y)*(cores[0].y-y) <=
+                  (cores[1].x-x)*(cores[1].x-x) + (cores[1].y-y)*(cores[1].y-y) ? cores[0] : cores[1];
+        const dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy) || 1;
+        return [dx/d, dy/d];
+      };
+      props.forEach(pr => {
+        if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H));
+        else if(pr.k === "sun") drawSun(px, W, H, pr);
+        else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
+        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand);
+        else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
+      });
+      px.globalCompositeOperation = "source-atop";
+      px.fillStyle = "rgba(0,0,0,0.35)";
+      px.fillRect(0, 0, W, H);
+      px.globalCompositeOperation = "source-over";
+      ctx.drawImage(propLayer, 0, 0, W, H);
+    }
+  }
 
-  // Vignette: pulls the corners back to black so the bright region reads as
-  // the subject rather than the whole frame being lit.
-  const vig = ctx.createRadialGradient(W*0.5, H*0.5, W*0.25, W*0.5, H*0.5, W*0.95);
-  vig.addColorStop(0, "rgba(0,0,0,0)");
-  vig.addColorStop(1, "rgba(0,0,0,0.55)");
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
+  // No baked vignette: this texture tiles vertically, and baked-in dark
+  // corners scrolled past as a seam band. The live screen-space vignette in
+  // render.js does the job in the coordinate space a vignette belongs in.
   return cv;
 }
 

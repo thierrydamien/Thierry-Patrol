@@ -28,8 +28,15 @@ const COLS = 12, ROWS = 12;
 /*
  * Where the grid sits on the hull, in hull units (hull box of size S centred
  * on the origin, nose at -S/2): the band from just above the canopy down to
- * the tail, full wingspan. Square region, square cells - what the kid draws
- * is what the hull wears, undistorted.
+ * the tail. Square region, square cells - what the kid draws is what the
+ * hull wears, undistorted.
+ *
+ * Deliberately UNCHANGED when the hull became a drawn one with a wider
+ * wingspan: every saved "px1:" drawing maps cells through this box, so
+ * moving it would silently shift years of saved art around the hull. The
+ * silhouette fix lives entirely in HULL_POLY (shipart.js), which now traces
+ * the visible hull by construction - so the mask below and the worn clip
+ * follow the real wing edges instead of stopping along invisible diagonals.
  */
 const REGION = { x:-0.30, y:-0.18, w:0.60, h:0.60 };
 

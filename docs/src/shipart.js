@@ -1,11 +1,18 @@
 /*
  * Ship art. One procedural pass that draws a pilot's ship *as it currently is*
- * - hull sprite plus a bolted-on part for every upgrade tier they own.
+ * - a drawn hull plus a bolted-on part for every upgrade tier they own.
  *
  * This exists so progress is physical instead of numeric: buying Rapid Fire 3
  * grows two more cannon barrels you can point at. It is deliberately free of
  * gameplay state (it takes a plain levels object), because the same function
  * draws the hangar, the comms portraits and the story panels.
+ *
+ * The hull is DRAWN, in enemyart's exact language: one tint in, a derived
+ * lit/base/shade/deep palette out, key light fixed at the top-left, a cool
+ * counter-light off the sky, a rim light so the silhouette holds over empty
+ * space, glass that stays glass whatever the paint colour. The photobashed
+ * sprite this replaced was the one ship on screen that didn't come out of
+ * that factory - and its port wing wore a mirror-flipped "PATROL" decal.
  *
  * Coordinate space: hull box of size S centred on the origin, nose at -S/2.
  */
@@ -14,40 +21,122 @@
 const SF = window.SF;
 const { TAU } = SF.core;
 
+/* ---------------------------------------------------------
+   PALETTE - the same maths as enemyart's paletteFor, kept
+   local so the player and the fleet can never drift apart by
+   way of an import. One tint in, one small set of shades out.
+   --------------------------------------------------------- */
+const LINE    = "rgba(10,12,20,0.85)";
+const METAL   = "#8c96a8";
+const METAL_L = "#aeb8ca";
+const METAL_D = "#4a5262";
+const GLASS   = "#bde9ff";
+const GLASS_RGB = "150,225,255";     // the fleet's cockpit ice - also the
+                                     // ONE cool accent energy parts share
+const GOLD    = "#ffd23f";           // the ONE warm accent gun parts share
+
+function hexToRgb(hex){
+  const v = parseInt(String(hex).replace("#",""), 16);
+  return { r:(v>>16)&255, g:(v>>8)&255, b:v&255 };
+}
+function mix(c, target, k){
+  return "rgb(" + Math.round(c.r + (target - c.r)*k) + "," +
+                  Math.round(c.g + (target - c.g)*k) + "," +
+                  Math.round(c.b + (target - c.b)*k) + ")";
+}
+const palettes = {};
+function paletteFor(tint){
+  let p = palettes[tint];
+  if(p) return p;
+  const c = hexToRgb(tint || "#f5a623");
+  p = palettes[tint] = {
+    lit:   mix(c, 255, 0.42),
+    base:  mix(c, 255, 0.06),
+    // Dark side stays a colour, never a hole - space IS the background here.
+    shade: mix(c, 0,   0.34),
+    deep:  mix(c, 0,   0.58),
+    trim:  mix(c, 255, 0.72),
+    glow:  tint || "#ff8a3d",
+    rim:     "rgba(255,250,238,0.82)",
+    rimCool: "rgba(126,188,255,0.34)",
+  };
+  return p;
+}
+
 /* Convenience: rounded rectangle without relying on ctx.roundRect (jsdom, old iPads). */
 function rrect(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r, y);
   ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
   ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+r);
   ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
   ctx.closePath();
 }
 function glow(ctx, color, blur){ ctx.shadowColor = color; ctx.shadowBlur = blur; }
-/** Fills the current path and outlines it, so bolted-on hardware reads as solid. */
+function noGlow(ctx){ ctx.shadowBlur = 0; }
+/** Fills the current path and outlines it at the fleet's line weight, so
+ *  bolted-on hardware reads as solid metal and not a UI sticker. */
 function fillEdge(ctx, S){
   ctx.fill();
-  ctx.strokeStyle = "rgba(16,20,32,0.55)";
-  ctx.lineWidth = S*0.010;
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = Math.max(S*0.018, 1);   // never sub-pixel at flight size
   ctx.stroke();
 }
-function noGlow(ctx){ ctx.shadowBlur = 0; }
+/*
+ * The two shared gradients every part draws with, made once per drawShip call
+ * in hull-box coordinates: gunmetal for hardware, the pilot's derived palette
+ * for painted panels. Light from the top-left, like the whole fleet.
+ */
+function metalGrad(ctx, S){
+  const g = ctx.createLinearGradient(-S*0.4, -S*0.4, S*0.35, S*0.4);
+  g.addColorStop(0, METAL_L); g.addColorStop(0.5, METAL); g.addColorStop(1, METAL_D);
+  return g;
+}
+function paintGrad(ctx, S, p){
+  const g = ctx.createLinearGradient(-S*0.4, -S*0.4, S*0.35, S*0.4);
+  g.addColorStop(0, p.lit); g.addColorStop(0.45, p.base); g.addColorStop(1, p.shade);
+  return g;
+}
+/*
+ * Exhausts are diffuse blooms, never triangles - DESIGN 8i's rule, learned
+ * when the whole fleet grew horns. A squashed radial gradient: hot core,
+ * edges that genuinely reach zero.
+ */
+function plume(ctx, x, y, len, wide, r0, g0, b0){
+  ctx.save();
+  ctx.translate(x, y + len*0.30);
+  ctx.scale(wide, 1);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len);
+  g.addColorStop(0, "rgba(255,244,214,0.88)");
+  g.addColorStop(0.4, "rgba(" + r0 + "," + g0 + "," + b0 + ",0.42)");
+  g.addColorStop(1, "rgba(" + r0 + "," + g0 + "," + b0 + ",0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, len, 0, TAU); ctx.fill();
+  ctx.restore();
+}
 
 /* ---------------------------------------------------------
    THE PARTS LADDER
    Declaration order is the order they're offered as "what's
    next", so it doubles as a suggested build path: cheap
    visible wins first, showpieces last.
+
+   Palette discipline: parts are gunmetal (o.metalG) plus the
+   hull's own paint (o.paintG), with ONE warm accent shared by
+   the gun family (GOLD) and ONE cool accent shared by the
+   energy family (the fleet's cockpit ice). A maxed ship used
+   to wear six unrelated candy hues; now it wears a kit.
    --------------------------------------------------------- */
 const PARTS = [
   { id:"twinBarrel", up:"rapid", at:1, layer:"front",
     name:"Twin Barrels", blurb:"A second cannon on each side",
     draw(ctx,S,o){
-      ctx.fillStyle = o.metal;
+      ctx.fillStyle = o.metalG;
       [-1,1].forEach(s => { rrect(ctx, s*S*0.10 - S*0.030, -S*0.54, S*0.060, S*0.26, S*0.02); fillEdge(ctx, S); });
-      ctx.fillStyle = o.color; glow(ctx, o.color, S*0.08);
-      [-1,1].forEach(s => { ctx.beginPath(); ctx.arc(s*S*0.10, -S*0.53, S*0.026, 0, TAU); ctx.fill(); });
+      ctx.fillStyle = o.ghost ? o.color : GOLD;
+      if(!o.ghost) glow(ctx, GOLD, S*0.06);
+      [-1,1].forEach(s => { ctx.beginPath(); ctx.arc(s*S*0.10, -S*0.53, S*0.024, 0, TAU); ctx.fill(); });
       noGlow(ctx);
     } },
 
@@ -55,53 +144,65 @@ const PARTS = [
     name:"Ion Nozzles", blurb:"A hotter, longer exhaust plume",
     draw(ctx,S,o){
       const flick = 0.82 + Math.sin(o.t*17)*0.18;
-      const g = ctx.createLinearGradient(0, S*0.36, 0, S*0.36 + S*0.46*flick);
-      g.addColorStop(0, "rgba(120,215,255,0.95)");
-      g.addColorStop(0.45, "rgba(80,150,255,0.55)");
-      g.addColorStop(1, "rgba(60,110,255,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(-S*0.11, S*0.36); ctx.lineTo(S*0.11, S*0.36);
-      ctx.lineTo(0, S*0.36 + S*0.46*flick); ctx.closePath(); ctx.fill();
+      plume(ctx, 0, S*0.40, S*0.44*flick, 0.42, 100, 150, 255);
     } },
 
   { id:"wingGuns", up:"spread", at:1, layer:"front",
     name:"Wing Guns", blurb:"A gun pod bolted to each wing",
     draw(ctx,S,o){
       [-1,1].forEach(s => {
-        ctx.fillStyle = o.metal;
+        ctx.fillStyle = o.metalG;
         rrect(ctx, s*S*0.36 - S*0.045, -S*0.06, S*0.090, S*0.30, S*0.03); fillEdge(ctx, S);
-        ctx.fillStyle = o.color;
-        rrect(ctx, s*S*0.36 - S*0.018, -S*0.16, S*0.036, S*0.13, S*0.014); ctx.fill();
+        ctx.fillStyle = o.paintG;
+        rrect(ctx, s*S*0.36 - S*0.018, -S*0.16, S*0.036, S*0.13, S*0.014); fillEdge(ctx, S);
       });
     } },
 
   { id:"shieldRing", up:"shield", at:1, layer:"behind",
     name:"Shield Generator", blurb:"A live containment ring around the hull",
+    /*
+     * Was a dashed stroked circle, which read as a debug gizmo riding every
+     * render of an upgraded ship. Now it's what a live field would be: a soft
+     * ring of light with the three emitter pods that project it.
+     */
     draw(ctx,S,o){
       ctx.save();
       ctx.rotate(o.t*0.7);
-      ctx.strokeStyle = o.ghost ? o.color : "rgba(120,200,255,0.75)";
-      ctx.lineWidth = S*0.022;
-      ctx.setLineDash([S*0.16, S*0.10]);
-      ctx.beginPath(); ctx.arc(0, 0, S*0.60, 0, TAU); ctx.stroke();
-      ctx.setLineDash([]);
+      if(o.ghost){
+        ctx.strokeStyle = o.color; ctx.lineWidth = Math.max(S*0.018, 1);
+        ctx.beginPath(); ctx.arc(0, 0, S*0.60, 0, TAU); ctx.stroke();
+      } else {
+        const g = ctx.createRadialGradient(0, 0, S*0.50, 0, 0, S*0.70);
+        g.addColorStop(0, "rgba(" + GLASS_RGB + ",0)");
+        g.addColorStop(0.5, "rgba(" + GLASS_RGB + ",0.26)");
+        g.addColorStop(1, "rgba(" + GLASS_RGB + ",0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, S*0.70, 0, TAU); ctx.fill();
+      }
+      for(let n=0;n<3;n++){
+        const a = n/3*TAU;
+        const x = Math.cos(a)*S*0.60, y = Math.sin(a)*S*0.60;
+        ctx.fillStyle = o.ghost ? o.color : METAL;
+        ctx.beginPath(); ctx.arc(x, y, S*0.030, 0, TAU); fillEdge(ctx, S);
+        if(!o.ghost){
+          ctx.fillStyle = GLASS;
+          ctx.beginPath(); ctx.arc(x, y, S*0.014, 0, TAU); ctx.fill();
+        }
+      }
       ctx.restore();
     } },
 
   { id:"hullPlates", up:"armor", at:1, layer:"front",
     name:"Hull Plates", blurb:"Angled armour down both flanks",
     draw(ctx,S,o){
-      ctx.fillStyle = o.ghost ? o.color : "rgba(196,206,222,0.52)";
-      ctx.strokeStyle = "rgba(20,26,40,0.55)";
-      ctx.lineWidth = S*0.012;
+      ctx.fillStyle = o.ghost ? o.color : o.metalG;
       [-1,1].forEach(s => {
         ctx.beginPath();
         ctx.moveTo(s*S*0.22, -S*0.18);
         ctx.lineTo(s*S*0.31, -S*0.02);
         ctx.lineTo(s*S*0.28, S*0.20);
         ctx.lineTo(s*S*0.21, S*0.15);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.closePath(); fillEdge(ctx, S);
       });
     } },
 
@@ -109,21 +210,23 @@ const PARTS = [
     name:"Bomb Pods", blurb:"Underslung pods, one per bomb",
     draw(ctx,S,o){
       [-1,1].forEach(s => {
-        ctx.fillStyle = o.metal;
+        ctx.fillStyle = o.metalG;
         rrect(ctx, s*S*0.26 - S*0.052, S*0.10, S*0.104, S*0.17, S*0.05); fillEdge(ctx, S);
-        ctx.fillStyle = "#ff8a3d";
-        ctx.beginPath(); ctx.arc(s*S*0.26, S*0.185, S*0.026, 0, TAU); ctx.fill();
+        ctx.fillStyle = o.ghost ? o.color : GOLD;
+        ctx.beginPath(); ctx.arc(s*S*0.26, S*0.185, S*0.024, 0, TAU); ctx.fill();
       });
     } },
 
   { id:"tractorDish", up:"magnet", at:1, layer:"front",
     name:"Tractor Dish", blurb:"A pulsing collector under the nose",
     draw(ctx,S,o){
-      ctx.strokeStyle = o.ghost ? o.color : "#8fe9c0";
-      ctx.lineWidth = S*0.020;
+      ctx.fillStyle = o.ghost ? o.color : o.metalG;
+      ctx.beginPath(); ctx.arc(0, -S*0.16, S*0.08, 0, Math.PI); ctx.closePath(); fillEdge(ctx, S);
+      ctx.strokeStyle = o.ghost ? o.color : "rgba(" + GLASS_RGB + ",0.8)";
+      ctx.lineWidth = Math.max(S*0.016, 1);
       ctx.beginPath(); ctx.arc(0, -S*0.16, S*0.11, Math.PI*0.15, Math.PI*0.85); ctx.stroke();
       const pulse = (o.t*1.4) % 1;
-      ctx.globalAlpha = (1 - pulse) * (o.ghost ? 0.5 : 1);
+      ctx.globalAlpha = (1 - pulse) * (o.ghost ? 0.5 : 0.8);
       ctx.beginPath(); ctx.arc(0, -S*0.16, S*0.11 + pulse*S*0.16, Math.PI*0.15, Math.PI*0.85); ctx.stroke();
       ctx.globalAlpha = o.ghost ? o.alpha : 1;
     } },
@@ -131,11 +234,11 @@ const PARTS = [
   { id:"seekerDome", up:"homing", at:1, layer:"front",
     name:"Seeker Dome", blurb:"The sensor that finds targets for you",
     draw(ctx,S,o){
-      ctx.fillStyle = o.metal;
-      ctx.beginPath(); ctx.arc(0, -S*0.02, S*0.075, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = o.ghost ? o.color : o.metalG;
+      ctx.beginPath(); ctx.arc(0, -S*0.02, S*0.075, Math.PI, TAU); ctx.closePath(); fillEdge(ctx, S);
       const on = Math.sin(o.t*6) > 0;
-      ctx.fillStyle = on ? "#22d3ee" : "rgba(34,211,238,0.25)";
-      if(on && !o.ghost) glow(ctx, "#22d3ee", S*0.10);
+      ctx.fillStyle = on ? GLASS : "rgba(" + GLASS_RGB + ",0.25)";
+      if(on && !o.ghost) glow(ctx, GLASS, S*0.08);
       ctx.beginPath(); ctx.arc(0, -S*0.05, S*0.026, 0, TAU); ctx.fill();
       noGlow(ctx);
     } },
@@ -143,10 +246,15 @@ const PARTS = [
   { id:"lance", up:"pierce", at:1, layer:"front",
     name:"Piercing Lance", blurb:"The spike that runs shots clean through",
     draw(ctx,S,o){
-      ctx.fillStyle = o.ghost ? o.color : "#dfe7f5";
+      ctx.fillStyle = o.ghost ? o.color : o.metalG;
       ctx.beginPath();
       ctx.moveTo(0, -S*0.78); ctx.lineTo(S*0.035, -S*0.44);
-      ctx.lineTo(-S*0.035, -S*0.44); ctx.closePath(); ctx.fill();
+      ctx.lineTo(-S*0.035, -S*0.44); ctx.closePath(); fillEdge(ctx, S);
+      if(!o.ghost){
+        ctx.fillStyle = GOLD; glow(ctx, GOLD, S*0.05);
+        ctx.beginPath(); ctx.arc(0, -S*0.76, S*0.016, 0, TAU); ctx.fill();
+        noGlow(ctx);
+      }
     } },
 
   { id:"plasmaCoils", up:"damage", at:2, layer:"front",
@@ -154,8 +262,8 @@ const PARTS = [
     draw(ctx,S,o){
       const pulse = 0.55 + Math.sin(o.t*5)*0.45;
       ctx.strokeStyle = o.ghost ? o.color : "rgba(255,210,63," + (0.45 + pulse*0.55) + ")";
-      ctx.lineWidth = S*0.026;
-      if(!o.ghost) glow(ctx, "#ffd23f", S*0.10*pulse);
+      ctx.lineWidth = Math.max(S*0.026, 1);
+      if(!o.ghost) glow(ctx, GOLD, S*0.10*pulse);
       [-1,1].forEach(s => {
         ctx.beginPath();
         ctx.arc(s*S*0.20, S*0.02, S*0.13, -Math.PI*0.35, Math.PI*0.35, s < 0);
@@ -175,7 +283,7 @@ const PARTS = [
         ctx.moveTo(s*S*0.62, S*0.10 + bob*s);
         ctx.lineTo(s*S*0.70, S*0.24 + bob*s);
         ctx.lineTo(s*S*0.54, S*0.24 + bob*s);
-        ctx.closePath(); ctx.fill();
+        ctx.closePath(); fillEdge(ctx, S);
         ctx.globalAlpha = o.ghost ? o.alpha : 1;
       });
     } },
@@ -183,36 +291,40 @@ const PARTS = [
   { id:"quadBarrel", up:"rapid", at:3, layer:"front",
     name:"Quad Barrels", blurb:"Four barrels cycling instead of two",
     draw(ctx,S,o){
-      ctx.fillStyle = o.metal;
+      ctx.fillStyle = o.metalG;
       [-1,1].forEach(s => { rrect(ctx, s*S*0.21 - S*0.026, -S*0.46, S*0.052, S*0.20, S*0.02); fillEdge(ctx, S); });
+      ctx.fillStyle = o.ghost ? o.color : GOLD;
+      [-1,1].forEach(s => { ctx.beginPath(); ctx.arc(s*S*0.21, -S*0.45, S*0.020, 0, TAU); ctx.fill(); });
     } },
 
   { id:"outerPylons", up:"spread", at:3, layer:"front",
     name:"Outer Pylons", blurb:"Guns pushed out past the wingtips",
     draw(ctx,S,o){
       [-1,1].forEach(s => {
-        ctx.strokeStyle = o.metal; ctx.lineWidth = S*0.038;
-        ctx.beginPath(); ctx.moveTo(s*S*0.36, S*0.06); ctx.lineTo(s*S*0.54, S*0.00); ctx.stroke();
-        ctx.fillStyle = o.color;
-        rrect(ctx, s*S*0.54 - S*0.030, -S*0.14, S*0.060, S*0.20, S*0.02); ctx.fill();
+        ctx.fillStyle = o.metalG;
+        ctx.save();
+        ctx.translate(s*S*0.45, S*0.03); ctx.rotate(s*-0.32);
+        rrect(ctx, -S*0.10, -S*0.020, S*0.20, S*0.040, S*0.015); fillEdge(ctx, S);
+        ctx.restore();
+        ctx.fillStyle = o.paintG;
+        rrect(ctx, s*S*0.54 - S*0.030, -S*0.14, S*0.060, S*0.20, S*0.02); fillEdge(ctx, S);
+        ctx.fillStyle = o.ghost ? o.color : GOLD;
+        ctx.beginPath(); ctx.arc(s*S*0.54, -S*0.16, S*0.018, 0, TAU); ctx.fill();
       });
     } },
 
   { id:"heavyPlating", up:"armor", at:3, layer:"front",
     name:"Heavy Plating", blurb:"Riveted slabs over the flanks",
     draw(ctx,S,o){
-      const plate = o.ghost ? o.color : "rgba(158,170,190,0.60)";
-      ctx.strokeStyle = "rgba(20,26,40,0.6)";
-      ctx.lineWidth = S*0.012;
       [-1,1].forEach(s => {
-        ctx.fillStyle = plate;
+        ctx.fillStyle = o.ghost ? o.color : o.metalG;
         ctx.beginPath();
         ctx.moveTo(s*S*0.20, -S*0.30);
         ctx.lineTo(s*S*0.37, -S*0.06);
         ctx.lineTo(s*S*0.34, S*0.26);
         ctx.lineTo(s*S*0.22, S*0.20);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.closePath(); fillEdge(ctx, S);
+        ctx.fillStyle = "rgba(14,18,30,0.55)";
         for(let r=0;r<3;r++){
           ctx.beginPath(); ctx.arc(s*S*0.29, -S*0.10 + r*S*0.11, S*0.013, 0, TAU); ctx.fill();
         }
@@ -222,8 +334,8 @@ const PARTS = [
   { id:"salvageClaws", up:"fortune", at:3, layer:"front",
     name:"Salvage Claws", blurb:"Grabbers that scrape more out of every kill",
     draw(ctx,S,o){
-      ctx.strokeStyle = o.ghost ? o.color : "#ffd23f";
-      ctx.lineWidth = S*0.026; ctx.lineCap = "round";
+      ctx.strokeStyle = o.ghost ? o.color : GOLD;
+      ctx.lineWidth = Math.max(S*0.026, 1); ctx.lineCap = "round";
       [-1,1].forEach(s => {
         ctx.beginPath();
         ctx.moveTo(s*S*0.10, S*0.24);
@@ -237,16 +349,7 @@ const PARTS = [
     name:"Afterburners", blurb:"Two outboard burners, wide open",
     draw(ctx,S,o){
       const flick = 0.8 + Math.sin(o.t*23 + 1)*0.2;
-      [-1,1].forEach(s => {
-        const g = ctx.createLinearGradient(0, S*0.30, 0, S*0.30 + S*0.40*flick);
-        g.addColorStop(0, "rgba(255,220,140,0.95)");
-        g.addColorStop(0.5, "rgba(255,140,60,0.5)");
-        g.addColorStop(1, "rgba(255,90,40,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(s*S*0.28 - S*0.06, S*0.30); ctx.lineTo(s*S*0.28 + S*0.06, S*0.30);
-        ctx.lineTo(s*S*0.28, S*0.30 + S*0.40*flick); ctx.closePath(); ctx.fill();
-      });
+      [-1,1].forEach(s => plume(ctx, s*S*0.28, S*0.32, S*0.38*flick, 0.40, 255, 140, 60));
     } },
 
   { id:"aegisHalo", up:"shield", at:4, layer:"behind",
@@ -254,13 +357,21 @@ const PARTS = [
     draw(ctx,S,o){
       ctx.save();
       ctx.rotate(-o.t*0.9);
-      ctx.strokeStyle = o.ghost ? o.color : "rgba(160,230,255,0.55)";
-      ctx.lineWidth = S*0.014;
-      ctx.beginPath(); ctx.arc(0, 0, S*0.74, 0, TAU); ctx.stroke();
-      ctx.fillStyle = o.ghost ? o.color : "#a0e6ff";
+      if(o.ghost){
+        ctx.strokeStyle = o.color; ctx.lineWidth = Math.max(S*0.014, 1);
+        ctx.beginPath(); ctx.arc(0, 0, S*0.74, 0, TAU); ctx.stroke();
+      } else {
+        const g = ctx.createRadialGradient(0, 0, S*0.66, 0, 0, S*0.82);
+        g.addColorStop(0, "rgba(" + GLASS_RGB + ",0)");
+        g.addColorStop(0.5, "rgba(" + GLASS_RGB + ",0.20)");
+        g.addColorStop(1, "rgba(" + GLASS_RGB + ",0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, S*0.82, 0, TAU); ctx.fill();
+      }
+      ctx.fillStyle = o.ghost ? o.color : GLASS;
       for(let n=0;n<4;n++){
         const a = n/4*TAU;
-        ctx.beginPath(); ctx.arc(Math.cos(a)*S*0.74, Math.sin(a)*S*0.74, S*0.030, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(Math.cos(a)*S*0.74, Math.sin(a)*S*0.74, S*0.030, 0, TAU); fillEdge(ctx, S);
       }
       ctx.restore();
     } },
@@ -269,11 +380,15 @@ const PARTS = [
     name:"Overdrive Vents", blurb:"Heat vents that flare when you burn it",
     draw(ctx,S,o){
       const pulse = 0.5 + Math.sin(o.t*8)*0.5;
-      ctx.fillStyle = o.ghost ? o.color : "rgba(255,138,61," + (0.5 + pulse*0.5) + ")";
       [-1,1].forEach(s => {
         for(let v=0;v<3;v++){
-          rrect(ctx, s*S*0.11 - S*0.016, S*0.06 + v*S*0.075, S*0.032, S*0.045, S*0.012);
-          ctx.fill();
+          const y = S*0.06 + v*S*0.075;
+          ctx.fillStyle = o.ghost ? o.color : "rgba(16,20,32,0.85)";
+          rrect(ctx, s*S*0.11 - S*0.018, y, S*0.036, S*0.05, S*0.012); ctx.fill();
+          if(!o.ghost){
+            ctx.fillStyle = "rgba(255,210,63," + (0.40 + pulse*0.55) + ")";
+            rrect(ctx, s*S*0.11 - S*0.011, y + S*0.008, S*0.022, S*0.034, S*0.008); ctx.fill();
+          }
         }
       });
     } },
@@ -284,8 +399,10 @@ const PARTS = [
       ctx.save();
       ctx.translate(0, -S*0.40);
       ctx.rotate(o.t*7);
-      ctx.fillStyle = o.metal;
-      ctx.beginPath(); ctx.arc(0, 0, S*0.11, 0, TAU); ctx.fill();
+      // Flat gunmetal, not the shared gradient: this frame spins, and a
+      // gradient would swirl the lighting round with it.
+      ctx.fillStyle = o.ghost ? o.color : METAL;
+      ctx.beginPath(); ctx.arc(0, 0, S*0.11, 0, TAU); fillEdge(ctx, S);
       ctx.fillStyle = o.ghost ? o.color : "#2b3242";
       for(let n=0;n<6;n++){
         const a = n/6*TAU;
@@ -298,9 +415,13 @@ const PARTS = [
     name:"Plasma Core", blurb:"The reactor that makes every shot bite",
     draw(ctx,S,o){
       const pulse = 0.6 + Math.sin(o.t*4)*0.4;
-      if(!o.ghost) glow(ctx, "#ff66b3", S*0.16*pulse);
-      ctx.fillStyle = o.ghost ? o.color : "rgba(255,140,200," + (0.45 + pulse*0.35) + ")";
+      if(!o.ghost) glow(ctx, GOLD, S*0.14*pulse);
+      ctx.fillStyle = o.ghost ? o.color : "rgba(255,224,130," + (0.55 + pulse*0.35) + ")";
       ctx.beginPath(); ctx.arc(0, S*0.10, S*0.036 + pulse*S*0.008, 0, TAU); ctx.fill();
+      if(!o.ghost){
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath(); ctx.arc(0, S*0.10, S*0.015, 0, TAU); ctx.fill();
+      }
       noGlow(ctx);
     } },
 
@@ -308,9 +429,9 @@ const PARTS = [
     name:"Full Broadside", blurb:"Every hardpoint on the wing, loaded",
     draw(ctx,S,o){
       [-1,1].forEach(s => {
-        ctx.fillStyle = o.color;
-        [0.44, 0.62].forEach(x => { rrect(ctx, s*S*x - S*0.024, -S*0.22, S*0.048, S*0.16, S*0.018); ctx.fill(); });
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = o.paintG;
+        [0.44, 0.62].forEach(x => { rrect(ctx, s*S*x - S*0.024, -S*0.22, S*0.048, S*0.16, S*0.018); fillEdge(ctx, S); });
+        ctx.fillStyle = o.ghost ? o.color : GOLD;
         ctx.beginPath(); ctx.arc(s*S*0.62, -S*0.24, S*0.018, 0, TAU); ctx.fill();
       });
     } },
@@ -348,32 +469,22 @@ const TUNE_ART = {
   falcon: {
     behind(ctx, S, o){       // hot twin plumes at the wing roots
       const flick = 0.8 + Math.sin(o.t*19)*0.2;
-      [-1, 1].forEach(s => {
-        const x = s*S*0.16;
-        const g = ctx.createLinearGradient(0, S*0.30, 0, S*0.30 + S*0.5*flick);
-        g.addColorStop(0, "rgba(255,190,90,0.9)");
-        g.addColorStop(1, "rgba(255,80,40,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(x - S*0.045, S*0.30); ctx.lineTo(x + S*0.045, S*0.30);
-        ctx.lineTo(x, S*0.30 + S*0.5*flick); ctx.closePath(); ctx.fill();
-      });
+      [-1, 1].forEach(s => plume(ctx, s*S*0.16, S*0.30, S*0.42*flick, 0.34, 255, 120, 50));
     },
     front(ctx, S, o){        // swept-back fins + a racing stripe
-      ctx.fillStyle = o.color; glow(ctx, o.color, S*0.05);
+      ctx.fillStyle = o.paintG;
       [-1, 1].forEach(s => {
         ctx.beginPath();
         ctx.moveTo(s*S*0.30, S*0.02); ctx.lineTo(s*S*0.52, S*0.32); ctx.lineTo(s*S*0.28, S*0.20);
-        ctx.closePath(); ctx.fill();
+        ctx.closePath(); fillEdge(ctx, S);
       });
-      noGlow(ctx);
       ctx.fillStyle = "rgba(255,255,255,0.5)";
       ctx.fillRect(-S*0.013, -S*0.40, S*0.026, S*0.56);
     },
   },
   titan: {
     front(ctx, S, o){        // riveted flank slabs + a nose plate
-      ctx.fillStyle = o.metal;
+      ctx.fillStyle = o.metalG;
       [-1, 1].forEach(s => { rrect(ctx, s*S*0.30 - S*0.05, -S*0.14, S*0.10, S*0.40, S*0.03); fillEdge(ctx, S); });
       rrect(ctx, -S*0.10, -S*0.52, S*0.20, S*0.12, S*0.03); fillEdge(ctx, S);
       ctx.fillStyle = "rgba(16,20,32,0.7)";
@@ -384,17 +495,17 @@ const TUNE_ART = {
   },
   viper: {
     front(ctx, S, o){        // twin overclocked rails, tips burning
-      ctx.fillStyle = o.metal;
+      ctx.fillStyle = o.metalG;
       [-1, 1].forEach(s => { rrect(ctx, s*S*0.05 - S*0.02, -S*0.66, S*0.04, S*0.30, S*0.015); fillEdge(ctx, S); });
-      ctx.fillStyle = "#ff5d73"; glow(ctx, "#ff5d73", S*0.08);
+      ctx.fillStyle = GOLD; glow(ctx, GOLD, S*0.08);
       [-1, 1].forEach(s => { ctx.beginPath(); ctx.arc(s*S*0.05, -S*0.66, S*0.024, 0, TAU); ctx.fill(); });
       noGlow(ctx);
     },
   },
   scavenger: {
     front(ctx, S, o){        // the golden collector scoop, sparks orbiting in
-      ctx.strokeStyle = "#ffd23f"; glow(ctx, "#ffd23f", S*0.07);
-      ctx.lineWidth = S*0.035; ctx.lineCap = "round";
+      ctx.strokeStyle = GOLD; glow(ctx, GOLD, S*0.07);
+      ctx.lineWidth = Math.max(S*0.035, 1); ctx.lineCap = "round";
       ctx.beginPath(); ctx.arc(0, S*0.12, S*0.34, Math.PI*0.15, Math.PI*0.85); ctx.stroke();
       ctx.fillStyle = "#ffe9a8";
       [0, 1, 2].forEach(k => {
@@ -402,6 +513,7 @@ const TUNE_ART = {
         ctx.beginPath(); ctx.arc(Math.cos(a)*S*0.34, S*0.12 + Math.sin(a)*S*0.34, S*0.02, 0, TAU); ctx.fill();
       });
       noGlow(ctx);
+      ctx.lineCap = "butt";
     },
   },
   ghost: {
@@ -409,15 +521,15 @@ const TUNE_ART = {
       const a = 0.28 + Math.sin(o.t*3)*0.16;
       ctx.strokeStyle = "rgba(160,180,255," + a.toFixed(2) + ")";
       glow(ctx, "#9aa5ff", S*0.09);
-      ctx.lineWidth = S*0.02;
+      ctx.lineWidth = Math.max(S*0.02, 1);
       ctx.beginPath(); ctx.ellipse(0, -S*0.04, S*0.42, S*0.52, 0, 0, TAU); ctx.stroke();
       noGlow(ctx);
     },
   },
   apex: {
     front(ctx, S, o){        // the Leviathan's gold: trim chevrons and edging
-      ctx.strokeStyle = "#ffd23f"; glow(ctx, "#ffd23f", S*0.06);
-      ctx.lineWidth = S*0.026; ctx.lineCap = "round";
+      ctx.strokeStyle = GOLD; glow(ctx, GOLD, S*0.06);
+      ctx.lineWidth = Math.max(S*0.026, 1); ctx.lineCap = "round";
       [0, 1].forEach(k => {
         const y = -S*0.44 + k*S*0.10;
         ctx.beginPath();
@@ -430,6 +542,7 @@ const TUNE_ART = {
         ctx.stroke();
       });
       noGlow(ctx);
+      ctx.lineCap = "butt";
     },
   },
 };
@@ -447,17 +560,8 @@ const TUNE_ART = {
  * Every one of these is a big, simple, high-contrast shape spanning most
  * of the ship, because the only thing that survives being fifty pixels
  * tall is a big simple shape. Drawn last, over every bought part, and
- * clipped to a hull-ish silhouette so paint never floats off the metal.
+ * clipped to the hull silhouette so paint never floats off the metal.
  */
-/*
- * The hull-ish silhouette liveries are clipped to, as vertices so the paint
- * easel can ask "is this cell on the ship?" against the SAME shape (see
- * paintjob.js). One polygon, two readers - they can never drift apart.
- */
-const HULL_POLY = [
-  [0, -0.50], [0.17, -0.14], [0.30, 0.16], [0.16, 0.44],
-  [-0.16, 0.44], [-0.30, 0.16], [-0.17, -0.14],
-];
 function hullClip(ctx, S){
   ctx.beginPath();
   HULL_POLY.forEach(([x, y], i) => {
@@ -469,7 +573,7 @@ function hullClip(ctx, S){
 const LIVERY_ART = {
   /*
    * Two fat racing stripes, nose to tail - each with a dark border, because
-   * the stock hull already has white panels and a plain white stripe simply
+   * the stock hull already has light panels and a plain white stripe simply
    * disappeared into them at flight size. The border is what makes it read
    * on ANY paint colour.
    */
@@ -483,7 +587,9 @@ const LIVERY_ART = {
     });
     ctx.restore();
   },
-  /** Flames licking up from the tail - orange over red over yellow. */
+  /** Flames licking up from the tail - orange over red over yellow.
+   *  Widths reach the wingtips: the clip is the real hull now, so a narrow
+   *  flame would stop visibly short of the edge it used to be eaten by. */
   flames(ctx, S){
     ctx.save(); hullClip(ctx, S);
     const tongue = (col, w, h, dy) => {
@@ -499,9 +605,9 @@ const LIVERY_ART = {
       ctx.lineTo(w, S*0.46 + dy);
       ctx.closePath(); ctx.fill();
     };
-    tongue("#c2410c", S*0.34, S*0.86, 0);
-    tongue("#f97316", S*0.27, S*0.66, 0);
-    tongue("#fbbf24", S*0.18, S*0.44, 0);
+    tongue("#c2410c", S*0.47, S*0.86, 0);
+    tongue("#f97316", S*0.36, S*0.66, 0);
+    tongue("#fbbf24", S*0.24, S*0.44, 0);
     ctx.restore();
   },
   /** One enormous lightning bolt across the entire hull. */
@@ -522,14 +628,14 @@ const LIVERY_ART = {
     ctx.fill(); ctx.stroke();
     ctx.restore();
   },
-  /** A chequered flag band right across the middle. */
+  /** A chequered flag band right across the middle - wingtip to wingtip. */
   checkers(ctx, S){
     ctx.save(); hullClip(ctx, S);
-    const cell = S*0.088, y0 = -S*0.10;
-    for(let r = 0; r < 3; r++){
+    const cell = S*0.115, y0 = -S*0.12;
+    for(let r = 0; r < 4; r++){
       for(let c = 0; c < 8; c++){
         ctx.fillStyle = (r + c) % 2 ? "#ffffff" : "#12161f";
-        ctx.fillRect(-S*0.35 + c*cell, y0 + r*cell, cell, cell);
+        ctx.fillRect(-S*0.46 + c*cell, y0 + r*cell, cell, cell);
       }
     }
     ctx.restore();
@@ -537,9 +643,12 @@ const LIVERY_ART = {
 };
 
 function drawShip(ctx, cx, cy, size, opts){
+  const color = opts.color || "#f5a623";
   const o = {
-    color: opts.color || "#f5a623",
-    metal: "#8a94a8",
+    color,
+    pal: paletteFor(color),
+    metal: METAL,
+    metalG: null, paintG: null,        // filled in below, white in ghost mode
     mateColor: opts.mateColor,
     t: opts.t || 0,
     ghost: false, alpha: 1,
@@ -550,20 +659,17 @@ function drawShip(ctx, cx, cy, size, opts){
 
   ctx.save();
   ctx.translate(cx, cy + bob);
+  o.metalG = metalGrad(ctx, S);
+  o.paintG = paintGrad(ctx, S, o.pal);
 
   const behind = [], front = [];
   PARTS.forEach(p => { if(owns(levels, p)) (p.layer === "behind" ? behind : front).push(p); });
 
   // Base exhaust: every ship has one, it just gets replaced by better parts.
+  // A diffuse bloom off the baked nozzle, never a bright triangle (DESIGN 8i).
   if(!owns(levels, PART_BY_ID.ionNozzles)){
     const flick = 0.8 + Math.sin(o.t*15)*0.2;
-    const g = ctx.createLinearGradient(0, S*0.34, 0, S*0.34 + S*0.22*flick);
-    g.addColorStop(0, "rgba(255,190,120,0.8)");
-    g.addColorStop(1, "rgba(255,120,60,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(-S*0.07, S*0.34); ctx.lineTo(S*0.07, S*0.34);
-    ctx.lineTo(0, S*0.34 + S*0.22*flick); ctx.closePath(); ctx.fill();
+    plume(ctx, 0, S*0.36, S*0.26*flick, 0.5, 255, 140, 60);
   }
 
   const tuneArt = TUNE_ART[opts.tune];
@@ -590,79 +696,262 @@ function drawShip(ctx, cx, cy, size, opts){
       const pulse = 0.28 + Math.sin(o.t*2.6)*0.16;
       ctx.save();
       ctx.globalAlpha = pulse;
-      gp.draw(ctx, S, Object.assign({}, o, { ghost:true, alpha:pulse, color:"#ffffff", metal:"#ffffff" }));
+      gp.draw(ctx, S, Object.assign({}, o, { ghost:true, alpha:pulse,
+        color:"#ffffff", metal:"#ffffff", metalG:"#ffffff", paintG:"#ffffff" }));
       ctx.restore();
     }
   }
   ctx.restore();
 }
 
-/** The hull itself: the game's sprite when it's loaded, a drawn one when it isn't. */
-function drawHull(ctx, S, color){
-  const R = SF.render;
-  if(R && R.isReady() && R.assets.ship){
-    ctx.drawImage(R.tinted(R.assets.ship, color), -S/2, -S/2, S, S);
-    return;
+/* ---------------------------------------------------------
+   THE HULL
+   A drawn interceptor in the fleet's language. One set of
+   vertices, two readers: paintHull below and HULL_POLY (the
+   livery clip + easel mask in paintjob.js) - so the paint can
+   never again stop dead along an edge the eye can't see.
+   --------------------------------------------------------- */
+
+// Fuselage: nose at -0.50, a smooth polygon (round joins hide the facets).
+const BODY = [
+   0,    -0.500,
+   0.050,-0.415,  0.088,-0.325,  0.114,-0.225,  0.128,-0.125,
+   0.136,-0.015,  0.132, 0.095,  0.122, 0.205,  0.108, 0.305,  0.098, 0.360,
+  -0.098, 0.360, -0.108, 0.305, -0.122, 0.205, -0.132, 0.095, -0.136,-0.015,
+  -0.128,-0.125, -0.114,-0.225, -0.088,-0.325, -0.050,-0.415,
+];
+// Both wings as one polygon, so the rim light wraps the whole span.
+const WING = [
+   0,    -0.095,
+   0.105,-0.040,  0.460, 0.185,  0.415, 0.290,  0.150, 0.235,
+   0,     0.270,
+  -0.150, 0.235, -0.415, 0.290, -0.460, 0.185, -0.105,-0.040,
+];
+// Canted tail fins, one each side.
+const FIN = [0.052, 0.245,  0.150, 0.420,  0.052, 0.360];
+
+/*
+ * The outer silhouette - the union of BODY, WING and FIN above, traced once.
+ * This is what liveries and the kid's own paint are clipped to, and what the
+ * easel mask is built from (see paintjob.js). One polygon, two readers - they
+ * can never drift apart, and now it IS the visible hull.
+ */
+const HULL_POLY = [
+  [0, -0.50],
+  [0.088, -0.325], [0.128, -0.125], [0.133, -0.022],   // body edge to wing root
+  [0.460, 0.185], [0.415, 0.290], [0.120, 0.242],      // out the wing and back
+  [0.108, 0.305], [0.150, 0.420], [0.060, 0.400],      // tail fin
+  [-0.060, 0.400], [-0.150, 0.420], [-0.108, 0.305],
+  [-0.120, 0.242], [-0.415, 0.290], [-0.460, 0.185],
+  [-0.133, -0.022], [-0.128, -0.125], [-0.088, -0.325],
+];
+
+function poly(ctx, pts, S){
+  ctx.beginPath();
+  for(let i=0;i<pts.length;i+=2){
+    if(i === 0) ctx.moveTo(pts[i]*S, pts[i+1]*S); else ctx.lineTo(pts[i]*S, pts[i+1]*S);
   }
-  /*
-   * Sprite-less fallback. It used to be one flat filled arrow, which is what
-   * the pilot picker showed for months whenever it painted before the sprite
-   * loaded - a coloured triangle reads as a placeholder, not a spacecraft. It
-   * is a proper little interceptor now: shaded fuselage, swept wings, a
-   * canopy and a lit engine, so an asset failure degrades to "simpler ship"
-   * rather than "broken".
-   */
-  const dark = shadeHex(color, -0.45), lit = shadeHex(color, 0.42);
-
-  // Swept wings, drawn behind the body
-  ctx.fillStyle = dark;
-  ctx.beginPath();
-  ctx.moveTo(0, -S*0.06);
-  ctx.lineTo(S*0.42, S*0.20); ctx.lineTo(S*0.30, S*0.30); ctx.lineTo(0, S*0.18);
-  ctx.lineTo(-S*0.30, S*0.30); ctx.lineTo(-S*0.42, S*0.20);
-  ctx.closePath(); ctx.fill();
-
-  // Fuselage, lit from the top-left like everything else in the game
-  const g = ctx.createLinearGradient(-S*0.18, -S*0.45, S*0.16, S*0.35);
-  g.addColorStop(0, lit); g.addColorStop(0.45, color); g.addColorStop(1, dark);
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(0, -S*0.48);
-  ctx.quadraticCurveTo(S*0.13, -S*0.20, S*0.14, S*0.14);
-  ctx.lineTo(S*0.10, S*0.34);
-  ctx.lineTo(-S*0.10, S*0.34);
-  ctx.lineTo(-S*0.14, S*0.14);
-  ctx.quadraticCurveTo(-S*0.13, -S*0.20, 0, -S*0.48);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "rgba(12,16,30,0.5)";
-  ctx.lineWidth = S*0.012;
-  ctx.stroke();
-
-  // Canopy
-  ctx.fillStyle = "rgba(190,230,255,0.9)";
-  ctx.beginPath();
-  ctx.ellipse(0, -S*0.16, S*0.062, S*0.12, 0, 0, TAU);
-  ctx.fill();
+  ctx.closePath();
+}
+/*
+ * Rim light, enemyart's trick verbatim: clip to the shape, stroke the same
+ * outline shifted away from the key light so only the lit edges survive the
+ * clip, then a cool counter-stroke the other way. It is what stops the hull
+ * dissolving into a dark sky, and it is all baked into the cached sprite.
+ */
+function rimLight(ctx, pts, p, S){
+  const d = S*0.024;
+  ctx.save();
+  poly(ctx, pts, S); ctx.clip();
+  ctx.translate(d, d);                          // key light: top-left
+  poly(ctx, pts, S);
+  ctx.strokeStyle = p.rim; ctx.lineWidth = S*0.044; ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  poly(ctx, pts, S); ctx.clip();
+  ctx.translate(-d*0.85, -d*0.85);
+  poly(ctx, pts, S);
+  ctx.strokeStyle = p.rimCool; ctx.lineWidth = S*0.042; ctx.stroke();
+  ctx.restore();
+}
+/** Fill with the top-left lit paint gradient, outline, catch the light. */
+function hullPiece(ctx, pts, p, S, grad){
+  poly(ctx, pts, S);
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = S*0.026; ctx.stroke();
+  rimLight(ctx, pts, p, S);
+}
+/*
+ * A canopy that is lit rather than painted - enemyart's cockpit, wearing the
+ * fleet's fixed cool glass. It never takes the paint colour: a green pilot
+ * flies green panels, not green windows.
+ */
+function canopy(ctx, x, y, rx, ry){
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(1, ry/rx);
+  const halo = ctx.createRadialGradient(0, 0, rx*0.4, 0, 0, rx*2.4);
+  halo.addColorStop(0, "rgba(" + GLASS_RGB + ",0.5)");
+  halo.addColorStop(0.5, "rgba(" + GLASS_RGB + ",0.16)");
+  halo.addColorStop(1, "rgba(" + GLASS_RGB + ",0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(0, 0, rx*2.4, 0, TAU); ctx.fill();
+  ctx.fillStyle = GLASS;
+  ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = rx*0.14; ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.beginPath();
-  ctx.ellipse(-S*0.02, -S*0.20, S*0.024, S*0.05, 0, 0, TAU);
-  ctx.fill();
-
-  // Nose tip and engine mouth
-  ctx.fillStyle = lit;
-  ctx.beginPath();
-  ctx.moveTo(0, -S*0.48); ctx.lineTo(S*0.035, -S*0.30); ctx.lineTo(-S*0.035, -S*0.30);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "rgba(20,24,40,0.85)";
-  rrect(ctx, -S*0.075, S*0.30, S*0.15, S*0.05, S*0.02); ctx.fill();
+  ctx.beginPath(); ctx.arc(-rx*0.28, -rx*0.3, rx*0.42, 0, TAU); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath(); ctx.arc(0, 0, rx*0.34, 0, TAU); ctx.fill();
+  ctx.restore();
 }
 
-/** Local shade helper - the module has no other colour maths. */
-function shadeHex(hex, k){
-  const v = parseInt(String(hex).replace("#",""), 16);
-  const c = [(v>>16)&255, (v>>8)&255, v&255];
-  const t = k < 0 ? 0 : 255, a = Math.abs(k);
-  return "rgb(" + c.map(n => Math.round(n + (t-n)*a)).join(",") + ")";
+/** Everything static about the hull, painted at size S. Bake-time only. */
+function paintHull(ctx, S, p, withText){
+  const paint = paintGrad(ctx, S, p);
+  const metal = metalGrad(ctx, S);
+
+  // Wings - painted panels, so they take the pilot's colour.
+  hullPiece(ctx, WING, p, S, paint);
+
+  // Painted trim along the leading edges, and wingtip lights.
+  ctx.strokeStyle = p.trim; ctx.lineWidth = S*0.012;
+  [-1,1].forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(s*S*0.13, -S*0.017); ctx.lineTo(s*S*0.44, S*0.181); ctx.stroke();
+  });
+  [-1,1].forEach(s => {
+    glow(ctx, p.glow, S*0.05);
+    ctx.fillStyle = p.glow;
+    ctx.beginPath(); ctx.arc(s*S*0.435, S*0.228, S*0.015, 0, TAU); ctx.fill();
+    noGlow(ctx);
+  });
+
+  /*
+   * The squadron name, as real drawn text on BOTH wings - which is the fix
+   * for the sprite whose port wing wore it mirror-flipped for months. Each
+   * wing gets its own rotation along its own sweep; neither is ever a
+   * negative scale of the other. Skipped below ~90px where it's only smudge.
+   */
+  if(withText){
+    ctx.save();
+    poly(ctx, WING, S); ctx.clip();      // lettering never leaves the metal
+    ctx.font = "700 " + Math.max(S*0.054, 5).toFixed(1) + "px Rajdhani, Arial, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    [-1,1].forEach(s => {
+      ctx.save();
+      ctx.translate(s*S*0.285, S*0.158);
+      ctx.rotate(s*0.566);               // along the wing's own sweep
+      ctx.fillStyle = "rgba(255,255,255,0.30)";
+      ctx.fillText("PATROL", 0, S*0.008);
+      ctx.fillStyle = "rgba(10,14,26,0.66)";
+      ctx.fillText("PATROL", 0, 0);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  // Tail fins - gunmetal, like all trim.
+  [-1,1].forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(s*S*FIN[0], S*FIN[1]);
+    ctx.lineTo(s*S*FIN[2], S*FIN[3]);
+    ctx.lineTo(s*S*FIN[4], S*FIN[5]);
+    ctx.closePath();
+    ctx.fillStyle = metal; ctx.fill();
+    ctx.strokeStyle = LINE; ctx.lineWidth = S*0.020; ctx.stroke();
+  });
+
+  // Engine: a dark nozzle plus one genuinely bright pixel in its mouth (the
+  // fleet's thruster rule). The moving flame is drawn live by drawShip.
+  ctx.fillStyle = METAL_D;
+  rrect(ctx, -S*0.075, S*0.345, S*0.15, S*0.055, S*0.02); ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = S*0.018; ctx.stroke();
+  ctx.fillStyle = "#10141f";
+  rrect(ctx, -S*0.055, S*0.362, S*0.11, S*0.028, S*0.012); ctx.fill();
+  const core = ctx.createRadialGradient(0, S*0.376, 0, 0, S*0.376, S*0.035);
+  core.addColorStop(0, "rgba(255,255,255,0.85)");
+  core.addColorStop(0.5, "rgba(255,214,150,0.35)");
+  core.addColorStop(1, "rgba(255,170,90,0)");
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(0, S*0.376, S*0.035, 0, TAU); ctx.fill();
+
+  // Fuselage over the wings - the other painted panel.
+  hullPiece(ctx, BODY, p, S, paint);
+
+  // Deep spine channel and panel seams: the greebles that make 300px rich
+  // and vanish harmlessly at 40.
+  ctx.fillStyle = p.deep;
+  poly(ctx, [0,-0.020, 0.045,0.060, 0.038,0.300, -0.038,0.300, -0.045,0.060], S);
+  ctx.fill();
+  ctx.strokeStyle = p.deep; ctx.lineWidth = S*0.008;
+  [[0.120, 0.080], [0.112, 0.220]].forEach(([w, y]) => {
+    ctx.beginPath(); ctx.moveTo(-w*S, y*S); ctx.lineTo(w*S, y*S); ctx.stroke();
+  });
+
+  // Gunmetal flank nacelles riding the wing roots.
+  [-1,1].forEach(s => {
+    ctx.fillStyle = metal;
+    rrect(ctx, s*S*0.145 - S*0.030, -S*0.02, S*0.060, S*0.24, S*0.03); ctx.fill();
+    ctx.strokeStyle = LINE; ctx.lineWidth = S*0.018; ctx.stroke();
+    ctx.fillStyle = "#181d2c";
+    rrect(ctx, s*S*0.145 - S*0.018, -S*0.005, S*0.036, S*0.045, S*0.015); ctx.fill();
+  });
+
+  // Gunmetal nose cap.
+  ctx.fillStyle = metal;
+  poly(ctx, [0,-0.50, 0.046,-0.385, -0.046,-0.385], S);
+  ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = S*0.016; ctx.stroke();
+
+  // Glass last, over everything: the one small bright thing on the hull.
+  canopy(ctx, 0, -S*0.175, S*0.066, S*0.115);
+}
+
+/*
+ * Rasterise once, blit forever - enemyart's cache, with one extra concern:
+ * the hero ship is drawn at 40px in combat and 300px in the hangar, so one
+ * fixed resolution would be blurry somewhere. Sprites bake per (colour,
+ * resolution) at up to 2x devicePixelRatio, so an iPad's hangar hull is as
+ * crisp as its enemies. The pad leaves room for rim light and canopy halo.
+ */
+const TEXT_MIN = 90;        // below this the wing lettering is only smudge
+const HULL_PAD = 0.10;      // fraction of S kept clear around the box
+const hullCache = new Map();
+function hullSprite(color, S){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const res = Math.max(24, Math.min(Math.round(S*dpr), 1024));
+  const withText = S >= TEXT_MIN ? 1 : 0;
+  const key = color + "|" + res + "|" + withText;
+  let cv = hullCache.get(key);
+  if(cv) return cv;
+  cv = document.createElement("canvas");
+  const pad = Math.ceil(res*HULL_PAD);
+  cv.width = cv.height = res + pad*2;
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  cv._scale = (res + pad*2)/res;
+  c.translate(cv.width/2, cv.height/2);
+  c.lineJoin = "round";
+  paintHull(c, res, paletteFor(color), withText);
+  // The wacky modes mint odd sizes; a runaway key set must not hoard canvases.
+  if(hullCache.size >= 40) hullCache.clear();
+  hullCache.set(key, cv);
+  return cv;
+}
+
+/** The hull itself - always drawn, no sprite, no Image, no load order. */
+function drawHull(ctx, S, color){
+  const cv = hullSprite(color, S);
+  if(cv){
+    const w = S*cv._scale;
+    ctx.drawImage(cv, -w/2, -w/2, w, w);
+    return;
+  }
+  // A context that can't mint offscreen canvases still gets the ship.
+  ctx.save();
+  ctx.lineJoin = "round";
+  paintHull(ctx, S, paletteFor(color), S >= TEXT_MIN ? 1 : 0);
+  ctx.restore();
 }
 
 SF.shipart = { PARTS, PART_BY_ID, levelsOf, partList, nextPart, ownedCount, drawShip,

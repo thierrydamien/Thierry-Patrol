@@ -89,7 +89,7 @@
       <div class="brief-hero-text">
         <div class="bh-row">
           <span id="briefNum" class="bh-num"></span>
-          <span id="briefBoss" class="bh-boss hidden">☠ BOSS</span>
+          <span id="briefBoss" class="bh-boss hidden"><canvas class="btn-ico" data-glyph="skull" width="22" height="22"></canvas>BOSS</span>
         </div>
         <h2 id="briefTitle" class="bh-title">MISSION</h2>
         <p id="briefSubtitle" class="bh-sub"></p>
@@ -116,7 +116,7 @@
          mission and a small phone runs out first. Sticky makes "can they see
          LAUNCH without scrolling" true by construction, on every device. -->
     <div class="brief-actions">
-      <button id="launchBtn" class="main-btn launch-btn">▶ LAUNCH</button>
+      <button id="launchBtn" class="main-btn launch-btn"><canvas class="btn-ico" data-glyph="play" width="26" height="26"></canvas>LAUNCH</button>
     </div>
     <button id="briefBackBtn" class="ghost-btn">Back to Missions</button>
   </section>
@@ -132,7 +132,7 @@
           <span>STOCK</span><span>YOURS</span>
         </div>
         <button id="hangarCompareBtn" class="compare-btn">COMPARE</button>
-        <button id="testFlightBtn" class="compare-btn test-btn">▶ TEST RANGE</button>
+        <button id="testFlightBtn" class="compare-btn test-btn"><canvas class="btn-ico" data-glyph="play" width="20" height="20"></canvas>TEST RANGE</button>
       </div>
       <div id="hangarSpecs" class="hangar-specs"></div>
       <div class="armory-bar">
@@ -206,7 +206,7 @@
     <div class="game-frame">
       <canvas id="game"></canvas>
 
-      <button id="pauseBtn" class="icon-btn top-left">II</button>
+      <button id="pauseBtn" class="icon-btn top-left" aria-label="Pause"><canvas class="btn-ico" data-glyph="pause" width="40" height="40"></canvas></button>
       <button id="muteBtn" class="icon-btn top-right">♪</button>
 
       <div class="ability-bar">
@@ -241,9 +241,9 @@
         <div id="resultObjectives" class="result-objectives"></div>
         <div id="resultLines" class="result-lines"></div>
         <div class="result-buttons">
-          <button id="nextBtn" class="main-btn hidden">▶ NEXT MISSION</button>
+          <button id="nextBtn" class="main-btn hidden"><canvas class="btn-ico" data-glyph="play" width="26" height="26"></canvas>NEXT MISSION</button>
           <button id="rookieBtn" class="main-btn hidden">TRY ON ROOKIE</button>
-          <button id="retryBtn" class="ghost-btn">↻ RETRY</button>
+          <button id="retryBtn" class="ghost-btn"><canvas class="btn-ico" data-glyph="retry" width="24" height="24"></canvas>RETRY</button>
           <button id="resultsMenuBtn" class="ghost-btn">Back to Missions</button>
         </div>
       </div>
@@ -263,7 +263,7 @@
     <canvas id="peCanvas" width="384" height="384"></canvas>
     <div id="pePalette" class="pe-palette"></div>
     <div class="pe-buttons">
-      <button id="peUndo" class="ghost-btn">↩ UNDO</button>
+      <button id="peUndo" class="ghost-btn"><canvas class="btn-ico" data-glyph="undo" width="24" height="24"></canvas>UNDO</button>
       <button id="peClear" class="ghost-btn">WIPE IT</button>
       <button id="peCancel" class="ghost-btn">CANCEL</button>
       <button id="peDone" class="main-btn">PUT IT ON MY SHIP</button>
@@ -343,7 +343,7 @@
      only works on Android - so a phone turned sideways has to be handled
      here. Pure CSS decides when this shows; ui.js only pauses a live run. -->
 <div id="rotateNag" class="rotate-nag">
-  <div class="rn-icon">📱</div>
+  <div class="rn-icon"><canvas class="btn-ico" data-glyph="phone" width="88" height="88"></canvas></div>
   <b>TURN YOUR PHONE</b>
   <span>Patrol flies the tall way up</span>
 </div>

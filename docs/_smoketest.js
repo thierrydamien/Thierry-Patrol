@@ -291,8 +291,10 @@ async function run(){
     // ones with a taller one.
     check("and their bottom padding respects the home indicator",
       /padding-bottom:\s*calc\(\s*max\(\s*20px\s*,\s*env\(safe-area-inset-bottom/.test(rule));
+    // Any solid hex will do - the check guards the fallback's existence, not
+    // the palette (the polish pass darkened the ground to #060512).
     check("the page paints a solid colour under the gradient",
-      /background-color:\s*#0a0920/.test(css));
+      /background-color:\s*#[0-9a-fA-F]{6}/.test(css));
   }
 
   /* ---------- KING PAPA's photo ---------- */
@@ -980,7 +982,9 @@ async function run(){
   check("hard tiers are locked until stars are earned", qa("#briefDifficulties .diff-card.locked").length === 3);
   check("a tier is preselected so LAUNCH always works",
     qa("#briefDifficulties .diff-card.on").length === 1);
-  check("the briefing explains the tier you picked", /pays/.test(id("briefDiffDetail").textContent));
+  // "pay" not "pays": the detail line now speaks the reader's language
+  // ("normal pay" on PILOT, "pays 1.8× the money" on ACE).
+  check("the briefing explains the tier you picked", /pay/.test(id("briefDiffDetail").textContent));
 
   /* ---------- play mission 1 to completion ---------- */
   SF.game.godMode = true;      // test-only: survive long enough to finish
@@ -1336,10 +1340,16 @@ async function run(){
     check("a begun arrival is active", BI.active());
     let steps = 0, done = false;
     while(!done && steps < 400){ done = BI.update(1/30, fake); steps++; }
-    check("the arrival finishes on its own clock",
-      done && Math.abs(steps/30 - BI.TOTAL) < 0.2);
+    // update() hands the fight back at the START of the eased outro (TOTAL
+    // minus OUT); the outro itself is drawing-only and rides the mission
+    // clock, so bars fade over live gameplay instead of hard-cutting.
+    check("the arrival hands the fight back on its own clock",
+      done && Math.abs(steps/30 - (BI.TOTAL - BI.OUT)) < 0.2);
     check("the arrival delivers the boss to its station",
       Math.abs(fake.y - fake.targetY) < 2 && fake.entering === false);
+    check("the outro is drawing-only - update() no longer runs the timeline",
+      !BI.update(1/30, fake));
+    BI.reset();
     check("a finished arrival is inert", !BI.active() && BI.progress() === 1);
     check("every boss has the name and epithet its card needs",
       Object.keys(SF.missions.BOSSES).every(k =>
@@ -4233,8 +4243,11 @@ async function run(){
       moveTo(){}, lineTo(){}, arc(){}, ellipse(){}, fill(){}, stroke(){}, fillRect(){},
       rotate(a){ ang = a; },
       drawImage(img, x, y, w, h){
-        // Tails are the only stretched draw in this path; bolts blit 1:1.
-        if(h !== undefined) tails.push({ ang, w, h });
+        // Tails are the only NON-SQUARE stretched draw in this path. Bolts
+        // now blit with explicit (square) dest sizes too - the retina bake
+        // draws a 2x sprite at logical size - so "has 5 args" stopped being
+        // a tail signature; "wider than it is tall, or vice versa" still is.
+        if(h !== undefined && w !== h) tails.push({ ang, w, h });
       },
     };
     const shot = (vx, vy, r) => ({ alive:true, x:200, y:200, vx, vy, r:r||4, kind:"bolt" });

@@ -8,12 +8,20 @@
  * coordinates, so the thing you are told to shoot is visibly a thing bolted
  * onto the ship.
  *
+ * Material rule: a boss shares the frame with the enemyart fleet, so it is
+ * built from the same stuff - a top-left-lit gradient hull, a dark outline,
+ * and a rim where an edge faces the key light. The first version was dark
+ * fills with bright neon outlines, and next to the cel-shaded escorts every
+ * boss read as the least finished thing in the game. Emissive colour is now
+ * reserved for parts that MEAN something: engines, eyes, weapon cores,
+ * telegraphs - a boss stays theatrical without becoming a wireframe.
+ *
  * All hulls are drawn live rather than pre-rendered because they react: cores
  * pulse, lights march, armour cracks as damage rises, and an armoured boss
  * needs to look armoured until it isn't. Everything is expressed in units of
  * S (the boss's size) around a local origin, so a hull scales cleanly.
  *
- * Perf note: these are ~40-90 path ops once per frame for ONE object on
+ * Perf note: these are ~60-140 path ops once per frame for ONE object on
  * screen. The hot paths (bullets, particles) are still pre-rendered blits.
  */
 (function(){
@@ -22,6 +30,105 @@ const SF = window.SF;
 const { clamp, TAU } = SF.core;
 
 /* ---------------- shared vocabulary ---------------- */
+function hexToRgb(hex){
+  const v = parseInt(String(hex).replace("#",""), 16);
+  return { r:(v>>16)&255, g:(v>>8)&255, b:v&255 };
+}
+function mix(c, target, k){
+  return "rgb(" + Math.round(c.r + (target - c.r)*k) + "," +
+                  Math.round(c.g + (target - c.g)*k) + "," +
+                  Math.round(c.b + (target - c.b)*k) + ")";
+}
+/*
+ * Material from a part's two design hexes: the old bright edge colour becomes
+ * the lit half of the ramp, the old flat fill survives as the shadow half.
+ * Same mix() maths as enemyart.paletteFor, so one factory built everything.
+ * Cached: draw() runs per frame and these strings never change.
+ */
+const MATS = {};
+function mat(hi, lo, litK){
+  const key = hi + "|" + (lo || "") + "|" + (litK || "");
+  if(MATS[key]) return MATS[key];
+  const a = hexToRgb(hi), b = hexToRgb(lo || hi);
+  return (MATS[key] = {
+    // litK caps the highlight for accents that are already pale - the default
+    // 0.42 (the fleet's) pushes them to white in the gradient's lit corner
+    lit:   mix(a, 255, litK === undefined ? 0.42 : litK),
+    base:  mix(a, 255, 0.06),
+    shade: lo ? mix(b, 255, 0.14) : mix(a, 0, 0.34),
+    deep:  lo ? mix(b, 0, 0.30)   : mix(a, 0, 0.58),
+  });
+}
+// The fleet's edge and light constants, verbatim: same dark line, same fixed
+// top-left key light, same cool counter-light off the sky.
+const LINE     = "rgba(10,12,20,0.85)";
+const RIM      = "rgba(255,250,238,0.82)";
+const RIM_COOL = "rgba(126,188,255,0.34)";
+function lineW(S){ return Math.max(1.6, S*0.013); }
+/** One gradient spans the whole hull, so every part sits under one light. */
+function skin(ctx, m, S){
+  const g = ctx.createLinearGradient(-S*0.5, -S*0.55, S*0.42, S*0.5);
+  g.addColorStop(0, m.lit);
+  g.addColorStop(0.45, m.base);
+  g.addColorStop(1, m.shade);
+  return g;
+}
+function pathPoly(ctx, pts){
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+}
+function pathSlab(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x - w/2, y - h/2, w, h, r);
+  else ctx.rect(x - w/2, y - h/2, w, h);
+}
+/*
+ * Rim light, enemyart's trick at boss scale: clip to the shape, stroke the
+ * same outline shifted away from the key light - the shifted line only
+ * survives inside the clip on the edges FACING the light. Then the cool
+ * counter-light on the opposite edges. This is what stops a 250px silhouette
+ * dissolving into a near-black sky.
+ */
+function rimPoly(ctx, pts, S, d, w){
+  ctx.save();
+  pathPoly(ctx, pts); ctx.clip();
+  ctx.translate(d, d); pathPoly(ctx, pts);
+  ctx.strokeStyle = RIM; ctx.lineWidth = w; ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  pathPoly(ctx, pts); ctx.clip();
+  ctx.translate(-d*0.85, -d*0.85); pathPoly(ctx, pts);
+  ctx.strokeStyle = RIM_COOL; ctx.lineWidth = w*0.95; ctx.stroke();
+  ctx.restore();
+}
+/** Gradient fill + dark outline + rim. `rw` slims the rim on small parts. */
+function hullPoly(ctx, pts, m, S, rw){
+  pathPoly(ctx, pts);
+  ctx.fillStyle = skin(ctx, m, S); ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S); ctx.stroke();
+  const k = rw || 1;
+  rimPoly(ctx, pts, S, S*0.015*k, S*0.022*k);
+}
+function hullSlab(ctx, x, y, w, h, r, m, S){
+  pathSlab(ctx, x, y, w, h, r);
+  ctx.fillStyle = skin(ctx, m, S); ctx.fill();
+  ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S); ctx.stroke();
+  // rim capped by the part's own size, or a small pod is all rim
+  const d = Math.min(S*0.015, Math.min(w, h)*0.09);
+  const lw = Math.min(S*0.022, Math.min(w, h)*0.16);
+  ctx.save();
+  pathSlab(ctx, x, y, w, h, r); ctx.clip();
+  ctx.translate(d, d); pathSlab(ctx, x, y, w, h, r);
+  ctx.strokeStyle = RIM; ctx.lineWidth = lw; ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  pathSlab(ctx, x, y, w, h, r); ctx.clip();
+  ctx.translate(-d*0.85, -d*0.85); pathSlab(ctx, x, y, w, h, r);
+  ctx.strokeStyle = RIM_COOL; ctx.lineWidth = lw*0.95; ctx.stroke();
+  ctx.restore();
+}
 function poly(ctx, pts, fill, stroke, lw){
   ctx.beginPath();
   ctx.moveTo(pts[0][0], pts[0][1]);
@@ -88,11 +195,6 @@ function cracks(ctx, boss, S, damage, timeMs){
 /* ---------------- the hulls ---------------- */
 const HULLS = {
   /*
-   * THE MARAUDER - the first boss anyone meets. A raider's wedge: heavy
-   * forward armour, two enormous side cannons (the weak points), and nothing
-   * subtle anywhere. It should look like it was welded together in a hurry.
-   */
-  /*
    * THE MARAUDER - a dart, not a slab. Two forward-swept arms carry the
    * cannons out at the tips (the weak points), with a narrow spearhead body
    * between them. Reads as "fast and pointed" from across the room, which is
@@ -101,25 +203,30 @@ const HULLS = {
   marauder(ctx, boss, S, damage, timeMs){
     const A = S/132;
     const charging = !!boss.charge;
+    const arm  = mat("#a8324a", "#320f1c");
+    const gun  = mat("#ff6b7f", "#5c1526");
+    const body = mat("#c23b55", "#24091a");
     // swept arms out to the cannon pods at (+-62,-4)
     [-1, 1].forEach(sd => {
-      poly(ctx, [[sd*10*A, 22*A],[sd*36*A, -30*A],[sd*74*A, -16*A],
-                 [sd*70*A, 16*A],[sd*24*A, 36*A]],
-           "#320f1c", "#a8324a", 3*A);
-      // the cannon itself, barrel pointing down-screen
-      slab(ctx, sd*62*A, -4*A, 26*A, 34*A, 6*A, "#5c1526", "#ff6b7f", 2.8*A);
-      ctx.fillStyle = "#ff9db0";
+      hullPoly(ctx, [[sd*10*A, 22*A],[sd*36*A, -30*A],[sd*74*A, -16*A],
+                     [sd*70*A, 16*A],[sd*24*A, 36*A]], arm, S);
+      // the cannon itself, barrel pointing down-screen; the muzzle stays hot
+      // because it is the part you are told to shoot
+      hullSlab(ctx, sd*62*A, -4*A, 26*A, 34*A, 6*A, gun, S);
       slab(ctx, sd*62*A, 16*A, 12*A, 14*A, 3*A, "#ff9db0", null);
       bloom(ctx, sd*62*A, 18*A, 18*A, "255,80,110", 0.35);
     });
     // spearhead body
-    poly(ctx, [[0,-64*A],[20*A,-8*A],[13*A,42*A],[-13*A,42*A],[-20*A,-8*A]],
-         "#24091a", "#c23b55", 3.5*A);
-    ctx.strokeStyle = "rgba(255,150,170,0.25)"; ctx.lineWidth = 2*A;
+    hullPoly(ctx, [[0,-64*A],[20*A,-8*A],[13*A,42*A],[-13*A,42*A],[-20*A,-8*A]],
+             body, S);
+    // spine seam, with a ridge catch-light on the side facing the key light
+    ctx.strokeStyle = "rgba(10,12,20,0.45)"; ctx.lineWidth = 2*A;
     ctx.beginPath(); ctx.moveTo(0,-52*A); ctx.lineTo(0, 36*A); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,224,230,0.28)"; ctx.lineWidth = 1.2*A;
+    ctx.beginPath(); ctx.moveTo(-1.8*A,-52*A); ctx.lineTo(-1.8*A, 36*A); ctx.stroke();
     // ram prow - lit while it is winding up to charge
     poly(ctx, [[0,-78*A],[12*A,-56*A],[-12*A,-56*A]],
-         charging ? "#ffd6de" : "#e05070", null);
+         charging ? "#ffd6de" : "#e05070", LINE, lineW(S));
     if(charging) bloom(ctx, 0, -66*A, 40*A, "255,120,150", 0.5);
     lights(ctx, -14*A, 14*A, -34*A, 4, "255,190,200", timeMs, 2.2*A);
     bloom(ctx, 0, 14*A, 22*A, "255,60,90", 0.3 + damage*0.2);
@@ -135,35 +242,47 @@ const HULLS = {
   jailer(ctx, boss, S, damage, timeMs){
     const A = S/140;
     const sway = Math.sin(timeMs/700)*3*A;
+    const body = mat("#2f7d55", "#0d2418");
+    const trim = mat("#3f9c68", "#13351f");
     // compact upper body
-    poly(ctx, [[-40*A,-42*A],[40*A,-42*A],[52*A,-8*A],[30*A,16*A],[-30*A,16*A],[-52*A,-8*A]],
-         "#0d2418", "#2f7d55", 3.4*A);
+    hullPoly(ctx, [[-40*A,-42*A],[40*A,-42*A],[52*A,-8*A],[30*A,16*A],[-30*A,16*A],[-52*A,-8*A]],
+             body, S);
     panels(ctx, -32*A, 32*A, -34*A, 12*A, 4, 0.35);
-    slab(ctx, 0, -30*A, 34*A, 16*A, 4*A, "#13351f", "#3f9c68", 2.2*A);
+    hullSlab(ctx, 0, -30*A, 34*A, 16*A, 4*A, trim, S);
     lights(ctx, -26*A, 26*A, -38*A, 5, "160,255,200", timeMs, 2.2*A);
 
-    // the two arms, reaching down and out to the cells at (+-58, 52)
+    // the two arms, reaching down and out to the cells at (+-58, 52):
+    // a dark contour, a lit tube, and a sheen line on the keyward side
     [-1, 1].forEach(sd => {
-      ctx.strokeStyle = "#1b4a30"; ctx.lineWidth = 15*A; ctx.lineCap = "round";
+      ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(sd*30*A, 4*A);
       ctx.quadraticCurveTo(sd*62*A, 18*A, sd*58*A + sway*sd, 44*A);
+      ctx.strokeStyle = trim.deep; ctx.lineWidth = 15*A; ctx.stroke();
+      ctx.strokeStyle = skin(ctx, trim, S); ctx.lineWidth = 10*A;
       ctx.stroke();
-      ctx.strokeStyle = "#3f9c68"; ctx.lineWidth = 7*A;
+      ctx.beginPath();
+      ctx.moveTo(sd*30*A - 2*A, 2*A);
+      ctx.quadraticCurveTo(sd*62*A - 2*A, 16*A, sd*58*A + sway*sd - 2*A, 42*A);
+      ctx.strokeStyle = "rgba(255,250,238,0.3)"; ctx.lineWidth = 2.4*A;
       ctx.stroke();
       // elbow joint
-      ctx.fillStyle = "#2f7d55";
-      ctx.beginPath(); ctx.arc(sd*52*A, 18*A, 8*A, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(sd*52*A, 18*A, 8*A, 0, TAU);
+      ctx.fillStyle = body.base; ctx.fill();
+      ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S); ctx.stroke();
+      ctx.fillStyle = "rgba(255,250,238,0.35)";
+      ctx.beginPath(); ctx.arc(sd*52*A - 2.4*A, 15.5*A, 2.6*A, 0, TAU); ctx.fill();
 
-      // the cell, clamped in a claw
+      // the cell, clamped in a claw that grips from behind (so it sits in shade)
       const cx = sd*58*A + sway*sd, cy = 52*A;
-      ctx.fillStyle = "#2f7d55";
       [-1, 1].forEach(k => {
         poly(ctx, [[cx + k*20*A, cy - 24*A],[cx + k*30*A, cy - 4*A],
                    [cx + k*24*A, cy + 22*A],[cx + k*14*A, cy + 10*A]],
-             "#2f7d55", null);
+             body.shade, "rgba(10,12,20,0.6)", lineW(S));
       });
-      slab(ctx, cx, cy, 34*A, 40*A, 5*A, "#08170f", "#4ade80", 3*A);
+      // metal cage around a dark cell - the containment field carries the glow
+      hullSlab(ctx, cx, cy, 34*A, 40*A, 5*A, body, S);
+      slab(ctx, cx, cy, 26*A, 32*A, 3*A, "#08170f", null);
       ctx.strokeStyle = "rgba(140,255,190,0.65)"; ctx.lineWidth = 2.4*A;
       for(let i = -1; i <= 1; i++){
         ctx.beginPath();
@@ -174,8 +293,8 @@ const HULLS = {
     });
 
     // tractor emitter, slung under the body between the arms
-    poly(ctx, [[-16*A,14*A],[16*A,14*A],[10*A,36*A],[-10*A,36*A]],
-         "#12402a", "#4ade80", 2.4*A);
+    hullPoly(ctx, [[-16*A,14*A],[16*A,14*A],[10*A,36*A],[-10*A,36*A]], trim, S, 0.6);
+    slab(ctx, 0, 33*A, 14*A, 3.5*A, 1.5*A, "rgba(140,255,190,0.85)", null);
     bloom(ctx, 0, 36*A, 24*A, "120,255,180", 0.28 + Math.sin(timeMs/240)*0.14);
     cracks(ctx, boss, S, damage, timeMs);
   },
@@ -187,26 +306,35 @@ const HULLS = {
    */
   sentinel(ctx, boss, S, damage, timeMs){
     const A = S/150;
+    const deck  = mat("#7c4bbd", "#1d1030");
+    const pod   = mat("#a855f7", "#150a26");
+    const tower = mat("#c9a4ff", "#2a1547", 0.2);
     // the deck - long and low
-    poly(ctx, [[-84*A,-2*A],[-64*A,-22*A],[64*A,-22*A],[84*A,-2*A],
-               [70*A,32*A],[-70*A,32*A]], "#1d1030", "#7c4bbd", 3.5*A);
-    // launch lanes running down the deck
-    ctx.strokeStyle = "rgba(210,180,255,0.30)"; ctx.lineWidth = 3*A;
-    ctx.setLineDash([10*A, 8*A]);
-    [-38, 0, 38].forEach(x => {
+    hullPoly(ctx, [[-84*A,-2*A],[-64*A,-22*A],[64*A,-22*A],[84*A,-2*A],
+                   [70*A,32*A],[-70*A,32*A]], deck, S);
+    // launch lanes: recessed grooves that brighten toward the launch lip,
+    // with a blinking threshold light - deck markings, not debug dashes
+    [-38, 0, 38].forEach((x, i) => {
+      ctx.strokeStyle = "rgba(10,12,20,0.45)"; ctx.lineWidth = 4*A;
       ctx.beginPath(); ctx.moveTo(x*A, -18*A); ctx.lineTo(x*A, 28*A); ctx.stroke();
+      const lg = ctx.createLinearGradient(0, -18*A, 0, 28*A);
+      lg.addColorStop(0, "rgba(210,180,255,0)");
+      lg.addColorStop(1, "rgba(210,180,255,0.5)");
+      ctx.strokeStyle = lg; ctx.lineWidth = 2*A;
+      ctx.beginPath(); ctx.moveTo(x*A, -18*A); ctx.lineTo(x*A, 28*A); ctx.stroke();
+      const on = 0.45 + Math.sin(timeMs/320 + i*2.1)*0.35;
+      ctx.fillStyle = "rgba(226,204,255," + on.toFixed(2) + ")";
+      ctx.fillRect(x*A - 3*A, 26*A, 6*A, 3*A);
     });
-    ctx.setLineDash([]);
     // engine pods far out at (+-68, 20)
     [-1, 1].forEach(sd => {
-      slab(ctx, sd*68*A, 20*A, 34*A, 42*A, 8*A, "#150a26", "#a855f7", 3*A);
+      hullSlab(ctx, sd*68*A, 20*A, 34*A, 42*A, 8*A, pod, S);
       bloom(ctx, sd*68*A, 34*A, 24*A, "168,85,247", 0.42);
-      ctx.fillStyle = "rgba(226,204,255,0.85)";
       slab(ctx, sd*68*A, 34*A, 18*A, 7*A, 3*A, "rgba(226,204,255,0.85)", null);
     });
     // command tower on the spine at (0,-30) - the tallest thing on the ship
-    poly(ctx, [[-16*A,-14*A],[-11*A,-48*A],[11*A,-48*A],[16*A,-14*A]],
-         "#2a1547", "#c9a4ff", 3*A);
+    hullPoly(ctx, [[-16*A,-14*A],[-11*A,-48*A],[11*A,-48*A],[16*A,-14*A]],
+             tower, S, 0.8);
     slab(ctx, 0, -38*A, 22*A, 10*A, 3*A, "#e9d5ff", null);
     bloom(ctx, 0, -34*A, 30*A, "200,150,255", 0.35 + damage*0.2);
     lights(ctx, -72*A, 72*A, -20*A, 11, "220,190,255", timeMs, 2.2*A);
@@ -220,14 +348,41 @@ const HULLS = {
    */
   warden(ctx, boss, S, damage, timeMs){
     const A = S/158;
-    // the ring
-    ctx.strokeStyle = "#0d3d4a"; ctx.lineWidth = 30*A;
-    ctx.beginPath(); ctx.arc(0, 12*A, 58*A, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 3.5*A;
+    const ring  = mat("#22d3ee", "#0d3d4a");
+    const hatch = mat("#22d3ee", "#04191f");
+    const arr   = mat("#7ce9f7", "#062b36", 0.16);
+    // the ring: a gradient-lit torus with dark edges, plus a faint powered
+    // line on the inner lip so the station still hums
+    ctx.beginPath(); ctx.arc(0, 12*A, 58*A, 0, TAU);
+    ctx.strokeStyle = skin(ctx, ring, S); ctx.lineWidth = 30*A; ctx.stroke();
+    ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S);
     ctx.beginPath(); ctx.arc(0, 12*A, 73*A, 0, TAU); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, 12*A, 43*A, 0, TAU); ctx.stroke();
-    // ribs across the ring
-    ctx.strokeStyle = "rgba(120,220,240,0.3)"; ctx.lineWidth = 2.5*A;
+    ctx.strokeStyle = "rgba(34,211,238,0.3)"; ctx.lineWidth = 2*A;
+    ctx.beginPath(); ctx.arc(0, 12*A, 43*A, 0, TAU); ctx.stroke();
+    // rim light on the torus: outer edge catches it top-left, the hole's
+    // inner wall catches it bottom-right, which is how a real ring sits
+    const d = S*0.018;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 12*A, 73*A, 0, TAU); ctx.arc(0, 12*A, 43*A, 0, TAU, true);
+    ctx.clip();
+    ctx.translate(d, d);
+    ctx.beginPath();
+    ctx.arc(0, 12*A, 73*A, 0, TAU); ctx.arc(0, 12*A, 43*A, 0, TAU, true);
+    ctx.strokeStyle = RIM; ctx.lineWidth = S*0.03; ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 12*A, 73*A, 0, TAU); ctx.arc(0, 12*A, 43*A, 0, TAU, true);
+    ctx.clip();
+    ctx.translate(-d*0.85, -d*0.85);
+    ctx.beginPath();
+    ctx.arc(0, 12*A, 73*A, 0, TAU); ctx.arc(0, 12*A, 43*A, 0, TAU, true);
+    ctx.strokeStyle = RIM_COOL; ctx.lineWidth = S*0.028; ctx.stroke();
+    ctx.restore();
+    // ribs across the ring - panel seams; the gradient carries the light now
+    ctx.strokeStyle = "rgba(10,12,20,0.4)"; ctx.lineWidth = 2.5*A;
     for(let i = 0; i < 8; i++){
       const a = (TAU/8)*i + timeMs/6000;
       ctx.beginPath();
@@ -237,14 +392,19 @@ const HULLS = {
     }
     // mine hatches set into the rim at (+-58, 14)
     [-1, 1].forEach(sd => {
-      slab(ctx, sd*58*A, 14*A, 38*A, 38*A, 10*A, "#04191f", "#22d3ee", 3*A);
+      hullSlab(ctx, sd*58*A, 14*A, 38*A, 38*A, 10*A, hatch, S);
+      ctx.fillStyle = hatch.deep;
+      ctx.beginPath(); ctx.arc(sd*58*A, 14*A, 13*A, 0, TAU); ctx.fill();
       ctx.fillStyle = "rgba(34,211,238," + (0.35 + Math.sin(timeMs/260 + sd)*0.25).toFixed(2) + ")";
       ctx.beginPath(); ctx.arc(sd*58*A, 14*A, 11*A, 0, TAU); ctx.fill();
+      bloom(ctx, sd*58*A, 14*A, 18*A, "34,211,238", 0.22);
     });
     // the mast and spine array at (0,-46)
-    ctx.strokeStyle = "#1c7f95"; ctx.lineWidth = 9*A;
+    ctx.strokeStyle = ring.deep; ctx.lineWidth = 11*A;
     ctx.beginPath(); ctx.moveTo(0, -14*A); ctx.lineTo(0, -40*A); ctx.stroke();
-    slab(ctx, 0, -46*A, 62*A, 20*A, 6*A, "#062b36", "#7ce9f7", 3*A);
+    ctx.strokeStyle = skin(ctx, ring, S); ctx.lineWidth = 7*A;
+    ctx.beginPath(); ctx.moveTo(0, -14*A); ctx.lineTo(0, -40*A); ctx.stroke();
+    hullSlab(ctx, 0, -46*A, 62*A, 20*A, 6*A, arr, S);
     ctx.strokeStyle = "rgba(150,240,255,0.6)"; ctx.lineWidth = 2*A;
     for(let i = -2; i <= 2; i++){
       ctx.beginPath();
@@ -261,18 +421,23 @@ const HULLS = {
    */
   phantom(ctx, boss, S, damage, timeMs){
     const A = S/150;
-    poly(ctx, [[0,-52*A],[42*A,-6*A],[64*A,20*A],[24*A,30*A],[0,20*A],
-               [-24*A,30*A],[-64*A,20*A],[-42*A,-6*A]],
-         "#141634", "#6b74c9", 3*A);
+    // low-key ramp: half the fight it isn't really there, so the hull stays
+    // closer to the sky than any other boss's
+    const body = mat("#6b74c9", "#141634", 0.22);
+    hullPoly(ctx, [[0,-52*A],[42*A,-6*A],[64*A,20*A],[24*A,30*A],[0,20*A],
+                   [-24*A,30*A],[-64*A,20*A],[-42*A,-6*A]], body, S);
     // swept edge highlights
-    ctx.strokeStyle = "rgba(180,190,255,0.35)"; ctx.lineWidth = 2*A;
+    ctx.strokeStyle = "rgba(180,190,255,0.3)"; ctx.lineWidth = 2*A;
     [-1, 1].forEach(sd => {
       ctx.beginPath();
       ctx.moveTo(sd*6*A, -44*A); ctx.lineTo(sd*46*A, 16*A); ctx.stroke();
     });
-    // lenses: core (0,-6) and two at (+-50, 14)
+    // lenses: core (0,-6) and two at (+-50, 14). These stay emissive - they
+    // are the eyes AND the weak points - but a dark seat grounds each one.
     const lens = (x, y, r, glowA) => {
       bloom(ctx, x, y, r*2.4, "154,165,255", glowA);
+      ctx.strokeStyle = LINE; ctx.lineWidth = 2*A;
+      ctx.beginPath(); ctx.arc(x, y, r + 1.8*A, 0, TAU); ctx.stroke();
       ctx.fillStyle = "#0a0c22";
       ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
       ctx.strokeStyle = "#9aa5ff"; ctx.lineWidth = 2.6*A;
@@ -294,29 +459,42 @@ const HULLS = {
    */
   leviathan(ctx, boss, S, damage, timeMs){
     const A = S/176;
+    const frame = mat("#c2570f", "#2a1206");
+    const pod   = mat("#f97316", "#1c0c04");
+    const hatch = mat("#f9a03c", "#1a0a03");
+    const core  = mat("#ffc46b", "#3a1a06", 0.12);
     // frame
-    poly(ctx, [[-58*A,-40*A],[58*A,-40*A],[80*A,-6*A],[72*A,34*A],[30*A,58*A],
-               [-30*A,58*A],[-72*A,34*A],[-80*A,-6*A]],
-         "#2a1206", "#c2570f", 4*A);
-    panels(ctx, -60*A, 60*A, -34*A, 40*A, 8, 0.42);
+    hullPoly(ctx, [[-58*A,-40*A],[58*A,-40*A],[80*A,-6*A],[72*A,34*A],[30*A,58*A],
+                   [-30*A,58*A],[-72*A,34*A],[-80*A,-6*A]], frame, S);
+    panels(ctx, -60*A, 60*A, -34*A, 40*A, 8, 0.3);
     // shoulder pods at (+-62, 14)
     [-1, 1].forEach(sd => {
-      slab(ctx, sd*62*A, 14*A, 44*A, 48*A, 9*A, "#1c0c04", "#f97316", 3.5*A);
+      hullSlab(ctx, sd*62*A, 14*A, 44*A, 48*A, 9*A, pod, S);
       bloom(ctx, sd*62*A, 14*A, 28*A, "249,115,22", 0.35);
       ctx.fillStyle = "rgba(255,200,140,0.75)";
       [-1, 0, 1].forEach(k => slab(ctx, sd*62*A, 14*A + k*13*A, 26*A, 5*A, 2*A,
                                    "rgba(255,200,140,0.75)", null));
     });
     // belly hatch at (0,44)
-    slab(ctx, 0, 44*A, 46*A, 28*A, 7*A, "#1a0a03", "#f9a03c", 3*A);
+    hullSlab(ctx, 0, 44*A, 46*A, 28*A, 7*A, hatch, S);
     ctx.strokeStyle = "rgba(255,190,120,0.6)"; ctx.lineWidth = 2.4*A;
     ctx.beginPath(); ctx.moveTo(-18*A, 44*A); ctx.lineTo(18*A, 44*A); ctx.stroke();
-    // spine core at (0,-18)
+    // spine core at (0,-18): a furnace throat - the heart glows out of a dark
+    // aperture, or the bloom just bleaches the housing
     bloom(ctx, 0, -18*A, 40*A, "255,180,80", 0.4 + damage*0.25);
-    poly(ctx, [[-24*A,-2*A],[-16*A,-40*A],[16*A,-40*A],[24*A,-2*A]],
-         "#3a1a06", "#ffc46b", 3*A);
-    ctx.fillStyle = "rgba(255,235,190," + (0.6 + Math.sin(timeMs/170)*0.3).toFixed(2) + ")";
-    ctx.beginPath(); ctx.arc(0, -18*A, 11*A, 0, TAU); ctx.fill();
+    hullPoly(ctx, [[-24*A,-2*A],[-16*A,-40*A],[16*A,-40*A],[24*A,-2*A]],
+             core, S, 0.8);
+    ctx.fillStyle = frame.deep;
+    ctx.beginPath(); ctx.arc(0, -18*A, 15*A, 0, TAU); ctx.fill();
+    // embers stay lit even at the bottom of the pulse - a dim furnace still burns
+    const emb = ctx.createRadialGradient(0, -18*A, 0, 0, -18*A, 15*A);
+    emb.addColorStop(0, "rgba(255,225,160,0.95)");
+    emb.addColorStop(0.55, "rgba(255,160,60,0.55)");
+    emb.addColorStop(1, "rgba(255,160,60,0)");
+    ctx.fillStyle = emb;
+    ctx.beginPath(); ctx.arc(0, -18*A, 15*A, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(255,235,190," + (0.72 + Math.sin(timeMs/170)*0.24).toFixed(2) + ")";
+    ctx.beginPath(); ctx.arc(0, -18*A, 9*A, 0, TAU); ctx.fill();
     lights(ctx, -54*A, 54*A, -36*A, 9, "255,210,150", timeMs, 2.4*A);
     cracks(ctx, boss, S, damage, timeMs);
   },

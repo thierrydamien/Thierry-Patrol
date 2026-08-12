@@ -142,7 +142,7 @@ const UPGRADES = [
     effect: lvl => (1+lvl) + " damage per hit" },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
     desc:"Bullets punch straight through anything they blow up",
-    effect: lvl => "blasts through " + lvl + " enemy" + (lvl === 1 ? "" : "s") + " and keeps going" },
+    effect: lvl => "blasts through " + (lvl === 1 ? "1 enemy" : lvl + " enemies") + " and keeps going" },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
     desc:"Your bullets bend through the air to chase enemies",
     effect: lvl => "tracking " + lvl + "/3" },

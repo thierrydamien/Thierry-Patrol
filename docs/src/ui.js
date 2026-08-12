@@ -128,6 +128,23 @@ function click(el, fn){
  * cost is four small ships and a dozen twinkles.
  */
 let titleRaf = 0, titleT = 0;
+/*
+ * The sky really is built once. The comment above always promised a cached
+ * canvas; the code was rebuilding the whole nebula - hundreds of gradients -
+ * sixty times a second on the two screens kids sit on longest, which is why
+ * the menus ran an iPad warm. Keyed by size so a rotation rebuilds it.
+ */
+const titleSky = { cv: null, key: "" };
+function titleSkyFor(W, H){
+  const key = W + "x" + H;
+  if(titleSky.key !== key){
+    // The Deep - the violet sky the blue planet below was chosen to sit in.
+    // build(7) landed on Gold Reach: the photo entries shift the indices.
+    titleSky.cv = SF.skygen.build(9, W, H);
+    titleSky.key = key;
+  }
+  return titleSky.cv;
+}
 function drawTitleArt(canvasId, p, t){
   const cv = $(canvasId);
   const ctx = cv && cv.getContext("2d");
@@ -136,8 +153,8 @@ function drawTitleArt(canvasId, p, t){
   t = t || 0;
   ctx.clearRect(0, 0, W, H);
 
-  const sky = SF.skygen.build(7, W, H);           // The Deep: the most dramatic
-  if(sky) ctx.drawImage(sky, 0, 0);
+  const sky = titleSkyFor(W, H);
+  if(sky) ctx.drawImage(sky, 0, 0, W, H);
   else { ctx.fillStyle = "#070716"; ctx.fillRect(0, 0, W, H); }
 
   // A handful of live twinkles over the cached sky.
@@ -151,15 +168,23 @@ function drawTitleArt(canvasId, p, t){
   ctx.globalAlpha = 1;
 
   // A big planet low and left, so the ship has something to fly past.
+  // Limb-lit along the sunward edge; the old bright highlight arc floating on
+  // the surface read as gloss on a marble rather than light on a world.
   const g = ctx.createRadialGradient(W*0.16, H*0.86, W*0.05, W*0.30, H*0.94, W*0.62);
   g.addColorStop(0, "#4a6fd8");
   g.addColorStop(0.5, "#17224f");
   g.addColorStop(1, "#04050f");
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "rgba(160,200,255,0.35)";
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, -2.9, -1.4); ctx.stroke();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.clip();
+  const limb = ctx.createRadialGradient(W*0.14, H*0.80, W*0.40, W*0.30, H*0.98, W*0.58);
+  limb.addColorStop(0.82, "rgba(160,200,255,0)");
+  limb.addColorStop(0.97, "rgba(160,200,255,0.22)");
+  limb.addColorStop(1, "rgba(200,225,255,0.38)");
+  ctx.fillStyle = limb;
+  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 
   // The hero: their ship if we know who is flying, a stock one otherwise.
   const levels = p ? SF.shipart.levelsOf(p) : {};
@@ -173,11 +198,13 @@ function drawTitleArt(canvasId, p, t){
     SF.shipart.drawShip(ctx, W*x, H*y + b2, W*sz, { color: col, levels:{}, t: t + i*0.7, idle:false });
   });
 
-  // Darken toward the bottom so the UI over it stays readable.
+  // Darken toward the bottom so the UI over it stays readable. Gently: the
+  // old 0.25/0.55/0.95 ramp buried the lower two thirds of the artwork, and
+  // the first screen of the game read as 60% dead black.
   const fade = ctx.createLinearGradient(0, 0, 0, H);
-  fade.addColorStop(0, "rgba(5,4,15,0.25)");
-  fade.addColorStop(0.5, "rgba(5,4,15,0.55)");
-  fade.addColorStop(1, "rgba(5,4,15,0.95)");
+  fade.addColorStop(0, "rgba(5,4,15,0.05)");
+  fade.addColorStop(0.55, "rgba(5,4,15,0.30)");
+  fade.addColorStop(1, "rgba(5,4,15,0.82)");
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, W, H);
 }
@@ -213,7 +240,7 @@ function renderProfiles(){
         <span class="pc-patch"></span></div>
       <div class="pname">${esc(p.callsign || p.name)}</div>
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
-      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i></i> <b>${p.highscore}</b> best</div>
+      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> best</div>
     `;
     click(card, () => selectProfile(name));
     grid.appendChild(card);
@@ -444,10 +471,13 @@ function buildSky(W, H){
   const c = cv.getContext("2d");
   if(!c) return cv;
 
+  // Near-black base, like the mission skies. The map used to open on a
+  // brighter pastel indigo that read as a different game from the playfield;
+  // pulling the ground down lets the gold route own the screen.
   const bg = c.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#2b2465");
-  bg.addColorStop(0.5, "#151338");
-  bg.addColorStop(1, "#080718");
+  bg.addColorStop(0, "#171238");
+  bg.addColorStop(0.5, "#0c0a24");
+  bg.addColorStop(1, "#060512");
   c.fillStyle = bg; c.fillRect(0, 0, W, H);
 
   // Nebula: a few big soft clouds, deliberately low contrast so the route
@@ -456,8 +486,8 @@ function buildSky(W, H){
    ["#db2777", 0.24, 0.72, 0.38], ["#14b8a6", 0.62, 0.90, 0.30]]
     .forEach(([col, x, y, r]) => {
       const g = c.createRadialGradient(x*W, y*H, 0, x*W, y*H, r*W);
-      g.addColorStop(0, col + "44");
-      g.addColorStop(0.5, col + "1a");
+      g.addColorStop(0, col + "36");
+      g.addColorStop(0.5, col + "14");
       g.addColorStop(1, col + "00");
       c.fillStyle = g;
       c.fillRect(0, 0, W, H);
@@ -511,7 +541,7 @@ function buildSky(W, H){
       g.addColorStop(1, "#05060f");
       c.fillStyle = g;
       c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
-      // Bands on the big one, a ring on the small one.
+      // Bands on the big one.
       if(idx === 0){
         c.save();
         c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.clip();
@@ -521,9 +551,18 @@ function buildSky(W, H){
         c.restore();
         c.globalAlpha = 1;
       }
-      c.strokeStyle = "rgba(255,235,200,0.28)";
-      c.lineWidth = 1.5;
-      c.beginPath(); c.arc(cx, cy, rr, -2.5, -0.9); c.stroke();
+      // Limb light inside the sunward (upper-left) edge - the floating
+      // highlight arc these wore before read as gloss on a marble. Anchoring
+      // the gradient at the far side lights only the rim facing the light.
+      c.save();
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.clip();
+      const limb = c.createRadialGradient(cx + rr*0.5, cy + rr*0.55, rr*0.2,
+                                          cx + rr*0.5, cy + rr*0.55, rr*1.62);
+      limb.addColorStop(0.82, "rgba(255,235,200,0)");
+      limb.addColorStop(1, "rgba(255,235,200,0.22)");
+      c.fillStyle = limb;
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+      c.restore();
     });
 
   // THEIR STAR: a baleful red giant over the far end of the route. The top of
@@ -574,6 +613,45 @@ function buildSky(W, H){
  * Ahead of you they loom as dark silhouettes; beaten, they stay behind as
  * cracked wrecks. Only enough of a boss is faked here for the painters to run.
  */
+/** A five-point star pip: gold and glowing when earned, a thin ring when not. */
+function drawStarPip(ctx, x, y, r, earned){
+  ctx.save();
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    const a = -Math.PI/2 + i*Math.PI*2/5, b = a + Math.PI/5;
+    ctx.lineTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+    ctx.lineTo(x + Math.cos(b)*r*0.45, y + Math.sin(b)*r*0.45);
+  }
+  ctx.closePath();
+  if(earned){
+    ctx.shadowColor = "rgba(255,210,63,0.8)"; ctx.shadowBlur = 5;
+    ctx.fillStyle = "#ffd23f";
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** A tiny drawn skull for the map's BOSS strap - a font ☠ is a different
+    face on every device, and it sat off-baseline in all of them. */
+function drawMiniSkull(ctx, x, y, s, ink){
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(s/10, s/10);
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(0, -1.4, 4.4, Math.PI, 0); ctx.fill();
+  ctx.fillRect(-4.4, -1.6, 8.8, 4.2);
+  ctx.beginPath();
+  ctx.moveTo(-3.4, 2.6); ctx.lineTo(3.4, 2.6); ctx.lineTo(2.4, 5); ctx.lineTo(-2.4, 5);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = ink;                 // eye sockets cut back to the strap
+  ctx.beginPath(); ctx.arc(-1.9, -0.6, 1.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(1.9, -0.6, 1.3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 const mapBoss = { fake:{}, shadow:{} };
 function mapBossFor(id){
   if(!mapBoss.fake[id]){
@@ -837,8 +915,13 @@ function renderMissions(){
   const nextBtn = $("campaignNext");
   if(nextBtn){
     const nm = MISSIONS[next];
-    nextBtn.innerHTML = `<b>▶ FLY MISSION ${nm.id}</b>` +
+    nextBtn.innerHTML = `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>FLY MISSION ${nm.id}</b>` +
                         `<span>${esc(nm.name)}</span>`;
+    const ico = nextBtn.querySelector(".btn-ico");
+    if(ico){
+      ico.style.width = (ico.width/2) + "px"; ico.style.height = (ico.height/2) + "px";
+      SF.icons.paint(ico, "play", getComputedStyle(nextBtn).color);
+    }
     nextBtn.onclick = () => { audio.play("uiClick"); openBriefing(next); };
   }
 
@@ -1153,12 +1236,12 @@ function drawCampaign(){
       ctx.restore();
     }
 
-    const starY = y - R - (hull ? 10 : boss ? 22 : 6);
+    const starY = y - R - (hull ? 14 : boss ? 26 : 10);
     if(unlocked){                                  // stars earned, on the rim
-      ctx.font = "13px Rajdhani, Arial, sans-serif";
+      // Drawn pips, not font glyphs: the text star rendered as a smudge over
+      // the nebula and clashed with every other star the game draws.
       for(let sIdx=0; sIdx<3; sIdx++){
-        ctx.fillStyle = sIdx < earned ? "#ffd23f" : "rgba(255,255,255,0.22)";
-        ctx.fillText("★", x + (sIdx-1)*15, starY);
+        drawStarPip(ctx, x + (sIdx-1)*16, starY, 6.5, sIdx < earned);
       }
     }
     /*
@@ -1168,13 +1251,17 @@ function drawCampaign(){
      */
     if(boss && unlocked){
       ctx.save();
-      const label = beaten ? "✓ DEFEATED" : "☠ BOSS", padX = 9, h = 19;
+      // The skull is drawn, not typed - a font ☠ wears a different face on
+      // every device and sat off-baseline in all of them.
+      const label = beaten ? "✓ DEFEATED" : "BOSS", padX = 9, h = 19;
+      const skullW = beaten ? 0 : 13;
       ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
-      const w = ctx.measureText(label).width + padX*2;
+      const w = ctx.measureText(label).width + padX*2 + skullW;
       // Discs wear the strap as a hat; hulls are tall enough that a hat
       // lands on the name of the stop above, so theirs hangs below instead.
       const bx = x - w/2, by = hull ? y + R + 8 : y - R - 20;
-      ctx.fillStyle = beaten ? "#166a45" : "#c2123a";
+      const strap = beaten ? "#166a45" : "#c2123a";
+      ctx.fillStyle = strap;
       ctx.beginPath();
       ctx.moveTo(bx + h/2, by);
       ctx.lineTo(bx + w - h/2, by);
@@ -1187,17 +1274,24 @@ function drawCampaign(){
       ctx.fill();
       ctx.strokeStyle = beaten ? "rgba(150,255,205,0.8)" : "rgba(255,180,190,0.85)";
       ctx.lineWidth = 1.5; ctx.stroke();
+      if(!beaten) drawMiniSkull(ctx, bx + padX + 4, by + h/2, 11, strap);
       ctx.fillStyle = "#fff";
       ctx.textBaseline = "middle";
-      ctx.fillText(label, x, by + h/2 + 1);
+      ctx.fillText(label, x + skullW/2, by + h/2 + 1);
       ctx.textBaseline = "alphabetic";
       ctx.restore();
     }
+    // The name needs its own backing where labels crowd (stop names, sector
+    // names and boss straps share a narrow column around mission 7).
+    ctx.save();
+    ctx.shadowColor = "rgba(4,6,16,0.9)";
+    ctx.shadowBlur = 5;
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
     ctx.font = "bold " + (unlocked ? 13 : 11) + "px Rajdhani, Arial, sans-serif";
     // A locked boss keeps its name to itself - the silhouette is the tease.
     ctx.fillText(boss && !unlocked ? "? ? ? ? ?" : node.mission.name.toUpperCase(),
                  x, y + R + (hull && unlocked ? 44 : 20));
+    ctx.restore();
 
     // Whose flag flies here: the record holder's initial in their own ship
     // colour, pinned to the stop's rim. A brother's chip on YOUR mission is
@@ -1831,14 +1925,15 @@ function renderPartsTab(panel){
     card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(t.name)}</b>
       <span>${esc(t.blurb)}</span>${lines}
       <u>${on ? "FITTED ✓" : open ? "tap to fit"
-            : "🔒 beat Mission " + t.unlockMission + "'s boss"}</u>`;
+            : `<i class="lock-slot"></i> beat Mission ` + t.unlockMission + "'s boss"}</u>`;
+    fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
     const tc = card.querySelector(".tc-ship").getContext("2d");
     if(tc) SF.shipart.drawShip(tc, 48, 50, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
         t: 0.8, idle: false, tune: t.id });
     click(card, () => {
       if(!open){
-        queueToast({ icon:"🔒", name:"Beat Mission " + t.unlockMission + "'s boss to win " + t.name,
+        queueToast({ glyph:"lock", name:"Beat Mission " + t.unlockMission + "'s boss to win " + t.name,
                      label:"LOCKED" });
         return;
       }
@@ -2187,9 +2282,25 @@ function renderBriefTiers(index){
   }).join("");
 
   const d = DIFFICULTY_BY_ID[briefTier];
+  // The detail line speaks the reader's language, not the tuning table's:
+  // "205% as many enemies · 2.6x health" is for the balance sheet, and the
+  // reader is seven. Pay keeps its number - the money is the hook.
+  const crowd = d.density <= 0.8 ? "a thinner crowd"
+              : d.density <= 1.2 ? "the normal crowd"
+              : d.density <= 2.2 ? "twice the enemies"
+              : d.density <= 3.0 ? "almost three times the enemies"
+              : "a sky full of enemies";
+  const armour = d.hpMult <= 0.9 ? "paper armour"
+               : d.hpMult <= 1.2 ? "normal armour"
+               : d.hpMult <= 3.0 ? "tougher armour"
+               : d.hpMult <= 5.0 ? "much tougher armour"
+               : "monster armour";
+  const payLine = d.pay === 1 ? "normal pay"
+                : d.pay < 1 ? "smaller pay"
+                : `pays ${d.pay}× the money`;
   $("briefDiffDetail").innerHTML =
     `<b style="color:${d.color}">${d.name}</b> — ${esc(d.blurb)}` +
-    `<span>${Math.round(d.density*100)}% as many enemies · ${d.hpMult}x health · pays ${d.pay}x</span>`;
+    `<span>${crowd} · ${armour} · ${payLine}</span>`;
   $("launchBtn").style.background = `linear-gradient(135deg, ${d.color}, ${d.color}bb)`;
 }
 
@@ -2291,14 +2402,15 @@ function buyUpgrade(id){
   P.checkAchievements(profile).forEach(queueToast);
   renderArmory();
   const rankNow = P.rankFor(profile);
-  if(rankNow.name !== rankBefore) queueToast({ icon: rankNow.badge, name: "PROMOTED: " + rankNow.name, label:"RANK UP" });
+  if(rankNow.name !== rankBefore) queueToast({ insignia: rankNow.badge, color: profile.shipColor,
+    name: "PROMOTED: " + rankNow.name, label:"RANK UP" });
 
   // A purchase that changes the *shape* of the ship deserves to be seen, and
   // the twentieth level is the story's chapter break.
   const partsNow = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
   if(partsNow > partsBefore){
     const part = SF.shipart.PARTS.filter(pt => (P.upgradeLevel(profile, pt.up) >= pt.at))[partsNow-1];
-    queueToast({ icon:"🔧", name: "FITTED: " + (part ? part.name : "NEW PART"), label:"HANGAR" });
+    queueToast({ glyph:"parts", name: "FITTED: " + (part ? part.name : "NEW PART"), label:"HANGAR" });
     // And the bay celebrates: white flash + gold ring rolling off the hull.
     hangar.celebrate = performance.now();
   }
@@ -2324,18 +2436,20 @@ function renderAchievements(){
   // than a scoreboard of things that already happened.
   const next = ACHIEVEMENTS.find(a => !owned.includes(a.id));
   $("medalNext").innerHTML = next
-    ? `<span>NEXT UP</span>${next.icon} ${esc(next.name)} — ${esc(next.desc)} · <b>£${next.pay.toLocaleString("en-GB")}</b>`
+    ? `<span>NEXT UP</span>${esc(next.name)} — ${esc(next.desc)} · <b>£${next.pay.toLocaleString("en-GB")}</b>`
     : `<span>COMPLETE</span>Every medal earned. Nothing left to win.`;
 
   drawMedalRing(owned.length / ACHIEVEMENTS.length);
 
   // Every medal names its bounty. Earned-but-unclaimed ones carry a COLLECT
   // button - pressing it is the ceremony, and the reason to keep coming back.
+  // The medals themselves are drawn (SF.icons.medal): the emoji set rendered
+  // as OS stickers, differently on every device, next to hand-drawn ships.
   $("achievementsList").innerHTML = ACHIEVEMENTS.map(a => {
     const has = owned.includes(a.id);
     const claimed = !!profile.medalsClaimed[a.id];
     return `<div class="medal${has ? " won" : ""}${has && !claimed ? " owed" : ""}">
-      <div class="medal-disc">${has ? `<span>${a.icon}</span>` : '<i class="lock-slot lock-slot-lg"></i>'}</div>
+      <div class="medal-disc"><i class="medal-slot" data-medal-id="${a.id}" data-locked="${has ? "" : "1"}"></i></div>
       <div class="medal-name">${esc(a.name)}</div>
       <div class="medal-desc">${esc(a.desc)}</div>
       ${has
@@ -2346,7 +2460,10 @@ function renderAchievements(){
     </div>`;
   }).join("");
 
-  fillGlyphs($("achievementsList"), null, "rgba(255,255,255,0.55)");
+  qa2($("achievementsList"), ".medal-slot").forEach(slot => {
+    slot.appendChild(SF.icons.medal(slot.dataset.medalId, 52, !!slot.dataset.locked));
+    slot.classList.remove("medal-slot");
+  });
   qa("#achievementsList .medal-claim").forEach(btn => {
     click(btn, () => {
       const paid = P.claimMedal(profile, btn.dataset.medal);
@@ -2559,6 +2676,9 @@ function showResults(result){
   $("resultTitle").style.color = rush ? (completed ? "#4ade80" : "#ffd23f")
     : endless ? "#ffd23f"
     : completed ? "#4ade80" : "#ff9d5c";
+  // A win wears gold; a loss stays quiet. The same grey ledger for a
+  // three-star sweep and a shoot-down was the results screen's real problem.
+  $("overlayResults").classList.toggle("victory", !!(completed || (endless && endlessNewBest)));
 
   // Losing should read as "you nearly had it", not as a telling-off - and you
   // always keep the money you collected, so a failed run is never wasted.
@@ -2604,14 +2724,16 @@ function showResults(result){
   // A Wacky Sky ending is never a defeat, so it never gets the sting.
   audio.setMusic(completed || endless ? "menu" : "defeat");
 
-  // Three stars rains confetti. Pride deserves paper.
+  // Three stars rains confetti; any win gets a lighter shower. Pride
+  // deserves paper, and a one-star scrape-through is still a win to a kid.
   const oldConf = $("overlayResults").querySelector(".confetti");
   if(oldConf) oldConf.remove();
-  if((completed && stars === 3) || (endless && endlessNewBest) || (rush && completed)){
+  const bigWin = (completed && stars === 3) || (endless && endlessNewBest) || (rush && completed);
+  if(bigWin || completed){
     const conf = document.createElement("div");
     conf.className = "confetti";
     const colors = ["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc","#ffffff"];
-    for(let i=0;i<54;i++){
+    for(let i=0;i<(bigWin ? 54 : 20);i++){
       const bit = document.createElement("i");
       bit.style.left = (Math.random()*100) + "%";
       bit.style.background = colors[i % colors.length];
@@ -2674,7 +2796,7 @@ function showResults(result){
       label:"TUNE UNLOCKED" });
   }
   if(result.vaultWon)
-    queueToast({ icon:"🌟", name:"SOLAR GOLD — the star's own paint. Yours alone.",
+    queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
       label:"SECRET FOUND" });
   if(completed && P.campaignComplete(profile)) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
@@ -2841,10 +2963,19 @@ function nextToast(){
   // The toast serves more than medals now - a `label` names the occasion
   // (default keeps the medal ceremony), and non-medal toasts drop the trophy.
   $("at-label").textContent = a.label || "MEDAL UNLOCKED";
-  // Only a real medal gets the trophy; other toasts carry no pasted-on icon.
-  $("at-icon").textContent = a.label ? "" : "🏆";
-  $("at-icon").classList.toggle("hidden", !!a.label);
-  $("at-name").textContent = (a.icon ? a.icon + " " : "") + a.name;
+  // The icon is drawn, never typed: a medal gets its own struck disc, a rank
+  // promotion gets the pilot's actual insignia, chrome toasts get a glyph.
+  // (The old path pasted a.icon into the text, which is how a kid's biggest
+  // career moment once read "sixstar PROMOTED: FLIGHT LEADER".)
+  const iconBox = $("at-icon");
+  iconBox.textContent = "";
+  let art = null;
+  if(a.id && SF.icons.medal) art = SF.icons.medal(a.id, 34, false);
+  else if(a.insignia) { art = document.createElement("span"); SF.insignia.mount(art, a.insignia, a.color || "#3399ff", 34); }
+  else if(a.glyph) art = SF.icons.el(a.glyph, "#ffd23f", 26);
+  if(art) iconBox.appendChild(art);
+  iconBox.classList.toggle("hidden", !art);
+  $("at-name").textContent = a.name;
   requestAnimationFrame(() => el.classList.add("show"));
   setTimeout(() => {
     el.classList.remove("show");
@@ -3101,14 +3232,14 @@ click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
 // launch banner IS the reveal: the roll is a surprise until the sky opens.
 click($("wackyBtn"), () => {
   if(!wackyUnlocked(profile)){
-    queueToast({ icon:"🔒", name:"Clear Mission 3 to open the Wacky Sky", label:"LOCKED" });
+    queueToast({ glyph:"lock", name:"Clear Mission 3 to open the Wacky Sky", label:"LOCKED" });
     return;
   }
   launch("wacky", "pilot");
 });
 click($("rushBtn"), () => {
   if(!rushUnlocked(profile)){
-    queueToast({ icon:"🔒", name:"Beat the Mission 4 boss to open the Rush", label:"LOCKED" });
+    queueToast({ glyph:"lock", name:"Beat the Mission 4 boss to open the Rush", label:"LOCKED" });
     return;
   }
   launch("rush", "pilot");
@@ -3192,6 +3323,15 @@ paintMuteBtn();
 // The chrome's drawn glyphs: ability buttons and the settings gears. Painted
 // once at boot - they never change shape, only visibility.
 qa(".sb-icon[data-glyph]").forEach(cv => SF.icons.paint(cv, cv.dataset.glyph, "#ffffff"));
+// Button glyphs (pause, play, retry, undo, the boss skull, the rotate phone).
+// These used to be typed characters - "II" for pause, ▶ ↻ ↩ ☠ 📱 - which sat
+// off-baseline in Rajdhani and wore a different face on every platform.
+// Painted in the button's own text colour so they always match their label.
+qa(".btn-ico[data-glyph]").forEach(cv => {
+  const host = cv.closest("button, span, div") || cv.parentElement;
+  cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
+  SF.icons.paint(cv, cv.dataset.glyph, host ? getComputedStyle(host).color : "#ffffff");
+});
 ["settingsBtnPicker", "settingsBtnMenu"].forEach(id => {
   const b = $(id);
   if(b) b.insertBefore(SF.icons.el("gear", "rgba(255,255,255,0.75)", 13), b.firstChild);

@@ -374,8 +374,51 @@ function draw(ctx, timeMs, VW, VH){
   if(kill) drawRing(ctx, timeMs, held);
   ctx.restore();
 
+  if(show.beat === "scrub") drawTear(ctx, VW, VH, timeMs);
   drawFurniture(ctx, VW, VH, timeMs);
   return true;
+}
+
+/*
+ * The scrub beat's tape damage. The 3px wobble alone read as a glitch, not
+ * a rewind, so the frame gets the rest of the VHS grammar: slices of the
+ * finished frame copied back onto themselves a few pixels sideways (real
+ * displacement, the canvas is its own source - nothing allocated), a
+ * hairline of glare on each tear, and a faint scanline field. Band
+ * positions jump every ~55ms rather than glide: tape tears, it doesn't
+ * wave. drawFurniture reuses the same clock so the REWIND tag jumps with
+ * the tear.
+ */
+const TEAR_STEP = 55;
+let scanPat = null, scanTried = false;
+function drawTear(ctx, VW, VH, timeMs){
+  const cv = ctx.canvas;
+  const px = cv.width / VW;                    // user space -> device pixels
+  const step = Math.floor(timeMs/TEAR_STEP);
+  ctx.save();
+  for(let i = 0; i < 3; i++){
+    const y = (Math.sin(i*39.7 + step*17.23)*0.5 + 0.5) * (VH - 44);
+    const h = 5 + i*7;
+    const dx = Math.sin(i*11.3 + step*7.77) * (16 - i*4);
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(cv, 0, y*px, cv.width, h*px, dx, y, VW, h);
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = "#9fd8ff";
+    ctx.fillRect(0, y, VW, 1.5);
+  }
+  if(!scanTried){
+    scanTried = true;
+    const c = document.createElement("canvas"); c.width = 2; c.height = 3;
+    const g = c.getContext("2d");
+    if(g){ g.fillStyle = "#080a14"; g.fillRect(0, 2, 2, 1); }
+    scanPat = ctx.createPattern(c, "repeat") || null;
+  }
+  if(scanPat){
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = scanPat;
+    ctx.fillRect(0, 0, VW, VH);
+  }
+  ctx.restore();
 }
 
 /*
@@ -419,6 +462,14 @@ function drawRing(ctx, timeMs, held){
 }
 
 /** Letterbox, the word REWIND, the culprit's name, and the way out. */
+// Only 600/700 are loaded on the page; heavier weights would fake-bold.
+const FONT = "px Rajdhani, 'Avenir Next Condensed', system-ui, sans-serif";
+/** Captions sit over live frames that can go bright: the same dark stroke
+    fx.js puts under its floating text goes under every fill here. */
+function caption(ctx, str, x, y){
+  ctx.strokeText(str, x, y);
+  ctx.fillText(str, x, y);
+}
 function drawFurniture(ctx, VW, VH, timeMs){
   const bar = VH*0.055;
   ctx.save();
@@ -427,26 +478,37 @@ function drawFurniture(ctx, VW, VH, timeMs){
   ctx.fillRect(0, VH - bar, VW, bar);
 
   ctx.textAlign = "center";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(6,8,18,0.75)";
+
+  const scrub = show.beat === "scrub";
   ctx.fillStyle = "#ff2d55";
-  ctx.font = "bold 20px Rajdhani, Arial, sans-serif";
-  const blink = show.beat === "scrub" ? (Math.sin(timeMs/70) > -0.4) : true;
-  if(blink) ctx.fillText(show.beat === "scrub" ? "◀◀ REWIND" : "WHAT HAPPENED", VW/2, bar*0.72);
+  ctx.font = "700 20" + FONT;
+  const blink = scrub ? (Math.sin(timeMs/70) > -0.4) : true;
+  if(blink){
+    // The tag rides the tear: same clock as drawTear's bands.
+    const step = Math.floor(timeMs/TEAR_STEP);
+    const jx = scrub ? Math.sin(step*7.77)*2.5 : 0;
+    const jy = scrub ? Math.sin(step*13.1)*1.2 : 0;
+    caption(ctx, scrub ? "◀◀ REWIND" : "WHAT HAPPENED", VW/2 + jx, bar*0.72 + jy);
+  }
 
   if(show.beat === "hold" && kill){
     const a = clamp(show.t/0.22, 0, 1);
     ctx.globalAlpha = a;
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 26px Rajdhani, Arial, sans-serif";
-    ctx.fillText(kill.label, VW/2, VH*0.5 - 10);
+    ctx.font = "700 26" + FONT;
+    caption(ctx, kill.label, VW/2, VH*0.5 - 10);
     ctx.fillStyle = "#ff8fa3";
-    ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
-    ctx.fillText("this is what got you", VW/2, VH*0.5 + 14);
+    ctx.font = "600 15" + FONT;
+    caption(ctx, "THIS IS WHAT GOT YOU", VW/2, VH*0.5 + 14);
     ctx.globalAlpha = 1;
   }
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-  ctx.fillText("tap to skip", VW/2, VH - bar*0.35);
+  ctx.font = "600 13" + FONT;
+  ctx.letterSpacing = "2px";     // spaced like a UI element where supported
+  caption(ctx, "TAP TO SKIP", VW/2, VH - bar*0.35);
   ctx.textAlign = "left";
   ctx.restore();
 }

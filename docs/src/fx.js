@@ -60,9 +60,37 @@ function spark(x, y, vx, vy, color, life, size){
 /** A burst of sparks - the generic "something got hit" puff. */
 function sparks(x, y, n, color, speed){
   speed = speed || 120;
+  // Coin pickups arrive here from the collision layer with this exact
+  // signature (used nowhere else). Recognising it locally keeps the call
+  // site - and the seeded randoms its three sparks draw - untouched.
+  if(n === 3 && speed === 90 && color === "#ffd23f") coinBurst(x, y);
   for(let i=0;i<n;i++){
     const a = rand(0, TAU), s = rand(speed*0.3, speed);
     spark(x, y, Math.cos(a)*s, Math.sin(a)*s, color, rand(0.18,0.42), rand(1.5,3));
+  }
+}
+
+/*
+ * The coin's own moment: a golden pop and a few embers drifting up off the
+ * pickup point. Rate-limited the way the coin sound is - at coin-rain
+ * density one flourish per beat reads richer than twenty - and drawn from
+ * Math.random only, so it can never perturb the seeded simulation stream.
+ */
+let coinFxAt = -1e9;
+function coinBurst(x, y){
+  if(nowMs - coinFxAt < 70) return;
+  coinFxAt = nowMs;
+  const p = pspawn();
+  p.x=x; p.y=y; p.life=0; p.max=0.1; p.size=10;
+  p.color="#ffd23f"; p.kind="flash"; p.vx=0; p.vy=0; p.drag=1; p.gravity=0; p.spin=0; p.angle=0;
+  const n = Math.random() < 0.5 ? 2 : 3;
+  for(let i=0;i<n;i++){
+    const e = pspawn();
+    e.x = x + mrand(-3,3); e.y = y + mrand(-2,2);
+    e.vx = mrand(-22,22); e.vy = mrand(-95,-45);
+    e.color = Math.random() < 0.5 ? "#ffd23f" : "#ffe9a8";
+    e.life=0; e.max=mrand(0.35,0.6); e.size=mrand(1.4,2.2);
+    e.kind="ember"; e.drag=0.96; e.gravity=70; e.spin=0; e.angle=mrand(0,TAU);
   }
 }
 
@@ -323,11 +351,21 @@ function update(dt, timeMs){
   flashAlpha = Math.max(0, flashAlpha - dt*2.4);
 }
 
-/** Camera offset for this frame; the renderer applies it around everything. */
+/**
+ * Camera offset for this frame; the renderer applies it around everything.
+ *
+ * Two detuned sinusoids per axis, not fresh noise per frame: noise buzzes
+ * like a loose speaker and buzzes twice as fast at 120Hz, while a dominant
+ * frequency with an overtone lurches and settles. Time-based, so the feel is
+ * identical at any framerate; decay still lives in shakeMag. 1/3 puts the
+ * summed peak (1.5x) exactly where the old +/-mag/2 random put it.
+ */
+const SHAKE_AMP = 1/3;
 function shakeOffset(out){
   if(shakeMag <= 0.25){ out.x = 0; out.y = 0; return out; }
-  out.x = (Math.random()-0.5)*shakeMag;
-  out.y = (Math.random()-0.5)*shakeMag;
+  const t = nowMs/1000;
+  out.x = (Math.sin(t*47)       + 0.5*Math.sin(t*89 + 1.7)) * shakeMag * SHAKE_AMP;
+  out.y = (Math.sin(t*53 + 2.3) + 0.5*Math.sin(t*97 + 4.1)) * shakeMag * SHAKE_AMP;
   return out;
 }
 
@@ -446,7 +484,13 @@ function drawParticles(ctx){
       const flicker = 0.55 + Math.sin((p.life*31) + p.angle*7)*0.45;
       ctx.globalAlpha = Math.min(1, t*1.6)*flicker;
       ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+      // Rotated by the angle stamped at spawn: forty axis-aligned squares
+      // per firework read as confetti pixels, not glitter.
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      ctx.restore();
     } else { // spark
       ctx.globalAlpha = Math.min(1, t*1.8);
       ctx.fillStyle = p.color;
@@ -521,10 +565,28 @@ function drawTexts(ctx){
   ctx.textAlign = "left";
 }
 
+/*
+ * The damage flash is a vignette, not a sheet. A flat fill washed out the
+ * HUD and the very bullets the player needs to dodge next; colour rushing
+ * in from the edges says "hit" just as loudly and leaves the centre - where
+ * the flying happens - readable. Gradient cached per size + colour.
+ */
+let flashGrad = null, flashGradKey = "";
 function drawFlash(ctx, w, h){
   if(flashAlpha <= 0.01) return;
-  ctx.fillStyle = "rgba(" + flashColor + "," + (flashAlpha*0.4) + ")";
+  const key = w + "x" + h + "|" + flashColor;
+  if(flashGradKey !== key){
+    flashGrad = ctx.createRadialGradient(w/2, h/2, Math.min(w, h)*0.35,
+                                         w/2, h/2, Math.hypot(w, h)*0.60);
+    flashGrad.addColorStop(0, "rgba(" + flashColor + ",0)");
+    flashGrad.addColorStop(1, "rgba(" + flashColor + ",1)");
+    flashGradKey = key;
+  }
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, flashAlpha*0.55);
+  ctx.fillStyle = flashGrad;
   ctx.fillRect(0, 0, w, h);
+  ctx.restore();
 }
 
 SF.fx = {
