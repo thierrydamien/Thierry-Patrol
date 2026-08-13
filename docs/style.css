@@ -82,6 +82,18 @@ html, body {
   height:100%;
   padding: max(20px, env(safe-area-inset-top, 0px)) 18px max(20px, env(safe-area-inset-bottom, 0px));
   overflow-y:auto;
+  /*
+   * Screens scroll UP, never sideways. Saying so explicitly matters because
+   * `overflow-y:auto` alone makes the browser compute overflow-x to `auto`
+   * too, so any child that bleeds past the right edge turns the whole screen
+   * into a horizontal scroller. The Armory did exactly that: the sticky BACK
+   * button paints its full-bleed gradient with `right:-100vw`, and the
+   * Armory could be dragged a whole viewport to the right for no reason.
+   * Hidden clips that underlay to the screen - which is all it ever needed
+   * to cover - and leaves genuine side-scrollers (the tab strip) alone,
+   * because those are their own scroll containers.
+   */
+  overflow-x:hidden;
   -webkit-overflow-scrolling: touch;
 }
 .screen.active { display:flex; animation: screenIn .28s ease both; }

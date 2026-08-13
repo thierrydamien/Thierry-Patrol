@@ -371,6 +371,17 @@ async function run(){
                     /getBoundingClientRect/.test(u.split("function fitTitleCanvas")[1].slice(0, 500)) &&
                     !/\.title-art\s*\{[^}]*object-fit\s*:\s*cover/.test(c); })());
   check("the title screen paints with the game's own sky", typeof SF.skygen.buildTitle === "function");
+  /*
+   * Menus scroll up, never sideways. `overflow-y:auto` on its own makes the
+   * browser compute overflow-x to `auto` as well, so one child bleeding past
+   * the right edge turns a screen into a side-scroller - which is exactly
+   * what the Armory's sticky BACK button did with its `right:-100vw`
+   * full-bleed underlay. The screens have to say `hidden` out loud.
+   */
+  check("a screen cannot be dragged sideways",
+    (() => { const c = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+             const block = (c.split(/^\.screen \{/m)[1] || "").split("}")[0];
+             return /overflow-y\s*:\s*auto/.test(block) && /overflow-x\s*:\s*hidden/.test(block); })());
   check("the title sky is not a campaign stop", (() => {
     const cv = SF.skygen.buildTitle(400, 700, 1);
     return !!cv && cv.width === 400 && cv.height === 700 &&
