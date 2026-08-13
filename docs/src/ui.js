@@ -2661,8 +2661,10 @@ function wackyUnlocked(p){
   return !!(rec && rec.cleared);
 }
 
-// Boss missions, in campaign order - the rush queue mirrors these.
-const RUSH_IDS = [4, 6, 8, 12, 14, 16, 18];
+// Boss missions, in campaign order - the rush queue mirrors these. Derived,
+// not listed: the hand-kept copy had drifted to pre-Act-3 mission numbers, so
+// the menu was counting ordinary clears as bosses in the queue.
+const RUSH_IDS = MISSIONS.filter(m => m.boss && ["marauder","jailer","sentinel","warden","phantom","leviathan","devourer"].includes(m.boss)).map(m => m.id);
 function rushUnlocked(p){
   const rec = p && p.missions && p.missions[4];
   return !!(rec && rec.cleared);
