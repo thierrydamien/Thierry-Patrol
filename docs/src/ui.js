@@ -4220,5 +4220,9 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           // borrow the game's own dialog instead of window.prompt/confirm.
           launchCustom,
           textDialog: opts => dialog(opts),
-          confirmDialog: opts => dialog(opts).then(v => v !== null) };
+          confirmDialog: opts => dialog(opts).then(v => v !== null),
+          // ...and the map's boss painter, so the board's preview can show the
+          // monster you picked instead of writing its name on a chip.
+          bossHullReady: mapHullReady,
+          drawBossHull: drawMapHull };
 })();

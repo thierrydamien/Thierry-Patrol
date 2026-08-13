@@ -1847,6 +1847,23 @@ async function run(){
     SF.workshop.BOSSES.every(b => !b.id || !!SF.missions.BOSSES[b.id]));
   check("the board never offers a boss whose death needs its own level",
     !SF.workshop.BOSSES.some(b => b.id === "forgery" || b.id === "devourer" || b.id === "papa"));
+  /* A seven-year-old cannot read "WEAVER x6 TWINCOLUMNS" and see a level, so
+   * the board draws the sky it is describing - real backdrop, real sprites in
+   * the game's OWN formation shapes, real boss hull. */
+  check("the board draws the sky it is describing",
+    (() => { const w = fs.readFileSync(path.join(__dirname, "src/workshop.js"), "utf8");
+             const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+             return /id="wsPreview"/.test(h) &&
+                    /function drawPreview/.test(w) &&
+                    /SF\.skygen\.build\(draft\.sky/.test(w) &&      // the real backdrop
+                    /SF\.enemyData\.FORMATIONS/.test(w) &&          // the real shapes
+                    /SF\.ui\.drawBossHull/.test(w); })());
+  check("the preview can reach the map's boss painter",
+    typeof SF.ui.drawBossHull === "function" && typeof SF.ui.bossHullReady === "function" &&
+    SF.workshop.BOSSES.every(b => !b.id || SF.ui.bossHullReady(b.id)));
+  check("the preview stops drawing when the board is closed",
+    (() => { const w = fs.readFileSync(path.join(__dirname, "src/workshop.js"), "utf8");
+             return /classList\.contains\("active"\)\) return;/.test(w); })());
   check("every house rule is a flag the game honours",
     (() => { const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
              return SF.workshop.RULES.every(r => r.id === "none" ||

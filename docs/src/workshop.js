@@ -170,9 +170,13 @@ function chip(label, active, onTap, dotColor){
   const b = document.createElement("button");
   b.className = "ws-chip" + (active ? " active" : "");
   if(dotColor){
+    // A palette is more than one colour, so the swatch shows the whole ramp
+    // rather than the first cloud: you pick a sky by how it LOOKS.
     const dot = document.createElement("span");
     dot.className = "ws-dot";
-    dot.style.background = dotColor;
+    dot.style.background = Array.isArray(dotColor) && dotColor.length > 1
+      ? "linear-gradient(135deg," + dotColor.join(",") + ")"
+      : (Array.isArray(dotColor) ? dotColor[0] : dotColor);
     b.appendChild(dot);
   }
   b.appendChild(document.createTextNode(label));
@@ -270,6 +274,200 @@ function paintSprite(cv, type){
   } catch(e){ /* a missing sprite is a blank chip, not a crash */ }
 }
 
+/* ---------------- the preview: the board draws itself ----------------
+ *
+ * A seven-year-old cannot read "WEAVER x6 TWINCOLUMNS" and see a level. So
+ * the sky gets drawn: the real generated backdrop, the real enemy sprites in
+ * the real formation shapes (straight out of the game's own FORMATIONS
+ * table), the real boss hull, and a badge for the house rule. It reads bottom
+ * to top - your ship, then the waves in the order they arrive, then whatever
+ * is waiting at the end. Everything on it is a thing that will actually be
+ * there, which is the whole point: change a chip, watch the sky change.
+ */
+let preview = { raf: 0, t: 0, sky: null, skyKey: "" };
+
+function previewSky(W, H){
+  const key = draft.sky + "@" + W + "x" + H;
+  if(preview.skyKey === key) return preview.sky;
+  preview.skyKey = key;
+  preview.sky = null;
+  try { preview.sky = SF.skygen.build(draft.sky, W, H, 1); } catch(e){ /* fall back below */ }
+  return preview.sky;
+}
+
+/** Formation slots mapped into a band: real shapes, preview-sized. */
+function bandSlots(w, W, top, h){
+  const F = SF.enemyData.FORMATIONS;
+  const fn = F[w.form] || F.line;
+  const VW = 480;                                   // the shapes' native field
+  let slots;
+  try { slots = fn(Math.min(w.n, 14), VW); } catch(e){ slots = []; }
+  if(!slots.length) return [];
+  const ys = slots.map(s => s.y);
+  const y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  const span = Math.max(1, y1 - y0);
+  return slots.map(s => ({
+    x: 10 + (s.x/VW)*(W - 20),
+    // Formations build upward from the top edge, so the first arrivals have
+    // the LARGEST y. Flipping keeps "who gets there first" at the bottom.
+    y: top + h - ((s.y - y0)/span)*(h - 6) - 3,
+  }));
+}
+
+function drawRuleBadge(ctx, W, H, rule, t){
+  if(rule === "none") return;
+  ctx.save();
+  if(rule === "wells"){                              // two swirls, bending space
+    [[W*0.26, H*0.42], [W*0.74, H*0.62]].forEach(([x, y], i) => {
+      const r = Math.min(W, H)*0.11;
+      const g = ctx.createRadialGradient(x, y, 1, x, y, r);
+      g.addColorStop(0, "rgba(167,139,250,0.55)");
+      g.addColorStop(1, "rgba(167,139,250,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(196,181,253,0.6)"; ctx.lineWidth = 1.5;
+      for(let k=0;k<3;k++){
+        ctx.beginPath();
+        ctx.arc(x, y, r*(0.3 + k*0.26), t*1.2 + i + k, t*1.2 + i + k + 2.1);
+        ctx.stroke();
+      }
+    });
+  } else if(rule === "storm"){                       // wind, shoving everyone
+    ctx.strokeStyle = "rgba(125,211,252,0.5)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    for(let i=0;i<14;i++){
+      const y = ((i*61 + t*90) % (H + 40)) - 20, len = 26 + (i%4)*16;
+      ctx.beginPath(); ctx.moveTo(-10 + (i*53)%W, y); ctx.lineTo(-10 + (i*53)%W + len, y + 9); ctx.stroke();
+    }
+  } else if(rule === "blackout"){                    // only what glows is there
+    const g = ctx.createRadialGradient(W/2, H*0.72, Math.min(W,H)*0.08, W/2, H*0.72, Math.max(W,H)*0.62);
+    g.addColorStop(0, "rgba(2,3,10,0)");
+    g.addColorStop(1, "rgba(2,3,10,0.86)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  } else if(rule === "beat"){                        // the conductor's count
+    const pulse = (t*1.6) % 1;
+    ctx.strokeStyle = "rgba(255,210,63," + (0.6*(1-pulse)).toFixed(2) + ")";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(W/2, H*0.5, 20 + pulse*Math.min(W,H)*0.42, 0, Math.PI*2); ctx.stroke();
+  } else if(rule === "foundry"){                     // belts, feeding the forge
+    ctx.fillStyle = "rgba(148,163,184,0.20)";
+    ctx.fillRect(0, H*0.30, W, 14);
+    ctx.fillStyle = "rgba(226,232,240,0.35)";
+    for(let i=0;i<12;i++) ctx.fillRect(((i*46 + t*40) % (W + 40)) - 20, H*0.30 + 3, 16, 8);
+  } else if(rule === "serpent"){                     // it eats your coins
+    ctx.strokeStyle = "rgba(74,222,128,0.55)"; ctx.lineWidth = 9; ctx.lineCap = "round";
+    ctx.beginPath();
+    for(let i=0;i<=24;i++){
+      const u = i/24;
+      ctx.lineTo(W*0.1 + u*W*0.8, H*0.45 + Math.sin(u*7 + t*2)*H*0.10);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPreview(){
+  const cv = els.preview;
+  if(!cv) return;
+  const box = cv.getBoundingClientRect();
+  const W = Math.max(200, Math.round(box.width)), H = Math.max(150, Math.round(box.height));
+  if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; preview.skyKey = ""; }
+  const ctx = cv.getContext("2d");
+  if(!ctx) return;
+  const t = preview.t;
+
+  const sky = previewSky(W, H);
+  if(sky) ctx.drawImage(sky, 0, 0, W, H);
+  else {                                             // a photo sky, or no canvas
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#101736"); g.addColorStop(1, "#05060f");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  const bossOn = !!draft.boss && SF.ui.bossHullReady(draft.boss);
+  const bossH = bossOn ? H*0.24 : 0;
+  const shipH = 46;
+  const waveTop = bossH, waveArea = H - bossH - shipH;
+  const n = Math.max(1, draft.waves.length);
+  const bandH = waveArea / n;
+
+  drawRuleBadge(ctx, W, H, draft.rule, t);
+
+  if(bossOn){
+    ctx.save();
+    ctx.translate(W/2, bossH*0.52);
+    // Sized to the band, not to the width: an oversized hull spilled into the
+    // top wave and made the picture unreadable at exactly the wrong moment.
+    try { SF.ui.drawBossHull(ctx, draft.boss, Math.min(W*0.40, bossH*0.95), 0, t*1000); }
+    catch(e){ /* an unpaintable hull just leaves the band empty */ }
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,93,115,0.95)";      // out of the hull's way
+    ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText("LAST: " + draft.boss.toUpperCase(), W - 8, 20);
+  }
+
+  // Waves, latest at the top - so the bottom of the picture is what hits you
+  // first and the eye travels up through the fight in order.
+  draft.waves.forEach((w, i) => {
+    const band = n - 1 - i;                          // wave 0 lives lowest
+    const top = waveTop + band*bandH;
+    const slots = bandSlots(w, W, top, bandH);
+    const S = Math.max(13, Math.min(30, bandH*0.62, W/Math.max(6, w.n)));
+    let spr = null;
+    try {
+      const tint = SF.enemyData.ENEMY_TYPES[w.type] && SF.enemyData.ENEMY_TYPES[w.type].tint;
+      spr = SF.enemyArt.has(w.type) ? SF.enemyArt.spriteFor(w.type, tint) : null;
+    } catch(e){ spr = null; }
+    slots.forEach((s, k) => {
+      const y = s.y + Math.sin(t*1.8 + k*0.5 + i)*2;
+      if(spr) ctx.drawImage(spr, s.x - S/2, y - S/2, S, S);
+      else {                                         // the mine, drawn bespoke
+        ctx.fillStyle = "#a11530";
+        ctx.beginPath(); ctx.arc(s.x, y, S*0.34, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#ff5d73"; ctx.lineWidth = 2;
+        for(let q=0;q<6;q++){
+          const a = q/6*Math.PI*2;
+          ctx.beginPath();
+          ctx.moveTo(s.x + Math.cos(a)*S*0.34, y + Math.sin(a)*S*0.34);
+          ctx.lineTo(s.x + Math.cos(a)*S*0.52, y + Math.sin(a)*S*0.52);
+          ctx.stroke();
+        }
+      }
+    });
+    // Which wave this is, and how many - on a plate, so it stays readable
+    // over a bright nebula as well as over a black one.
+    const tag = (i+1) + " · " + w.type.toUpperCase() + " ×" + w.n;
+    ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
+    ctx.textAlign = "left";
+    const tw = ctx.measureText(tag).width;
+    ctx.fillStyle = "rgba(4,6,16,0.55)";
+    ctx.fillRect(4, top + bandH - 15, tw + 10, 14);
+    ctx.fillStyle = "rgba(226,232,240,0.8)";
+    ctx.fillText(tag, 9, top + bandH - 4);
+  });
+
+  // ...and you, at the bottom, where you always are.
+  const me = SF.ui.getProfile();
+  try {
+    SF.shipart.drawShip(ctx, W/2, H - shipH*0.55, 30,
+      { color: (me && me.shipColor) || "#4cc9f0", levels: (me && me.upgrades) || {},
+        t: t, idle:false, tune: me && me.tune, decal: me && me.decal });
+  } catch(e){ /* the preview is never worth a crash */ }
+}
+
+function startPreview(){
+  if(preview.raf) return;
+  const step = () => {
+    preview.raf = 0;
+    const scr = document.getElementById("screen-workshop");
+    if(!scr || !scr.classList.contains("active")) return;
+    preview.t += 1/60;
+    drawPreview();
+    preview.raf = requestAnimationFrame(step);
+  };
+  preview.raf = requestAnimationFrame(step);
+}
+
 function render(){
   if(!draft) draft = freshDraft();
   els.name.textContent = draft.name;
@@ -277,7 +475,7 @@ function render(){
   els.skyRow.innerHTML = "";
   skyChoices().forEach(({ i, s }) => {
     els.skyRow.appendChild(chip(s.name.toUpperCase(), draft.sky === i,
-      () => { draft.sky = i; render(); }, s.clouds[0]));
+      () => { draft.sky = i; render(); }, s.clouds.slice(0, 3)));
   });
 
   els.ruleRow.innerHTML = "";
@@ -308,6 +506,9 @@ function render(){
   });
 
   renderFamily();
+  preview.skyKey = "";                  // the palette may have just changed
+  drawPreview();
+  startPreview();
 }
 
 function renderFamily(){
@@ -381,6 +582,7 @@ function init(){
     waves:   document.getElementById("wsWaves"),
     bossRow: document.getElementById("wsBossRow"),
     family:  document.getElementById("wsFamily"),
+    preview: document.getElementById("wsPreview"),
   };
   document.getElementById("wsRenameBtn").addEventListener("click", async () => {
     SF.audio.play("uiClick");

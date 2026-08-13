@@ -226,6 +226,13 @@
       <span id="wsName">MY SKY</span>
       <button id="wsRenameBtn" class="ghost-btn">RENAME</button>
     </div>
+    <!-- The board draws itself. Kids can't read a list of wave names and see
+         a level; they can look at this and see one. Read it bottom to top:
+         your ship, then the waves in the order they arrive, then the boss. -->
+    <div class="ws-preview-wrap">
+      <canvas id="wsPreview" class="ws-preview"></canvas>
+      <span class="ws-preview-tag">YOUR SKY, BOTTOM TO TOP</span>
+    </div>
     <label class="panel-label ws-label">THE SKY</label>
     <div id="wsSkyRow" class="ws-chips"></div>
     <label class="panel-label ws-label">HOUSE RULE</label>
