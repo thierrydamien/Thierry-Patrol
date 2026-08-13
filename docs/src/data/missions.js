@@ -52,7 +52,7 @@ const OBJECTIVES = {
                progress: s => (s.partsDenied || 0) + "/10" },
   serpent:   { label:"Slay the Tithe Serpent", icon:"🐍",
                test: s => !!s.serpentSlain,
-               progress: s => s.serpentSlain ? "done" : (s.serpentAte ? s.serpentAte + " coins eaten" : "") },
+               progress: s => s.serpentSlain ? "done" : (s.serpentAte === 1 ? "1 coin eaten" : s.serpentAte ? s.serpentAte + " coins eaten" : "") },
   paintSix:  { label:"Paint 6 sketches to your side", icon:"🖌",
                test: s => (s.painted || 0) >= 6,
                progress: s => (s.painted || 0) + "/6" },

@@ -198,6 +198,63 @@ const SHAPES = {
    * coin wide. The body rings are drawn by the renderer from the same
    * palette; this painter is just the face a kid learns to chase.
    */
+  /*
+   * A serpent RING: an armoured annulus with fin ridges, drawn to chain
+   * visually when the renderer strings them along the head's tape. The
+   * weak one gets its lantern glow from the renderer, not from here.
+   */
+  serpentSeg(ctx, S, p){
+    ctx.fillStyle = p.shade;
+    ctx.beginPath(); ctx.arc(0, 0, S*0.34, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = p.base;
+    ctx.beginPath(); ctx.arc(-S*0.05, -S*0.06, S*0.30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = p.lit;
+    ctx.beginPath(); ctx.arc(-S*0.09, -S*0.10, S*0.16, 0, Math.PI*2); ctx.fill();
+    // the hole through the middle - it is a ring, not a bead
+    ctx.fillStyle = p.deep;
+    ctx.beginPath(); ctx.arc(0, 0, S*0.115, 0, Math.PI*2); ctx.fill();
+    // fin ridges
+    ctx.strokeStyle = p.deep; ctx.lineWidth = S*0.06; ctx.lineCap = "round";
+    [-1,1].forEach(sd => {
+      ctx.beginPath();
+      ctx.moveTo(sd*S*0.30, -S*0.10);
+      ctx.quadraticCurveTo(sd*S*0.46, 0, sd*S*0.30, S*0.12);
+      ctx.stroke();
+    });
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = p.line; ctx.lineWidth = Math.max(1, S*0.03);
+    ctx.beginPath(); ctx.arc(0, 0, S*0.34, 0, Math.PI*2); ctx.stroke();
+  },
+  /*
+   * A ship part on the Foundry belt: half-built machinery on a pallet -
+   * a turret pod, exposed ribs, one loose cable. It must read as CARGO,
+   * not a fighter, so nothing about it points anywhere.
+   */
+  part(ctx, S, p){
+    // pallet
+    ctx.fillStyle = p.metalD;
+    ctx.fillRect(-S*0.36, S*0.16, S*0.72, S*0.14);
+    ctx.fillStyle = p.line;
+    ctx.fillRect(-S*0.30, S*0.30, S*0.10, S*0.06);
+    ctx.fillRect( S*0.20, S*0.30, S*0.10, S*0.06);
+    // the half-built pod
+    hull(ctx, [0,S*0.16, S*0.26,S*0.02, S*0.20,-S*0.24, -S*0.20,-S*0.24,
+               -S*0.26,S*0.02], p, S);
+    // exposed ribs where the plating isn't on yet
+    ctx.strokeStyle = p.deep; ctx.lineWidth = S*0.045;
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();
+      ctx.moveTo(i*S*0.11, -S*0.20); ctx.lineTo(i*S*0.11, S*0.08);
+      ctx.stroke();
+    }
+    // one loose cable, because half-built things dangle
+    ctx.strokeStyle = p.metal; ctx.lineWidth = S*0.035; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(S*0.18, -S*0.10);
+    ctx.quadraticCurveTo(S*0.34, S*0.02, S*0.28, S*0.14);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+  },
   serpent(ctx, S, p){
     // skull: blunt diamond, nose toward the player (+y)
     hull(ctx, [0,S*0.42, S*0.30,S*0.10, S*0.24,-S*0.26, -S*0.24,-S*0.26,

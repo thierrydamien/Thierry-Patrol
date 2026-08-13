@@ -176,6 +176,52 @@ const COMMS = {
     "You got Vesper! Nobody has ever done that, {you}.",
     "She's down! That was proper flying, {you}.",
   ]},
+  /* --- Act 4 openers and beats --- */
+  wellsStart: { speaker:"control", cooldown:999, lines:[
+    "Gravity's broken out here, {you}. Your shots will CURVE - swing them.",
+    "See the whirlpools? Everything loose falls in. Don't be everything.",
+  ]},
+  chorusStart: { speaker:"control", cooldown:999, lines:[
+    "Listen, {you} - they fire on the beat. Move BETWEEN the drums.",
+    "The whole fleet is one big song. Dance in the gaps, {you}.",
+  ]},
+  foundryStart: { speaker:"control", cooldown:999, lines:[
+    "They're BUILDING ships on those belts, {you}. Pop the parts first!",
+    "Every part you stop is a fight you never have. Starve the machine.",
+  ]},
+  foundryBuilt: { speaker:"control", cooldown:20, lines:[
+    "One got through the assembler - heads up, it's coming down MEAN.",
+    "That's what happens when a part gets home. Don't let the next one.",
+  ]},
+  serpentStart: { speaker:"control", cooldown:999, lines:[
+    "Something's alive in this garden, {you}. Keep an eye on your coins.",
+    "Old miners' story says a serpent lives here. It's not a story.",
+  ]},
+  serpentSeen: { speaker:"control", cooldown:999, lines:[
+    "THERE - the Tithe Serpent! It eats coins. Your coins. Hit the glowing ring!",
+  ]},
+  serpentDown: { speaker:"control", cooldown:999, lines:[
+    "It coughed up every penny! Beautiful flying, {you}.",
+  ]},
+  backstageStart: { speaker:"control", cooldown:999, lines:[
+    "{you}... the charts stop here. This is behind the sky. Fly careful.",
+    "Nothing out here is finished, {you}. I don't think we're meant to see this.",
+  ]},
+  backstageNo: { speaker:"control", cooldown:999, lines:[
+    "That... wasn't me on the radio, {you}. Stay sharp.",
+  ]},
+  mirrorSeen: { speaker:"control", cooldown:999, lines:[
+    "{you} - that ship. That's YOUR ship. It's flying your moves!",
+  ]},
+  mirrorBomb: { speaker:"control", cooldown:14, lines:[
+    "It has your bombs too?! That's cheating. Probably.",
+  ]},
+  brushSeen: { speaker:"control", cooldown:999, lines:[
+    "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.",
+  ]},
+  brushDown: { speaker:"control", cooldown:999, lines:[
+    "You painted the sky, {you}. Every star out here is one of yours now.",
+  ]},
   silentStart: { speaker:"control", cooldown:999, lines:[
     "Guns are dead, {you}. Don't fight - FLY.",
     "No cannons this run, {you}. Slip through quiet and don't get touched.",

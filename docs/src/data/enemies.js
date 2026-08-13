@@ -352,6 +352,14 @@ const BEHAVIOURS = {
   serpentHead(e, dt, c){
     e.trailPts = e.trailPts || [];
     e.phase += dt;
+    if(e.fleeing){
+      // Done here: straight up and out with the takings, tape still running
+      // so the rings follow it off the top of the screen.
+      e.y -= e.speed * 2.1 * dt;
+      e.trailPts.push({ x: e.x, y: e.y });
+      if(e.trailPts.length > 720) e.trailPts.shift();
+      return;
+    }
     // A lissajous wander with a slow drift, clamped to the garden's canopy.
     const tx = c.VW*0.5 + Math.sin(e.phase*0.62) * c.VW*0.36;
     const ty = 200 + Math.sin(e.phase*0.47 + 1.7) * 130;
@@ -366,6 +374,17 @@ const BEHAVIOURS = {
     e.y = clamp(e.y, 70, 430);
     e.trailPts.push({ x: e.x, y: e.y });
     if(e.trailPts.length > 720) e.trailPts.shift();
+  },
+
+  /*
+   * A part on the Foundry's belt: it rides its lane until the assembler
+   * takes it. It cannot fight back - the whole level is whether YOU get it
+   * before the machine does. game.js owns the belts and the consuming.
+   */
+  beltPart(e, dt, c){
+    e.x += (e.beltDir || 1) * (e.beltSpeed || 70) * dt;
+    e.phase += dt;
+    e.y = (e.beltY || e.y) + Math.sin(e.phase*7) * 1.5;   // rattling along
   },
 
   /** A ring of the serpent: reads its place off the head's tape. */
@@ -552,6 +571,16 @@ const ENEMY_TYPES = {
     score:60, money:4, tint:"#2fbf9a", fire:null,
     armoured:true,
     toughSeconds:1.5,
+  },
+  /*
+   * A ship part riding the Foundry's belts. Every one the player pops is a
+   * ship that never gets born; every one that reaches the assembler is an
+   * elite that very much does. Deliberately soft - the level's pressure is
+   * how MANY there are while a fight is also happening.
+   */
+  part: {
+    name:"Ship Part", behaviour:"beltPart", hp:3, r:15, size:42, speed:0,
+    score:15, money:12, tint:"#fb923c", fire:null,
   },
 };
 

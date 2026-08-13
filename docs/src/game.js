@@ -62,6 +62,7 @@ const game = {
   onMissionEnd: null,     // set by the UI layer
   onTestFlightEnd: null,  // set by the UI layer - the range exits to the Armory
   godMode: false,         // test hook only
+  get VW(){ return VW; }, get VH(){ return VH; },
 };
 
 /* ---------------------------------------------------------
@@ -322,6 +323,8 @@ function startMission(missionIndex, difficultyId){
   game.world.reset();
   fx.reset();
   SF.finale.reset();                      // no intro/fleet/death left running
+  SF.backstage.reset();                   // the workshop sleeps until asked
+  if(mission.backstage) SF.backstage.begin();
   SF.bossintro.reset();
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
@@ -368,6 +371,7 @@ function startMission(missionIndex, difficultyId){
     rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
     damageTaken: 0, livesLost: 0, completed: false,
     convoyTotal: mission.convoy ? 1 : 0, convoyLost: 0,
+    partsDenied: 0, serpentAte: 0, serpentSlain: false, painted: 0,
     stars: 0,
   };
 
@@ -436,6 +440,19 @@ function startMission(missionIndex, difficultyId){
     storm: mission.storm ? { mode:"calm", timer: 5, dir: 1, str: 0 } : null,
     // The Convoy: ONE hauler, escorted the whole way.
     convoy: mission.convoy ? { launched: false, released: false } : null,
+    /* --- Act 4's rule-breakers. Each is a small state machine ticked in the
+       main update, the same pattern as the storm above. --- */
+    // The Undertow: drifting gravity wells that curve every loose thing.
+    wells: mission.wells ? { list: [], next: 6, mawAt: wavesEndT * 0.60, maw: null } : null,
+    // The Chorus: one metronome, and every gun in the sky obeys it.
+    beat: mission.beat ? { t: 0, count: 0, window: 0, silenceUntil: 0, pulseMs: 0 } : null,
+    // The Foundry: parts ride belts toward the assembler. Deny or fight.
+    foundry: mission.foundry ? {
+      belts: [ { y: 112, dir: 1, speed: 76 }, { y: 174, dir: -1, speed: 94 } ],
+      next: 7, built: 0 } : null,
+    // The Tithe Serpent: spawns once, eats coins, grows, and must be slain.
+    serpent: mission.serpent ? { at: 14, head: null, eaten: 0, eatenValue: 0,
+      grown: 0, tailGoneSaid: false, fleeAt: 0 } : null,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -473,6 +490,11 @@ function startMission(missionIndex, difficultyId){
              : mission.convoy ? "convoyStart"
              : mission.trench ? "trenchStart"
              : mission.blackout ? "blackoutStart"
+             : mission.wells ? "wellsStart"
+             : mission.beat ? "chorusStart"
+             : mission.foundry ? "foundryStart"
+             : mission.serpent ? "serpentStart"
+             : mission.backstage ? "backstageStart"
              : "missionStart");
   SF.input.clearMovement();
   audio.init();
@@ -627,6 +649,47 @@ const callbacks = {
       game.world.dropCoins(e.x, e.y, e.loot);
       fx.text(e.x, e.y - 26, "+£" + e.loot + " BACK!", "#ffd23f", 18, true);
       SF.comms.say("thiefDown");
+    }
+
+    // The Foundry: a popped part is a ship that never gets born.
+    if(e.typeId === "part"){
+      run.stats.partsDenied++;
+      fx.text(e.x, e.y - 20, "DENIED!", "#4ade80", 14, true);
+    }
+    // The Chorus: silencing a conductor makes the whole choir forget the
+    // words - four full seconds where not one gun in the sky may fire.
+    if(run.beat && e.elite && e.type.fire){
+      run.beat.silenceUntil = simMs + 4000;
+      run.bannerText = "THE CHOIR FALLS SILENT";
+      run.bannerSub = "four seconds — go!";
+      run.bannerColor = "#c026d3";
+      run.bannerUntil = simMs + 2000;
+      fx.ring(e.x, e.y, 120, "#e879f9", 5, 0.6);
+      audio.play("victory");
+    }
+    // The Tithe Serpent's rings pop one at a time; the head pays out.
+    if(e.typeId === "serpent" && run.serpent){
+      run.stats.serpentSlain = true;
+      const back = Math.max(60, run.serpent.eatenValue);
+      game.world.dropCoins(e.x, e.y, back);
+      run.bannerText = "EVERY PENNY BACK!";
+      run.bannerSub = "the serpent coughs up £" + back;
+      run.bannerColor = "#2fbf9a";
+      run.bannerUntil = simMs + 3000;
+      fx.explosion(e.x, e.y, 110, "#2fbf9a", true);
+      for(let i = 0; i < 3; i++) fx.ring(e.x, e.y, 60 + i*50, "#7ef0cf", 4 - i, 0.5);
+      fx.shake(16); fx.hitStop(100);
+      audio.play("bossExplode");
+      SF.comms.say("serpentDown");
+      // The rings die with the head, nose to tail.
+      const es = game.world.enemies.items;
+      for(let i = 0; i < es.length; i++){
+        const seg = es[i];
+        if(seg.alive && seg.typeId === "serpentSeg"){
+          seg.alive = false;
+          fx.spark(seg.x, seg.y, 0, -40, "#7ef0cf", 0.4, 3);
+        }
+      }
     }
 
     // Splitters burst into shards that immediately come at you - the kill is
@@ -838,6 +901,21 @@ function killBoss(boss){
     game.profile.bossesDefeated++;
     fx.hitStop(180);
     fx.shake(20);
+    return;
+  }
+  // THE FORGERY's titan is only act one: it cracks open, and what crawls
+  // out is yours. backstage.js owns everything after this frame.
+  if(boss.def.forge){
+    fx.explosion(boss.x, boss.y, 170, "#e8c14a", true);
+    for(let i = 0; i < 4; i++)
+      fx.ring(boss.x, boss.y, 70 + i*60, i%2 ? "#ffd23f" : "#e8c14a", 5 - i, 0.5 + i*0.15);
+    fx.debris(boss.x, boss.y, 26, "#e8c14a");
+    fx.shake(26); fx.hitStop(160);
+    audio.play("bossExplode");
+    run.score += Math.round(1500 * run.difficulty.pay);
+    game.world.boss = null;
+    run.bossActive = true;              // the fight goes on - just not in this slot
+    SF.backstage.titanDown();
     return;
   }
   // The Devourer dies for eight seconds, in five stages, on its own clock.
@@ -1055,6 +1133,11 @@ function update(dt, timeMs){
   behaviourCtx.onBossPhase = onBossPhase;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
   behaviourCtx.godMode = game.godMode;
+  // The Chorus: guns may only release inside the beat's window, and never
+  // while the choir has forgotten the words (a conductor just died).
+  behaviourCtx.beatGate = run.beat
+    ? (() => run.beat.window > 0 && simMs >= run.beat.silenceUntil)
+    : null;
 
   // The test range: immune, timed, and it exits to the Armory - never to the
   // results screen. Nothing here may touch records, money or medals.
@@ -1082,7 +1165,10 @@ function update(dt, timeMs){
     run.director.update(dt);
     run.stats.spawned = run.director.spawnedCount;
     if(run.director.finishedSpawning && game.world.countEnemies() === 0){
-      if(run.mission.boss){
+      // Behind the Sky: the first fake ending plays out before the boss may
+      // arrive - backstage.js says when the workshop is ready.
+      if(run.mission.backstage && !SF.backstage.readyForBoss()){ /* hold */ }
+      else if(run.mission.boss){
         run.bossActive = true;
         run.bossSpawned = true;
         game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
@@ -1369,6 +1455,281 @@ function update(dt, timeMs){
       if(st.timer <= 0){ st.mode = "calm"; st.timer = rand(3.5, 6.5); }
     }
   }
+
+  /*
+   * THE UNDERTOW. Gravity wells drift through the field and curve every
+   * loose thing - your bolts, their bolts, the coins. Nothing else in the
+   * game bends a bullet, which is exactly why this level exists: aiming
+   * stops being a straight line and starts being a swing. Wells EAT what
+   * falls all the way in, so an orbit is never forever.
+   */
+  if(run.wells && !run.ended && run.phase !== "intro"){
+    const wl = run.wells;
+    wl.next -= dt;
+    if(wl.next <= 0 && wl.list.length < 3){
+      wl.next = rand(7, 11);
+      wl.list.push({
+        x: rand(VW*0.2, VW*0.8), y: rand(140, 420),
+        vx: rand(-14, 14), vy: rand(6, 16),
+        r: 15, R: rand(190, 240), G: rand(430, 560),
+        life: rand(14, 20), spin: rand(0, Math.PI*2),
+      });
+      audio.play("telegraph");
+    }
+    // THE MAW: once, past the midpoint - a well too big to share a sky with.
+    if(!wl.maw && run.time >= wl.mawAt){
+      wl.maw = { x: -100, y: 300, vx: 52, vy: 0, r: 26, R: 400, G: 980,
+                 life: 18, spin: 0, maw: true };
+      wl.list.push(wl.maw);
+      run.bannerText = "THE MAW";
+      run.bannerSub = "nothing flies straight past THAT";
+      run.bannerColor = "#2dd4bf";
+      run.bannerUntil = simMs + 3000;
+      audio.play("alarm");
+      fx.shake(10);
+    }
+    const pullList = (items, eatR) => {
+      for(let i = 0; i < items.length; i++){
+        const b = items[i];
+        if(!b.alive) continue;
+        for(let k = 0; k < wl.list.length; k++){
+          const w = wl.list[k];
+          const dx = w.x - b.x, dy = w.y - b.y;
+          const d = Math.hypot(dx, dy);
+          if(d > w.R || d < 1) continue;
+          if(d < w.r + eatR){          // fell all the way in: the well eats it
+            b.alive = false;
+            fx.spark(b.x, b.y, dx*2, dy*2, "#7ef0e6", 0.25, 2);
+            break;
+          }
+          const f = w.G * (1 - d/w.R);
+          b.vx += dx/d * f * dt;
+          b.vy += dy/d * f * dt;
+        }
+      }
+    };
+    pullList(game.world.bullets.items, 4);
+    pullList(game.world.enemyBullets.items, 4);
+    // Coins spiral beautifully; give them drift velocity the pickup update
+    // integrates via its own wobble - here we just shove positions gently.
+    const pk = game.world.pickups.items;
+    for(let i = 0; i < pk.length; i++){
+      const c = pk[i];
+      if(!c.alive) continue;
+      for(let k = 0; k < wl.list.length; k++){
+        const w = wl.list[k];
+        const dx = w.x - c.x, dy = w.y - c.y;
+        const d = Math.hypot(dx, dy);
+        if(d > w.R*0.8 || d < w.r + 6) continue;
+        const f = w.G * 0.55 * (1 - d/(w.R*0.8));
+        c.x += dx/d * f * dt * dt * 12;
+        c.y += dy/d * f * dt * dt * 12;
+      }
+    }
+    // The ship feels the pull too - readable, never a trap.
+    const pl = game.world.player;
+    if(pl && pl.alive){
+      for(let k = 0; k < wl.list.length; k++){
+        const w = wl.list[k];
+        const dx = w.x - pl.x, dy = w.y - pl.y;
+        const d = Math.hypot(dx, dy);
+        if(d > w.R || d < 1) continue;
+        const f = (w.maw ? 130 : 85) * (1 - d/w.R);
+        pl.x = clamp(pl.x + dx/d * f * dt, 24, VW - 24);
+        pl.y = clamp(pl.y + dy/d * f * dt, 90, SF.entityConst.PLAY_BOTTOM);
+      }
+    }
+    for(let k = wl.list.length - 1; k >= 0; k--){
+      const w = wl.list[k];
+      w.x += w.vx * dt; w.y += w.vy * dt;
+      w.spin += dt * 1.6;
+      w.life -= dt;
+      if(w.life <= 0 || w.x < -140 || w.x > VW + 140){
+        if(w === wl.maw && w.life > 0) continue;
+        wl.list.splice(k, 1);
+        fx.ring(w.x, w.y, w.R*0.5, "#2dd4bf", 3, 0.5);
+      }
+    }
+  }
+
+  /*
+   * THE CHORUS. One metronome; every gun in the sky waits for it. The gate
+   * itself lives in entities (beatGate) - this block is the conductor's
+   * hands: it counts the beat, opens the release window, pulses the sky,
+   * and while an elite conductor lives it snaps EVERY ready gun to the same
+   * beat so the volley arrives as a wall with a dodge-window after it.
+   */
+  if(run.beat && !run.ended && run.phase !== "intro"){
+    const bt = run.beat;
+    const interval = 60 / 64;                    // 64 bpm: readable, dancing
+    bt.window = Math.max(0, bt.window - dt);
+    if(simMs >= bt.silenceUntil){
+      bt.t += dt;
+      if(bt.t >= interval){
+        bt.t -= interval;
+        bt.count++;
+        bt.window = 0.16;
+        bt.pulseMs = simMs;
+        audio.play(bt.count % 4 === 0 ? "shootHeavy" : "telegraph");
+        // A live conductor turns the beat into a full choir: every ready
+        // gun releases together.
+        let conductor = false;
+        const es = game.world.enemies.items;
+        for(let i = 0; i < es.length; i++){
+          const e = es[i];
+          if(e.alive && e.elite && e.type.fire){ conductor = true; break; }
+        }
+        if(conductor){
+          for(let i = 0; i < es.length; i++){
+            const e = es[i];
+            if(e.alive && e.type.fire && e.y > 10 && e.y < VH - 60)
+              e.fireTimer = Math.min(e.fireTimer, 0.02);
+          }
+        }
+      }
+    } else {
+      bt.t = 0;   // silence resets the bar, so the choir re-enters cleanly
+    }
+  }
+
+  /*
+   * THE FOUNDRY. Parts ride the belts; the assembler at each belt's end
+   * turns whatever survives into a live elite, with a fanfare the player
+   * learns to dread. The mission's whole question: shoot the fight in
+   * front of you, or the future coming down the belt?
+   */
+  if(run.foundry && !run.ended && run.phase === "waves"){
+    const fd = run.foundry;
+    fd.next -= dt;
+    const es = game.world.enemies.items;
+    let parts = 0;
+    for(let i = 0; i < es.length; i++)
+      if(es[i].alive && es[i].typeId === "part") parts++;
+    if(fd.next <= 0 && parts < 5){
+      fd.next = rand(4.2, 6.5);
+      const belt = fd.belts[randInt(0, fd.belts.length - 1)];
+      const e = game.world.spawnEnemy("part",
+        belt.dir > 0 ? -28 : VW + 28, belt.y, { difficulty: run.difficulty });
+      e.beltDir = belt.dir; e.beltSpeed = belt.speed * rand(0.9, 1.15); e.beltY = belt.y;
+      audio.play("telegraph");
+    }
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive || e.typeId !== "part") continue;
+      const arrived = (e.beltDir > 0 && e.x > VW - 44) || (e.beltDir < 0 && e.x < 44);
+      if(!arrived) continue;
+      e.alive = false;
+      fd.built++;
+      const mouthX = e.beltDir > 0 ? VW - 60 : 60;
+      const kind = ["striker", "brute", "interceptor"][fd.built % 3];
+      game.world.spawnEnemy(kind, mouthX, -36, { difficulty: run.difficulty, elite: true });
+      fx.ring(mouthX, e.beltY, 60, "#fb923c", 5, 0.5);
+      fx.text(mouthX, e.beltY - 26, "BUILT!", "#ff5d73", 17, true);
+      fx.shake(6);
+      audio.play("alarm");
+      if(fd.built === 1) SF.comms.say("foundryBuilt");
+    }
+  }
+
+  /*
+   * THE TITHE SERPENT. One creature, alive for most of the level: it chases
+   * the nearest loose coin, eats it, and grows a ring for every sixth
+   * mouthful. Its tail-most ring is the weak one - pop rings until the tail
+   * is gone and the head itself finally opens up. Kill it and every stolen
+   * penny comes back; dawdle and it slithers home with the lot.
+   */
+  if(run.serpent && !run.ended && run.phase !== "intro"){
+    const sp = run.serpent;
+    if(!sp.head && run.time >= sp.at){
+      const head = game.world.spawnEnemy("serpent", VW*0.5, -30, { difficulty: run.difficulty });
+      sp.head = head;
+      for(let i = 0; i < 6; i++){
+        const seg = game.world.spawnEnemy("serpentSeg", VW*0.5, -30 - (i+1)*24,
+          { difficulty: run.difficulty });
+        seg.headRef = head; seg.segIndex = i;
+      }
+      sp.grown = 6;
+      run.bannerText = "THE TITHE SERPENT";
+      run.bannerSub = "it eats coins — hit the glowing ring!";
+      run.bannerColor = "#2fbf9a";
+      run.bannerUntil = simMs + 3600;
+      audio.play("bossWake");
+      SF.comms.say("serpentSeen");
+    }
+    const head = sp.head;
+    if(head && head.alive && !head.fleeing){
+      // Hunger: the nearest loose coin inside its reach.
+      let best = null, bd = 300*300;
+      const pk = game.world.pickups.items;
+      for(let i = 0; i < pk.length; i++){
+        const c = pk[i];
+        if(!c.alive || c.kind !== "coin") continue;
+        const d = (c.x-head.x)*(c.x-head.x) + (c.y-head.y)*(c.y-head.y);
+        if(d < bd){ bd = d; best = c; }
+      }
+      head.hungry = !!best;
+      head.huntX = best ? best.x : null;
+      head.huntY = best ? best.y : null;
+      // The bite.
+      if(best && bd < (head.r + 15)*(head.r + 15)){
+        best.alive = false;
+        sp.eaten++;
+        sp.eatenValue += best.value || 2;
+        run.stats.serpentAte = sp.eaten;
+        fx.spark(head.x, head.y + 14, 0, 60, "#ffd23f", 0.3, 3);
+        audio.play("armourClang");
+        // Every sixth coin grows a new ring on the tail.
+        const rings = game.world.enemies.items.filter(x => x.alive && x.typeId === "serpentSeg");
+        if(sp.eaten % 6 === 0 && rings.length < 14){
+          const seg = game.world.spawnEnemy("serpentSeg", head.x, head.y,
+            { difficulty: run.difficulty });
+          seg.headRef = head;
+          seg.segIndex = sp.grown++;
+          fx.text(head.x, head.y - 26, "IT GREW!", "#2fbf9a", 16, true);
+        }
+      }
+      // The weak ring is the tail: last alive ring drops its armour and glows.
+      const rings = [];
+      const es = game.world.enemies.items;
+      for(let i = 0; i < es.length; i++)
+        if(es[i].alive && es[i].typeId === "serpentSeg") rings.push(es[i]);
+      rings.sort((a, b) => a.segIndex - b.segIndex);
+      for(let i = 0; i < rings.length; i++){
+        const weak = i === rings.length - 1;
+        rings[i].weak = weak;
+        rings[i].armoured = !weak;
+      }
+      // No rings left: the head itself is finally soft.
+      head.armoured = rings.length > 0;
+      if(!rings.length && !sp.tailGoneSaid){
+        sp.tailGoneSaid = true;
+        run.bannerText = "ITS TAIL IS GONE!";
+        run.bannerSub = "the head is soft — finish it!";
+        run.bannerColor = "#ffd23f";
+        run.bannerUntil = simMs + 2600;
+        audio.play("victory");
+      }
+      // Everything else is dead and the waves are done: it makes for home
+      // with the takings unless the player stops it.
+      if(run.director.finishedSpawning){
+        const others = game.world.countEnemies() - 1 - rings.length;
+        if(others <= 0){
+          sp.fleeAt = sp.fleeAt || run.time + 9;
+          if(run.time >= sp.fleeAt){
+            head.fleeing = true;
+            run.bannerText = "IT MAKES FOR HOME!";
+            run.bannerSub = sp.eatenValue > 0 ? ("with £" + sp.eatenValue + " of yours") : "stop it!";
+            run.bannerColor = "#ff5d73";
+            run.bannerUntil = simMs + 2600;
+            audio.play("alarm");
+          }
+        }
+      }
+    }
+  }
+
+  // Behind the Sky: the workshop's whole theatre lives in backstage.js.
+  if(run.mission.backstage) SF.backstage.update(dt, run, game.world, simMs);
 
   /*
    * THE CONVOY. Three haulers cross bottom-to-top over ~34s each, staggered
@@ -1694,6 +2055,7 @@ function draw(timeMs){
   ctx.translate(shakeVec.x, shakeVec.y);
   ctx.clearRect(-30, -30, VW+60, VH+60);
   SF.render.drawBackground(ctx);
+  SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -1701,9 +2063,11 @@ function draw(timeMs){
    */
   if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
+  if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
+  SF.backstage.drawActors(ctx, timeMs);              // the mirror, the brush, the letters
   SF.render.drawArena(ctx, world.boss, timeMs);      // the Devourer's screen-wide attacks
   SF.render.drawFleet(ctx, timeMs);                  // the rescued pilots, phase five
   SF.render.drawBullets(ctx, world);
@@ -1718,7 +2082,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -1763,6 +2127,10 @@ function frame(now){
 function start(){
   requestAnimationFrame(frame);
 }
+
+// Backstage's contact hazards (the mirror's hull, the eraser, a landed
+// letter) hurt through the same one door every enemy bullet uses.
+game.hurtPlayer = source => callbacks.onPlayerHit(source, null);
 
 SF.game = game;
 Object.assign(game, {

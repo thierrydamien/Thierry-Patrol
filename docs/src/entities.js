@@ -658,8 +658,14 @@ class World {
       if(fire && e.y > 10 && e.y < VH - 60){
         e.fireTimer -= dt;
         if(e.fireTimer <= 0){
-          this.enemyShoot(e, fire, ctxObj);
-          e.fireTimer = rand(fire.every[0], fire.every[1]) * ctxObj.difficulty.fireRate;
+          // The Chorus: a ready gun holds its shot for the beat. The gate
+          // says when the song allows it - game.js owns the metronome.
+          if(ctxObj.beatGate && !ctxObj.beatGate(e)){
+            e.fireTimer = 0.05;
+          } else {
+            this.enemyShoot(e, fire, ctxObj);
+            e.fireTimer = rand(fire.every[0], fire.every[1]) * ctxObj.difficulty.fireRate;
+          }
         }
       }
 

@@ -1097,6 +1097,173 @@ let darkCv = null, darkCtx = null;
  * with a wider lamp - dread rather than a job, still every glow punched
  * through so fairness holds in both darknesses.
  */
+/*
+ * Act 4's furniture, drawn under the traffic: the Undertow's gravity wells,
+ * the Foundry's belts and assembler maws, the Tithe Serpent's spine, and
+ * the Chorus's beat pulse. One entry point so the frame composition stays
+ * one line; each piece draws only when its mission flag is live.
+ */
+function drawAct4(ctx, run, world, timeMs){
+  if(!run || run.ended) return;
+
+  // --- THE UNDERTOW: the wells -------------------------------------------
+  if(run.wells){
+    const list = run.wells.list;
+    for(let i = 0; i < list.length; i++){
+      const w = list[i];
+      // The reach: a soft dark iris with a teal rim at the influence edge.
+      const g = ctx.createRadialGradient(w.x, w.y, w.r, w.x, w.y, w.R);
+      g.addColorStop(0, "rgba(4,10,14,0.55)");
+      g.addColorStop(0.55, "rgba(6,20,26,0.18)");
+      g.addColorStop(1, "rgba(45,212,191,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(w.x, w.y, w.R, 0, TAU); ctx.fill();
+      // Spiral arms: three broken rings turning at different rates.
+      for(let ring = 0; ring < 3; ring++){
+        const rr = w.R * (0.30 + ring*0.24);
+        const a0 = w.spin * (1.8 - ring*0.5) + ring*2.1;
+        ctx.strokeStyle = "rgba(126,240,230," + (0.34 - ring*0.09).toFixed(2) + ")";
+        ctx.lineWidth = 2.5 - ring*0.6;
+        for(let seg = 0; seg < 3; seg++){
+          ctx.beginPath();
+          ctx.arc(w.x, w.y, rr, a0 + seg*TAU/3, a0 + seg*TAU/3 + TAU/4.4);
+          ctx.stroke();
+        }
+      }
+      // The eye. Anything that touches this is gone.
+      const eye = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.r*2.2);
+      eye.addColorStop(0, "rgba(230,255,252,0.9)");
+      eye.addColorStop(0.35, w.maw ? "rgba(45,212,191,0.6)" : "rgba(45,212,191,0.45)");
+      eye.addColorStop(1, "rgba(45,212,191,0)");
+      ctx.fillStyle = eye;
+      ctx.beginPath(); ctx.arc(w.x, w.y, w.r*2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#04110f";
+      ctx.beginPath(); ctx.arc(w.x, w.y, w.r*0.62, 0, TAU); ctx.fill();
+    }
+  }
+
+  // --- THE FOUNDRY: belts and the assembler maws --------------------------
+  if(run.foundry){
+    const belts = run.foundry.belts;
+    for(let i = 0; i < belts.length; i++){
+      const b = belts[i];
+      // The lane.
+      ctx.fillStyle = "rgba(12,10,8,0.62)";
+      ctx.fillRect(0, b.y - 14, VW, 28);
+      ctx.strokeStyle = "rgba(251,146,60,0.30)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, b.y - 14); ctx.lineTo(VW, b.y - 14);
+      ctx.moveTo(0, b.y + 14); ctx.lineTo(VW, b.y + 14);
+      ctx.stroke();
+      // Rolling chevrons say which way the future is headed.
+      const off = ((timeMs/1000) * b.speed * b.dir) % 34;
+      ctx.strokeStyle = "rgba(251,146,60,0.35)";
+      ctx.lineWidth = 2;
+      for(let x = -34 + off; x < VW + 34; x += 34){
+        ctx.beginPath();
+        ctx.moveTo(x - 5*b.dir, b.y - 6);
+        ctx.lineTo(x + 5*b.dir, b.y);
+        ctx.lineTo(x - 5*b.dir, b.y + 6);
+        ctx.stroke();
+      }
+      // The assembler maw at the receiving end: teeth, stripes, appetite.
+      const mx = b.dir > 0 ? VW - 40 : 40, flip = b.dir > 0 ? 1 : -1;
+      ctx.save();
+      ctx.translate(mx, b.y);
+      ctx.scale(flip, 1);
+      ctx.fillStyle = "#1c1410";
+      ctx.fillRect(-6, -26, 46, 52);
+      ctx.strokeStyle = "rgba(251,146,60,0.5)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-6, -26, 46, 52);
+      for(let t = 0; t < 3; t++){
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath();
+        ctx.moveTo(-6, -20 + t*16);
+        ctx.lineTo(-16, -14 + t*16);
+        ctx.lineTo(-6, -8 + t*16);
+        ctx.closePath(); ctx.fill();
+      }
+      // hazard stripes on the housing
+      ctx.fillStyle = "rgba(255,210,63,0.28)";
+      for(let t = 0; t < 4; t++) ctx.fillRect(2 + t*10, -26, 5, 52);
+      // the appetite light
+      ctx.fillStyle = "rgba(255,93,115," + (0.4 + Math.sin(timeMs/240)*0.3).toFixed(2) + ")";
+      ctx.beginPath(); ctx.arc(30, -18, 3.5, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // --- THE TITHE SERPENT: spine and the weak ring's lantern ---------------
+  if(run.serpent && run.serpent.head){
+    const es = world.enemies.items;
+    const rings = [];
+    let head = null;
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive) continue;
+      if(e.typeId === "serpent") head = e;
+      else if(e.typeId === "serpentSeg") rings.push(e);
+    }
+    if(head){
+      rings.sort((a, b) => a.segIndex - b.segIndex);
+      // The spine: one thick rope from head through every ring, under the art.
+      ctx.strokeStyle = "rgba(16,64,54,0.85)";
+      ctx.lineWidth = 13;
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(head.x, head.y);
+      for(let i = 0; i < rings.length; i++) ctx.lineTo(rings[i].x, rings[i].y);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(47,191,154,0.35)";
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+      // The weak ring glows like a lantern - the one thing to aim at.
+      for(let i = 0; i < rings.length; i++){
+        if(!rings[i].weak) continue;
+        const wseg = rings[i];
+        const pulse = 0.6 + Math.sin(timeMs/170)*0.4;
+        const g = ctx.createRadialGradient(wseg.x, wseg.y, 0, wseg.x, wseg.y, 34);
+        g.addColorStop(0, "rgba(255,235,150," + (0.55*pulse).toFixed(2) + ")");
+        g.addColorStop(0.5, "rgba(255,210,63," + (0.30*pulse).toFixed(2) + ")");
+        g.addColorStop(1, "rgba(255,210,63,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(wseg.x, wseg.y, 34, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(255,210,63," + (0.5 + pulse*0.3).toFixed(2) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(wseg.x, wseg.y, 22 + pulse*3, 0, TAU); ctx.stroke();
+      }
+    }
+  }
+
+  // --- THE CHORUS: the beat, visible --------------------------------------
+  if(run.beat){
+    const bt = run.beat;
+    const k = (timeMs - bt.pulseMs) / 420;
+    if(bt.pulseMs && k >= 0 && k < 1){
+      // One ring rolls out from the top of the sky on every beat.
+      ctx.strokeStyle = "rgba(232,121,249," + (0.4*(1 - k)).toFixed(2) + ")";
+      ctx.lineWidth = 3*(1 - k) + 1;
+      ctx.beginPath(); ctx.arc(VW/2, 60, 30 + k*VW*0.75, 0, TAU); ctx.stroke();
+      // And the whole sky takes a breath.
+      ctx.fillStyle = "rgba(253,244,255," + (0.05*(1 - k)).toFixed(3) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+    }
+    // The measure: four little drums under the HUD, the live one lit.
+    const silence = timeMs < bt.silenceUntil;
+    for(let i = 0; i < 4; i++){
+      const on = !silence && bt.count % 4 === i;
+      ctx.fillStyle = silence ? "rgba(232,121,249,0.15)"
+                    : on ? "rgba(232,121,249,0.9)" : "rgba(232,121,249,0.28)";
+      ctx.beginPath();
+      ctx.arc(VW/2 + (i - 1.5)*16, 176, on ? 4.5 : 3, 0, TAU);
+      ctx.fill();
+    }
+  }
+}
+
 function drawBlackout(ctx, world, timeMs, soft){
   if(!darkCv){
     darkCv = document.createElement("canvas");
@@ -2981,6 +3148,7 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout,
+  drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,
