@@ -511,36 +511,55 @@ const HULLS = {
  * Each stolen hull keeps its own colours on purpose; only the welds and a
  * thin gold wash say one hand bolted it together.
  */
+/* The titan is five stolen hulls welded into one silhouette. They are
+ * composed on an offscreen and washed gold THERE: source-atop against the
+ * live canvas tinted a rectangle of whatever sat behind the boss (the
+ * campaign map found that out the hard way). The bake is keyed to the
+ * damage bucket, so battle scars still accumulate - and the stolen hulls
+ * get no timeMs on purpose: they are dead metal, only the welds live. */
+const FORGE_PARTS = [
+  ["leviathan", 0,  84, 0.52, 0],      // skirt
+  ["marauder", -96, 14, 0.46, -0.28],  // left arm, tucked behind the chest
+  ["warden",   102, 18, 0.38,  0.30],  // right arm: the ring reads as a pauldron
+  ["sentinel",  0,  -6, 0.60, 0],      // chest, welded OVER the arms - it bonds the figure
+  ["phantom",   0, -86, 0.34, 0],      // head
+];
+let forgeCache = null;                 // one titan at a time
 HULLS.forgery = function(ctx, boss, S, damage, timeMs){
   const A = S/300;
-  const sub = (id, x, y, scale, rot) => {
-    if(!HULLS[id]) return;
-    ctx.save();
-    ctx.translate(x*A, y*A);
-    if(rot) ctx.rotate(rot);
-    // Sub-painters read a couple of live fields; hand them a calm fake so a
-    // stolen hull never runs its own theatrics inside the titan.
-    try {
-      HULLS[id](ctx, { defId:id, charge:0, flash:0, blink:0,
-                       wounds: boss.wounds || [], phase: null, phaseIndex: 0 },
-                S*scale, Math.min(0.4, damage*0.6), timeMs);
-    } catch(e){ /* a stolen hull must never break the titan */ }
-    ctx.restore();
-  };
-
-  // Back to front: skirt, chest, arms, head.
-  sub("leviathan", 0,  84, 0.52, 0);
-  sub("sentinel",  0,  -6, 0.60, 0);
-  sub("marauder", -92, 16, 0.46, -0.28);
-  sub("warden",    92, 16, 0.46,  0.28);
-  sub("phantom",   0, -86, 0.34, 0);
-
-  // A thin gold wash bonds the patchwork into one machine.
-  ctx.save();
-  ctx.globalCompositeOperation = "source-atop";
-  ctx.fillStyle = "rgba(232,193,74,0.10)";
-  ctx.fillRect(-S*0.9, -S*0.7, S*1.8, S*1.4);
-  ctx.restore();
+  const subDamage = Math.min(0.4, damage*0.6);
+  const PX = 2;                        // baked at 2x so retina stays crisp
+  const half = 200*A;                  // composite half-extent
+  const key = S.toFixed(1) + ":" + Math.floor(subDamage*10);
+  if(!forgeCache || forgeCache.key !== key){
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = Math.max(2, Math.ceil(half*2*PX));
+    const c2 = cv.getContext("2d");
+    c2.translate(half*PX, half*PX);
+    c2.scale(PX, PX);
+    for(let i = 0; i < FORGE_PARTS.length; i++){
+      const [id, x, y, scale, rot] = FORGE_PARTS[i];
+      if(!HULLS[id]) continue;
+      c2.save();
+      c2.translate(x*A, y*A);
+      if(rot) c2.rotate(rot);
+      // Sub-painters read a couple of live fields; hand them a calm fake so
+      // a stolen hull never runs its own theatrics inside the titan.
+      try {
+        HULLS[id](c2, { defId:id, charge:0, flash:0, blink:0,
+                        wounds: boss.wounds || [], phase: null, phaseIndex: 0 },
+                  S*scale, subDamage, 0);
+      } catch(e){ /* a stolen hull must never break the titan */ }
+      c2.restore();
+    }
+    // A thin gold wash bonds the patchwork into one machine - and on the
+    // offscreen it can only ever touch the titan's own pixels.
+    c2.globalCompositeOperation = "source-atop";
+    c2.fillStyle = "rgba(232,193,74,0.12)";
+    c2.fillRect(-half, -half, half*2, half*2);
+    forgeCache = { key, canvas: cv };
+  }
+  ctx.drawImage(forgeCache.canvas, -half, -half, half*2, half*2);
 
   // The welds: stitched gold seams over the three joints (the weak points),
   // breathing slightly so the titan reads as barely holding together.
