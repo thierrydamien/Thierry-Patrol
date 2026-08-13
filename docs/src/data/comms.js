@@ -219,6 +219,11 @@ const COMMS = {
   brushSeen: { speaker:"control", cooldown:999, lines:[
     "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.",
   ]},
+  // Said once, the first time the brush draws a squadron: the last rule the
+  // game teaches, and the one the whole act turns on.
+  paintSketch: { speaker:"control", cooldown:999, lines:[
+    "Those aren't real yet, {you} - they're still drawings! FLY THROUGH THEM. Your paint gets there first and they come out on OUR side.",
+  ]},
   brushDown: { speaker:"control", cooldown:999, lines:[
     "You painted the sky, {you}. Every star out here is one of yours now.",
   ]},

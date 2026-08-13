@@ -449,6 +449,27 @@ async function run(){
                     /m\.mode === "open" \? 2 : 1/.test(b) &&            // open guard pays double
                     /mode: "mirror", modeT/.test(b); })());             // the rhythm exists
   /*
+   * The paint rule is the last thing the game teaches and the one the whole
+   * act turns on: fly through a sketch and it comes out on your side. It
+   * shipped un-learnable. Measured, a bot flying flat out at the nearest
+   * ghost and ignoring every other threat painted SIX of thirty in a minute
+   * - exactly the star's target - so a child who also has to dodge never
+   * closed the loop and never found out the rule existed.
+   */
+  check("the paint rule can actually be learned",
+    (() => { const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+             return /ink: 4\.5, painted: false/.test(b) &&      // a window, not a frame
+                    /dx\*dx \+ dy\*dy < 46\*46/.test(b) &&       // a brush, not a needle
+                    /taughtPaint/.test(b); })());               // and it says so, once
+  check("the game says the paint rule out loud, in kid words",
+    !!SF.commsData.COMMS.paintSketch &&
+    /FLY THROUGH THEM/.test(SF.commsData.COMMS.paintSketch.lines[0]));
+  check("the sketch shows its clock and the trail shows the brush",
+    (() => { const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+             return /The claim ring/.test(b) &&                 // time you can see
+                    /The loaded head, at the nose/.test(b) &&   // paint comes from YOU
+                    /"PAINTED!  " \+ run\.stats\.painted \+ "\/6"/.test(b); })());
+  /*
    * The opening card is the only instruction a child actually gets mid-flight,
    * so it is held to kid rules: every mission must have one, it must be short
    * enough to read at a glance AND to fit the 600px canvas at 19px, and it

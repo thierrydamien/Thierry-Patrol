@@ -39,6 +39,8 @@ const TAU = Math.PI*2;
 
 let S = null;          // the whole finale state; null when inactive
 const VW = () => (SF.game && SF.game.VW) || 600;
+/** The pilot's own paint - the colour the whole act is about. */
+function pcolOf(){ return (SF.game.profile && SF.game.profile.shipColor) || "#3399ff"; }
 
 function reset(){ S = null; }
 
@@ -60,6 +62,7 @@ function begin(){
     erasers: [],
     paletteIdx: -1,         // which act's sky the brush is repainting with
     paintTrail: [],
+    taughtPaint: false,     // the paint rule is explained once, on the first volley
     fakeCard: 0,            // the second fake ending (a sketched results card)
     novaT: 0,
   };
@@ -387,10 +390,29 @@ function update(dt, run, world, simMs){
             x: 60 + (W - 120) * (i + 0.5)/n + rand(-16, 16),
             y: rand(150, 330),
             type: pick(types),
-            ink: 2.4, painted: false,
+            /*
+             * INK is the window you have to fly through a ghost before it
+             * becomes a real enemy, and at 2.4s it was not a window at all.
+             * Measured: a bot flying at full speed straight at the nearest
+             * sketch, ignoring the erasers, the letters and the boss, painted
+             * SIX of thirty over a minute - which is exactly the star's
+             * target. A seven-year-old who also has to dodge was never going
+             * to close the loop, so the rule could not teach itself.
+             */
+            ink: 4.5, painted: false,
           });
         }
         audio.play("telegraph");
+        // The first squadron it draws is the lesson. Said once, plainly, with
+        // the ghosts on screen in front of you.
+        if(!S.taughtPaint){
+          S.taughtPaint = true;
+          run.bannerText = "FLY THROUGH THE SKETCHES";
+          run.bannerSub = "your paint turns them onto OUR side";
+          run.bannerColor = pcolOf();
+          run.bannerUntil = simMs + 4200;
+          SF.comms.say("paintSketch");
+        }
         B.nextAttack = 6.5;
       } else if(B.attack === "eraser"){
         S.erasers.push({
@@ -429,15 +451,26 @@ function update(dt, run, world, simMs){
       sk.ink -= dt;
       // The trail paints it to your side.
       if(!sk.painted){
-        for(let k = 0; k < S.paintTrail.length; k += 2){
+        // A brush, not a needle. At 30px you had to cross the ghost almost
+        // dead centre; the drawn box is 52px across, so grazing it now counts
+        // - which is what "flying through it" looks like to a child.
+        for(let k = 0; k < S.paintTrail.length; k++){
           const tp = S.paintTrail[k];
           const dx = tp.x - sk.x, dy = tp.y - sk.y;
-          if(dx*dx + dy*dy < 30*30){
+          if(dx*dx + dy*dy < 46*46){
             sk.painted = true;
             run.stats.painted++;
             S.allies.push({ x: sk.x, y: sk.y, type: sk.type, t: 12, zap: 1.2 });
-            fx.ring(sk.x, sk.y, 40, "#ffffff", 4, 0.4);
-            fx.text(sk.x, sk.y - 26, "PAINTED!", "#4ade80", 16, true);
+            // Splashed in YOUR paint, and counted out loud: a star you can't
+            // see the progress of is a star nobody chases.
+            fx.ring(sk.x, sk.y, 44, pcolOf(), 5, 0.42);
+            fx.ring(sk.x, sk.y, 24, "#ffffff", 3, 0.3);
+            for(let q = 0; q < 8; q++){
+              const a = q/8*TAU;
+              fx.spark(sk.x, sk.y, Math.cos(a)*130, Math.sin(a)*130, pcolOf(), 0.4, 3);
+            }
+            fx.text(sk.x, sk.y - 26,
+                    "PAINTED!  " + run.stats.painted + "/6", "#4ade80", 17, true);
             audio.play("rescue");
             S.sketches.splice(i, 1);
             break;
@@ -692,17 +725,47 @@ function drawActors(ctx, timeMs){
   if(!S) return;
   const fxnow = timeMs;
 
-  // Sketches: dashed blueprint ghosts filling in as their ink runs out.
+  /*
+   * Sketches: dashed blueprint ghosts filling in as their ink runs out.
+   *
+   * They used to be a dashed box that quietly darkened, which told a child
+   * nothing about the two things that matter: that this is a thing to fly
+   * INTO, and that there is a clock on it. Now the box carries a draining
+   * ring - the ink timer, made of time you can see - and it wears the
+   * pilot's own paint colour on the near edge, so it reads as claimable
+   * rather than as scenery.
+   */
+  const pc = pcolOf();
   for(let i = 0; i < S.sketches.length; i++){
     const sk = S.sketches[i];
     const spr = SF.enemyArt.spriteFor(sk.type, "#9db8e8", false);
+    const k = clamp(1 - sk.ink/4.5, 0, 1);          // 0 fresh -> 1 about to ink
     ctx.save();
     ctx.translate(sk.x, sk.y);
-    const k = clamp(1 - sk.ink/2.4, 0, 1);
+
+    // The claim ring: a full circle of your paint that drains as it inks.
+    ctx.strokeStyle = k > 0.78 ? "rgba(255,93,115,0.95)" : pc;
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 34, -Math.PI/2, -Math.PI/2 + (1-k)*TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(0, 0, 34, 0, TAU); ctx.stroke();
+
+    // A soft target pad, so the middle of it reads as somewhere to BE.
+    const pad = ctx.createRadialGradient(0, 0, 2, 0, 0, 30);
+    pad.addColorStop(0, "rgba(255,255,255,0.16)");
+    pad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = pad;
+    ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill();
+
     ctx.globalAlpha = 0.35 + k*0.5;
     if(spr) ctx.drawImage(spr, -24, -24, 48, 48);
     ctx.globalAlpha = 0.8;
-    ctx.strokeStyle = k > 0.75 ? "rgba(255,93,115,0.9)" : "rgba(130,170,230,0.8)";
+    ctx.strokeStyle = k > 0.78 ? "rgba(255,93,115,0.9)" : "rgba(130,170,230,0.8)";
     ctx.setLineDash([5, 5]);
     ctx.lineDashOffset = -fxnow/60;
     ctx.strokeRect(-26, -26, 52, 52);
@@ -711,7 +774,7 @@ function drawActors(ctx, timeMs){
   }
 
   // Allies: painted in the player's colour, zapping upward.
-  const pcol = (SF.game.profile && SF.game.profile.shipColor) || "#3399ff";
+  const pcol = pcolOf();
   for(let i = 0; i < S.allies.length; i++){
     const al = S.allies[i];
     const spr = SF.enemyArt.spriteFor(al.type, pcol, false);
@@ -945,19 +1008,42 @@ function drawActors(ctx, timeMs){
     ctx.restore();
   }
 
-  // The paint trail: the ship writes in its own colour.
+  /*
+   * The paint trail: the ship writes in its own colour. It was one 10px line
+   * at half alpha, which on a blueprint full of dashed pencil read as another
+   * bit of drawing rather than as YOUR brush - and the whole act turns on
+   * noticing that your ship is now the thing making marks. So: a wide wet
+   * stroke, a brighter core down the middle of it, and a loaded head at the
+   * nose that says the paint is coming from the ship.
+   */
   if(S.paintTrail.length > 2){
     ctx.save();
-    ctx.strokeStyle = pcol;
-    ctx.globalAlpha = 0.5;
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(S.paintTrail[0].x, S.paintTrail[0].y);
-    for(let i = 1; i < S.paintTrail.length; i++)
-      ctx.lineTo(S.paintTrail[i].x, S.paintTrail[i].y);
-    ctx.stroke();
+    const stroke = w => {
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(S.paintTrail[0].x, S.paintTrail[0].y);
+      for(let i = 1; i < S.paintTrail.length; i++)
+        ctx.lineTo(S.paintTrail[i].x, S.paintTrail[i].y);
+      ctx.stroke();
+    };
+    ctx.globalAlpha = 0.30; ctx.strokeStyle = pcol; stroke(22);   // the wet edge
+    ctx.globalAlpha = 0.72; ctx.strokeStyle = pcol; stroke(13);   // the body
+    ctx.globalAlpha = 0.55; ctx.strokeStyle = "#ffffff"; stroke(3.5);  // the core
     ctx.restore();
+    // The loaded head, at the nose: this is where the paint is coming from.
+    const head = S.paintTrail[S.paintTrail.length - 1];
+    if(head){
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(head.x, head.y, 1, head.x, head.y, 26);
+      g.addColorStop(0, pcol);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.5 + Math.sin(fxnow/140)*0.12;
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(head.x, head.y, 26, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
   }
 }
 
