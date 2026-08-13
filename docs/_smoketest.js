@@ -881,6 +881,59 @@ async function run(){
     SF.ui.renderMissions();
   }
 
+  /* ---------- the map reads as a record of what was done ----------
+   * A finished stretch used to look exactly like an unfinished one, and a
+   * locked stop was a grey disc that teased nothing. Both are state the map
+   * already knew and simply wasn't saying.
+   */
+  {
+    const p = SF.ui.getProfile();
+    const keep = p.missions;
+
+    p.missions = {};
+    // Sector 0 is always reachable (mission 1 always is), so the unreached
+    // case has to be a stretch further up the road.
+    check("an untouched stretch reports itself unreached",
+      (() => { const s = SF.ui.sectorStats(1); return !s.reached && s.done === 0 && s.total > 0; })());
+
+    // Three-star the first stretch only.
+    const first = SF.ui.sectorStats(0);
+    for(let i = first.from; i <= first.to; i++){
+      const m = SF.missions.MISSIONS[i];
+      p.missions[m.id] = { cleared:true, stars:{ pilot:(m.objectives||[]).length }, best:{ pilot:1 } };
+    }
+    const perfect = SF.ui.sectorStats(0);
+    check("a stretch with every star in it reads PERFECT",
+      perfect.reached && perfect.cleared && perfect.perfect &&
+      perfect.stars === perfect.starMax);
+
+    // Same stops cleared, one star short: cleared but not perfect.
+    p.missions[SF.missions.MISSIONS[first.from].id].stars.pilot = 1;
+    const cleared = SF.ui.sectorStats(0);
+    check("cleared and perfect are different things",
+      cleared.cleared && !cleared.perfect && cleared.stars < cleared.starMax);
+
+    check("the sectors tile the whole campaign, with no stop in two of them",
+      (() => {
+        let expect = 0;
+        for(let si = 0; si < 11; si++){
+          const s = SF.ui.sectorStats(si);
+          if(s.from !== expect) return false;
+          expect = s.to + 1;
+        }
+        return expect === SF.missions.MISSIONS.length;
+      })());
+
+    p.missions = keep;
+    SF.ui.renderMissions();
+  }
+  // A locked stop is a DRAWING now, so its enemy needs graphite rather than
+  // the near-black cut-out that vanishes against one.
+  check("a locked stop's enemy is drawn in pencil, not in shadow",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /function enemySilPencil/.test(u) &&
+                    /unlocked \? enemySil\(face\.enemy\)\s*:\s*enemySilPencil\(face\.enemy\)/.test(u); })());
+
   /* ---------- iPhone ---------- */
   {
     const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");

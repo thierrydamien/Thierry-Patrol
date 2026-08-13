@@ -879,6 +879,27 @@ function enemySil(type){
   return (silCache[type] = cv);
 }
 /*
+ * The same silhouette in graphite. A locked stop is a DRAWING of a stop now,
+ * and the near-black cut-out that reads perfectly against a lit disc simply
+ * disappeared into the pencil one - so the tease showed nothing, which is
+ * the whole thing it exists to avoid.
+ */
+const silPencilCache = {};
+function enemySilPencil(type){
+  if(silPencilCache[type] !== undefined) return silPencilCache[type];
+  const base = enemySil(type);
+  if(!base) return (silPencilCache[type] = null);
+  const cv = document.createElement("canvas");
+  cv.width = base.width; cv.height = base.height;
+  const k = cv.getContext("2d");
+  if(!k) return (silPencilCache[type] = null);
+  k.drawImage(base, 0, 0);
+  k.globalCompositeOperation = "source-in";
+  k.fillStyle = "#aec3ef";
+  k.fillRect(0, 0, cv.width, cv.height);
+  return (silPencilCache[type] = cv);
+}
+/*
  * How many missions each enemy turns up in. A mission's SIGNATURE enemy is its
  * rarest one, not its most numerous: grunts are the filler in almost every
  * level, so "most bodies" picked the grunt for missions 1, 2, 3, 5 and 7 alike
@@ -1030,6 +1051,36 @@ function debtLabel(d){
   }
   const n = d.total - d.earned;
   return n + " star" + (n > 1 ? "s" : "") + " left";
+}
+
+/*
+ * What a stretch of the route is worth, and how much of it the family owns.
+ * A sector runs from its own stop up to the one before the next sector, so
+ * the spans come out of the SECTORS table rather than being written twice.
+ */
+function sectorStats(si){
+  const from = SECTORS[si].at;
+  const to = (si + 1 < SECTORS.length ? SECTORS[si+1].at : MISSIONS.length) - 1;
+  let done = 0, total = 0, stars = 0, starMax = 0, reached = false;
+  for(let i = from; i <= to && i < MISSIONS.length; i++){
+    const m = MISSIONS[i], rec = profile.missions[m.id];
+    total++;
+    starMax += (m.objectives || []).length;
+    stars += P.starsForMission(profile, m.id);
+    if(rec && rec.cleared) done++;
+    if(isMissionUnlocked(profile, i)) reached = true;
+  }
+  return { from, to, done, total, stars, starMax, reached,
+           cleared: total > 0 && done === total,
+           perfect: total > 0 && starMax > 0 && stars >= starMax };
+}
+
+/** True when both ends of a route segment are fully starred. */
+function masteredSegment(i){
+  const a = MISSIONS[i], b = MISSIONS[i+1];
+  if(!a || !b) return false;
+  return P.starsForMission(profile, a.id) >= (a.objectives || []).length &&
+         P.starsForMission(profile, b.id) >= (b.objectives || []).length;
 }
 
 function renderMissions(){
@@ -1290,19 +1341,38 @@ function drawCampaign(){
   let reached = 0;
   for(let i=0;i<nodes.length;i++) if(isMissionUnlocked(profile, i)) reached = i;
 
-  // The route: travelled stretches are lit, the rest is a faint dashed plan.
+  /*
+   * The route: travelled stretches are lit, the rest is a faint dashed plan -
+   * and a stretch between two fully-starred stops is brighter still, with a
+   * pale core running through it. Three states in one hue, so "mastered"
+   * doesn't invent a colour that fights "travelled".
+   */
   for(let i=0;i<nodes.length-1;i++){
     const a = nodes[i], b = nodes[i+1];
     const done = i < reached;
+    const mastered = done && masteredSegment(i);
+    const curve = () => {
+      ctx.beginPath();
+      ctx.moveTo(px(a), py(a));
+      ctx.quadraticCurveTo((px(a)+px(b))/2 + (i%2 ? 70 : -70), (py(a)+py(b))/2, px(b), py(b));
+      ctx.stroke();
+    };
     ctx.save();
     ctx.setLineDash(done ? [] : [10, 12]);
-    ctx.lineWidth = done ? 5 : 3;
-    ctx.strokeStyle = done ? "rgba(245,166,35,0.75)" : "rgba(255,255,255,0.16)";
-    if(done){ ctx.shadowColor = "rgba(245,166,35,0.7)"; ctx.shadowBlur = 12; }
-    ctx.beginPath();
-    ctx.moveTo(px(a), py(a));
-    ctx.quadraticCurveTo((px(a)+px(b))/2 + (i%2 ? 70 : -70), (py(a)+py(b))/2, px(b), py(b));
-    ctx.stroke();
+    ctx.lineWidth = done ? (mastered ? 6 : 5) : 3;
+    ctx.strokeStyle = mastered ? "rgba(255,205,70,0.95)"
+                    : done ? "rgba(245,166,35,0.75)" : "rgba(255,255,255,0.16)";
+    if(done){
+      ctx.shadowColor = mastered ? "rgba(255,214,90,0.95)" : "rgba(245,166,35,0.7)";
+      ctx.shadowBlur = mastered ? 18 : 12;
+    }
+    curve();
+    if(mastered){                       // the pale core - a polished road
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = "rgba(255,248,214,0.75)";
+      curve();
+    }
     ctx.restore();
   }
 
@@ -1331,18 +1401,62 @@ function drawCampaign(){
     ctx.restore();
   }
 
-  SECTORS.forEach(sec => {
+  /*
+   * The sectors keep score. A stretch you have finished used to look exactly
+   * like one you had not - the same grey words floating beside the route -
+   * so scrolling the map told you nothing about what the family had actually
+   * done. Now each stretch carries its own state: how many stops are down,
+   * a green CLEARED when they all are, and gold when every star in it is
+   * home. Scrolling the campaign reads as a record instead of a list.
+   */
+  SECTORS.forEach((sec, si) => {
     const n = nodes[sec.at];
     if(!n) return;
+    const st = sectorStats(si);
+    const state = !st.reached ? "locked" : st.perfect ? "perfect" : st.cleared ? "cleared" : "open";
+    const tint = { locked:"#8e96b8", open:"#cfd8ff", cleared:"#6ee7a8", perfect:"#ffd23f" }[state];
+    const note = { locked:"LOCKED",
+                   open: st.done + " / " + st.total + " STOPS",
+                   cleared:"SECTOR CLEARED",
+                   perfect:"PERFECT  ★ " + st.stars + "/" + st.starMax }[state];
     ctx.save();
-    ctx.globalAlpha = isMissionUnlocked(profile, sec.at) ? 0.5 : 0.22;
-    ctx.fillStyle = "#cfd8ff";
-    ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
     // Opposite side to the ship marker, and clear of the node itself.
     const away = n.x > 0.5 ? -1 : 1;
+    const lx = px(n) + away*74, ly = py(n) - 2;
     ctx.textAlign = away < 0 ? "right" : "left";
+
+    // A rule running out to the frame edge: the ribbon that makes a stretch
+    // read as a stretch rather than a caption on one stop.
+    const grad = ctx.createLinearGradient(lx, 0, lx + away*190, 0);
+    grad.addColorStop(0, tint);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = state === "perfect" ? 2.5 : 1.5;
+    ctx.globalAlpha *= 0.5;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly + 6); ctx.lineTo(lx + away*190, ly + 6);
+    ctx.stroke();
+    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
+
+    if(state === "perfect"){                 // a mastered stretch gets a glow
+      ctx.save();
+      ctx.shadowColor = "rgba(255,210,63,0.75)"; ctx.shadowBlur = 14;
+      ctx.fillStyle = tint;
+      ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
+      ctx.letterSpacing = "3px";
+      ctx.fillText(sec.name, lx, ly);
+      ctx.restore();
+    }
+    ctx.fillStyle = tint;
+    ctx.font = "bold 15px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "3px";
-    ctx.fillText(sec.name, px(n) + away*74, py(n) - 2);
+    ctx.fillText(sec.name, lx, ly);
+    ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
+    ctx.letterSpacing = "1.5px";
+    ctx.globalAlpha *= 0.85;
+    ctx.fillText(note, lx, ly + 17);
+    ctx.letterSpacing = "0px";
     ctx.restore();
   });
 
@@ -1539,14 +1653,32 @@ function drawCampaign(){
         g.addColorStop(0, boss ? "#ff7a90" : face.c0);
         g.addColorStop(1, boss ? "#7a1226" : face.c1);
       }
-      else { g.addColorStop(0, "#3a3f57"); g.addColorStop(1, "#191c2c"); }
+      // Locked, and drawn rather than greyed: the same graphite the workshop
+      // sketches Sky 29 in. A stop you cannot fly yet was a dead grey disc,
+      // which is the one thing the road ahead should never be - it is the
+      // part of the map a kid is supposed to want. Now it is a drawing of
+      // the stop, waiting to be painted in, and the enemy in it is legible.
+      else { g.addColorStop(0, "#242a3e"); g.addColorStop(1, "#12151f"); }
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+      if(!unlocked){
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x, y, R-2, 0, Math.PI*2); ctx.clip();
+        ctx.strokeStyle = "rgba(150,166,215,0.16)";
+        ctx.lineWidth = 1.4;
+        for(let h = -R*2; h <= R*2; h += 8){    // pencil hatching
+          ctx.beginPath();
+          ctx.moveTo(x - R + h, y - R); ctx.lineTo(x + h, y + R);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // The mission's own enemy, riding inside the disc. Clipped to the rim so
       // eighteen stops stay eighteen tidy circles, and kept faint so it reads
       // as the stop's character rather than competing with its number.
-      const sprite = face.enemy && enemySil(face.enemy);
+      const sprite = face.enemy && (unlocked ? enemySil(face.enemy)
+                                             : enemySilPencil(face.enemy));
       if(sprite){
         ctx.save();
         ctx.beginPath(); ctx.arc(x, y, R-2, 0, Math.PI*2); ctx.clip();
@@ -1559,18 +1691,30 @@ function drawCampaign(){
           ctx.fillStyle = eg;
           ctx.fillRect(x-R, y-R, R*2, R*2);
         }
-        ctx.globalAlpha = unlocked ? 0.62 : 0.2;
+        // 0.2 was a ghost - the tease only works if you can see what it is.
+        ctx.globalAlpha = unlocked ? 0.62 : 0.62;
         // Wide ships lose their wingtips to the rim at full width, and the
         // wingtips are exactly what tells a weaver from a grunt.
         const box = R*1.72;
         ctx.drawImage(sprite, x - box/2, y - box/2, box, box);
         ctx.restore();
       }
+      if(!unlocked){                        // the dashed pencil rim, over it all
+        ctx.save();
+        ctx.setLineDash([5, 6]);
+        ctx.strokeStyle = "rgba(170,186,235,0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+      }
 
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = earned === 3 ? "#ffd23f"
-                      : unlocked ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.15)";
-      ctx.stroke();
+      // A locked stop already wears its pencil rim; a second faint ring over
+      // the dashes only fills them back in.
+      if(unlocked){
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = earned === 3 ? "#ffd23f" : "rgba(255,255,255,0.55)";
+        ctx.stroke();
+      }
 
       ctx.textAlign = "center";
       // A number over artwork needs its own backing or it dissolves into the
@@ -3921,6 +4065,7 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile,
+          sectorStats,                  // the map's per-stretch scoreboard
           // The Drawing Board's doors into the app: launch a drawn sky, and
           // borrow the game's own dialog instead of window.prompt/confirm.
           launchCustom,
