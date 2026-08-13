@@ -793,6 +793,87 @@ function buildSky(W, H){
     }
     c.closePath(); c.fill(); c.stroke();
   }
+
+  /*
+   * THE EDGE OF THE MAP. Everything above here is torn away: no printed sky,
+   * just the drafting paper the chart was drawn on, with the grid, the compass
+   * circles, the roughed-in stars and his handwriting still on it. Their star
+   * is up here too, pencilled and never inked. The point is that arriving at
+   * Sky 29 should not feel like arriving at stop twenty-nine - it should feel
+   * like flying off the end of everything anyone finished drawing.
+   */
+  const tearY = mapTearY(H);
+  const edge = [];                                   // the torn lip, left to right
+  for(let x = -20; x <= W + 40; x += 22)
+    edge.push([x, tearY + (skyRand(x*0.37 + 900) - 0.5)*30 + Math.sin(x*0.021)*10]);
+
+  c.save();
+  c.beginPath();                                     // clip to everything ABOVE the rip
+  c.moveTo(-20, 0); c.lineTo(W + 40, 0);
+  for(let i = edge.length - 1; i >= 0; i--) c.lineTo(edge[i][0], edge[i][1]);
+  c.closePath();
+  c.clip();
+
+  const paper = c.createLinearGradient(0, 0, 0, tearY + 40);
+  paper.addColorStop(0, "#0a0c18");
+  paper.addColorStop(1, "#141931");
+  c.fillStyle = paper; c.fillRect(-20, 0, W + 60, tearY + 60);
+
+  c.strokeStyle = "rgba(150,170,220,0.09)"; c.lineWidth = 1;   // the drafting grid
+  for(let x = 0; x <= W; x += 34){ c.beginPath(); c.moveTo(x, 0); c.lineTo(x, tearY + 40); c.stroke(); }
+  for(let y = 0; y <= tearY + 40; y += 34){ c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+
+  c.setLineDash([7, 8]);                             // circles for planets never painted
+  c.strokeStyle = "rgba(174,195,239,0.30)"; c.lineWidth = 1.6;
+  [[0.26, 0.62, 0.17], [0.76, 0.30, 0.10], [0.56, 0.86, 0.06]].forEach(([x, y, r]) => {
+    c.beginPath(); c.arc(x*W, y*tearY, r*W, 0, Math.PI*2); c.stroke();
+  });
+  // Their star, roughed in and abandoned: the ring plus the rays you draw
+  // first and ink last. It was a painted red giant before the tear reached it.
+  const gx = W*0.12, gy = H*0.035, gr = W*0.085;
+  c.beginPath(); c.arc(gx, gy, gr, 0, Math.PI*2); c.stroke();
+  c.setLineDash([]);
+  c.strokeStyle = "rgba(174,195,239,0.26)"; c.lineWidth = 1.2;
+  for(let i=0;i<10;i++){
+    const a = i/10*Math.PI*2 + 0.3;
+    c.beginPath();
+    c.moveTo(gx + Math.cos(a)*gr*1.15, gy + Math.sin(a)*gr*1.15);
+    c.lineTo(gx + Math.cos(a)*gr*1.5, gy + Math.sin(a)*gr*1.5);
+    c.stroke();
+  }
+
+  c.strokeStyle = "rgba(174,195,239,0.40)"; c.lineWidth = 1.2;  // stars, roughed as crosses
+  for(let i=0;i<26;i++){
+    const x = skyRand(i+960)*W, y = skyRand(i+1000)*tearY, s = 3 + skyRand(i+1040)*4;
+    c.beginPath();
+    c.moveTo(x - s, y); c.lineTo(x + s, y);
+    c.moveTo(x, y - s); c.lineTo(x, y + s);
+    c.stroke();
+  }
+
+  // His handwriting, still on the page - kept high and central, where neither
+  // the last stop nor its sector ribbon can sit on top of it.
+  c.fillStyle = "rgba(186,204,245,0.55)";
+  c.font = "italic 16px Rajdhani, Arial, sans-serif";
+  c.textAlign = "left";
+  c.fillText("sky 29 — for the boys", W*0.33, tearY*0.13);
+  c.fillStyle = "rgba(174,195,239,0.32)";
+  c.font = "italic 12px Rajdhani, Arial, sans-serif";
+  c.fillText("never finished it", W*0.33, tearY*0.13 + 19);
+  c.fillText("their star", gx - gr*0.35, gy + gr + 16);
+  c.restore();
+
+  // The lip: a dark under-edge with a pale paper edge riding on it. Two
+  // strokes are what make this read as TORN instead of as a second backdrop.
+  const lip = () => {
+    c.beginPath();
+    c.moveTo(edge[0][0], edge[0][1]);
+    for(let i=1;i<edge.length;i++) c.lineTo(edge[i][0], edge[i][1]);
+    c.stroke();
+  };
+  c.lineJoin = "round";
+  c.strokeStyle = "rgba(3,4,12,0.85)"; c.lineWidth = 7; lip();
+  c.strokeStyle = "rgba(214,226,255,0.45)"; c.lineWidth = 2; lip();
   return cv;
 }
 
@@ -1051,6 +1132,14 @@ const ROUTE_SPAN = 0.80;        // fraction of the height the route occupies
 function mapHeight(){
   return Math.round(ROUTE_GAP * (MISSIONS.length - 1) / ROUTE_SPAN);
 }
+
+/**
+ * Where the printed chart runs out. Sky 29 is not another stop on the route -
+ * it is the one Papa never finished - so the map itself is TORN just short of
+ * it, and the last stop floats on bare drafting paper above the rip. Both the
+ * baked backdrop and the live layer need the same line, hence a function.
+ */
+function mapTearY(H){ return H*(0.90 - ROUTE_SPAN) + ROUTE_GAP*0.55; }
 
 function campaignLayout(){
   const n = MISSIONS.length;
@@ -1376,7 +1465,11 @@ function drawCampaign(){
   campaign.sky = campaign.sky || buildSky(W, H);
   ctx.drawImage(campaign.sky, 0, 0);
 
+  // Stars only twinkle where there is still a sky to twinkle in: above the
+  // tear the map is paper, and paper does not shine.
+  const tearY = mapTearY(H);
   campaign.stars.forEach(s => {
+    if(s.y*H < tearY) return;
     ctx.globalAlpha = 0.35 + Math.sin(t*1.6 + s.tw)*0.3;
     ctx.fillStyle = "#dbe6ff";
     ctx.fillRect(s.x*W, s.y*H, s.r, s.r);
@@ -1387,7 +1480,8 @@ function drawCampaign(){
   {
     const period = 5.5, k = Math.floor(t/period), f = (t - k*period)/1.1;
     if(f < 1){
-      const sx = (0.1 + skyRand(k*5+1)*0.8)*W, sy = skyRand(k*5+2)*H;
+      const sx = (0.1 + skyRand(k*5+1)*0.8)*W;
+      const sy = tearY + skyRand(k*5+2)*(H - tearY);   // never across the paper
       const ang = 2.2 + skyRand(k*5+3)*0.7;
       const d = f*260, LEN = 70;
       const ex = sx + Math.cos(ang)*d, ey = sy + Math.sin(ang)*d;
@@ -1417,6 +1511,9 @@ function drawCampaign(){
     const a = nodes[i], b = nodes[i+1];
     const done = i < reached;
     const mastered = done && masteredSegment(i);
+    // The last leg leaves the chart. However much of the route you have lit,
+    // the road to Sky 29 stays a pencil line - there was never a road there.
+    const offMap = !!b.mission.gift;
     const curve = () => {
       ctx.beginPath();
       ctx.moveTo(px(a), py(a));
@@ -1424,6 +1521,14 @@ function drawCampaign(){
       ctx.stroke();
     };
     ctx.save();
+    if(offMap){
+      ctx.setLineDash([9, 12]);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = done ? "rgba(214,226,255,0.6)" : "rgba(174,195,239,0.26)";
+      curve();
+      ctx.restore();
+      continue;
+    }
     ctx.setLineDash(done ? [] : [10, 12]);
     ctx.lineWidth = done ? (mastered ? 6 : 5) : 3;
     ctx.strokeStyle = mastered ? "rgba(255,205,70,0.95)"
@@ -1444,7 +1549,10 @@ function drawCampaign(){
 
   // A little supply convoy runs the lit stretch: the road you opened is in
   // use. Three gold sparks chasing each other up the route, nothing more.
-  if(reached > 0){
+  // ...but only as far as the chart goes. Supply runs don't leave the map.
+  const roadEnd = Math.min(reached, nodes.length - 1 -
+                           (nodes[nodes.length-1].mission.gift ? 1 : 0));
+  if(roadEnd > 0){
     const quad = (a, b, i, u) => {
       const cx = (px(a)+px(b))/2 + (i%2 ? 70 : -70), cy = (py(a)+py(b))/2;
       const q = 1-u;
@@ -1453,8 +1561,8 @@ function drawCampaign(){
     ctx.save();
     ctx.lineCap = "round";
     for(let j=0;j<3;j++){
-      const u = ((t*0.16 + j*0.37) % 1) * reached;
-      const seg = Math.min(reached-1, Math.floor(u));
+      const u = ((t*0.16 + j*0.37) % 1) * roadEnd;
+      const seg = Math.min(roadEnd-1, Math.floor(u));
       const f = u - seg;
       const [hx, hy] = quad(nodes[seg], nodes[seg+1], seg, f);
       const [tx2, ty2] = quad(nodes[seg], nodes[seg+1], seg, Math.max(0, f-0.05));

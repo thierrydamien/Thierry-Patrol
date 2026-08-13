@@ -961,6 +961,22 @@ async function run(){
              return /function enemySilPencil/.test(u) &&
                     /unlocked \? enemySil\(face\.enemy\)\s*:\s*enemySilPencil\(face\.enemy\)/.test(u); })());
 
+  // Sky 29 is an ENDING, not stop twenty-nine. The chart is torn short of it,
+  // the last leg is a pencil line, and nothing that belongs to a painted sky -
+  // twinkling stars, shooting stars, the supply convoy - crosses the rip.
+  check("the campaign map is torn short of Sky 29",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /function mapTearY/.test(u) &&
+                    /THE EDGE OF THE MAP/.test(u) &&
+                    /sky 29 — for the boys/.test(u); })());
+  check("the last leg of the route is drawn in pencil",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /const offMap = !!b\.mission\.gift/.test(u); })());
+  check("nothing from a painted sky crosses the tear",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /if\(s\.y\*H < tearY\) return;/.test(u) &&      // no twinkle on paper
+                    /const roadEnd = Math\.min\(reached/.test(u); })());  // convoy stays on the map
+
   /* ---------- iPhone ---------- */
   {
     const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
