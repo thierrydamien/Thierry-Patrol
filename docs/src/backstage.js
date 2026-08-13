@@ -152,13 +152,32 @@ function update(dt, run, world, simMs){
       const p = world.player;
       const lv = id => SF.profile.upgradeLevel(SF.game.profile, id);
       const dps = p ? p.dps : 60;
+      /*
+       * SIZING A DUEL AGAINST A SHIP-SIZED BOSS.
+       *
+       * The old bar was dps * 16 with a 27px hit radius, and measured, that
+       * is a fight nobody finishes. Two reasons, both invisible on paper.
+       * A real boss is a 300px hull with a ~126px hitbox, so a fanned spread
+       * lands nearly all of it; this thing is the size of your own ship, so
+       * most of the fan flies past and only ~11 of a 65-dps loadout ever
+       * arrives. And the bar ignored difficulty.bossHp, so ROOKIE faced the
+       * same wall as NIGHTMARE.
+       *
+       * So: a hitbox that matches its role rather than its sprite, and a
+       * pool derived from what actually lands. Measured at ~22s on PILOT.
+       */
+      const diff = (SF.game.run && SF.game.run.difficulty) || { bossHp: 1 };
+      const pool = Math.round(dps * 3.2 * (diff.bossHp || 1));
       S.mirror = {
-        x: W/2, y: -60, r: 22,
-        hp: Math.round(dps * 16), maxHp: Math.round(dps * 16),
+        x: W/2, y: -60, r: 34,
+        hp: pool, maxHp: pool,
         holdY: 190, vx: 0,
         fireTimer: 1.2, dodgeCool: 0, tell: 0, dodgeDir: 0,
         spread: lv("spread"), rapid: lv("rapid"),
         bombs: 2, nextBombAt: 0.66,
+        // The duel breathes: it mirrors and shoots, then it OPENS - drifts to
+        // the middle, holds still, stops firing - and that is your turn.
+        mode: "mirror", modeT: 3.2, taught: false,
         flash: 0, t: 0,
       };
       S.stage = "mirror"; S.t = 0;
@@ -174,8 +193,50 @@ function update(dt, run, world, simMs){
     const m = S.mirror, p = world.player;
     m.t += dt;
     m.flash = Math.max(0, m.flash - dt*4);
-    // Arrive, then hold a mirrored lane: your x, reflected.
+    /*
+     * THE FIGHT'S RHYTHM.
+     *
+     * Mirroring your lane is the whole idea of this boss, and on its own it
+     * made the duel unwinnable: your guns fire straight up from your x, and
+     * it sits at W - x, so the ONLY place you are lined up with it is dead
+     * centre - which is also the only place its volley lands on you. Safe and
+     * able-to-shoot were mutually exclusive, so a good player could dodge
+     * forever and never take its health down.
+     *
+     * So it breathes. It mirrors and shoots for a few seconds, then OPENS:
+     * drifts to the middle, holds, stops firing, stops dodging, and cannot be
+     * bumped into. Dodge its turn, take yours. The reflection still reads -
+     * it is your ship, flying your loadout - it just no longer stands where
+     * you cannot reach it forever.
+     */
+    if(m.y >= m.holdY){
+      m.modeT -= dt;
+      if(m.modeT <= 0){
+        if(m.mode === "mirror"){
+          m.mode = "open"; m.modeT = 3.0;
+          m.dodgeDir = 0; m.dodgeUsed = 0;
+          audio.play("telegraph");
+          if(!m.taught){                 // teach the window the first time
+            m.taught = true;
+            run.bannerText = "IT'S WIDE OPEN";
+            run.bannerSub = "when it stops, SHOOT IT";
+            run.bannerColor = "#4ade80";
+            run.bannerUntil = simMs + 2600;
+          }
+        } else {
+          m.mode = "mirror"; m.modeT = 3.2;
+          m.fireTimer = Math.max(m.fireTimer, 0.7);   // room to slide away
+        }
+      }
+    }
+    // Arrive, then hold a mirrored lane: your x, reflected. Except when it is
+    // open, where it comes to the middle and waits - a target you can reach
+    // from anywhere rather than one that is always exactly opposite you.
     if(m.y < m.holdY) m.y += 130 * dt;
+    else if(m.mode === "open"){
+      m.x = lerp(m.x, W/2, Math.min(1, dt*1.6));
+      m.y = m.holdY + Math.sin(m.t*1.3)*10;
+    }
     else if(p){
       const lane = W - p.x;
       m.x = lerp(m.x, lane, Math.min(1, dt*2.2));
@@ -183,7 +244,7 @@ function update(dt, run, world, simMs){
     }
     // It shoots YOUR guns back: your spread pattern, your fire rate.
     m.fireTimer -= dt;
-    if(m.fireTimer <= 0 && m.y > 40){
+    if(m.fireTimer <= 0 && m.y > 40 && m.mode === "mirror"){
       const angles = SF.config.spreadPattern(m.spread);
       for(let i = 0; i < angles.length; i++){
         const a = Math.PI/2 + angles[i]/600;      // down, fanned like yours
@@ -196,7 +257,7 @@ function update(dt, run, world, simMs){
     // It dodges like the rival - on a cooldown, with a tell.
     m.dodgeCool = Math.max(0, m.dodgeCool - dt);
     m.tell = Math.max(0, m.tell - dt);
-    if(!m.dodgeDir && m.dodgeCool <= 0){
+    if(!m.dodgeDir && m.dodgeCool <= 0 && m.mode === "mirror"){
       const bs = world.bullets.items;
       for(let i = 0; i < bs.length; i++){
         const b = bs[i];
@@ -223,11 +284,19 @@ function update(dt, run, world, simMs){
       const dx = b.x - m.x, dy = b.y - m.y;
       if(dx*dx + dy*dy < (m.r + 5)*(m.r + 5)){
         b.alive = false;
-        m.hp -= b.damage || 1;
+        /*
+         * An open guard is worth double. Shrinking the pool instead would
+         * have made the bar flicker away in a handful of volleys; this keeps
+         * the duel long enough to feel like one while paying out hard for
+         * the thing the fight is teaching - wait, then hit.
+         */
+        const mult = m.mode === "open" ? 2 : 1;
+        const hit = (b.damage || 1) * mult;
+        m.hp -= hit;
         m.flash = 1;
-        fx.spark(b.x, b.y, 0, -60, "#e8c14a", 0.3, 2);
+        fx.spark(b.x, b.y, 0, -60, mult > 1 ? "#4ade80" : "#e8c14a", 0.3, 2);
         if(SF.game.run) SF.game.run.stats.damageDealt =
-          (SF.game.run.stats.damageDealt || 0) + (b.damage || 1);
+          (SF.game.run.stats.damageDealt || 0) + hit;
       }
     }
     // At each third of health it plays YOUR panic button: a bomb that
@@ -241,8 +310,11 @@ function update(dt, run, world, simMs){
       audio.play("bomb");
       SF.comms.say("mirrorBomb");
     }
-    // Ram guard: standing under it hurts (gently - it is still a duel).
-    if(p && p.alive && Math.hypot(p.x - m.x, p.y - m.y) < m.r + 16)
+    // Ram guard: standing under it hurts (gently - it is still a duel). Not
+    // while it is open, though: the window is the one moment the fight tells
+    // you to come and get it, and punishing that teaches the wrong lesson.
+    if(m.mode === "mirror" && p && p.alive &&
+       Math.hypot(p.x - m.x, p.y - m.y) < m.r + 16)
       SF.game.hurtPlayer && SF.game.hurtPlayer("mirror");
     if(m.hp <= 0){
       S.stage = "tear"; S.t = 0;
@@ -721,6 +793,31 @@ function drawActors(ctx, timeMs){
       ctx.beginPath();
       ctx.arc(m.x, m.y, 30, 0, TAU);
       ctx.stroke();
+    }
+    /*
+     * The open window, said in green - the game's own colour for "this is
+     * good for you". Guns cold, a target ring, and a countdown arc that runs
+     * out, so a seven-year-old can see the turn coming and see it ending.
+     */
+    if(m.mode === "open"){
+      const k = clamp(m.modeT / 3.0, 0, 1);
+      const pulse = 0.55 + Math.sin(m.t*9)*0.45;
+      ctx.save();
+      ctx.strokeStyle = "rgba(74,222,128," + (0.45 + pulse*0.45).toFixed(2) + ")";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(m.x, m.y, 40 + pulse*5, 0, TAU); ctx.stroke();
+      // the turn running out
+      ctx.strokeStyle = "rgba(74,222,128,0.95)";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 52, -Math.PI/2, -Math.PI/2 + TAU*k);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(74,222,128,0.95)";
+      ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("OPEN!", m.x, m.y - 62);
+      ctx.restore();
     }
   }
 

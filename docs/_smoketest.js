@@ -436,6 +436,18 @@ async function run(){
   check("painting the sky pays a paint that is never sold",
     SF.config.PAINTS.some(pt => pt.id === "sky29" && pt.secret));
   /*
+   * The Mirror Pilot's duel contract. It shipped unwinnable once: a bar
+   * sized for a boss you could always shoot, on a boss that stood exactly
+   * where you couldn't. The fight now breathes (mirror -> open), the open
+   * guard pays double, and the pool respects the difficulty tier. Pinned at
+   * the source level because the numbers ARE the design.
+   */
+  check("the mirror duel breathes, pays out, and scales",
+    (() => { const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+             return /dps \* 3\.2 \* \(diff\.bossHp \|\| 1\)/.test(b) &&   // tier-scaled pool
+                    /m\.mode === "open" \? 2 : 1/.test(b) &&            // open guard pays double
+                    /mode: "mirror", modeT/.test(b); })());             // the rhythm exists
+  /*
    * The opening card is the only instruction a child actually gets mid-flight,
    * so it is held to kid rules: every mission must have one, it must be short
    * enough to read at a glance AND to fit the 600px canvas at 19px, and it
