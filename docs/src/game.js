@@ -309,10 +309,14 @@ function startMission(missionIndex, difficultyId){
   const test = missionIndex === "test";
   const rush = missionIndex === "rush";
   const vault = missionIndex === "vault";
+  // A mission OBJECT is a Drawing Board sky: the family draws them, so they
+  // arrive as data rather than as an index into the campaign.
+  const custom = !!missionIndex && typeof missionIndex === "object";
   // Replayable on request: the door never locks. Only the SOLAR GOLD paint
   // is one-time (see endMission) - `vaultDone` still gates that, it just no
   // longer gates the mission itself.
-  const mission = wacky ? SF.wacky.build()
+  const mission = custom ? missionIndex
+                : wacky ? SF.wacky.build()
                 : test  ? buildTestRange()
                 : rush  ? buildBossRush()
                 : vault ? buildStarVault()
@@ -331,7 +335,8 @@ function startMission(missionIndex, difficultyId){
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   game.world.mods = mission.mods || {};   // the Wacky Sky's roll; {} elsewhere
-  SF.render.initBackground(wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
+  SF.render.initBackground(custom ? (mission.skyIndex || 0)
+                          : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
   const loadout = buildLoadout(profile, difficulty);
   game.world.createPlayer(loadout);
@@ -592,6 +597,17 @@ function endMission(completed){
     if(endlessNewBest) profile.endlessBest = run.score;
     const sec = Math.round(run.time);
     if(sec > (profile.endlessLongest || 0)) profile.endlessLongest = sec;
+    P.save(profile);
+  } else if(run.mission.custom){
+    // A Drawing Board sky keeps its own book: best score per sky, per pilot,
+    // synced with the profile - so a brother's record chip is stealable. The
+    // campaign ledger (records, lastMission, stories) never hears about it.
+    if(completed){
+      const wb = profile.workshopBest = profile.workshopBest || {};
+      const prev = wb[run.mission.id];
+      if(!prev || run.score > prev.score)
+        wb[run.mission.id] = { score: run.score, at: Date.now() };
+    }
     P.save(profile);
   } else {
     profile.lastMission = run.mission.id;

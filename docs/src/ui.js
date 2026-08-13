@@ -358,6 +358,12 @@ function renderMenu(){
       : bosses + " boss" + (bosses > 1 ? "es" : "") + " in the queue · best " +
         (profile.bossRushBest || 0) + " down");
   }
+  {
+    const drawn = SF.workshop ? SF.workshop.familySkies().length : 0;
+    setSub("workshopSub", drawn
+      ? drawn + " sk" + (drawn > 1 ? "ies" : "y") + " on the family board"
+      : "draw a sky, dare the family");
+  }
   setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
   {
     const owed = P.unclaimedMedals(profile);
@@ -459,6 +465,19 @@ function drawMenuIcons(){
     c.lineWidth = 0;
     c.beginPath(); c.arc(24, 52, 11, -0.6, Math.PI*1.35); c.lineWidth = 8; c.stroke();
     c.beginPath(); c.arc(56, 20, 11, Math.PI - 0.6, Math.PI*2.35); c.stroke();
+  });
+
+  paint("workshopBtn", c => {           // the Royal Brush, at rest
+    glowSet(c, "#c9b458");
+    c.strokeStyle = "#c9b458"; c.lineWidth = 8; c.lineCap = "round";
+    c.beginPath(); c.moveTo(52, 12); c.lineTo(34, 34); c.stroke();   // handle
+    c.fillStyle = "#c9b458";
+    c.beginPath();                                                    // bristles
+    c.moveTo(34, 30); c.lineTo(42, 38); c.lineTo(26, 56); c.quadraticCurveTo(18, 60, 16, 52);
+    c.closePath(); c.fill();
+    c.shadowBlur = 0;
+    c.fillStyle = "#ff9e7d";                                          // a wet drop
+    c.beginPath(); c.arc(20, 62, 4.5, 0, Math.PI*2); c.fill();
   });
 
   paint("achievementsBtn", c => {       // a medal on its ribbon
@@ -3021,7 +3040,7 @@ function showResults(result){
   // losses on a harder tier, the easier way down is one tap. The arcade modes
   // (wacky, rush) run at a fixed tier, so they never offer it.
   $("rookieBtn").classList.toggle("hidden",
-    !(!endless && !rush && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
+    !(!endless && !rush && !run.mission.custom && !completed && failStreak && failStreak.n >= 2 && run.difficulty.id !== "rookie"));
 
   // Combat's over: a win keeps the calm menu theme the victory lap started;
   // a loss gets the ten-second defeat sting, which hands back to the menu.
@@ -3561,6 +3580,12 @@ click($("rushBtn"), () => {
   launch("rush", "pilot");
 });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
+click($("workshopBtn"), () => { SF.workshop.open(); show("screen-workshop"); });
+click($("wsBackBtn"), () => { renderMenu(); show("screen-menu"); });
+/** Launch a Drawing Board sky. Fixed at NORMAL so the family records are fair. */
+function launchCustom(missionObj){
+  launch(missionObj, "pilot");
+}
 click($("hangarCompareBtn"), () => { hangar.compare = !hangar.compare; renderArmory(); });
 // The firing range: feel the ship you just built, ten seconds after buying it.
 click($("testFlightBtn"), () => launch("test", "pilot"));
@@ -3635,6 +3660,7 @@ SF.game.onMissionEnd = (result) => {
    BOOT
    --------------------------------------------------------- */
 SF.game.attach($("game"), document.querySelector(".game-frame"), $("screen-game"));
+SF.workshop.init();               // the Drawing Board wires its own controls
 paintMuteBtn();
 // The chrome's drawn glyphs: ability buttons and the settings gears. Painted
 // once at boot - they never change shape, only visibility.
@@ -3746,5 +3772,10 @@ if("serviceWorker" in navigator){
 SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
-          getProfile: () => profile };
+          getProfile: () => profile,
+          // The Drawing Board's doors into the app: launch a drawn sky, and
+          // borrow the game's own dialog instead of window.prompt/confirm.
+          launchCustom,
+          textDialog: opts => dialog(opts),
+          confirmDialog: opts => dialog(opts).then(v => v !== null) };
 })();

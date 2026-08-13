@@ -338,6 +338,8 @@ html, body {
              background: linear-gradient(90deg, rgba(255,210,63,0.10), rgba(255,255,255,0.07) 45%); }
 .mb-rush   { border-left:3px solid rgba(255,93,115,0.85);
              background: linear-gradient(90deg, rgba(255,93,115,0.10), rgba(255,255,255,0.07) 45%); }
+.mb-board  { border-left:3px solid rgba(201,180,88,0.85);
+             background: linear-gradient(90deg, rgba(201,180,88,0.10), rgba(255,255,255,0.07) 45%); }
 .mb-armory { border-left:3px solid rgba(124,196,255,0.85);
              background: linear-gradient(90deg, rgba(124,196,255,0.10), rgba(255,255,255,0.07) 45%); }
 .mb-medals { border-left:3px solid rgba(74,222,128,0.85);
@@ -1401,3 +1403,68 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 
 /* The campaign header's one-line legend for the record chips. */
 .map-legend { font-style: normal; color: var(--ink-faint); }
+
+/* ---------------- THE DRAWING BOARD ---------------- */
+/* Chips cycle and steppers step: everything on this screen is a tap, sized
+   for the same thumbs the game is. */
+.ws-name-row {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; padding:12px 14px; margin-bottom:4px;
+}
+.ws-name-row span { font-weight:700; font-size:19px; letter-spacing:1px; }
+.ws-name-row .ghost-btn { margin:0; padding:8px 14px; }
+.ws-label { margin-top:14px; }
+.ws-chips { display:flex; flex-wrap:wrap; gap:7px; width:100%; }
+.ws-chip {
+  display:inline-flex; align-items:center; gap:7px;
+  font-family:inherit; font-weight:700; font-size:11px; letter-spacing:0.6px;
+  color: rgba(255,255,255,0.6); background: rgba(0,0,0,0.30);
+  border:2px solid transparent; border-radius:12px; padding:7px 11px; cursor:pointer;
+}
+.ws-chip.active { color:#fff; border-color: var(--accent); background: rgba(245,166,35,0.14); }
+.ws-dot { width:11px; height:11px; border-radius:50%; box-shadow: 0 0 6px currentColor; }
+.ws-waves { display:flex; flex-direction:column; gap:7px; width:100%; }
+.ws-wave {
+  display:flex; align-items:center; gap:8px; width:100%;
+  background: rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px; padding:7px 9px;
+}
+.ws-sprite { width:34px; height:34px; flex:0 0 auto; }
+.ws-cycle {
+  font-family:inherit; font-weight:700; letter-spacing:0.5px; cursor:pointer;
+  background: rgba(255,255,255,0.07); color:#fff;
+  border:1px solid rgba(255,255,255,0.18); border-radius:10px; padding:8px 6px;
+}
+.ws-type { flex:1.2 1 0; min-width:0; font-size:12px;
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ws-form { flex:1 1 0; min-width:0; font-size:10.5px; color: rgba(255,255,255,0.75);
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ws-count { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+.ws-count button {
+  width:28px; height:28px; border-radius:9px; cursor:pointer; font-weight:800; font-size:15px;
+  font-family:inherit; background: rgba(255,255,255,0.10); color:#fff; border:none;
+}
+.ws-count b { min-width:34px; text-align:center; font-size:13px; }
+.ws-mini {
+  width:30px; height:30px; flex:0 0 auto; border-radius:9px; cursor:pointer;
+  font-size:14px; font-family:inherit; background: rgba(255,255,255,0.08);
+  color:#fff; border:none;
+}
+.ws-mini:disabled { opacity:0.25; cursor:default; }
+.ws-del { color:#ff8296; }
+.ws-add { margin:2px 0 0; }
+#wsLaunchBtn { margin-top:16px; }
+.ws-family { display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:8px; }
+.ws-sky-card {
+  display:flex; align-items:center; gap:10px; width:100%;
+  background: rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px; padding:10px 12px;
+}
+.ws-sky-meta { flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.ws-sky-meta b { font-size:15px; letter-spacing:0.5px;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ws-sky-meta span { font-size:11.5px; color: rgba(255,255,255,0.55); }
+.ws-best { color:#ffd23f !important; }
+.ws-unflown { color: rgba(255,255,255,0.4) !important; font-style:italic; }
+.ws-fly { width:auto; min-width:84px; margin:0; padding:10px 14px; font-size:13px; }
+.ws-empty { font-size:13px; color: rgba(255,255,255,0.5); line-height:1.5; padding:4px 2px; }

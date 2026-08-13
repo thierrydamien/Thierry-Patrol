@@ -147,7 +147,7 @@ const SRC = [
   "src/core.js","src/icons.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
   "src/data/comms.js","src/data/story.js",
   "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/backstage.js","src/sky29.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
+  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/workshop.js","src/ui.js",
 ];
 
 const results = [];
@@ -1686,6 +1686,49 @@ async function run(){
     console.log(`Boss -> ${b.name} hp:${Math.round(b.hp)}/${b.maxHp} phase:${b.phaseIndex+1} weakPointsLeft:${b.weakPoints.filter(w=>!w.destroyed).length}`);
   } else {
     console.log("Boss -> defeated within the frame budget");
+  }
+
+  /* ---------- THE DRAWING BOARD ----------
+   * Family-drawn skies are data, and three promises hold: everything the
+   * board offers is real (a chip that compiles to a missing enemy is a crash
+   * a kid authored), a drawn sky flies as a mission object, and the campaign
+   * ledger never hears about the flight - the family board does. */
+  check("the board's vocabulary is real",
+    // Mines have no SHAPES entry (drawn bespoke in play AND on the board).
+    SF.workshop.TYPES.every(tp => !!SF.enemyData.ENEMY_TYPES[tp] && (SF.enemyArt.has(tp) || tp === "mine")) &&
+    SF.workshop.FORMS.every(f => !!SF.enemyData.FORMATIONS[f]) &&
+    SF.workshop.BOSSES.every(b => !b.id || !!SF.missions.BOSSES[b.id]));
+  check("the board never offers a boss whose death needs its own level",
+    !SF.workshop.BOSSES.some(b => b.id === "forgery" || b.id === "devourer" || b.id === "papa"));
+  check("every house rule is a flag the game honours",
+    (() => { const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+             return SF.workshop.RULES.every(r => r.id === "none" ||
+               new RegExp("mission\\." + r.id + "\\b|run\\." + r.id + "\\b").test(g)); })());
+  {
+    const prof = SF.ui.getProfile();
+    const missionsBefore = JSON.stringify(prof.missions);
+    const lastBefore = prof.lastMission;
+    const m = SF.workshop.toMission({
+      id:"ws-test", name:"Test Sky", author: prof.name, authorCall:"TEST",
+      sky:9, rule:"wells", boss:"",
+      waves:[ { type:"grunt", n:6, form:"vee" }, { type:"carrier", n:1, form:"column" } ] });
+    check("a drawn sky compiles to a real mission",
+      m.custom === true && m.wells === true && m.waves.length === 2 &&
+      m.objectives.includes("kill80") && m.objectives.includes("rescueAll"));
+    SF.game.startMission(m, "pilot");
+    await runFrames(300);
+    check("a drawn sky flies", SF.game.run.mission.custom === true &&
+      SF.game.run.director.spawnedCount > 0 && errors.length === 0);
+    SF.game.endMission(true);
+    await runFrames(12);
+    check("the campaign ledger never hears about a drawn sky",
+      JSON.stringify(SF.ui.getProfile().missions) === missionsBefore &&
+      SF.ui.getProfile().lastMission === lastBefore);
+    check("the family board hears about it instead",
+      !!(SF.ui.getProfile().workshopBest && SF.ui.getProfile().workshopBest["ws-test"] &&
+         SF.ui.getProfile().workshopBest["ws-test"].score >= 0));
+    if(!id("overlayResults").classList.contains("hidden")) clickEl(id("resultsMenuBtn"));
+    await runFrames(6);
   }
 
   /* ---------- abilities ---------- */
