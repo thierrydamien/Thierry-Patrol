@@ -894,6 +894,7 @@ function missionFace(m){
    would quietly point at the wrong level the first time the campaign is
    reordered, and the half-time story beat would fire in the wrong place. */
 const ACT_ONE_END = MISSIONS.findIndex(m => m.boss === "sentinel");
+const DEVOURER_END = MISSIONS.findIndex(m => m.boss === "devourer");
 
 const MAP_W = 640;
 const ROUTE_GAP = 108;          // vertical pixels between stops, canvas-space
@@ -2960,7 +2961,12 @@ function showResults(result){
   if(result.vaultWon)
     queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
       label:"SECRET FOUND" });
-  if(completed && P.campaignComplete(profile)) maybeStory("campaign");
+  // The true curtain lives behind the sky now; the Devourer keeps its own.
+  // Anchoring the old finale to its mission (not to campaignComplete) matters:
+  // with Act 4 in the campaign, a fresh profile would otherwise get the
+  // Devourer's curtain played over the workshop's ending.
+  if(completed && P.campaignComplete(profile)) maybeStory("workshop");
+  else if(completed && run.missionIndex === DEVOURER_END) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
 }

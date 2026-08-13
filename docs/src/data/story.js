@@ -64,14 +64,27 @@ const STORY = {
     button:"FLY DARK",
   },
 
-  /* Campaign cleared: a proper curtain, still not a full stop. */
+  /* The Devourer falls: a proper curtain, still not a full stop - the last
+     panel opens the crack that Act 4 flies through. */
   campaign: {
     title: "THE STAR CAME BACK",
     panels: [
       { art:"sky",  text:"The Devourer came apart in a light so bright that every pilot in the sector saw it from home. Where it was, there is nothing now - just the dark, and then, slowly, stars again." },
       { art:"crew", text:"They all came, {you}. Every pilot you ever pulled out of a cell or caught drifting - they turned up at the end and flew the last minute with you. That's the part they'll tell." },
       { art:"now",  text:"Command's calling it the day the war ended. Down there they're calling it something else: the day the Thierrys went out to the last star and came back." },
-      { art:"sky",  text:"The sky is yours, {you}. Take it anywhere - the missions are still up there on the harder tiers, and no sky is too wild for you now - not even the Wacky one." },
+      { art:"sky",  text:"One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it." },
+    ],
+    button:"COME HOME",
+  },
+
+  /* The TRUE ending now: the workshop is beaten, the sky is painted. */
+  workshop: {
+    title: "THE PAINTED SKY",
+    panels: [
+      { art:"sky",  text:"The Royal Brush went up like a firework with every colour the workshop owns - and where it burst, the sky isn't blank any more. You painted it, {you}. It's yours." },
+      { art:"crew", text:"The sketches you painted flew home beside you. Somebody in that workshop once drew YOUR ship too - and today you flew that drawing better than it knew it could be flown." },
+      { art:"now",  text:"Command has no name for what happened behind the sky, so the squadron picked one: the day {you} chased the game all the way to its drawing board and won." },
+      { art:"sky",  text:"Every sky from here on is one somebody painted first. Fly them all, on every tier - and if the paint ever stutters again, wave. The painter knows your ship by heart." },
     ],
     button:"COME HOME",
   },

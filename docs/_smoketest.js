@@ -504,6 +504,14 @@ async function run(){
   check("every story beat has panels and art",
     Object.values(SF.storyData.STORY).every(b =>
       b.panels.length >= 2 && b.panels.every(pn => pn.text && pn.art)));
+  // With Act 4 in the campaign, campaignComplete means mission 28: the
+  // Devourer's curtain must anchor to ITS mission or a fresh profile gets
+  // the wrong story played over the workshop's ending.
+  check("the Devourer keeps its curtain; the workshop gets the true one",
+    !!SF.storyData.STORY.workshop &&
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /maybeStory\("workshop"\)/.test(u) &&
+                    /missionIndex === DEVOURER_END\) maybeStory\("campaign"\)/.test(u); })());
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
