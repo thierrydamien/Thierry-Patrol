@@ -175,21 +175,141 @@ function panels(ctx, x0, x1, y0, y1, n, alpha){
   }
 }
 /** Battle damage: torn seams that glow hotter the closer it is to dead. */
+/*
+ * BATTLE DAMAGE. Every hull funnels through here, so this is the one place
+ * that decides what a hurt boss looks like - and the old answer was "a few
+ * thin brown squiggles", which at 70% health read as a scratched paint job
+ * rather than a ship being taken apart. A kid has to be able to glance up and
+ * know it is nearly done.
+ *
+ * Four stages, each arriving as the damage does:
+ *   any     - a soot smudge and a split with a hot seam in it
+ *   > 0.35  - the split becomes a TORN HOLE with a molten rim and dark inside
+ *   > 0.55  - the worst holes VENT: a jet of flame and sparks, streaming back
+ *   > 0.70  - the whole hull washes red on an emergency pulse
+ *
+ * Everything is driven off the boss's own seeded `wounds` plus the clock, so
+ * it is stable frame to frame, costs no allocation, and needs no state.
+ */
 function cracks(ctx, boss, S, damage, timeMs){
+  const k = S/150;
   const n = Math.min(boss.wounds.length, Math.floor(damage*10));
+  const t = timeMs/1000;
   for(let i = 0; i < n; i++){
-    const w = boss.wounds[i], k = S/150;
-    const wx = w.x*k, wy = w.y*k;
-    ctx.strokeStyle = "rgba(0,0,0,0.65)"; ctx.lineWidth = w.r*0.20*k;
-    ctx.beginPath();
-    ctx.moveTo(wx - w.r*k*0.9, wy - w.r*k*0.35);
-    ctx.lineTo(wx + w.r*k*0.35, wy);
-    ctx.lineTo(wx + w.r*k*0.9, wy + w.r*k*0.45);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,150,70," + (0.30 + Math.sin(timeMs/170 + i)*0.18).toFixed(2) + ")";
-    ctx.lineWidth = w.r*0.09*k;
-    ctx.stroke();
+    const w = boss.wounds[i];
+    const wx = w.x*k, wy = w.y*k, wr = w.r*k;
+
+    // Soot: the burn is wider than the break, and it is what stops a wound
+    // from looking like a pen line on clean paint.
+    const sg = ctx.createRadialGradient(wx, wy, 0, wx, wy, wr*2.1);
+    sg.addColorStop(0, "rgba(12,10,14,0.55)");
+    sg.addColorStop(0.55, "rgba(12,10,14,0.26)");
+    sg.addColorStop(1, "rgba(12,10,14,0)");
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(wx, wy, wr*2.1, 0, TAU); ctx.fill();
+
+    const flicker = 0.30 + Math.sin(t*5.6 + i)*0.18;
+    if(damage > 0.35 && i % 2 === 0){
+      // A hole punched clean through: dark inside, molten at the lip. Drawn
+      // as a ragged polygon off the wound's own numbers so it never crawls.
+      ctx.beginPath();
+      for(let q = 0; q < 11; q++){
+        const a = q/11*TAU;
+        // Ragged, but only a little: the first pass swung the radius by half
+        // the wound per step and every hole came out a spiky orange kite.
+        const rr = wr*(0.34 + (Math.sin(w.x*0.7 + q*1.3)*0.5 + 0.5)*0.16);
+        ctx.lineTo(wx + Math.cos(a)*rr, wy + Math.sin(a)*rr*0.82);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "rgba(6,5,9,0.92)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(216," + Math.round(96 + flicker*70) + ",52,0.7)";
+      ctx.lineWidth = Math.max(1, wr*0.1);
+      ctx.stroke();
+      bloom(ctx, wx, wy, wr*0.9, "255,140,60", 0.12 + flicker*0.10);
+    } else {
+      ctx.strokeStyle = "rgba(0,0,0,0.65)"; ctx.lineWidth = wr*0.20;
+      ctx.beginPath();
+      ctx.moveTo(wx - wr*0.9, wy - wr*0.35);
+      ctx.lineTo(wx + wr*0.35, wy);
+      ctx.lineTo(wx + wr*0.9, wy + wr*0.45);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,150,70," + flicker.toFixed(2) + ")";
+      ctx.lineWidth = wr*0.09;
+      ctx.stroke();
+    }
+
+    /*
+     * Venting. The two worst holes throw a plume back over the hull - flame
+     * at the mouth going to smoke, plus a couple of sparks riding it. This is
+     * the single loudest "it is losing" signal on the whole ship.
+     */
+    if(damage > 0.55 && i < 3){
+      const len = wr*(1.9 + Math.sin(t*3.1 + i*1.9)*0.5);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const vg = ctx.createLinearGradient(wx, wy, wx, wy - len);
+      vg.addColorStop(0, "rgba(255,190,90,0.55)");
+      vg.addColorStop(0.4, "rgba(255,110,60,0.22)");
+      vg.addColorStop(1, "rgba(120,80,90,0)");
+      ctx.fillStyle = vg;
+      ctx.beginPath();
+      ctx.moveTo(wx - wr*0.3, wy);
+      ctx.lineTo(wx + wr*0.3, wy);
+      ctx.lineTo(wx + wr*0.1, wy - len);
+      ctx.lineTo(wx - wr*0.1, wy - len);
+      ctx.closePath(); ctx.fill();
+      for(let q = 0; q < 3; q++){
+        const u = ((t*1.4 + q*0.33 + i*0.17) % 1);
+        ctx.fillStyle = "rgba(255," + Math.round(220 - u*120) + ",140," + (0.8*(1-u)).toFixed(2) + ")";
+        ctx.beginPath();
+        ctx.arc(wx + Math.sin(u*7 + i)*wr*0.4, wy - u*len, Math.max(0.8, wr*0.13*(1-u)), 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
+
+  // Emergency lighting: past two thirds gone, the whole hull throbs red. It
+  // is the cue that reads from the far side of the room, which is exactly
+  // where a seven-year-old watches a boss fight from.
+  if(damage > 0.70){
+    const beat = 0.5 + Math.sin(t*6.4)*0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const eg = ctx.createRadialGradient(0, 0, S*0.05, 0, 0, S*0.62);
+    eg.addColorStop(0, "rgba(255,60,70," + (0.10 + beat*0.16).toFixed(3) + ")");
+    eg.addColorStop(1, "rgba(255,40,60,0)");
+    ctx.fillStyle = eg;
+    ctx.beginPath(); ctx.arc(0, 0, S*0.62, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+
+/**
+ * An engine plume: a tapered wash of light behind a nozzle, breathing on its
+ * own clock. Bosses used to hang in the sky with nothing holding them there -
+ * one of these under each hull is the cheapest possible "this thing flies".
+ */
+function thrust(ctx, x, y, w, len, rgb, timeMs, seed){
+  const b = 0.82 + Math.sin(timeMs/110 + (seed || 0))*0.18;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createLinearGradient(x, y, x, y + len*b);
+  g.addColorStop(0, "rgba(" + rgb + ",0.55)");
+  g.addColorStop(0.35, "rgba(" + rgb + ",0.24)");
+  g.addColorStop(1, "rgba(" + rgb + ",0)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - w/2, y);
+  ctx.lineTo(x + w/2, y);
+  ctx.lineTo(x + w*0.16, y + len*b);
+  ctx.lineTo(x - w*0.16, y + len*b);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // The hot core at the nozzle itself.
+  bloom(ctx, x, y + len*0.06, w*0.85, rgb, 0.34*b);
 }
 
 /* ---------------- the hulls ---------------- */
@@ -206,6 +326,9 @@ const HULLS = {
     const arm  = mat("#a8324a", "#320f1c");
     const gun  = mat("#ff6b7f", "#5c1526");
     const body = mat("#c23b55", "#24091a");
+    // Engines first, so the plume comes out from BEHIND the plating. A dart
+    // that hangs in the sky with nothing pushing it is a cardboard cut-out.
+    [-1, 1].forEach(sd => thrust(ctx, sd*10*A, 40*A, 15*A, 62*A, "255,120,150", timeMs, sd));
     // swept arms out to the cannon pods at (+-62,-4)
     [-1, 1].forEach(sd => {
       hullPoly(ctx, [[sd*10*A, 22*A],[sd*36*A, -30*A],[sd*74*A, -16*A],
@@ -244,6 +367,7 @@ const HULLS = {
     const sway = Math.sin(timeMs/700)*3*A;
     const body = mat("#2f7d55", "#0d2418");
     const trim = mat("#3f9c68", "#13351f");
+    [-1, 1].forEach(sd => thrust(ctx, sd*34*A, 12*A, 16*A, 50*A, "120,255,180", timeMs, sd*2));
     // compact upper body
     hullPoly(ctx, [[-40*A,-42*A],[40*A,-42*A],[52*A,-8*A],[30*A,16*A],[-30*A,16*A],[-52*A,-8*A]],
              body, S);
@@ -309,6 +433,9 @@ const HULLS = {
     const deck  = mat("#7c4bbd", "#1d1030");
     const pod   = mat("#a855f7", "#150a26");
     const tower = mat("#c9a4ff", "#2a1547", 0.2);
+    // The pods out on the tips were always meant to be engines; now they burn
+    // like them, which is what makes a flat deck read as a ship under way.
+    [-1, 1].forEach(sd => thrust(ctx, sd*68*A, 38*A, 26*A, 78*A, "190,130,255", timeMs, sd*3));
     // the deck - long and low
     hullPoly(ctx, [[-84*A,-2*A],[-64*A,-22*A],[64*A,-22*A],[84*A,-2*A],
                    [70*A,32*A],[-70*A,32*A]], deck, S);
@@ -424,6 +551,9 @@ const HULLS = {
     // low-key ramp: half the fight it isn't really there, so the hull stays
     // closer to the sky than any other boss's
     const body = mat("#6b74c9", "#141634", 0.22);
+    // Kept dim: half the fight it isn't really there, and a bright exhaust
+    // would give away a boss whose whole trick is not being visible.
+    [-1, 1].forEach(sd => thrust(ctx, sd*30*A, 27*A, 13*A, 44*A, "150,165,255", timeMs, sd*4));
     hullPoly(ctx, [[0,-52*A],[42*A,-6*A],[64*A,20*A],[24*A,30*A],[0,20*A],
                    [-24*A,30*A],[-64*A,20*A],[-42*A,-6*A]], body, S);
     // swept edge highlights
@@ -463,6 +593,10 @@ const HULLS = {
     const pod   = mat("#f97316", "#1c0c04");
     const hatch = mat("#f9a03c", "#1a0a03");
     const core  = mat("#ffc46b", "#3a1a06", 0.12);
+    // Three of them, and big: the largest hull in the game should sound like
+    // it, and the plumes are most of what sells the mass.
+    [-40, 0, 40].forEach((x, i) =>
+      thrust(ctx, x*A, 52*A, 26*A, 86*A, "255,150,60", timeMs, i*2.3));
     // frame
     hullPoly(ctx, [[-58*A,-40*A],[58*A,-40*A],[80*A,-6*A],[72*A,34*A],[30*A,58*A],
                    [-30*A,58*A],[-72*A,34*A],[-80*A,-6*A]], frame, S);

@@ -1180,6 +1180,33 @@ async function run(){
       m.boss === "devourer" ? typeof SF.render.drawDevourerHull === "function"
                             : SF.bossart.has(m.boss)));
   /*
+   * A boss should look like it is flying and, once you have hurt it, like it
+   * is losing. Both used to be missing: the hulls hung in the sky with no
+   * exhaust, and battle damage was a few thin lines that read as scratched
+   * paint at any health. Every hull funnels through the same two helpers, so
+   * pinning them covers all of them.
+   */
+  check("every boss hull burns an engine", (() => {
+    const b = fs.readFileSync(path.join(__dirname, "src/bossart.js"), "utf8");
+    if(!/function thrust\(/.test(b)) return false;
+    // one thrust() call inside each hull that should have visible engines
+    return ["marauder","jailer","sentinel","phantom","leviathan"].every(id => {
+      const at = b.indexOf("  " + id + "(ctx, boss, S, damage, timeMs){");
+      if(at < 0) return false;
+      return /thrust\(ctx/.test(b.slice(at, at + 2600));
+    });
+  })());
+  check("a hurt boss is coming apart, not scratched", (() => {
+    const b = fs.readFileSync(path.join(__dirname, "src/bossart.js"), "utf8");
+    return /BATTLE DAMAGE/.test(b) &&
+           /damage > 0\.35/.test(b) &&      // holes punched through the plating
+           /damage > 0\.55/.test(b) &&      // the worst of them vent
+           /damage > 0\.70/.test(b);        // and the hull throbs red
+  })());
+  check("a blown weak point keeps burning",
+    (() => { const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+             return /A blown part is the clearest progress/.test(r); })());
+  /*
    * Ordinary stops are told apart by the enemy drawn inside them, so any two
    * sharing a face are two stops that look the same - which is the whole thing
    * this was built to fix. Asserted rather than eyeballed, because the face is

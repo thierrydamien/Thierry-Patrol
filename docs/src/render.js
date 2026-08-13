@@ -1841,8 +1841,38 @@ function drawWeakPoints(ctx, boss, bx, by, timeMs){
   boss.weakPoints.forEach(wp => {
     const wx = bx + wp.ox, wy = by + wp.oy;
     if(wp.destroyed){
-      ctx.fillStyle = "rgba(20,10,10,0.85)";
-      ctx.beginPath(); ctx.arc(wx, wy, wp.r*0.8, 0, TAU); ctx.fill();
+      /*
+       * A blown part is the clearest progress the fight has, and it used to
+       * leave a flat dark dot - the same read as a shadow. Now it is a hole
+       * that is still burning: soot around it, a molten lip, and a plume
+       * streaming back off the hull. You can count how far in you are by how
+       * many fires the boss is carrying.
+       */
+      const R = wp.r*0.8, t = timeMs/1000, flick = 0.5 + Math.sin(t*5.3 + wp.ox)*0.5;
+      const soot = ctx.createRadialGradient(wx, wy, 0, wx, wy, R*2.2);
+      soot.addColorStop(0, "rgba(10,8,12,0.6)");
+      soot.addColorStop(1, "rgba(10,8,12,0)");
+      ctx.fillStyle = soot;
+      ctx.beginPath(); ctx.arc(wx, wy, R*2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(14,8,10,0.92)";
+      ctx.beginPath(); ctx.arc(wx, wy, R, 0, TAU); ctx.fill();
+      ctx.strokeStyle = "rgba(226," + Math.round(100 + flick*70) + ",56,0.75)";
+      ctx.lineWidth = Math.max(1, R*0.16);
+      ctx.beginPath(); ctx.arc(wx, wy, R, 0, TAU); ctx.stroke();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const pl = ctx.createLinearGradient(wx, wy, wx, wy - R*3);
+      pl.addColorStop(0, "rgba(255,180,90,0.42)");
+      pl.addColorStop(0.45, "rgba(255,110,60,0.16)");
+      pl.addColorStop(1, "rgba(120,80,90,0)");
+      ctx.fillStyle = pl;
+      ctx.beginPath();
+      ctx.moveTo(wx - R*0.55, wy);
+      ctx.lineTo(wx + R*0.55, wy);
+      ctx.lineTo(wx + R*0.14, wy - R*(2.4 + flick*0.8));
+      ctx.lineTo(wx - R*0.14, wy - R*(2.4 + flick*0.8));
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
       return;
     }
     const pulse = 0.55 + Math.sin(timeMs/180)*0.2;
