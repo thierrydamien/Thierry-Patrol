@@ -226,6 +226,14 @@ function rgba(hex, a){
   const c = hexToRgb(hex);
   return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
 }
+/** Blend two hexes, t=0 gives a, t=1 gives b. Used for gradient mid-stops so a
+ *  planet ramps through its own material instead of jumping lit->dark. */
+function mixHex(a, b, t){
+  const x = hexToRgb(a), y = hexToRgb(b);
+  return "rgb(" + Math.round(x[0] + (y[0]-x[0])*t) + "," +
+                  Math.round(x[1] + (y[1]-x[1])*t) + "," +
+                  Math.round(x[2] + (y[2]-x[2])*t) + ")";
+}
 
 /**
  * Draws `fn` three times - at y, y-H and y+H - so anything crossing an edge
@@ -256,66 +264,189 @@ function drawPlanet(ctx, W, H, p, rand, lightDir){
   // Unit vector toward the sky's bright core - the nebula is the light source,
   // so the lit limb agrees with the brightest sky behind it.
   const lx = lightDir[0], ly = lightDir[1], lang = Math.atan2(ly, lx);
+  /*
+   * The first version of this painter was one radial gradient, flat rectangles
+   * for bands and flat discs for craters - and it read as exactly that, "hand
+   * drawn", as the review from the cockpit put it. What sells a sphere is four
+   * cheap things: mottled surface NOISE so the material looks like rock or gas
+   * instead of vinyl; bands that WAVE and fade toward the limb the way weather
+   * wraps a ball; craters with a lit rim and a sunken floor instead of dark
+   * stains; and a hard TERMINATOR with a whisker of atmosphere outside the lit
+   * edge. Every roll comes off the mission's seeded `rand`, so it is the same
+   * planet every visit, and the whole sky is baked once - the cost is zero.
+   */
   const paint = yy => {
     ctx.save();
     if(p.rings){                                   // back half of the ring
       ctx.save();
       ctx.translate(cx, yy); ctx.rotate(-0.42); ctx.scale(1, 0.22);
       ctx.strokeStyle = rgba(p.lit, 0.30);
-      ctx.lineWidth = r*0.30;
-      ctx.beginPath(); ctx.arc(0, 0, r*1.55, Math.PI, TAU); ctx.stroke();
+      ctx.lineWidth = r*0.18;
+      ctx.beginPath(); ctx.arc(0, 0, r*1.48, Math.PI, TAU); ctx.stroke();
+      ctx.strokeStyle = rgba(p.lit, 0.16);
+      ctx.lineWidth = r*0.08;
+      ctx.beginPath(); ctx.arc(0, 0, r*1.68, Math.PI, TAU); ctx.stroke();
       ctx.restore();
     }
-    const g = ctx.createRadialGradient(cx + lx*r*0.62, yy + ly*r*0.62, r*0.05, cx, yy, r);
+
+    // Base sphere. A longer ramp through a blended mid-tone, so the falloff
+    // reads as a curving surface rather than a spotlight on a flat circle.
+    const g = ctx.createRadialGradient(cx + lx*r*0.55, yy + ly*r*0.55, r*0.05, cx, yy, r*1.02);
     g.addColorStop(0, p.lit);
-    g.addColorStop(0.55, p.dark);
-    g.addColorStop(1, "#020309");
+    g.addColorStop(0.38, mixHex(p.lit, p.dark, 0.45));
+    g.addColorStop(0.72, p.dark);
+    g.addColorStop(1, "#01020a");
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(cx, yy, r, 0, TAU); ctx.fill();
 
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, yy, r, 0, TAU); ctx.clip();
-    if(p.bands){
-      ctx.globalAlpha = 0.16; ctx.fillStyle = p.lit;
-      [-0.62,-0.34,-0.05,0.26,0.55].forEach(o =>
-        ctx.fillRect(cx - r, yy + o*r, r*2, r*(0.06 + rand()*0.08)));
-      ctx.globalAlpha = 1;
+
+    // Surface mottling: soft seeded blotches, pale where they face the light
+    // and dark where they do not, sized to read as terrain or weather systems.
+    for(let i = 0; i < 26; i++){
+      const a = rand()*TAU, d = Math.sqrt(rand())*r*0.96;
+      const bx = cx + Math.cos(a)*d, by = yy + Math.sin(a)*d;
+      const br = r*(0.10 + rand()*0.22);
+      const towardLight = Math.cos(a)*lx + Math.sin(a)*ly;
+      const ng = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      if(towardLight > 0 && rand() < 0.6){
+        ng.addColorStop(0, rgba(p.lit, 0.10 + rand()*0.08));
+        ng.addColorStop(1, rgba(p.lit, 0));
+      } else {
+        ng.addColorStop(0, rgba(p.dark, 0.16 + rand()*0.12));
+        ng.addColorStop(1, rgba(p.dark, 0));
+      }
+      ctx.fillStyle = ng;
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.fill();
     }
+
+    if(p.bands){
+      /*
+       * Gas bands with weather in them: full-width ribbons whose edges wander
+       * on a seeded sine, alternating pale and dark. Straight rectangles read
+       * as wallpaper; a wobble of a few pixels reads as wind.
+       */
+      [-0.62, -0.38, -0.14, 0.10, 0.34, 0.58].forEach((o, ri) => {
+        const bh = r*(0.07 + rand()*0.09);
+        const wob = r*(0.02 + rand()*0.03), ph = rand()*TAU, freq = 2 + rand()*2.5;
+        const light = ri % 2 === 0;
+        ctx.fillStyle = rgba(light ? p.lit : p.dark, light ? 0.16 : 0.22);
+        ctx.beginPath();
+        for(let x = -r; x <= r; x += r/14)
+          ctx.lineTo(cx + x, yy + o*r + Math.sin(ph + x/r*freq)*wob);
+        for(let x = r; x >= -r; x -= r/14)
+          ctx.lineTo(cx + x, yy + o*r + bh + Math.sin(ph + 1.7 + x/r*freq)*wob);
+        ctx.closePath(); ctx.fill();
+      });
+      // The storm every gas giant earns: a stretched eye of dark in a pale
+      // collar, sitting off-centre like the famous one.
+      const sa = rand()*TAU, sd = Math.sqrt(rand())*r*0.5;
+      ctx.save();
+      ctx.translate(cx + Math.cos(sa)*sd, yy + Math.sin(sa)*sd*0.6 + r*0.2);
+      ctx.scale(1.5, 1);
+      const sg = ctx.createRadialGradient(0, 0, 0, 0, 0, r*0.14);
+      sg.addColorStop(0, rgba(p.dark, 0.5));
+      sg.addColorStop(0.55, rgba(p.lit, 0.32));
+      sg.addColorStop(1, rgba(p.lit, 0));
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(0, 0, r*0.14, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
     if(p.craters){
-      for(let i=0;i<9;i++){
-        const a = rand()*TAU, d = Math.sqrt(rand())*r*0.82, cr = r*(0.05 + rand()*0.12);
-        ctx.fillStyle = rgba(p.dark, 0.55);
-        ctx.beginPath(); ctx.arc(cx + Math.cos(a)*d, yy + Math.sin(a)*d, cr, 0, TAU); ctx.fill();
+      for(let i = 0; i < 9; i++){
+        const a = rand()*TAU, d = Math.sqrt(rand())*r*0.78, cr = r*(0.05 + rand()*0.11);
+        const px = cx + Math.cos(a)*d, py = yy + Math.sin(a)*d;
+        // Floor first, deepest away from the sun...
+        const fg = ctx.createRadialGradient(px + lx*cr*0.25, py + ly*cr*0.25, cr*0.1, px, py, cr);
+        fg.addColorStop(0, rgba(p.dark, 0.65));
+        fg.addColorStop(1, rgba(p.dark, 0.25));
+        ctx.fillStyle = fg;
+        ctx.beginPath(); ctx.arc(px, py, cr, 0, TAU); ctx.fill();
+        // ...then the rim, lit on the sunward arc and shadowed opposite. That
+        // pair is the whole difference between a hole and a stain.
+        ctx.lineWidth = Math.max(0.8, cr*0.22);
+        ctx.strokeStyle = rgba(p.lit, 0.5);
+        ctx.beginPath(); ctx.arc(px, py, cr, lang - 2.2, lang - 0.9); ctx.stroke();
+        ctx.strokeStyle = "rgba(0,0,0,0.4)";
+        ctx.beginPath(); ctx.arc(px, py, cr, lang + 0.9, lang + 2.2); ctx.stroke();
       }
     }
-    if(p.crescent){                                // heavy shadow: a lit sliver only
+
+    /*
+     * Shading, ONE pass only. `crescent` and the terminator are two ways of
+     * saying the same thing - which side faces the sun - and running both is
+     * what turned the big crescent bodies into black holes punched in the
+     * nebula. Crescents get the harder linear cut; everyone else gets the
+     * radial terminator, which also curves the bands into the limb for free.
+     */
+    if(p.crescent){
       const sg = ctx.createLinearGradient(cx + lx*r, yy + ly*r, cx - lx*r, yy - ly*r);
       sg.addColorStop(0, "rgba(0,0,0,0)");
-      sg.addColorStop(0.42, "rgba(0,0,0,0.72)");
-      sg.addColorStop(1, "rgba(0,0,0,0.94)");
+      sg.addColorStop(0.42, "rgba(0,0,0,0.62)");
+      sg.addColorStop(1, "rgba(0,0,0,0.88)");
       ctx.fillStyle = sg;
       ctx.fillRect(cx - r, yy - r, r*2, r*2);
+      // Earthshine: the night side lifted a hair off pure black, so the disc
+      // still has a body in it instead of reading as a hole in the sky.
+      ctx.fillStyle = rgba(p.lit, 0.05);
+      ctx.beginPath(); ctx.arc(cx, yy, r, 0, TAU); ctx.fill();
+    } else {
+      const tg = ctx.createRadialGradient(cx + lx*r*0.55, yy + ly*r*0.55, r*0.35, cx, yy, r*1.35);
+      tg.addColorStop(0, "rgba(0,0,0,0)");
+      tg.addColorStop(0.62, "rgba(2,3,9,0.3)");
+      tg.addColorStop(1, "rgba(1,2,7,0.8)");
+      ctx.fillStyle = tg;
+      ctx.fillRect(cx - r, yy - r, r*2, r*2);
     }
-    // Soft limb glow on the core-facing edge. Drawn after the crescent so a
+
+    // Soft limb glow on the core-facing edge. Drawn after the shading so a
     // mostly-dark body still keeps a lit rim - the cue that says "sphere",
     // not "hole". Kept faint: scenery must never compete with bullets.
     const lg = ctx.createRadialGradient(cx + lx*r, yy + ly*r, r*0.15, cx + lx*r, yy + ly*r, r*1.05);
-    lg.addColorStop(0, rgba(p.lit, 0.32));
+    lg.addColorStop(0, rgba(p.lit, 0.30));
     lg.addColorStop(1, rgba(p.lit, 0));
     ctx.fillStyle = lg;
     ctx.fillRect(cx - r, yy - r, r*2, r*2);
+
+    // Rim light: the nebula wrapping the edge of the disc. It is a gradient
+    // that ramps from nothing at 0.8r to bright at the limb, NOT a stroked arc
+    // and not a clipped band - both of those end somewhere, and the seam reads
+    // as a scratch or a second circle drawn inside the planet.
+    const rl = ctx.createRadialGradient(cx, yy, r*0.8, cx, yy, r);
+    rl.addColorStop(0, rgba(p.lit, 0));
+    rl.addColorStop(0.72, rgba(p.lit, 0.06));
+    rl.addColorStop(1, rgba(p.lit, 0.34));
+    ctx.fillStyle = rl;
+    ctx.fillRect(cx - r, yy - r, r*2, r*2);
     ctx.restore();
 
-    ctx.strokeStyle = rgba(p.lit, 0.42);           // rim light, centred on the core
-    ctx.lineWidth = Math.max(1, r*0.02);
-    ctx.beginPath(); ctx.arc(cx, yy, r, lang - 0.9, lang + 0.9); ctx.stroke();
+    // Atmosphere: a whisker of lit haze OUTSIDE the disc on the sunward side.
+    // Photographs of planets always have it; drawings never do.
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, yy, r*1.06, 0, TAU);
+    ctx.arc(cx, yy, r*0.985, 0, TAU, true);
+    ctx.clip();
+    const ag = ctx.createRadialGradient(cx + lx*r, yy + ly*r, r*0.3, cx, yy, r*1.06);
+    ag.addColorStop(0, rgba(p.lit, 0.34));
+    ag.addColorStop(0.7, rgba(p.lit, 0.08));
+    ag.addColorStop(1, rgba(p.lit, 0));
+    ctx.fillStyle = ag;
+    ctx.fillRect(cx - r*1.1, yy - r*1.1, r*2.2, r*2.2);
+    ctx.restore();
 
     if(p.rings){                                   // front half, over the disc
       ctx.save();
       ctx.translate(cx, yy); ctx.rotate(-0.42); ctx.scale(1, 0.22);
+      // Two tones and a gap, like a real ring system's light and dark lanes.
       ctx.strokeStyle = rgba(p.lit, 0.55);
-      ctx.lineWidth = r*0.30;
-      ctx.beginPath(); ctx.arc(0, 0, r*1.55, 0, Math.PI); ctx.stroke();
+      ctx.lineWidth = r*0.18;
+      ctx.beginPath(); ctx.arc(0, 0, r*1.48, 0, Math.PI); ctx.stroke();
+      ctx.strokeStyle = rgba(p.lit, 0.30);
+      ctx.lineWidth = r*0.08;
+      ctx.beginPath(); ctx.arc(0, 0, r*1.68, 0, Math.PI); ctx.stroke();
       ctx.restore();
     }
     ctx.restore();

@@ -563,6 +563,20 @@ async function run(){
   check("every generated sky has something with an edge in it",
     SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
   check("a photo mission generates no canvas", SF.skygen.build(0, 100, 100) === null);
+  check("planets are lit, not drawn: mottling, weather and a terminator", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    return /Surface mottling/.test(s) &&                   // material, not vinyl
+           /Math\.sin\(ph \+ x\/r\*freq\)\*wob/.test(s) &&  // bands that wave
+           /lang - 2\.2, lang - 0\.9/.test(s) &&            // crater rims catch the sun
+           /Atmosphere/.test(s);                            // haze outside the lit limb
+  })());
+  check("a crescent body is shaded once, not twice", (() => {
+    // Running the crescent cut AND the radial terminator is what turned the
+    // big dark planets into holes punched in the nebula.
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    return /if\(p\.crescent\)\{[\s\S]*?\} else \{[\s\S]*?terminator|Earthshine/.test(s) &&
+           /Earthshine/.test(s);
+  })());
   check("every ship part hangs off a real upgrade",
     SF.shipart.PARTS.every(pt => !!SF.config.UPGRADE_BY_ID[pt.up]));
   check("no ship part asks for a level its upgrade can't reach",
