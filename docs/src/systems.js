@@ -30,7 +30,7 @@ class WaveDirector {
     this.spawnedCount = 0;
     this.density = difficulty.density || 1;
     // Asteroids and other scenery are spawned like waves but are not the
-    // opposition, so "destroy 90% of enemies" doesn't count them.
+    // opposition, so "destroy 80% of enemies" doesn't count them.
     this.totalPlanned = mission.waves.reduce((n,w) =>
       n + (ENEMY_TYPES[w.type].hazard ? 0 : this.waveSize(w)), 0);
     this.rescuesPlanned = mission.waves.reduce((n,w) =>

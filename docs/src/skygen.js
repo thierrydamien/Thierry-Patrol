@@ -195,6 +195,18 @@ const SKIES = [
     density:0.5, stars:0.55, bright:1,
     props:[ {k:"galaxy", x:0.30, y:0.24, r:0.20},
             {k:"planet", x:0.80, y:0.76, r:0.09, lit:"#6b6787", dark:"#191627", crescent:true} ] },
+
+  /* Sky 29 - the gift. Papa's unfinished canvas, finally painted: a dawn with
+     every act's colour in it - Act 1's violet, Act 3's gold, Act 4's teal -
+     and the busiest, brightest sky in the game, because it took every star to
+     earn. The mission starts it under a pencil veil (see sky29.js); THIS is
+     what the flying reveals. */
+  { name:"Sky 29", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+    density:1.3, stars:1.25, bright:5,
+    props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
+            {k:"galaxy", x:0.20, y:0.18, r:0.26},
+            {k:"planet", x:0.16, y:0.62, r:0.06, lit:"#ffb6a3", dark:"#4a1d2e", craters:true},
+            {k:"sun",    x:0.86, y:0.14, r:0.03, color:"#ffe9a8"} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */

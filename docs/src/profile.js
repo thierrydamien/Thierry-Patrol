@@ -81,6 +81,7 @@ function blank(name){
     decal: null,
     fireworks: "classic",
     vaultDone: false,   // true once SOLAR GOLD is won - the mission itself replays freely
+    sky29Done: false,   // true once Sky 29 is painted - its paint pays out once
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
     lastMission: 1, lastDifficulty: "pilot",
@@ -290,8 +291,17 @@ function starsForMission(p, missionId){
   if(!rec || !rec.stars) return 0;
   return Math.max.apply(null, [0].concat(Object.values(rec.stars).map(Number)));
 }
+/*
+ * Gift missions (Sky 29) stay OUT of the star ledger: the whole campaign is
+ * "84 stars", the gift is what 84 unlocks, and letting it mint three more
+ * would turn "every star" into a number that changes the moment you reach it.
+ */
 function totalStars(p){
-  return MISSIONS.reduce((n,m) => n + starsForMission(p, m.id), 0);
+  return MISSIONS.reduce((n,m) => n + (m.gift ? 0 : starsForMission(p, m.id)), 0);
+}
+/** The bar the gift stop asks for: three per real mission. */
+function maxStars(){
+  return MISSIONS.filter(m => !m.gift).length * 3;
 }
 /** Index of the hardest difficulty this pilot has ever completed a mission on. */
 function hardestCleared(p){
@@ -307,7 +317,9 @@ function difficultyUnlocked(p, difficulty){
   return totalStars(p) >= difficulty.unlockStars;
 }
 function campaignComplete(p){
-  return MISSIONS.every(m => p.missions[m.id] && p.missions[m.id].cleared);
+  // The gift stop is a bonus ON completion, not part of it: the workshop
+  // curtain must fall when Behind the Sky does, whether or not Sky 29 is done.
+  return MISSIONS.every(m => m.gift || (p.missions[m.id] && p.missions[m.id].cleared));
 }
 
 /* ---------------------------------------------------------
@@ -406,7 +418,7 @@ function recordMission(p, missionId, difficultyId, stars, score, cleared){
 SF.profile = {
   listNames, addName, load, save, saveRaw, snapshot, blank, migrate, adoptOldSaves,
   upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
-  starsForMission, totalStars, hardestCleared, difficultyUnlocked, campaignComplete,
+  starsForMission, totalStars, maxStars, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,
   checkAchievements, recordMission, achievementStats, unclaimedMedals, claimMedal,
 };

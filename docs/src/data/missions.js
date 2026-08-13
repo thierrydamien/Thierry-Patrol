@@ -25,8 +25,8 @@ const OBJECTIVES = {
   complete:  { label:"Complete the mission", icon:"🏁",
                test: s => s.completed,
                progress: s => s.completed ? "done" : "" },
-  kill90:    { label:"Destroy 90% of enemies", icon:"💥",
-               test: s => s.killRatio >= 0.9,
+  kill80:    { label:"Destroy 80% of enemies", icon:"💥",
+               test: s => s.killRatio >= 0.8,
                progress: s => Math.round(s.killRatio*100) + "%" },
   killAll:   { label:"Destroy every enemy", icon:"☄️",
                test: s => s.spawned > 0 && s.kills >= s.spawned && s.escaped === 0,
@@ -328,7 +328,7 @@ const MISSIONS = [
       w(80,  "grunt", 10, "vee"),
       w(88,  "grunt", 12, "wall"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:2, name:"Weaving Through", subtitle:"Moving targets",
@@ -352,7 +352,7 @@ const MISSIONS = [
       w(98,  "grunt", 11, "wall"),
       w(106, "weaver",10, "pincer"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:3, name:"Return Fire", subtitle:"They shoot back",
@@ -381,7 +381,7 @@ const MISSIONS = [
       w(110, "sniper",  3, "arc"),
       w(114, "striker", 6, "vee"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:4, name:"Heavy Metal", subtitle:"First boss",
@@ -409,7 +409,7 @@ const MISSIONS = [
       w(103, "grunt",  12, "wall"),
     ],
     boss: "marauder",
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
@@ -438,7 +438,7 @@ const MISSIONS = [
       w(113, "kamikaze", 9, "arc"),
       w(121, "grunt",   12, "wall"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:6, name:"The Storm", subtitle:"Fly the wind",
@@ -463,7 +463,7 @@ const MISSIONS = [
       w(100, "carrier",  1, "column"),
       w(106, "striker",  7, "wall"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:7, name:"Prison Break", subtitle:"Rescue mission",
@@ -526,7 +526,7 @@ const MISSIONS = [
       w(131, "striker",  8, "tripleColumns", { elite: 2 }),
       w(139, "kamikaze",10, "scatter"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:9, name:"The Convoy", subtitle:"Bring them home",
@@ -550,7 +550,7 @@ const MISSIONS = [
       w(102, "interceptor", 4, "sides"),
       w(110, "brute",       3, "tripleColumns"),
     ],
-    objectives: ["complete","convoy","kill90"],
+    objectives: ["complete","convoy","kill80"],
   },
   {
     id:10, name:"Sky Sentinel", subtitle:"Their flagship",
@@ -585,7 +585,7 @@ const MISSIONS = [
       w(138, "kamikaze",11, "pincer"),
     ],
     boss: "sentinel",
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
 
   /*
@@ -674,7 +674,7 @@ const MISSIONS = [
       w(111, "grunt",   13, "pincer"),
       w(119, "brute",    5, "line", { elite: 2 }),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:13, name:"The Rival", subtitle:"One of them is good",
@@ -697,7 +697,7 @@ const MISSIONS = [
       w(90,  "weaver",   7, "pincer"),
       w(100, "splitter", 3, "line"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
     goal:"VESPER copies you — trick her!",
   },
   {
@@ -755,7 +755,7 @@ const MISSIONS = [
       w(103, "grunt",   13, "wall"),
     ],
     boss: "warden",
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   /*
    * The breather between the two hardest bosses - the customer's rule is a
@@ -796,7 +796,7 @@ const MISSIONS = [
       w(122, "interceptor", 8, "sides"),
       w(128, "striker",  9, "tripleColumns", { elite: 2 }),
     ],
-    objectives: ["complete","kill90","coinRush"],
+    objectives: ["complete","kill80","coinRush"],
   },
   {
     id:17, name:"Cold Approach", subtitle:"Line up the shot",
@@ -853,7 +853,7 @@ const MISSIONS = [
       w(104, "boulder", 6, "gate"),
       w(112, "weaver",  6, "arc"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:19, name:"All Hands", subtitle:"Everyone who is left",
@@ -921,7 +921,7 @@ const MISSIONS = [
       w(139, "grunt",   15, "wall"),
     ],
     boss: "leviathan",
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
 
   /* =========================================================
@@ -954,7 +954,7 @@ const MISSIONS = [
       w(96,  "carrier",  1, "column"),
       w(103, "striker",  6, "arc"),
     ],
-    objectives: ["complete","rescueAll","kill90"],
+    objectives: ["complete","rescueAll","kill80"],
   },
   {
     id:22, name:"The Long Dark", subtitle:"Something is out there",
@@ -985,7 +985,7 @@ const MISSIONS = [
       w(120, "turret",   5, "twinColumns", { elite: 2 }),
       w(128, "grunt",   14, "wall"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:23, name:"The Devourer", subtitle:"The last star",
@@ -1037,7 +1037,7 @@ const MISSIONS = [
       w(100, "striker",  6, "pincer"),
       w(108, "grunt",   12, "wall"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:25, name:"The Chorus", subtitle:"They fire on the beat",
@@ -1064,7 +1064,7 @@ const MISSIONS = [
       w(100, "grunt",   12, "pincer"),
       w(108, "sniper",   4, "sides"),
     ],
-    objectives: ["complete","kill90","rescueAll"],
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:26, name:"The Foundry", subtitle:"Stop the production line",
@@ -1143,6 +1143,35 @@ const MISSIONS = [
     boss: "forgery",
     objectives: ["complete","paintSix","rescueAll"],
   },
+  {
+    /*
+     * SKY 29 - the gift level. Gated on every star in the campaign (the gift
+     * itself is excluded from the count - see profile.totalStars), and it is
+     * a celebration, not a test: a parade of everything the family has
+     * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
+     * owns the pencil veil, the last stroke and the squadron photo.
+     */
+    id:29, name:"Sky 29", subtitle:"the one Papa never finished",
+    brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
+    goal:"Paint Papa's last sky!",
+    gift:true, sky29:true, coinRain:true,
+    waves: [
+      w(1,  "grunt",       8, "vee"),
+      w(8,  "weaver",      8, "twinColumns"),
+      w(15, "swooper",     7, "arc"),
+      w(21, "mine",        6, "scatter"),
+      w(26, "striker",     6, "pincer"),
+      w(31, "carrier",     1, "column"),
+      w(36, "shielder",    4, "wall"),
+      w(42, "bomber",      5, "scatter"),
+      w(48, "sniper",      5, "arc"),
+      w(53, "carrier",     1, "column"),
+      w(58, "thief",       2, "sides"),
+      w(63, "brute",       3, "wall", { elite:1 }),
+      w(69, "interceptor", 9, "scatter"),
+    ],
+    objectives: ["complete","rescueAll","coinRush"],
+  },
 ];
 
 /** Missions unlock one at a time; stars gate the harder difficulty tiers instead. */
@@ -1150,7 +1179,12 @@ function isMissionUnlocked(profile, index){
   if(index === 0) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
-  return !!(record && record.cleared);
+  const prevCleared = !!(record && record.cleared);
+  // The gift stop wants more than the road to it: every star in the campaign.
+  // (totalStars already excludes gift missions, so the bar can actually be met.)
+  if(MISSIONS[index].gift)
+    return prevCleared && SF.profile.totalStars(profile) >= SF.profile.maxStars();
+  return prevCleared;
 }
 
 /** Total rescue pods a mission can yield: one per hauler, plus free drifters. */

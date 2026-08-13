@@ -146,7 +146,7 @@ function probe(name, arg){ fakeNow += 1000; return vibeCount(() => window.SF.aud
 const SRC = [
   "src/core.js","src/icons.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
   "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/backstage.js","src/systems.js",
+  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/backstage.js","src/sky29.js","src/systems.js",
   "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/ui.js",
 ];
 
@@ -402,9 +402,39 @@ async function run(){
       .every(k => !SF.haptics._patterns[k]));
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("28 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 28 &&
+  check("29 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 29 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
+  /*
+   * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
+   * ledger ("every star" must stay a bar you can actually reach); it never
+   * counts toward campaignComplete (the workshop curtain falls at 28); and it
+   * only opens when every real star is home.
+   */
+  check("the gift stop stays out of the star ledger",
+    SF.profile.maxStars() === 84 && (() => {
+      const p = SF.profile.load("LEDGER");
+      p.missions[29] = { cleared:true, stars:{ pilot:3 } };
+      return SF.profile.totalStars(p) === 0;
+    })());
+  check("the workshop curtain doesn't wait for the gift", (() => {
+    const p = SF.profile.load("CURTAIN");
+    SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id] = { cleared:true, stars:{pilot:1} }; });
+    return SF.profile.campaignComplete(p);
+  })());
+  check("Sky 29 opens on every star, not before", (() => {
+    const p = SF.profile.load("GATE");
+    SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id] = { cleared:true, stars:{pilot:2} }; });
+    const idx = SF.missions.MISSIONS.findIndex(m => m.gift);
+    const before = SF.missions.isMissionUnlocked(p, idx);
+    SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id].stars.pilot = 3; });
+    return !before && SF.missions.isMissionUnlocked(p, idx);
+  })());
+  check("the gift level has its own theatre",
+    !!SF.sky29 && typeof SF.sky29.readyToClear === "function" &&
+    SF.missions.MISSIONS.find(m => m.gift).sky29 === true);
+  check("painting the sky pays a paint that is never sold",
+    SF.config.PAINTS.some(pt => pt.id === "sky29" && pt.secret));
   /*
    * The opening card is the only instruction a child actually gets mid-flight,
    * so it is held to kid rules: every mission must have one, it must be short
@@ -749,11 +779,13 @@ async function run(){
         el.getBoundingClientRect = geom(fromTop - sc.scrollTop, STOP);
       });
     };
-    const openOn = (clearedIds) => {
+    const openOn = (clearedIds, starred) => {
       const p = SF.ui.getProfile();
       const keep = p.missions;
       p.missions = {};
-      clearedIds.forEach(mid => { p.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+      // `starred` is the finished pilot: the gift stop needs every star, not
+      // just every clear, so "done" means done properly.
+      clearedIds.forEach(mid => { p.missions[mid] = { cleared:true, stars: starred ? {pilot:3} : {}, best:{} }; });
       sc.scrollTop = 0;
       SF.ui.renderMissions();          // renders while hidden, exactly as the app does
       const whileHidden = sc.scrollTop;
@@ -778,7 +810,7 @@ async function run(){
 
     const fresh = openOn([]);
     const mid   = openOn([1,2,3,4,5,6,7,8,9]);
-    const done  = openOn(SF.missions.MISSIONS.map(m => m.id));
+    const done  = openOn(SF.missions.MISSIONS.map(m => m.id), true);
 
     check("the campaign targets the first mission you have not cleared",
       fresh.mission === 1 && mid.mission === 10 &&
@@ -984,7 +1016,8 @@ async function run(){
    * picked by a heuristic that a new level could quietly collide with.
    */
   {
-    const faces = SF.missions.MISSIONS.filter(m => !m.boss).map(m => SF.ui.missionFace(m).enemy);
+    // The gift stop draws a painted disc, not an enemy - it sits out the face rule.
+    const faces = SF.missions.MISSIONS.filter(m => !m.boss && !m.gift).map(m => SF.ui.missionFace(m).enemy);
     check("every ordinary stop draws an enemy", faces.every(Boolean));
     check("no two ordinary stops wear the same face",
       new Set(faces).size === faces.length);
@@ -3076,7 +3109,7 @@ async function run(){
     // the whole campaign at 28.
     check("each finale closes its act",
       SF.missions.MISSIONS.find(m => m.id === 23).boss === "devourer" &&
-      SF.missions.MISSIONS[SF.missions.MISSIONS.length-1].boss === "forgery" &&
+      SF.missions.MISSIONS.find(m => m.id === 28).boss === "forgery" &&
       SF.missions.MISSIONS.find(m => m.id === 22).boss === undefined);
     check("beating it awards the last tune and the last medal",
       SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 23) &&

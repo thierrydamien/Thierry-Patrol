@@ -615,7 +615,7 @@ class World {
     // Whether this enemy is part of the mission's planned opposition. Rocks,
     // boss adds, laid mines and hive drones are all real threats but none of
     // them were "planned", so counting them would quietly break the kill
-    // objectives - either inflating the total or making 90% unreachable.
+    // objectives - either inflating the total or making the kill ratio unreachable.
     e.counted = !type.hazard && !o.uncounted;
     e.shielded = false;   // recomputed every frame from live Guardians
     e.loot = 0; e.stolen = 0; e.fleeing = false; e.patience = 0;

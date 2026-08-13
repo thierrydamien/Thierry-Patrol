@@ -222,6 +222,15 @@ const COMMS = {
   brushDown: { speaker:"control", cooldown:999, lines:[
     "You painted the sky, {you}. Every star out here is one of yours now.",
   ]},
+  sky29Start: { speaker:"control", cooldown:999, lines:[
+    "This is the one, {you}. Papa sketched it and never got to paint it. Every star you earned is a colour - fly, and use them all.",
+  ]},
+  sky29Half: { speaker:"mate", cooldown:999, lines:[
+    "{you}, look at it. It's really happening - keep painting!",
+  ]},
+  sky29Photo: { speaker:"mate", cooldown:999, lines:[
+    "Everyone in close. Wings level. SMILE, {you}!",
+  ]},
   silentStart: { speaker:"control", cooldown:999, lines:[
     "Guns are dead, {you}. Don't fight - FLY.",
     "No cannons this run, {you}. Slip through quiet and don't get touched.",

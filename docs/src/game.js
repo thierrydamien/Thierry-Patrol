@@ -325,6 +325,8 @@ function startMission(missionIndex, difficultyId){
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.backstage.reset();                   // the workshop sleeps until asked
   if(mission.backstage) SF.backstage.begin();
+  SF.sky29.reset();                       // the easel waits for its mission
+  if(mission.sky29) SF.sky29.begin();
   SF.bossintro.reset();
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
@@ -495,6 +497,7 @@ function startMission(missionIndex, difficultyId){
              : mission.foundry ? "foundryStart"
              : mission.serpent ? "serpentStart"
              : mission.backstage ? "backstageStart"
+             : mission.sky29 ? "sky29Start"
              : "missionStart");
   SF.input.clearMovement();
   audio.init();
@@ -552,6 +555,16 @@ function endMission(completed){
     profile.shipColor = SF.config.PAINT_BY_ID.solar.hex;   // applied on the spot
     run.vaultWon = true;
   }
+  // Sky 29 pays the same way: paint the sky once, wear its dawn forever.
+  // The mission stays replayable - only the memento is one-time.
+  if(run.mission.sky29 && completed && !profile.sky29Done){
+    profile.sky29Done = true;
+    if(!profile.cosmetics.paints.includes("sky29")) profile.cosmetics.paints.push("sky29");
+    run.sky29Won = true;
+  }
+  // Crossing the 84-star line is the moment the gift stop opens - worth a
+  // toast, because the map is the last place a player looks after a win.
+  const starsBefore = P.totalStars(profile);
 
   profile.money += run.money;
   profile.lifetimeMoney += run.money;
@@ -605,6 +618,8 @@ function endMission(completed){
       rush: !!run.mission.bossRush, rushBeaten, rushTotal: run.rushList.length,
       firstClear,
       vaultWon: !!run.vaultWon,
+      sky29Won: !!run.sky29Won,
+      allStarsNow: starsBefore < P.maxStars() && P.totalStars(profile) >= P.maxStars(),
       durationSec: Math.round(run.time),
       prevFamilyBest, prevSelfBest,
       objectives: run.objectiveDefs.map(def => ({
@@ -625,6 +640,7 @@ const callbacks = {
     const run = game.run;
     e.alive = false;
     if(e.counted){ run.stats.kills++; }
+    if(run.mission.sky29) SF.sky29.splash(e.x, e.y);   // every kill, a drop of paint
 
     // Beating the rival is the level, so it gets a boss-sized send-off - it
     // just isn't a boss, and never blocks the mission the way one would.
@@ -1187,6 +1203,8 @@ function update(dt, timeMs){
           SF.bossintro.begin();
           audio.setMusic(null);
         }
+      } else if(run.mission.sky29 && !SF.sky29.readyToClear()){
+        /* Sky 29 holds here for the last stroke and the photo. */
       } else {
         run.phase = "clearing";
         run.phaseTimer = 1.2;
@@ -1730,6 +1748,8 @@ function update(dt, timeMs){
 
   // Behind the Sky: the workshop's whole theatre lives in backstage.js.
   if(run.mission.backstage) SF.backstage.update(dt, run, game.world, simMs);
+  // Sky 29: the painting, the last stroke and the photo live in sky29.js.
+  if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
 
   /*
    * THE CONVOY. Three haulers cross bottom-to-top over ~34s each, staggered
@@ -2056,6 +2076,7 @@ function draw(timeMs){
   ctx.clearRect(-30, -30, VW+60, VH+60);
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
+  SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -2082,7 +2103,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

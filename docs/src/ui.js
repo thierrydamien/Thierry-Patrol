@@ -971,13 +971,14 @@ const SECTORS = [
   { at:19, name:"THEIR STAR" },      // 20-22: the dark, and the end
   { at:23, name:"THE CRACK" },       // 24-27: where space stops behaving
   { at:26, name:"THE WORKSHOP" },    // 28: where space gets made
+  { at:28, name:"THE EASEL" },       // 29: the one Papa never finished
 ];
 
 function renderMissions(){
   const stars = P.totalStars(profile);
   // The second half explains the little initial chips on the stops - they
   // were the one mark on the map the map never explained.
-  $("missionStars").innerHTML = stars + " / " + (MISSIONS.length*3) + " ★ collected" +
+  $("missionStars").innerHTML = stars + " / " + P.maxStars() + " ★ collected" +
     (P.listNames().length > 1 ? ' <i class="map-legend">· a chip on a stop = who holds its record</i>' : "");
 
   // Size the map to the campaign, not the other way round.
@@ -1002,6 +1003,18 @@ function renderMissions(){
       unlocked ? node.mission.name + ", " + earned + " of 3 stars"
                : node.mission.name + ", locked");
     if(unlocked) click(btn, () => openBriefing(node.index));
+    // The gift stop explains itself when tapped early: a locked stop that
+    // says nothing reads as a bug, and this one has a real answer.
+    else if(node.mission.gift) click(btn, () => {
+      audio.play("uiClick");
+      dialog({
+        title: "SKY 29",
+        text: "Papa left one sky unfinished - this one. It has your names pencilled in the corner." +
+              "\n\nEarn EVERY star in the campaign - all " + P.maxStars() + " - and the squadron paints it together." +
+              "\n\n★ " + P.totalStars(profile) + " / " + P.maxStars() + " so far.",
+        okLabel: "WE'LL EARN THEM", cancelLabel: "CLOSE",
+      });
+    });
     holder.appendChild(btn);
   });
 
@@ -1208,6 +1221,92 @@ function drawCampaign(){
   nodes.forEach((node, i) => {
     const unlocked = isMissionUnlocked(profile, i);
     const earned = P.starsForMission(profile, node.mission.id);
+
+    /*
+     * The gift stop draws itself: locked it is a PENCIL SKETCH of a stop -
+     * dashed ring, graphite fill, the star bar it is waiting for written
+     * underneath - and the moment the last star lands it becomes the most
+     * painted thing on the map. A promise you can see from mission 10.
+     */
+    if(node.mission.gift){
+      const x = px(node), y = py(node), R = 36;
+      const rec = profile.missions[node.mission.id];
+      const painted = !!(rec && rec.cleared);
+      if(!unlocked){
+        ctx.save();
+        ctx.fillStyle = "rgba(22,26,40,0.55)";
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+        ctx.setLineDash([6, 7]);
+        ctx.strokeStyle = "rgba(165,178,215,0.75)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.stroke();
+        // pencil hatching, so it reads as "drawn, not built"
+        ctx.strokeStyle = "rgba(165,178,215,0.22)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([]);
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x, y, R-3, 0, Math.PI*2); ctx.clip();
+        for(let h = -R; h <= R; h += 9){
+          ctx.beginPath(); ctx.moveTo(x - R + h, y - R); ctx.lineTo(x + h, y + R); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.fillStyle = "rgba(200,210,240,0.8)";
+        ctx.font = "italic bold 22px Rajdhani, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("29", x, y + 8);
+        ctx.font = "italic bold 13px Rajdhani, Arial, sans-serif";
+        ctx.fillText("SKY 29", x, y + R + 20);
+        // The requirement, in plain kid words, always visible.
+        const have = P.totalStars(profile), want = P.maxStars();
+        ctx.fillStyle = "rgba(255,210,63,0.85)";
+        ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
+        ctx.fillText("★ " + have + " / " + want + " — EARN EVERY STAR", x, y + R + 37);
+        ctx.restore();
+      } else {
+        // Painted (or ready to be): the disc wears the dawn itself.
+        const pulse = 0.5 + Math.sin(t*3)*0.5;
+        if(!painted){
+          ctx.strokeStyle = "rgba(255,210,63," + (0.3 + pulse*0.5) + ")";
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(x, y, R + 12 + pulse*7, 0, Math.PI*2); ctx.stroke();
+        }
+        const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.1, x, y, R);
+        g.addColorStop(0, "#ffd23f");
+        g.addColorStop(0.55, "#ff7a59");
+        g.addColorStop(1, "#8b5cf6");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = painted ? "#ffd23f" : "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.stroke();
+        ctx.save();
+        ctx.shadowColor = "rgba(4,6,16,0.95)"; ctx.shadowBlur = 6;
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.font = "bold 24px Rajdhani, Arial, sans-serif";
+        ctx.fillText("29", x, y + 9);
+        ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+        ctx.fillText("SKY 29", x, y + R + 20);
+        ctx.restore();
+        ctx.fillStyle = painted ? "rgba(150,255,205,0.9)" : "rgba(255,210,63,0.95)";
+        ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(painted ? "✓ PAINTED" : "READY TO PAINT", x, y + R + 37);
+        // Whose flag flies on the gift: same chip as every other stop.
+        const best = P.familyBest(node.mission.id);
+        if(best && best.owner !== profile.name){
+          const chipX = x + R*0.78, chipY = y + R*0.78;
+          ctx.fillStyle = best.color || "#e74c3c";
+          ctx.strokeStyle = "rgba(10,12,24,0.85)";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(chipX, chipY, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+          ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
+        }
+      }
+      return;                            // fully bespoke - skip the shared node kit
+    }
     const boss = !!node.mission.boss;
     const bossId = node.mission.boss || null;
     const hull = boss && mapHullReady(bossId);
@@ -3003,6 +3102,13 @@ function showResults(result){
   if(result.vaultWon)
     queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
       label:"SECRET FOUND" });
+  if(result.sky29Won)
+    queueToast({ glyph:"star", name:"SKY 29 — the dawn off Papa's last canvas. Wear it well.",
+      label:"PAINT WON" });
+  // The 84th star is a door opening, and the door is at the top of the map.
+  if(result.allStarsNow)
+    queueToast({ glyph:"star", name:"EVERY STAR IS HOME — Sky 29 is waiting at the top of the map.",
+      label:"SKY 29 UNLOCKED" });
   // The true curtain lives behind the sky now; the Devourer keeps its own.
   // Anchoring the old finale to its mission (not to campaignComplete) matters:
   // with Act 4 in the campaign, a fresh profile would otherwise get the
