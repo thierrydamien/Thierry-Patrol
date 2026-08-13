@@ -342,38 +342,44 @@ const SUPPLIES = [
    `fire` multiplies the fire INTERVAL - above 1 = slower.
    --------------------------------------------------------- */
 const TUNES = [
+  /*
+   * Boss trophies, and PURELY good on purpose. They shipped with trade-offs
+   * ("+22% speed but slower guns") and the crew's verdict was that the costs
+   * made them not worth fitting - a prize you leave in the box is not a
+   * prize. So the costs are gone: each tune is a clean specialty, sized so
+   * the later trophies are bigger, and NOVA - the campaign's own reward -
+   * stays the best of all of them.
+   */
   { id:"vanguard", name:"VANGUARD",
     blurb:"The ship as the yard built it.",
     pros:["ready for anything"], cons:[],
     speed:1.00, fire:1.00, lives:0 },
   { id:"falcon",   name:"FALCON", unlockMission:4,
     blurb:"The Marauder's engines, bolted on. Swept fins, hot twin plumes.",
-    pros:["+22% speed"], cons:["slower guns"],
-    speed:1.22, fire:1.12, lives:0 },
+    pros:["+20% speed"], cons:[],
+    speed:1.20, fire:1.00, lives:0 },
   { id:"titan",    name:"TITAN", unlockMission:7,
     blurb:"The Jailer's armour plates. A spare seat and slabs down the flanks.",
-    pros:["+1 life"], cons:["-12% speed","slower guns"],
-    speed:0.88, fire:1.05, lives:1 },
+    pros:["+1 life"], cons:[],
+    speed:1.00, fire:1.00, lives:1 },
   { id:"viper",    name:"VIPER", unlockMission:10,
     blurb:"The Sentinel's overclocked cannons on twin rails.",
-    pros:["+14% fire rate"], cons:["-8% speed"],
-    speed:0.92, fire:0.88, lives:0 },
+    pros:["+12% fire rate"], cons:[],
+    speed:1.00, fire:0.88, lives:0 },
   { id:"scavenger",name:"SCAVENGER", unlockMission:15,
     blurb:"The Warden's collector rig. A golden scoop under the nose.",
-    pros:["coins fly to you","+12% pay"], cons:["slower guns"],
-    speed:1.00, fire:1.06, lives:0, magnet:1.7, money:1.12 },
+    pros:["coins fly to you","+15% pay"], cons:[],
+    speed:1.00, fire:1.00, lives:0, magnet:1.7, money:1.15 },
   { id:"ghost",    name:"GHOST", unlockMission:17,
     blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
-    pros:["+5% speed","longer safety after a hit"], cons:["slower guns"],
-    speed:1.05, fire:1.08, lives:0, invuln:1.5 },
-  /* The final boss's trophy breaks the every-gain-has-a-cost rule on
-     purpose: it is THE reward for finishing the campaign. */
+    pros:["+8% speed","longer safety after a hit"], cons:[],
+    speed:1.08, fire:1.00, lives:0, invuln:1.5 },
   { id:"nova",     name:"NOVA", unlockMission:23, apex:true,
     blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
     pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
     speed:1.12, fire:0.90, lives:1, magnet:1.5 },
   { id:"apex",     name:"APEX", unlockMission:20, apex:true,
-    blurb:"The Leviathan's core, fitted to your ship. Gold trim. No trade-offs - you earned it.",
+    blurb:"The Leviathan's core, fitted to your ship. Gold trim. You earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
     speed:1.08, fire:0.95, lives:1 },
 ];

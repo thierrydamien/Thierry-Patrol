@@ -1401,8 +1401,7 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 }
 .screen::-webkit-scrollbar-track, .armory-panel::-webkit-scrollbar-track, .overlay::-webkit-scrollbar-track { background: transparent; }
 
-/* The campaign header's one-line legend for the record chips. */
-.map-legend { font-style: normal; color: var(--ink-faint); }
+
 
 /* ---------------- THE DRAWING BOARD ---------------- */
 /* Chips cycle and steppers step: everything on this screen is a tap, sized
@@ -1540,8 +1539,6 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
     position: sticky; top:78px; z-index:4;
     background:#090818;              /* opaque: the map must not ghost through */
   }
-  /* On a phone the header has one job - the goal - and the record-chip
-     legend is what pushes it onto three lines. */
-  .map-legend { display:none; }
+
   .rail-stop { width:auto; flex:0 0 auto; padding:5px 9px; background: rgba(0,0,0,0.3); }
 }

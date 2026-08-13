@@ -672,31 +672,39 @@ const TITLE_SKY = {
   name:"The Home Sky", clouds:["#3b2a7a","#1e6aa8","#7c3aed"], dust:"#05061a",
   star:"#dbeafe", density:0.9, stars:1.15, bright:4,
 };
-function buildTitle(W, H, dpr = 1){
-  const u = Math.min(W, H);
+function buildTitle(W, H, dpr = 1, topH = 0){
+  // topH is the first screenful. The canvas covers the menu's whole SCROLL
+  // now, so composing in fractions of H would drop the good furniture below
+  // the fold; the show anchors to the viewport, the giant anchors to the
+  // very bottom (where SETTINGS and FULLSCREEN live), and the road between
+  // gets its own quiet props.
+  const vh = Math.min(H, topH || H);
+  const u = Math.min(W, vh);
   const rx = k => (k*u)/W;                     // a radius in units of the short side
-  const sky = Object.assign({}, TITLE_SKY, { props: [
+  const props = [
     // Depth first: a galaxy high on the left, so the corner the wordmark sits
     // over has something behind it other than black.
-    { k:"galaxy", x:0.17, y:0.20, r:rx(0.34) },
-    // The world below - an amber giant, mostly off the bottom edge, so what
-    // shows is a lit limb rather than a disc. The old menu drew its own flat
-    // sphere here; this one is the same painter the missions use, so the first
-    // screen finally speaks the game's art language. No bands: at this crop
-    // they never read as weather, they just leave one stray sliver at the
-    // edge of the clip where a stripe clips the circle.
+    { k:"galaxy", x:0.17, y:(0.20*vh)/H, r:rx(0.34) },
+    // The world below - an amber giant off the bottom of the whole scroll, so
+    // the LAST buttons sit on a lit planet limb rather than on page ground.
     { k:"planet", x:0.12, y:(H + 0.31*u)/H, r:rx(0.55),
       lit:"#d9a441", dark:"#33200a" },
     // A ringed neighbour, small and high right: the "designed" note that says
     // somebody chose this view.
-    { k:"planet", x:0.87, y:0.21, r:rx(0.10),
+    { k:"planet", x:0.87, y:(0.21*vh)/H, r:rx(0.10),
       lit:"#8b6bd8", dark:"#241245", rings:true },
     // A cratered moon low right, balancing the giant across the frame.
-    { k:"planet", x:0.82, y:0.63, r:rx(0.055),
+    { k:"planet", x:0.82, y:(0.63*vh)/H, r:rx(0.055),
       lit:"#9fb4d8", dark:"#161d2e", craters:true },
-    // A far sun bottom right - the warm accent that kills the dead corner.
-    { k:"sun", x:0.93, y:0.88, r:rx(0.018), color:"#ffd9a0" },
-  ] });
+    // A far sun near the bottom - the warm accent by the last buttons.
+    { k:"sun", x:0.93, y:(H - 0.14*vh)/H, r:rx(0.018), color:"#ffd9a0" },
+  ];
+  if(H > vh*1.35){                             // the scroll's middle third
+    props.push({ k:"planet", x:0.20, y:(vh*1.05 + (H - vh)*0.45)/H, r:rx(0.07),
+                 lit:"#5eead4", dark:"#134e4a", crescent:true });
+    props.push({ k:"galaxy", x:0.78, y:(vh*1.0 + (H - vh)*0.7)/H, r:rx(0.22) });
+  }
+  const sky = Object.assign({}, TITLE_SKY, { props });
   return paint(sky, 4242, W, H, dpr, false);
 }
 

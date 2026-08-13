@@ -368,7 +368,8 @@ async function run(){
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              const c = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
              return /function fitTitleCanvas/.test(u) &&
-                    /getBoundingClientRect/.test(u.split("function fitTitleCanvas")[1].slice(0, 500)) &&
+                    // It must cover the whole scroll run, not the first screenful.
+                    /scrollHeight/.test(u.split("function fitTitleCanvas")[1].slice(0, 700)) &&
                     !/\.title-art\s*\{[^}]*object-fit\s*:\s*cover/.test(c); })());
   check("the title screen paints with the game's own sky", typeof SF.skygen.buildTitle === "function");
   /*
@@ -3509,16 +3510,20 @@ async function run(){
 
   /* ---------- flight tuning ---------- */
   {
-    check("every tune that gains something gives something up (apex excepted)",
+    /*
+     * Reversed by request: the trade-offs made the trophies not worth
+     * fitting, so every tune is now purely good - a prize, not a haggle.
+     */
+    check("a boss trophy never costs anything",
       SF.config.TUNES.length === 8 &&
-      SF.config.TUNES.every(t => t.id === "vanguard" || t.apex ||
-        (t.fire > 1 || t.speed < 1)));
-    check("every boss mission awards exactly one tune",
-      [4, 7, 10, 15, 17, 20, 23].every(mid =>
-        SF.config.TUNES.filter(t => t.unlockMission === mid).length === 1));
-    check("every tune states its trade in kid words",
-      SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length &&
-        Array.isArray(t.cons) && (t.cons.length || t.id === "vanguard" || t.apex)));
+      SF.config.TUNES.every(t =>
+        (!t.cons || t.cons.length === 0) &&
+        (t.speed || 1) >= 1 - 1e-9 && (t.fire || 1) <= 1 + 1e-9 && (t.lives || 0) >= 0));
+    check("each boss trophy hangs off a real boss stop",
+      SF.config.TUNES.every(t => !t.unlockMission ||
+        SF.missions.MISSIONS.some(m => m.id === t.unlockMission && m.boss)));
+    check("every tune says what it does",
+      SF.config.TUNES.every(t => Array.isArray(t.pros) && t.pros.length));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
     const base = SF.profile.blank("Tuner");
@@ -3528,16 +3533,20 @@ async function run(){
 
     base.tune = "falcon";
     const falcon = SF.game.buildLoadout(base, diff);
-    check("the falcon is faster with slower guns",
-      falcon.speedMult > stock.speedMult && falcon.fireInterval > stock.fireInterval &&
-      falcon.lives === stock.lives);
-    check("boss sizing sees the falcon's real output",
-      falcon.dps < stock.dps);
+    // Trade-offs were cut by request: a trophy tune is purely good now.
+    check("the falcon is faster and costs nothing",
+      falcon.speedMult > stock.speedMult && falcon.fireInterval === stock.fireInterval &&
+      falcon.lives === stock.lives && falcon.dps === stock.dps);
 
     base.tune = "titan";
     const titan = SF.game.buildLoadout(base, diff);
-    check("the titan trades speed for a spare life",
-      titan.lives === stock.lives + 1 && titan.speedMult < stock.speedMult);
+    check("the titan gains a life and keeps its speed",
+      titan.lives === stock.lives + 1 && titan.speedMult === stock.speedMult);
+
+    base.tune = "viper";
+    const viper = SF.game.buildLoadout(base, diff);
+    check("the viper's faster guns show up in its real output",
+      viper.fireInterval < stock.fireInterval && viper.dps > stock.dps);
 
     // A bad value from an old or foreign save falls back to vanguard.
     base.tune = "warpdrive9000";

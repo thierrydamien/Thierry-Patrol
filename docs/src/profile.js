@@ -215,6 +215,14 @@ function migrate(p){
       p.tune = "vanguard";
   }
   if(!Array.isArray(p.achievements)) p.achievements = [];
+  /*
+   * Only medals that still EXIST count. An early build shipped a medal that
+   * was later cut, and a save that had earned it read "28 of 27" forever -
+   * a scoreboard that can exceed its own maximum teaches a kid the numbers
+   * are lies. Deduped for the same reason.
+   */
+  p.achievements = [...new Set(p.achievements)]
+    .filter(id => ACHIEVEMENTS.some(a => a.id === id));
   // Old saves predate the Paint Shop; give them the empty garage.
   if(!p.cosmetics || typeof p.cosmetics !== "object") p.cosmetics = {};
   if(!Array.isArray(p.cosmetics.paints)) p.cosmetics.paints = [];

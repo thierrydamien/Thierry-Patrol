@@ -135,10 +135,10 @@ let titleRaf = 0, titleT = 0;
  * the menus ran an iPad warm. Keyed by size so a rotation rebuilds it.
  */
 const titleSky = { cv: null, key: "" };
-function titleSkyFor(W, H, dpr){
-  const key = W + "x" + H + "@" + dpr;
+function titleSkyFor(W, H, dpr, topH){
+  const key = W + "x" + H + "@" + dpr + ":" + topH;
   if(titleSky.key !== key){
-    titleSky.cv = SF.skygen.buildTitle(W, H, dpr);
+    titleSky.cv = SF.skygen.buildTitle(W, H, dpr, topH);
     titleSky.key = key;
   }
   return titleSky.cv;
@@ -155,14 +155,48 @@ function titleSkyFor(W, H, dpr){
  * 3x phone was soft, too. Measure the box, match it, draw in CSS pixels.
  */
 function fitTitleCanvas(cv){
-  const r = cv.getBoundingClientRect();
-  const W = Math.max(1, Math.round(r.width)), H = Math.max(1, Math.round(r.height));
+  /*
+   * Cover the SCROLL RUN, not the first screenful. The menu scrolls - a full
+   * pilot card plus every mode pushes SETTINGS and FULLSCREEN past the fold -
+   * and a backdrop sized to the viewport left everything down there sitting
+   * on flat page ground. The canvas is absolutely positioned, so sizing it
+   * to scrollHeight can't feed back into scrollHeight.
+   */
+  const sec = cv.parentElement;
+  const W = Math.max(1, Math.round(sec.clientWidth));
+  const H = Math.max(1, Math.round(Math.max(sec.scrollHeight, sec.clientHeight)));
+  if(cv.style.height !== H + "px") cv.style.height = H + "px";
   // Capped: a 3x tablet would otherwise ask for a 30-megapixel menu backdrop.
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const bw = Math.round(W*dpr), bh = Math.round(H*dpr);
   if(cv.width !== bw || cv.height !== bh){ cv.width = bw; cv.height = bh; }
   return { W, H, dpr };
 }
+/*
+ * The wing, cached. drawTitleArt runs every frame and profiles live in
+ * localStorage as JSON - loading the family sixty times a second would be
+ * silly. Rebuilt whenever the pilot roster or the active pilot changes.
+ */
+const titleFleet = { key:"", ships:[] };
+function titleFleetFor(p){
+  const names = P.listNames();
+  const key = names.join("|") + "::" + (p ? p.name : "");
+  if(titleFleet.key !== key){
+    const others = names.filter(n => !p || n !== p.name).map(n => {
+      const q = P.load(n);
+      return { color: q.shipColor, levels: SF.shipart.levelsOf(q),
+               tune: q.tune, decal: q.decal };
+    });
+    // A lone pilot still gets escorts - stock hulls in squadron colours.
+    while(others.length < 2)
+      others.push({ color: SF.config.SHIP_COLORS[(others.length + 1) % SF.config.SHIP_COLORS.length],
+                    levels: {} });
+    titleFleet.key = key;
+    titleFleet.ships = others;
+  }
+  return titleFleet.ships;
+}
+
 function drawTitleArt(canvasId, p, t){
   const cv = $(canvasId);
   const ctx = cv && cv.getContext("2d");
@@ -172,7 +206,9 @@ function drawTitleArt(canvasId, p, t){
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);       // draw in CSS pixels throughout
   ctx.clearRect(0, 0, W, H);
 
-  const sky = titleSkyFor(W, H, dpr);
+  // The first screenful: the show anchors here even when the menu scrolls.
+  const topH = Math.min(H, Math.max(1, cv.parentElement.clientHeight || H));
+  const sky = titleSkyFor(W, H, dpr, topH);
   if(sky) ctx.drawImage(sky, 0, 0, W, H);
   else { ctx.fillStyle = "#070716"; ctx.fillRect(0, 0, W, H); }
 
@@ -201,23 +237,48 @@ function drawTitleArt(canvasId, p, t){
    */
   const levels = p ? SF.shipart.levelsOf(p) : {};
   const col = p ? p.shipColor : "#f5a623";
-  const u = Math.min(W, H);
+  const u = Math.min(W, topH);
   const gutter = (W - Math.min(W, 700))/2;
   const wide = gutter > 120;                     // room to fly beside the menu
-  const fly = (x, y, size, seed, lv, tune) => {
+
+  /*
+   * THE FORGERY, looming. The campaign's last monster hangs far off in the
+   * title sky - small, dim, patient - so the menu carries a promise as well
+   * as a fleet. Behind everything, and drawn dead calm: menace is stillness.
+   */
+  if(mapHullReady("forgery")){
+    ctx.save();
+    ctx.globalAlpha = 0.34;
+    const fx2 = wide ? W - gutter*0.42 : W*0.82;
+    const fy2 = wide ? topH*0.10 : topH*0.055;
+    ctx.translate(fx2, fy2 + Math.sin(t*0.4)*3);
+    drawMapHull(ctx, "forgery", u*0.20, 0, t*180);
+    ctx.restore();
+  }
+
+  /*
+   * The squadron is the FAMILY, not four copies of one ship: the wing flies
+   * the other pilots' actual hulls in their actual paint. Falls back to
+   * stock escorts in squadron colours when there is only one pilot.
+   */
+  const fleet = titleFleetFor(p);
+  const fly = (x, y, size, seed, ship) => {
     const half = size*0.62;                                  // wingspan + glow
     SF.shipart.drawShip(ctx, clamp(x, half, W - half), Math.max(y, half + 6) +
       Math.sin(t*1.15 + seed)*u*0.006, size,
-      { color: col, levels: lv || {}, t: t + seed, idle:false, tune });
+      { color: (ship && ship.color) || col, levels: (ship && ship.levels) || {},
+        t: t + seed, idle:false, tune: ship && ship.tune, decal: ship && ship.decal });
   };
+  const me = { color: col, levels, tune: p && p.tune, decal: p && p.decal };
 
   if(wide){
     // The kitted hero gets the right gutter, big, in front of the ringed
     // world. Sized off the gutter as well as the frame so it leans into the
     // cards rather than landing on them.
-    fly(W - gutter*0.5, H*0.34, Math.min(gutter*1.3, u*0.30), 1.1, levels, p && p.tune);
+    fly(W - gutter*0.5, topH*0.34, Math.min(gutter*1.3, u*0.30), 1.1, me);
     [[gutter*0.50, 0.30, 0.13], [gutter*0.44, 0.62, 0.10], [W - gutter*0.55, 0.68, 0.11]]
-      .forEach(([x, y, sz], i) => fly(x, H*y, Math.min(gutter*0.7, u*sz), i*2.4 + 0.6));
+      .forEach(([x, y, sz], i) =>
+        fly(x, topH*y, Math.min(gutter*0.7, u*sz), i*2.4 + 0.6, fleet[i % fleet.length]));
   } else {
     /*
      * No gutters: the menu owns the middle of the glass, so the wing becomes
@@ -225,11 +286,17 @@ function drawTitleArt(canvasId, p, t){
      * card. Everything is small enough to sit behind the wordmark and still
      * clear the first card - depth, not clutter.
      */
-    const band = Math.min(H*0.15, u*0.34);
+    const band = Math.min(topH*0.15, u*0.34);
     [[0.16, 0.42, 0.17], [0.83, 0.52, 0.15], [0.40, 0.20, 0.10], [0.66, 0.78, 0.12]]
       .forEach(([x, y, sz], i) =>
         fly(W*x, band*y, Math.min(u*sz, band*0.62), i*2.4 + 0.6,
-            i === 0 ? levels : null, i === 0 ? (p && p.tune) : null));
+            i === 0 ? me : fleet[i % fleet.length]));
+  }
+  // The scroll's middle third gets quiet traffic, so the road down to
+  // SETTINGS isn't dead space.
+  if(H > topH*1.35){
+    fly(W*0.12, topH*1.15 + (H - topH)*0.35, u*0.07, 5.2, fleet[0]);
+    fly(W*0.88, topH*1.05 + (H - topH)*0.62, u*0.055, 6.8, fleet[1 % fleet.length]);
   }
 
   /*
@@ -1087,8 +1154,7 @@ function renderMissions(){
   const stars = P.totalStars(profile), want = P.maxStars();
   // The second half explains the little initial chips on the stops - they
   // were the one mark on the map the map never explained.
-  $("missionStars").innerHTML = stars + " / " + want + " ★ collected" +
-    (P.listNames().length > 1 ? ' <i class="map-legend">· a chip on a stop = who holds its record</i>' : "");
+  $("missionStars").innerHTML = stars + " / " + want + " ★ collected";
 
   /*
    * The header states the goal. A bare tally tells a kid nothing about what
@@ -1544,18 +1610,6 @@ function drawCampaign(){
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(painted ? "✓ PAINTED" : "READY TO PAINT", x, y + R + 37);
-        // Whose flag flies on the gift: same chip as every other stop.
-        const best = P.familyBest(node.mission.id);
-        if(best && best.owner !== profile.name){
-          const chipX = x + R*0.78, chipY = y + R*0.78;
-          ctx.fillStyle = best.color || "#e74c3c";
-          ctx.strokeStyle = "rgba(10,12,24,0.85)";
-          ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(chipX, chipY, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = "#fff";
-          ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
-          ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
-        }
       }
       if(starHunt) ctx.restore();        // the hunt's dimming, balanced
       return;                            // fully bespoke - skip the shared node kit
@@ -1785,24 +1839,12 @@ function drawCampaign(){
                  x, y + R + (hull && unlocked ? 44 : 20));
     ctx.restore();
 
-    // Whose flag flies here: the record holder's initial in their own ship
-    // colour, pinned to the stop's rim. A brother's chip on YOUR mission is
-    // the whole replay engine of a family game, and it belongs on the map,
-    // not buried in a hint card.
-    if(unlocked){
-      const best = P.familyBest(node.mission.id);
-      if(best && best.owner !== profile.name){
-        const chipX = x + R*0.78, chipY = y + R*0.78;
-        ctx.fillStyle = best.color || "#e74c3c";
-        ctx.strokeStyle = "rgba(10,12,24,0.85)";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(chipX, chipY, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
-        ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
-      }
-    }
-
+    /*
+     * The record chip used to ride here - the holder's initial on the stop's
+     * rim. Cut on request: at map scale it read as noise, and the real
+     * scoreboard (the Championship, and the briefing's record line) already
+     * says who holds what, with room to say it properly.
+     */
     /*
      * The hunt's whole point: the stop doesn't just stay bright, it SAYS what
      * it still owes. A gold tag under the name, naming the objective - which
