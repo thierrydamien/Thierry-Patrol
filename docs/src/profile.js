@@ -404,21 +404,56 @@ function checkAchievements(p){
 }
 
 /** Records a finished mission attempt. Returns true if this was a new best. */
-function recordMission(p, missionId, difficultyId, stars, score, cleared){
+function recordMission(p, missionId, difficultyId, stars, score, cleared, metIds){
   const rec = p.missions[missionId] || (p.missions[missionId] = { cleared:false, stars:{}, best:{} });
   let improved = false;
   if(cleared && !rec.cleared){ rec.cleared = true; improved = true; }
-  if(stars > (rec.stars[difficultyId] || 0)){ rec.stars[difficultyId] = stars; improved = true; }
+  if(stars > (rec.stars[difficultyId] || 0)){
+    rec.stars[difficultyId] = stars;
+    improved = true;
+  }
+  /*
+   * WHICH objectives were met, not just how many. The map's star-hunt mode
+   * needs to name the one you are missing ("missing: rescue every pilot"),
+   * and a count can't do that. Kept per difficulty and only replaced when
+   * that tier does better, so it always agrees with rec.stars beside it.
+   * Old saves simply have no `met` and fall back to the count.
+   */
+  if(metIds && stars >= (rec.stars[difficultyId] || 0)){
+    rec.met = rec.met || {};
+    rec.met[difficultyId] = metIds.slice();
+  }
   if(score > (rec.best[difficultyId] || 0)){ rec.best[difficultyId] = score; improved = true; }
   if(score > p.highscore) p.highscore = score;
   save(p);
   return improved;
 }
 
+/**
+ * The objectives this pilot has NOT yet ticked on a mission, as objective ids.
+ * Reads the best-scoring tier's record so it agrees with starsForMission.
+ * Returns null when the save predates per-objective tracking - the caller
+ * then shows a count instead of naming names.
+ */
+function missingObjectives(p, mission){
+  const rec = p.missions && p.missions[mission.id];
+  const all = mission.objectives || [];
+  if(!rec || !rec.stars) return all.slice();
+  let bestDiff = null, bestN = -1;
+  Object.keys(rec.stars).forEach(d => {
+    const n = Number(rec.stars[d]) || 0;
+    if(n > bestN){ bestN = n; bestDiff = d; }
+  });
+  if(bestN >= all.length) return [];
+  const met = rec.met && bestDiff && rec.met[bestDiff];
+  if(!met) return null;                       // known incomplete, unknown which
+  return all.filter(id => met.indexOf(id) === -1);
+}
+
 SF.profile = {
   listNames, addName, load, save, saveRaw, snapshot, blank, migrate, adoptOldSaves,
   upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
-  starsForMission, totalStars, maxStars, hardestCleared, difficultyUnlocked, campaignComplete,
+  starsForMission, totalStars, maxStars, missingObjectives, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,
   checkAchievements, recordMission, achievementStats, unclaimedMedals, claimMedal,
 };

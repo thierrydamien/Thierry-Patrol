@@ -69,12 +69,26 @@
   <!-- ===================== MISSION SELECT ===================== -->
   <section id="screen-missions" class="screen">
     <h2 class="section-title">THE CAMPAIGN</h2>
-    <p id="missionStars" class="power-line"></p>
+    <!-- The header states the GOAL, not just the tally: how many stars are
+         still out there and what the next one opens. -->
+    <div id="campaignProgress" class="camp-progress">
+      <div class="camp-prog-top">
+        <span id="missionStars" class="camp-stars"></span>
+        <button id="starHuntBtn" class="camp-hunt">★ FIND MY STARS</button>
+      </div>
+      <div class="camp-bar"><div id="campaignBarFill" class="camp-bar-fill"></div></div>
+      <p id="campaignGoal" class="camp-goal"></p>
+    </div>
     <!-- The map is drawn on the canvas; one transparent button per stop sits
-         over it, so hit-testing, focus and keyboard access come for free. -->
-    <div id="missionList" class="campaign-map">
-      <canvas id="campaignCanvas" width="640" height="900"></canvas>
-      <div id="campaignNodes" class="campaign-nodes"></div>
+         over it, so hit-testing, focus and keyboard access come for free.
+         The rail beside it jumps to a sector: the route is 29 stops and
+         3,000-odd pixels tall, and thumbing that is not navigation. -->
+    <div class="campaign-frame">
+      <div id="sectorRail" class="sector-rail"></div>
+      <div id="missionList" class="campaign-map">
+        <canvas id="campaignCanvas" width="640" height="900"></canvas>
+        <div id="campaignNodes" class="campaign-nodes"></div>
+      </div>
     </div>
     <!-- One line, pinned to the bottom edge: the shortcut straight into the
          next mission. Deliberately a button and not the card it replaced -

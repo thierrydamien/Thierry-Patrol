@@ -830,6 +830,57 @@ async function run(){
     SF.ui.renderMissions();
   }
 
+  /* ---------- the map answers "what next, and why?" ----------
+   * Sky 29 asks for all 84 stars, so the map has to be able to say which ones
+   * are missing, where they are, and how to get there. Four pins, one per
+   * control, plus the record change that makes naming a missing star possible.
+   */
+  {
+    const p = SF.ui.getProfile();
+    const keep = p.missions;
+    p.missions = {};
+    // Cleared everything, but mission 2 is one star short and 3 is two short.
+    SF.missions.MISSIONS.forEach(m => {
+      if(m.gift) return;
+      p.missions[m.id] = { cleared:true, stars:{ pilot:3 }, best:{ pilot:1000 } };
+    });
+    const m2 = SF.missions.MISSIONS[1], m3 = SF.missions.MISSIONS[2];
+    p.missions[m2.id] = { cleared:true, stars:{ pilot:2 }, best:{ pilot:1000 },
+                          met:{ pilot: m2.objectives.slice(0, 2) } };
+    p.missions[m3.id] = { cleared:true, stars:{ pilot:1 }, best:{ pilot:1000 } };
+    SF.ui.renderMissions();
+
+    check("a record remembers WHICH objectives were ticked, not just how many",
+      (() => { const miss = SF.profile.missingObjectives(p, m2);
+               return miss && miss.length === 1 && miss[0] === m2.objectives[2]; })());
+    check("an old save without that detail still reports the gap, unnamed",
+      SF.profile.missingObjectives(p, m3) === null);
+    check("the header states the goal, not just the tally",
+      /more ★ to open SKY 29/.test(id("campaignGoal").textContent) &&
+      parseFloat(id("campaignBarFill").style.width) > 0);
+    check("the star hunt offers itself only when stars are owed",
+      !id("starHuntBtn").classList.contains("hidden") &&
+      /FIND MY STARS \(2\)/.test(id("starHuntBtn").textContent));
+    check("with the road finished, the button chases a star instead of a stop",
+      /GRAB A STAR/.test(id("campaignNext").textContent));
+    check("the rail lists every sector, newest stretch first",
+      qa("#sectorRail .rail-stop").length === 11 &&
+      /THE EASEL/.test(qa("#sectorRail .rail-stop")[0].textContent));
+
+    // A pilot with every star gets neither a hunt button nor a star to chase.
+    SF.missions.MISSIONS.forEach(m => {
+      if(!m.gift) p.missions[m.id] = { cleared:true, stars:{ pilot:3 }, best:{ pilot:1000 } };
+    });
+    SF.ui.renderMissions();
+    check("all 84 home: the hunt puts itself away",
+      id("starHuntBtn").classList.contains("hidden") &&
+      /SKY 29 is open/.test(id("campaignGoal").textContent) &&
+      /FLY MISSION/.test(id("campaignNext").textContent));
+
+    p.missions = keep;
+    SF.ui.renderMissions();
+  }
+
   /* ---------- iPhone ---------- */
   {
     const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");

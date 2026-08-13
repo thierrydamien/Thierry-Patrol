@@ -1468,3 +1468,80 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .ws-unflown { color: rgba(255,255,255,0.4) !important; font-style:italic; }
 .ws-fly { width:auto; min-width:84px; margin:0; padding:10px 14px; font-size:13px; }
 .ws-empty { font-size:13px; color: rgba(255,255,255,0.5); line-height:1.5; padding:4px 2px; }
+
+/* ---------------- CAMPAIGN: goal header, star hunt, sector rail ------------
+   The map answers "what do I fly next, and why?" now, and these are the three
+   controls that say it: a bar with the target written on it, a hunt toggle,
+   and a table of contents for a route that is 3,000px tall. */
+/* Sticky: the goal and the hunt toggle are the two controls you want WHILE
+   scrolling a 3,000px map, and a header that scrolls away has neither. */
+.camp-progress {
+  position: sticky; top:0; z-index:5;
+  width:100%; max-width:600px; margin-bottom:10px; padding:6px 10px 8px;
+  border-radius:12px;
+  background: linear-gradient(180deg, rgba(9,8,24,0.97) 70%, rgba(9,8,24,0.86));
+}
+.camp-prog-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.camp-stars { font-size:12px; letter-spacing:1px; color: rgba(255,255,255,0.65); }
+.camp-hunt {
+  flex:0 0 auto; font-family:inherit; font-weight:700; font-size:10.5px; letter-spacing:0.7px;
+  padding:7px 11px; border-radius:11px; cursor:pointer; min-height:32px;
+  background: rgba(255,210,63,0.12); color:#ffd23f;
+  border:1.5px solid rgba(255,210,63,0.45);
+}
+.camp-hunt.on { background:#ffd23f; color:#2a1d00; border-color:#ffd23f; }
+.camp-bar {
+  height:7px; border-radius:5px; margin:8px 0 6px;
+  background: rgba(0,0,0,0.45); overflow:hidden;
+}
+.camp-bar-fill {
+  height:100%; border-radius:5px; width:0;
+  background: linear-gradient(90deg, #ffb020, #ffd23f);
+  box-shadow: 0 0 10px rgba(255,210,63,0.5);
+  transition: width .5s ease;
+}
+.camp-goal { font-size:12px; color: rgba(255,255,255,0.6); line-height:1.4; }
+.camp-goal-done { color:#4ade80; }
+
+/* The map and its rail share a row; the rail is the narrow column. */
+.campaign-frame {
+  display:flex; align-items:flex-start; gap:8px;
+  width:100%; max-width:600px;
+}
+.campaign-frame .campaign-map { flex:1 1 auto; min-width:0; }
+.sector-rail {
+  flex:0 0 auto; display:flex; flex-direction:column; gap:3px;
+  padding-top:4px; width:96px;
+  /* Rides along with the scroll: a table of contents you have to scroll back
+     to the top to reach is not a table of contents. */
+  position: sticky; top:86px; align-self:flex-start;
+}
+.rail-stop {
+  display:flex; align-items:center; gap:5px; width:100%;
+  font-family:inherit; font-weight:700; font-size:9px; letter-spacing:0.2px;
+  text-align:left; color: rgba(255,255,255,0.55);
+  background:transparent; border:none; padding:5px 2px; cursor:pointer;
+  border-radius:7px; min-height:26px;
+}
+.rail-stop i {
+  flex:0 0 auto; width:6px; height:6px; border-radius:50%;
+  background: rgba(255,255,255,0.35);
+}
+.rail-stop span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rail-stop:not(.locked) i { background: var(--accent); box-shadow: 0 0 6px rgba(245,166,35,0.7); }
+.rail-stop.locked { color: rgba(255,255,255,0.25); }
+.rail-stop:active { background: rgba(255,255,255,0.08); }
+/* A phone has no room for a rail beside a map: it becomes a scrolling strip
+   of chips above it, which is the same control in the shape that fits. */
+@media (max-width: 560px) {
+  .campaign-frame { flex-direction:column; gap:6px; }
+  .sector-rail {
+    flex-direction:row; width:100%; overflow-x:auto; gap:5px; padding:4px 0 5px;
+    position: sticky; top:78px; z-index:4;
+    background:#090818;              /* opaque: the map must not ghost through */
+  }
+  /* On a phone the header has one job - the goal - and the record-chip
+     legend is what pushes it onto three lines. */
+  .map-legend { display:none; }
+  .rail-stop { width:auto; flex:0 0 auto; padding:5px 9px; background: rgba(0,0,0,0.3); }
+}

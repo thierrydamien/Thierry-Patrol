@@ -436,6 +436,7 @@ function startMission(missionIndex, difficultyId){
     bannerText: mission.name.toUpperCase(), bannerSub: mission.goal || mission.brief,
     bannerColor: "#ffd23f", bannerUntil: simMs + 6000,
     objectiveDefs: mission.objectives.map(id => OBJECTIVES[id]),
+    objectiveIds: mission.objectives.slice(),   // for the map's star hunt
     objectiveIds: mission.objectives.slice(),
     // The ship LAUNCHES - rockets up from below the screen for the first
     // second, engines wide open, before control is handed over.
@@ -619,7 +620,13 @@ function endMission(completed){
     firstClear = completed && !(prevRec && prevRec.cleared);
     prevSelfBest = prevRec && prevRec.best
       ? Math.max.apply(null, [0].concat(Object.values(prevRec.best).map(Number))) : 0;
-    P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0, run.score, completed);
+    // The ids that were actually ticked ride along, so the campaign map can
+    // tell a pilot WHICH star is still out there rather than just how many.
+    const metIds = completed
+      ? (run.objectiveIds || []).filter((id, i) => run.objectiveDefs[i].test(run.stats))
+      : [];
+    P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0,
+                    run.score, completed, metIds);
   }
   const unlocked = P.checkAchievements(profile);
 

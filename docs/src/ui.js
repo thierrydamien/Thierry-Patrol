@@ -993,12 +993,84 @@ const SECTORS = [
   { at:28, name:"THE EASEL" },       // 29: the one Papa never finished
 ];
 
+/*
+ * STAR HUNT.
+ *
+ * Sky 29 asks for all 84 stars, which turns "which ones am I missing?" into
+ * the most important question this screen can answer - and it couldn't. The
+ * hunt is a view over the same map: finished stops go quiet, unfinished ones
+ * keep their colour and say what is still owed. Off by default, because the
+ * map is a story first and a checklist second.
+ */
+let starHunt = false;
+
+/** Stops still owed a star, nearest-to-done first, then earliest. */
+function starDebts(){
+  const out = [];
+  MISSIONS.forEach((m, i) => {
+    // The gift's own stars are outside the 84 (see profile.totalStars), so
+    // hunting them would tell a pilot they are short when they are not.
+    if(m.gift || !isMissionUnlocked(profile, i)) return;
+    const earned = P.starsForMission(profile, m.id);
+    const total = (m.objectives || []).length;
+    if(earned >= total) return;
+    out.push({ mission:m, index:i, earned, total,
+               missing: P.missingObjectives(profile, m) });
+  });
+  out.sort((a, b) => (b.earned - a.earned) || (a.index - b.index));
+  return out;
+}
+
+/** The label for one owed star, short enough to sit under a stop. */
+function debtLabel(d){
+  if(d.missing && d.missing.length){
+    const def = SF.missions.OBJECTIVES[d.missing[0]];
+    const extra = d.missing.length > 1 ? " +" + (d.missing.length - 1) : "";
+    return (def ? def.label : d.missing[0]) + extra;
+  }
+  const n = d.total - d.earned;
+  return n + " star" + (n > 1 ? "s" : "") + " left";
+}
+
 function renderMissions(){
-  const stars = P.totalStars(profile);
+  const stars = P.totalStars(profile), want = P.maxStars();
   // The second half explains the little initial chips on the stops - they
   // were the one mark on the map the map never explained.
-  $("missionStars").innerHTML = stars + " / " + P.maxStars() + " ★ collected" +
+  $("missionStars").innerHTML = stars + " / " + want + " ★ collected" +
     (P.listNames().length > 1 ? ' <i class="map-legend">· a chip on a stop = who holds its record</i>' : "");
+
+  /*
+   * The header states the goal. A bare tally tells a kid nothing about what
+   * it is FOR; the bar plus one sentence turns it into a target with a prize
+   * on the end of it - and once the prize is won, into a record of it.
+   */
+  const fill = $("campaignBarFill");
+  if(fill) fill.style.width = Math.round((stars/Math.max(1, want))*100) + "%";
+  const goal = $("campaignGoal");
+  if(goal){
+    const left = want - stars;
+    const giftIdx = MISSIONS.findIndex(m => m.gift);
+    const giftDone = giftIdx >= 0 && profile.missions[MISSIONS[giftIdx].id] &&
+                     profile.missions[MISSIONS[giftIdx].id].cleared;
+    goal.textContent = left > 0
+      ? left + " more ★ to open SKY 29 — the sky Papa never finished"
+      : giftDone ? "Every star home, and Sky 29 painted. Nothing left but the flying."
+                 : "Every star is home — SKY 29 is open at the top of the map";
+    goal.classList.toggle("camp-goal-done", left <= 0);
+  }
+  const debts = starDebts();
+  const hunt = $("starHuntBtn");
+  if(hunt){
+    // Nothing to hunt is worth saying out loud, and the button turns itself off.
+    if(!debts.length){ starHunt = false; hunt.classList.add("hidden"); }
+    else {
+      hunt.classList.remove("hidden");
+      hunt.classList.toggle("on", starHunt);
+      hunt.textContent = starHunt ? "✕ SHOW THE WHOLE MAP"
+                                  : "★ FIND MY STARS (" + debts.length + ")";
+    }
+  }
+  renderSectorRail();
 
   // Size the map to the campaign, not the other way round.
   const cv = $("campaignCanvas");
@@ -1054,21 +1126,59 @@ function renderMissions(){
    */
   let next = 0;
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) next = i;
+  /*
+   * The button used to always point at the newest unlocked stop, which is
+   * exactly right until the campaign is finished - then it is stuck on the
+   * last mission forever while nineteen stars sit unclaimed behind it. So
+   * once there is no new ground to take (or while the hunt is on), it offers
+   * the nearest star instead: the stop closest to done.
+   */
+  const lastUnlockedDone = profile.missions[MISSIONS[next].id] &&
+                           profile.missions[MISSIONS[next].id].cleared;
+  const debt = debts[0];
+  const chase = debt && (starHunt || lastUnlockedDone) ? debt : null;
+  const target = chase ? chase.index : next;
   const nextBtn = $("campaignNext");
   if(nextBtn){
-    const nm = MISSIONS[next];
-    nextBtn.innerHTML = `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>FLY MISSION ${nm.id}</b>` +
-                        `<span>${esc(nm.name)}</span>`;
+    const nm = MISSIONS[target];
+    nextBtn.innerHTML = chase
+      ? `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>GRAB A STAR · ${nm.id}</b>` +
+        `<span>${esc(debtLabel(chase))}</span>`
+      : `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>FLY MISSION ${nm.id}</b>` +
+        `<span>${esc(nm.name)}</span>`;
     const ico = nextBtn.querySelector(".btn-ico");
     if(ico){
       ico.style.width = (ico.width/2) + "px"; ico.style.height = (ico.height/2) + "px";
       SF.icons.paint(ico, "play", getComputedStyle(nextBtn).color);
     }
-    nextBtn.onclick = () => { audio.play("uiClick"); openBriefing(next); };
+    nextBtn.onclick = () => { audio.play("uiClick"); openBriefing(target); };
   }
 
   startCampaignLoop();
-  scrollToNextStop(next);
+  scrollToNextStop(target);
+}
+
+/*
+ * The sector rail: the map is 29 stops and about 3,000px tall, so getting
+ * from Sky 29 back to mission 6 to farm a star was a long thumb-drag with no
+ * landmarks. The rail is the map's table of contents - one tap per stretch,
+ * the one you are looking at lit.
+ */
+function renderSectorRail(){
+  const rail = $("sectorRail");
+  if(!rail) return;
+  rail.innerHTML = "";
+  // Top of the screen is the END of the route, so the rail reads top-down in
+  // the same order the map does.
+  SECTORS.slice().reverse().forEach(sec => {
+    const b = document.createElement("button");
+    const unlocked = isMissionUnlocked(profile, sec.at);
+    b.className = "rail-stop" + (unlocked ? "" : " locked");
+    b.innerHTML = `<i></i><span>${esc(sec.name)}</span>`;
+    b.setAttribute("aria-label", "Jump to " + sec.name);
+    click(b, () => scrollToNextStop(sec.at));
+    rail.appendChild(b);
+  });
 }
 
 /*
@@ -1237,9 +1347,18 @@ function drawCampaign(){
   });
 
   const me = profile.callsign || profile.name;
+  // Star hunt: everything already finished steps back so the stops that still
+  // owe you a star are the only bright things on the route.
+  const owes = {};
+  if(starHunt) starDebts().forEach(d => { owes[d.mission.id] = d; });
   nodes.forEach((node, i) => {
     const unlocked = isMissionUnlocked(profile, i);
     const earned = P.starsForMission(profile, node.mission.id);
+    const debt = owes[node.mission.id];
+    if(starHunt){
+      ctx.save();
+      ctx.globalAlpha = debt ? 1 : 0.22;
+    }
 
     /*
      * The gift stop draws itself: locked it is a PENCIL SKETCH of a stop -
@@ -1324,6 +1443,7 @@ function drawCampaign(){
           ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
         }
       }
+      if(starHunt) ctx.restore();        // the hunt's dimming, balanced
       return;                            // fully bespoke - skip the shared node kit
     }
     const boss = !!node.mission.boss;
@@ -1538,6 +1658,31 @@ function drawCampaign(){
         ctx.fillText((best.name[0] || "?").toUpperCase(), chipX, chipY + 4);
       }
     }
+
+    /*
+     * The hunt's whole point: the stop doesn't just stay bright, it SAYS what
+     * it still owes. A gold tag under the name, naming the objective - which
+     * is the difference between "you're missing something here" and "fly this
+     * one and rescue the pilots".
+     */
+    if(debt){
+      const label = debtLabel(debt).toUpperCase();
+      ctx.save();
+      ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
+      const padX = 8, h = 18, w = ctx.measureText(label).width + padX*2;
+      const ty = y + R + (hull && unlocked ? 52 : 28);
+      ctx.fillStyle = "rgba(255,210,63,0.92)";
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(x - w/2, ty, w, h, 9);
+      else ctx.rect(x - w/2, ty, w, h);
+      ctx.fill();
+      ctx.fillStyle = "#2a1d00";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(label, x, ty + h/2 + 0.5);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+    }
+    if(starHunt) ctx.restore();
   });
 
   // Your actual ship, parked at the furthest stop you've reached - always on
@@ -3581,6 +3726,7 @@ click($("rushBtn"), () => {
   }
   launch("rush", "pilot");
 });
+click($("starHuntBtn"), () => { starHunt = !starHunt; renderMissions(); });
 click($("armoryBtn"), () => { renderArmory(); show("screen-armory"); });
 click($("workshopBtn"), () => { SF.workshop.open(); show("screen-workshop"); });
 click($("wsBackBtn"), () => { renderMenu(); show("screen-menu"); });
