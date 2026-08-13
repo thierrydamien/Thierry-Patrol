@@ -58,6 +58,7 @@ class WaveDirector {
       if(s.delay <= 0){
         const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
+          bounty: s.bounty,
           // Two in three go for the convoy; the rest still hunt the player,
           // so parking next to the hauler is never a free win.
           huntsEscort: !!this.mission.convoy && chance(0.66),
@@ -107,10 +108,19 @@ class WaveDirector {
     while(eliteIdx.size < Math.min(eliteCount, slots.length)){
       eliteIdx.add(randInt(0, slots.length-1));
     }
+    /*
+     * BOUNTY (mission flag): one ship in the salvo is wanted, and pays for
+     * it. It is the whole lesson of "aim at THAT one, not at the crowd" made
+     * into money - which is why it goes on the level that teaches leading a
+     * moving target rather than being a generic reward.
+     */
+    const bountyIdx = this.mission.bounty && slots.length
+      ? randInt(0, slots.length - 1) : -1;
     slots.forEach((s, i) => {
       this.pending.push({
         type: wave.type, x: clamp(s.x, 34, VW-34), y: s.y,
         delay: s.delay + extraDelay, elite: eliteIdx.has(i),
+        bounty: i === bountyIdx && !eliteIdx.has(i),   // never double-decorated
         hoverY: 155 + (i % 4) * 52 + rand(-14, 14),   // four hover bands in the taller field
       });
     });
@@ -368,7 +378,19 @@ function resolve(world, ctxObj, dt){
       const e = enemies[i];
       if(!e.alive) continue;
       const rr = e.r + p.r;
-      if((e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y) < rr*rr){
+      const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
+      /*
+       * NEAR MISS (mission flag): a diver that goes past your wingtip without
+       * touching you pays for it. The lesson of the kamikaze level is "let
+       * them come, THEN swerve", and nothing teaches that like being paid for
+       * cutting it fine. Claimed once per ship, and only for things that
+       * actually dive - a grunt drifting past is not a dodge.
+       */
+      if(ctxObj.onGraze && !e.grazed && e.diver && d2 < (rr+22)*(rr+22) && d2 >= rr*rr){
+        e.grazed = true;
+        ctxObj.onGraze(e);
+      }
+      if(d2 < rr*rr){
         // Ramming an enemy destroys it too - a fair trade, and it stops the
         // "invisible wall" feeling of bouncing off a sprite. A rock is not a
         // fair trade: it costs you a life and is still there afterwards, which
@@ -387,6 +409,29 @@ function resolve(world, ctxObj, dt){
   }
 
   const ebs = world.enemyBullets.items;
+  /*
+   * COVER (mission flag): rocks stop their bullets. Everywhere else a boulder
+   * is only an obstacle - here it is also a wall you can put between you and
+   * a gun, which turns "they shoot back" from a dodging drill into a reason
+   * to read the field. Rocks are few (never more than a handful alive), so
+   * the inner loop is cheap; it only runs on the levels that ask for it.
+   */
+  if(world.cover){
+    for(let i=0;i<ebs.length;i++){
+      const b = ebs[i];
+      if(!b.alive) continue;
+      for(let k=0;k<enemies.length;k++){
+        const r = enemies[k];
+        if(!r.alive || !r.hazard) continue;
+        const rr2 = b.r + r.r;
+        if((b.x-r.x)*(b.x-r.x) + (b.y-r.y)*(b.y-r.y) < rr2*rr2){
+          b.alive = false;
+          fx.sparks(b.x, b.y, 4, "#cbd5e1", 130);
+          break;
+        }
+      }
+    }
+  }
   for(let i=0;i<ebs.length;i++){
     const b = ebs[i];
     if(!b.alive) continue;

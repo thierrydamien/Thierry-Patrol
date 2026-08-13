@@ -290,8 +290,12 @@ function w(t, type, n, form, opts){
 const MISSIONS = [
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
-    brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves.",
+    brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves - and the squadron is flying this one with you.",
     goal:"Fly with your finger. Shoot!",
+    // Nobody's first ninety seconds are flown alone: two escort drones on the
+    // house, flown by whoever else is on the device. It also shows a kid what
+    // a Wingman Drone does long before they are asked to buy one.
+    lentDrones:2,
     /*
      * The most important ninety seconds in the game: if a seven-year-old
      * doesn't love THIS, there is no mission two. The first version was
@@ -332,8 +336,11 @@ const MISSIONS = [
   },
   {
     id:2, name:"Weaving Through", subtitle:"Moving targets",
-    brief:"These ones slide left and right. Shoot where they are going, not where they are.",
-    goal:"They slide — aim ahead of them!",
+    brief:"These ones slide left and right. Shoot where they are going, not where they are - and every wave has one WANTED ship in a gold ring that pays five times as much.",
+    goal:"Ringed one pays x5 — hunt it down!",
+    // The lesson is picking one moving ship out of a crowd and leading it, so
+    // the level pays for exactly that instead of for clearing the sky.
+    bounty:true,
     waves: [
       w(1,   "grunt",  6, "line"),
       w(8,   "weaver", 5, "arc"),
@@ -356,8 +363,11 @@ const MISSIONS = [
   },
   {
     id:3, name:"Return Fire", subtitle:"They shoot back",
-    brief:"These ones stop and aim at you. Keep moving and they will miss!",
-    goal:"They shoot back. Keep moving!",
+    brief:"These ones stop and aim at you. Keep moving and they will miss - and out here the rocks are on your side: their shots cannot get through one.",
+    goal:"They shoot back — hide behind rocks!",
+    // Cover turns "they shoot back" from a dodging drill into a reason to
+    // read the field. The rocks were already here; now they mean something.
+    cover:true,
     waves: [
       w(1,   "grunt",   7, "arc"),
       w(8,   "striker", 3, "line"),
@@ -413,8 +423,11 @@ const MISSIONS = [
   },
   {
     id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
-    brief:"Kamikazes pick a spot and rocket at it. Let them come close, then swerve away.",
-    goal:"They dive at you — swerve away!",
+    brief:"Kamikazes pick a spot and rocket at it. Let them come close, THEN swerve - the closer you cut it, the more they pay. Every near miss is money.",
+    goal:"Cut it fine — near misses pay!",
+    // The lesson is nerve: waiting before the swerve. Paying for the graze is
+    // what turns "don't get hit" into "get missed by as little as possible".
+    nearMiss:true,
     waves: [
       w(1,   "kamikaze", 3, "arc"),
       w(8,   "swooper",  4, "line"),
@@ -648,8 +661,9 @@ const MISSIONS = [
      ========================================================= */
   {
     id:12, name:"The Wreck Line", subtitle:"Through the debris",
-    brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot - they just do not move either.",
-    goal:"Rocks! Fly around or blast them",
+    brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
+    goal:"Fly the scrap — it stops their shots",
+    cover:true,                       // the debris shelters as well as blocks
     face:"asteroid",                  // the debris is the level, not its escorts
     waves: [
       w(1,   "asteroid", 6, "scatter"),

@@ -500,6 +500,29 @@ async function run(){
   }
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
+  /*
+   * "Even the first ones should feel different." A level earns an identity by
+   * having a boss, a house rule, or a named ship in it - a different mix of
+   * the same grunts is not an identity. Missions 1-5 were the offenders, so
+   * they are the ones this pins.
+   */
+  check("no early mission is just a different pile of the same enemies", (() => {
+    const OWN = ["boss","storm","wells","beat","blackout","foundry","serpent","convoy",
+                 "trench","coinRain","noGuns","rival","vault","backstage","sky29",
+                 "cover","bounty","nearMiss","lentDrones","starRain"];
+    // The Gauntlet's identity is the elites themselves, which live in its
+    // waves rather than in a flag - that counts.
+    return SF.missions.MISSIONS.slice(0, 12).every(m =>
+      OWN.some(k => !!m[k]) || m.waves.filter(wv => wv.elite).length >= 4);
+  })());
+  check("the first five each teach their own thing", (() => {
+    const M = SF.missions.MISSIONS;
+    return M[0].lentDrones === 2 &&   // 1: you are not flying this alone
+           M[1].bounty === true &&    // 2: pick ONE moving target out of a crowd
+           M[2].cover === true &&     // 3: they shoot back - so use the rocks
+           !!M[3].boss &&             // 4: the first boss
+           M[4].nearMiss === true;    // 5: nerve - wait, THEN swerve
+  })());
   check("every wave references a real enemy type",
     SF.missions.MISSIONS.every(m => m.waves.every(w => !!SF.enemyData.ENEMY_TYPES[w.type])));
   check("every enemy type has a real behaviour",
@@ -1224,6 +1247,10 @@ async function run(){
     !!SF.comms._state.lastAt.missionStart ||
     SF.comms._state.lastAt.missionStart === 0);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
+  // Mission 1 lends the squadron: nobody's first ninety seconds are flown
+  // alone, whatever the pilot has or hasn't bought.
+  check("the first patrol flies with lent drones",
+    SF.game.world.player.drones >= 2);
 
   // Tallying the hooks as well as the buzzes: the rumble table was tuned off
   // these counts (guns 4/s, kills 0.6/s), so the numbers it was tuned against
@@ -1891,6 +1918,86 @@ async function run(){
     check("the family board hears about it instead",
       !!(SF.ui.getProfile().workshopBest && SF.ui.getProfile().workshopBest["ws-test"] &&
          SF.ui.getProfile().workshopBest["ws-test"].score >= 0));
+    if(!id("overlayResults").classList.contains("hidden")) clickEl(id("resultsMenuBtn"));
+    await runFrames(6);
+  }
+
+  /* ---------- the early levels' own mechanics, actually firing ---------- */
+  {
+    /*
+     * These are diagnostic flights, not play, so the ledger is put back
+     * afterwards: a FAILED campaign run still books a best score, and leaving
+     * three of those on the pilot would quietly rewrite the family's records
+     * (and every later test that reads them).
+     */
+    const prof = SF.ui.getProfile();
+    const ledger = JSON.parse(JSON.stringify(prof.missions));
+    const lastBefore = prof.lastMission, diffBefore = prof.lastDifficulty;
+
+    // WANTED (mission 2): the director rings exactly one ship per salvo, and
+    // killing it pays five times. Both halves, because a marker nobody is
+    // paid for is decoration and a payout nobody can see is accounting.
+    SF.game.startMission(1, "pilot");   // index 1 == mission 2
+    await runFrames(60);
+    check("the wanted level rings one ship per salvo, and only one", (() => {
+      const dir = SF.game.run.director;
+      if(SF.game.run.mission.bounty !== true) return false;
+      dir.pending.length = 0;
+      dir.queueSalvo({ type:"grunt", n:8, form:"line" }, 8, 0);
+      return dir.pending.filter(s => s.bounty).length === 1;
+    })());
+    check("a wanted ship pays five times over", (() => {
+      const d = SF.game.run.difficulty;
+      const want = SF.game.world.spawnEnemy("grunt", 320, 200, { difficulty: d, bounty: true });
+      const before = SF.game.run.stats.bounties || 0;
+      SF.game.callbacks.onEnemyKilled(want, null, false);
+      return want.bounty === true && (SF.game.run.stats.bounties || 0) === before + 1;
+    })());
+    SF.game.endMission(false);
+    await runFrames(4);
+
+    // COVER (missions 3 and 12): a rock eats their bullets.
+    SF.game.startMission(2, "pilot");   // index 2 == mission 3
+    await runFrames(60);
+    check("rocks stop their shots on the levels that promise it", (() => {
+      const w = SF.game.world;
+      if(!w.cover) return false;
+      const rock = w.spawnEnemy("boulder", 300, 300, { difficulty: SF.game.run.difficulty });
+      rock.entering = false;
+      const b = w.spawnEnemyBullet(300, 300, 0, 200, "bolt", 4);
+      SF.systems.resolve(w, { onPlayerHit(){}, onEnemyKilled(){}, onEscape(){}, godMode:true }, 0.016);
+      const stopped = !b.alive;
+      rock.alive = false;
+      return stopped;
+    })());
+    SF.game.endMission(false);
+    await runFrames(4);
+
+    // NEAR MISS (mission 5): a diver that goes past your wingtip pays.
+    SF.game.startMission(4, "pilot");   // index 4 == mission 5
+    await runFrames(60);
+    check("cutting it fine pays on the kamikaze level", (() => {
+      const w = SF.game.world;
+      if(SF.game.run.mission.nearMiss !== true) return false;
+      const before = SF.game.run.stats.grazes || 0;
+      const e = w.spawnEnemy("kamikaze", 200, 200, { difficulty: SF.game.run.difficulty });
+      SF.game.callbacks.onGraze(e);
+      const paid = (SF.game.run.stats.grazes || 0) === before + 1;
+      e.alive = false;
+      return paid && e.diver === true;       // ...and it is a diver that earns it
+    })());
+    check("a drifting grunt is not a dodge", (() => {
+      const e = SF.game.world.spawnEnemy("grunt", 100, 100, { difficulty: SF.game.run.difficulty });
+      const ok = e.diver === false;
+      e.alive = false;
+      return ok;
+    })());
+    SF.game.endMission(false);
+    await runFrames(4);
+
+    prof.missions = ledger;                 // hand the records back untouched
+    prof.lastMission = lastBefore; prof.lastDifficulty = diffBefore;
+    SF.profile.save(prof);
     if(!id("overlayResults").classList.contains("hidden")) clickEl(id("resultsMenuBtn"));
     await runFrames(6);
   }

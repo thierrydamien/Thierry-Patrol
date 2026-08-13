@@ -516,6 +516,29 @@ function drawEnemies(ctx, world, timeMs){
   for(let i=0;i<items.length;i++){
     const e = items[i];
     if(!e.alive) continue;
+    /*
+     * WANTED. A bounty target has to be pickable out of a moving crowd from
+     * the sofa, so it gets a spinning gold ring UNDER the hull and a chevron
+     * over it - never a tint on the sprite, which would fight the type
+     * colours a kid has already learned to read.
+     */
+    if(e.bounty){
+      const R = e.r + 12 + Math.sin(t*4)*2;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,210,63,0.85)";
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([7, 6]);
+      ctx.lineDashOffset = -t*26;
+      ctx.beginPath(); ctx.arc(e.x, e.y, R, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(255,210,63,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(e.x, e.y - R - 11);
+      ctx.lineTo(e.x - 6, e.y - R - 3);
+      ctx.lineTo(e.x + 6, e.y - R - 3);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
     // A Marksman draws the line it is about to fire down, filling as it aims.
     if(e.type.chargeTime && e.state === 1 && world.player){
       const k = clamp(e.charge/e.chargeTime, 0, 1);

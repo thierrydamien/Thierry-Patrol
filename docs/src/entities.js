@@ -613,6 +613,12 @@ class World {
     // real. Some still come for you - a level where nothing chases you is a
     // level where standing still works.
     e.huntsEscort = !!o.huntsEscort;
+    e.bounty = !!o.bounty;            // wanted: drawn with a ring, pays five times
+    e.grazed = false;                 // near-miss credit, claimed once per ship
+    // Who counts as "coming at you" for a near miss. A grunt drifting past is
+    // not a dodge; something that picked you and committed is.
+    e.diver = type.behaviour === "kamikaze" || type.behaviour === "swoop" ||
+              type.behaviour === "intercept";
     e.anchorX = x; e.weaveWidth = rand(62, 118); e.weaveSpeed = rand(1.3, 2.0);
     e.hoverY = o.hoverY != null ? o.hoverY : rand(170, 340);
     e.hoverTime = rand(3.5, 6);

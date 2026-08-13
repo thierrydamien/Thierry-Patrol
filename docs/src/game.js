@@ -335,10 +335,21 @@ function startMission(missionIndex, difficultyId){
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   game.world.mods = mission.mods || {};   // the Wacky Sky's roll; {} elsewhere
+  game.world.cover = !!mission.cover;     // rocks stop their bullets on this one
   SF.render.initBackground(custom ? (mission.skyIndex || 0)
                           : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
   const loadout = buildLoadout(profile, difficulty);
+  /*
+   * LENT DRONES (mission flag). On the very first patrol the squadron flies
+   * with you: two escort drones, on the house, whoever else is on the device.
+   * Three things at once - nobody's first ninety seconds are flown alone, the
+   * level has an identity that isn't "grunts but more of them", and a kid
+   * sees what a Wingman Drone does before ever being asked to buy one. Never
+   * takes anything away: it only tops the count up.
+   */
+  if(mission.lentDrones)
+    loadout.drones = Math.max(loadout.drones, mission.lentDrones);
   game.world.createPlayer(loadout);
 
   /*
@@ -753,7 +764,16 @@ const callbacks = {
     const scoreMult = comboMult * run.difficulty.pay * (simMs < game.world.player.tempScoreUntil ? 2 : 1);
 
     run.score += Math.round(e.score * scoreMult);
-    const coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
+    let coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
+    // A WANTED ship pays five times, loudly. Picking one target out of a
+    // moving crowd is a skill, and this is the level that pays for it.
+    if(e.bounty){
+      coin *= 5;
+      run.stats.bounties = (run.stats.bounties || 0) + 1;
+      fx.ring(e.x, e.y, 46, "#ffd23f", 4, 0.4);
+      fx.text(e.x, e.y - 30, "WANTED! +£" + coin, "#ffd23f", 19, true);
+      audio.play("coin", true);
+    }
     game.world.dropCoins(e.x, e.y, coin);
 
     if(run.mods.confetti){
@@ -811,6 +831,22 @@ const callbacks = {
       // Killed outside the scan, so the list can't change under the loop.
       caught.forEach(o => callbacks.onEnemyKilled(o, null, false));
     }
+  },
+
+  /*
+   * A diver went past your wingtip and missed. On the level that teaches
+   * "let them come, THEN swerve", that is the skill, so it gets paid and
+   * shouted about - a near miss you don't notice teaches nothing.
+   */
+  onGraze(e){
+    const run = game.run;
+    if(!run || run.ended) return;
+    run.stats.grazes = (run.stats.grazes || 0) + 1;
+    const coin = Math.max(1, Math.round(4 * run.payScale * game.world.player.moneyMult));
+    game.world.dropCoins(e.x, e.y, coin);
+    fx.ring(e.x, e.y, 26, "#7cc4ff", 2.5, 0.22);
+    fx.text(e.x, e.y - 22, "CLOSE!", "#7cc4ff", 16, true);
+    audio.play("coin");
   },
 
   onEnemyEscaped(e){
@@ -1197,6 +1233,7 @@ function update(dt, timeMs){
   behaviourCtx.onBossDead = finalBossBlast;
   behaviourCtx.onBossPhase = onBossPhase;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
+  behaviourCtx.onGraze = run.mission.nearMiss ? callbacks.onGraze : null;
   behaviourCtx.godMode = game.godMode;
   // The Chorus: guns may only release inside the beat's window, and never
   // while the choir has forgotten the words (a conductor just died).
