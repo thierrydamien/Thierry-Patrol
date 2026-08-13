@@ -356,6 +356,26 @@ async function run(){
     !!SF.audio._sounds.uiDeny);
   check("Escape pauses on a keyboard",
     /Escape/.test(fs.readFileSync(path.join(__dirname, "src/input.js"), "utf8")));
+  /*
+   * The menu backdrop was a fixed 720x1000 bitmap stretched with
+   * object-fit:cover, so the window's aspect decided which third of the
+   * artwork survived - on a laptop that was the hero ship's head, on a phone
+   * the sides. Pin the two halves of the fix: the canvas is measured and
+   * matched in script, and the title has its own sky built by the same
+   * painter the missions use rather than a hand-rolled sphere.
+   */
+  check("the menu backdrop is sized to its box, not cropped to it",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             const c = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+             return /function fitTitleCanvas/.test(u) &&
+                    /getBoundingClientRect/.test(u.split("function fitTitleCanvas")[1].slice(0, 500)) &&
+                    !/\.title-art\s*\{[^}]*object-fit\s*:\s*cover/.test(c); })());
+  check("the title screen paints with the game's own sky", typeof SF.skygen.buildTitle === "function");
+  check("the title sky is not a campaign stop", (() => {
+    const cv = SF.skygen.buildTitle(400, 700, 1);
+    return !!cv && cv.width === 400 && cv.height === 700 &&
+           !SF.skygen.SKIES.some(s => s.name === "The Home Sky");
+  })());
   check("the loading screen is the title card, not a bare LOADING",
     (() => { const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
              return /loading-title/.test(h) && /A FAMILY SQUADRON/.test(

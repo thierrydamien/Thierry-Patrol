@@ -218,9 +218,16 @@ function rgba(hex, a){
 /**
  * Draws `fn` three times - at y, y-H and y+H - so anything crossing an edge
  * appears on the other one. This is the whole trick behind the seamless wrap.
+ *
+ * The menu sky is the one customer that must NOT wrap: it is a still frame,
+ * never scrolled, so a prop hanging off the bottom would have its twin come
+ * back in at the top as a second planet in the same picture. `wrapTiles` is
+ * set for the duration of one synchronous paint() and read only here.
  */
+let wrapTiles = true;
 function tiled(ctx, H, y, fn){
   fn(y);
+  if(!wrapTiles) return;
   if(y > H*0.6) fn(y - H);
   if(y < H*0.4) fn(y + H);
 }
@@ -431,7 +438,18 @@ let propLayer = null;
 function build(missionIndex, W, H, dpr = 1){
   const sky = SKIES[missionIndex % SKIES.length];
   if(sky.photo) return null;                       // the renderer uses the artwork
-  const rand = rngFor(missionIndex*137 + 7);
+  return paint(sky, missionIndex*137 + 7, W, H, dpr, true);
+}
+
+/**
+ * One painter, two customers: the scrolling mission skies (wrap:true) and the
+ * menu's still frame (wrap:false). Splitting this out is what lets the title
+ * screen use the game's OWN planets - banded, ringed, limb-lit - instead of
+ * the hand-rolled sphere it used to draw for itself.
+ */
+function paint(sky, seed, W, H, dpr, wrap){
+  wrapTiles = !!wrap;
+  const rand = rngFor(seed);
   const cv = document.createElement("canvas");
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   const ctx = cv.getContext("2d");
@@ -628,10 +646,52 @@ function build(missionIndex, W, H, dpr = 1){
   return cv;
 }
 
+/*
+ * THE MENU SKY.
+ *
+ * Not a SKIES entry on purpose: the campaign list is a contract (one sky per
+ * stop, all distinct) and the menu is not a stop. It is also the only sky
+ * composed against the REAL window shape rather than a fixed portrait frame -
+ * every distance is a fraction of u, the short side, so the same picture
+ * reads on a phone held upright and on a laptop in landscape instead of
+ * being cropped to whichever third happened to fit.
+ */
+const TITLE_SKY = {
+  name:"The Home Sky", clouds:["#3b2a7a","#1e6aa8","#7c3aed"], dust:"#05061a",
+  star:"#dbeafe", density:0.9, stars:1.15, bright:4,
+};
+function buildTitle(W, H, dpr = 1){
+  const u = Math.min(W, H);
+  const rx = k => (k*u)/W;                     // a radius in units of the short side
+  const sky = Object.assign({}, TITLE_SKY, { props: [
+    // Depth first: a galaxy high on the left, so the corner the wordmark sits
+    // over has something behind it other than black.
+    { k:"galaxy", x:0.17, y:0.20, r:rx(0.34) },
+    // The world below - an amber giant, mostly off the bottom edge, so what
+    // shows is a lit limb rather than a disc. The old menu drew its own flat
+    // sphere here; this one is the same painter the missions use, so the first
+    // screen finally speaks the game's art language. No bands: at this crop
+    // they never read as weather, they just leave one stray sliver at the
+    // edge of the clip where a stripe clips the circle.
+    { k:"planet", x:0.12, y:(H + 0.31*u)/H, r:rx(0.55),
+      lit:"#d9a441", dark:"#33200a" },
+    // A ringed neighbour, small and high right: the "designed" note that says
+    // somebody chose this view.
+    { k:"planet", x:0.87, y:0.21, r:rx(0.10),
+      lit:"#8b6bd8", dark:"#241245", rings:true },
+    // A cratered moon low right, balancing the giant across the frame.
+    { k:"planet", x:0.82, y:0.63, r:rx(0.055),
+      lit:"#9fb4d8", dark:"#161d2e", craters:true },
+    // A far sun bottom right - the warm accent that kills the dead corner.
+    { k:"sun", x:0.93, y:0.88, r:rx(0.018), color:"#ffd9a0" },
+  ] });
+  return paint(sky, 4242, W, H, dpr, false);
+}
+
 /** Which asset a photo-backed mission uses, or null when it's generated. */
 function photoFor(missionIndex){
   return (SKIES[missionIndex % SKIES.length] || {}).photo || null;
 }
 
-SF.skygen = { build, photoFor, SKIES };
+SF.skygen = { build, buildTitle, photoFor, SKIES };
 })();

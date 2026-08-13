@@ -135,25 +135,44 @@ let titleRaf = 0, titleT = 0;
  * the menus ran an iPad warm. Keyed by size so a rotation rebuilds it.
  */
 const titleSky = { cv: null, key: "" };
-function titleSkyFor(W, H){
-  const key = W + "x" + H;
+function titleSkyFor(W, H, dpr){
+  const key = W + "x" + H + "@" + dpr;
   if(titleSky.key !== key){
-    // The Deep - the violet sky the blue planet below was chosen to sit in.
-    // build(7) landed on Gold Reach: the photo entries shift the indices.
-    titleSky.cv = SF.skygen.build(9, W, H);
+    titleSky.cv = SF.skygen.buildTitle(W, H, dpr);
     titleSky.key = key;
   }
   return titleSky.cv;
+}
+/*
+ * The backing store follows the element, at device resolution.
+ *
+ * It used to be a fixed 720x1000 bitmap stretched with object-fit:cover, and
+ * that one line cost the first screen of the game everything: cover CROPS to
+ * whatever the window's aspect happens to be, so on a laptop it ate ~90px off
+ * the top - the hero ship was beheaded - and on a phone it ate the sides. The
+ * middle third that survived was the part with nothing in it, which is why the
+ * home screen read as "mostly empty and black". Same bitmap stretched over a
+ * 3x phone was soft, too. Measure the box, match it, draw in CSS pixels.
+ */
+function fitTitleCanvas(cv){
+  const r = cv.getBoundingClientRect();
+  const W = Math.max(1, Math.round(r.width)), H = Math.max(1, Math.round(r.height));
+  // Capped: a 3x tablet would otherwise ask for a 30-megapixel menu backdrop.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const bw = Math.round(W*dpr), bh = Math.round(H*dpr);
+  if(cv.width !== bw || cv.height !== bh){ cv.width = bw; cv.height = bh; }
+  return { W, H, dpr };
 }
 function drawTitleArt(canvasId, p, t){
   const cv = $(canvasId);
   const ctx = cv && cv.getContext("2d");
   if(!ctx) return;
-  const W = cv.width, H = cv.height;
+  const { W, H, dpr } = fitTitleCanvas(cv);
   t = t || 0;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);       // draw in CSS pixels throughout
   ctx.clearRect(0, 0, W, H);
 
-  const sky = titleSkyFor(W, H);
+  const sky = titleSkyFor(W, H, dpr);
   if(sky) ctx.drawImage(sky, 0, 0, W, H);
   else { ctx.fillStyle = "#070716"; ctx.fillRect(0, 0, W, H); }
 
@@ -167,46 +186,69 @@ function drawTitleArt(canvasId, p, t){
   }
   ctx.globalAlpha = 1;
 
-  // A big planet low and left, so the ship has something to fly past.
-  // Limb-lit along the sunward edge; the old bright highlight arc floating on
-  // the surface read as gloss on a marble rather than light on a world.
-  const g = ctx.createRadialGradient(W*0.16, H*0.86, W*0.05, W*0.30, H*0.94, W*0.62);
-  g.addColorStop(0, "#4a6fd8");
-  g.addColorStop(0.5, "#17224f");
-  g.addColorStop(1, "#04050f");
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.fill();
-  ctx.save();
-  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.clip();
-  const limb = ctx.createRadialGradient(W*0.14, H*0.80, W*0.40, W*0.30, H*0.98, W*0.58);
-  limb.addColorStop(0.82, "rgba(160,200,255,0)");
-  limb.addColorStop(0.97, "rgba(160,200,255,0.22)");
-  limb.addColorStop(1, "rgba(200,225,255,0.38)");
-  ctx.fillStyle = limb;
-  ctx.beginPath(); ctx.arc(W*0.30, H*0.98, W*0.58, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  // The hero: their ship if we know who is flying, a stock one otherwise.
-  // Parked a touch higher and smaller than it used to be: a fully-kitted
-  // hull's wingtips were sitting behind the PATROL wordmark.
+  /*
+   * The fleet, composed against the real frame.
+   *
+   * Two rules, both learned the hard way. Sizes come off the SHORT side, not
+   * the width - tie a ship to W on a landscape laptop and it grows taller than
+   * the band it is supposed to sit in. And every ship is clamped so its own
+   * radius clears the top edge, because "it fits at 720x1000" is not the same
+   * promise as "it fits".
+   *
+   * On a wide window the menu is a 700px column with empty gutters either
+   * side, so the wing flies THERE - the black bars either side of the cards
+   * were most of what made this screen feel unfinished.
+   */
   const levels = p ? SF.shipart.levelsOf(p) : {};
   const col = p ? p.shipColor : "#f5a623";
-  const bob = Math.sin(t*1.1)*H*0.006;
-  SF.shipart.drawShip(ctx, W*0.68, H*0.185 + bob, W*0.25, { color: col, levels, t: t + 1.1, idle:false, tune: p && p.tune });
+  const u = Math.min(W, H);
+  const gutter = (W - Math.min(W, 700))/2;
+  const wide = gutter > 120;                     // room to fly beside the menu
+  const fly = (x, y, size, seed, lv, tune) => {
+    const half = size*0.62;                                  // wingspan + glow
+    SF.shipart.drawShip(ctx, clamp(x, half, W - half), Math.max(y, half + 6) +
+      Math.sin(t*1.15 + seed)*u*0.006, size,
+      { color: col, levels: lv || {}, t: t + seed, idle:false, tune });
+  };
 
-  // A wing of three behind it, small, for depth - each on its own rhythm.
-  [[0.36,0.12,0.10],[0.86,0.15,0.085],[0.52,0.05,0.07]].forEach(([x,y,sz], i) => {
-    const b2 = Math.sin(t*1.3 + i*2.4)*H*0.005;
-    SF.shipart.drawShip(ctx, W*x, H*y + b2, W*sz, { color: col, levels:{}, t: t + i*0.7, idle:false });
-  });
+  if(wide){
+    // The kitted hero gets the right gutter, big, in front of the ringed
+    // world. Sized off the gutter as well as the frame so it leans into the
+    // cards rather than landing on them.
+    fly(W - gutter*0.5, H*0.34, Math.min(gutter*1.3, u*0.30), 1.1, levels, p && p.tune);
+    [[gutter*0.50, 0.30, 0.13], [gutter*0.44, 0.62, 0.10], [W - gutter*0.55, 0.68, 0.11]]
+      .forEach(([x, y, sz], i) => fly(x, H*y, Math.min(gutter*0.7, u*sz), i*2.4 + 0.6));
+  } else {
+    /*
+     * No gutters: the menu owns the middle of the glass, so the wing becomes
+     * distant traffic across the top instead of a hero parked on the pilot
+     * card. Everything is small enough to sit behind the wordmark and still
+     * clear the first card - depth, not clutter.
+     */
+    const band = Math.min(H*0.15, u*0.34);
+    [[0.16, 0.42, 0.17], [0.83, 0.52, 0.15], [0.40, 0.20, 0.10], [0.66, 0.78, 0.12]]
+      .forEach(([x, y, sz], i) =>
+        fly(W*x, band*y, Math.min(u*sz, band*0.62), i*2.4 + 0.6,
+            i === 0 ? levels : null, i === 0 ? (p && p.tune) : null));
+  }
 
-  // Darken toward the bottom so the UI over it stays readable. Gently: the
-  // old 0.25/0.55/0.95 ramp buried the lower two thirds of the artwork, and
-  // the first screen of the game read as 60% dead black.
+  /*
+   * Readability scrim. The old one was a full-width ramp to 82% black, which
+   * is how a hand-painted sky ends up looking like a dark rectangle. This
+   * darkens only where the UI actually is - a soft column down the middle -
+   * and leaves the gutters, the planet and the wing in the clear.
+   */
+  const colHalf = Math.min(W, 760)/2;
+  const scrim = ctx.createLinearGradient(W/2 - colHalf, 0, W/2 + colHalf, 0);
+  scrim.addColorStop(0, "rgba(5,4,15,0)");
+  scrim.addColorStop(0.5, "rgba(5,4,15,0.46)");
+  scrim.addColorStop(1, "rgba(5,4,15,0)");
+  ctx.fillStyle = scrim;
+  ctx.fillRect(W/2 - colHalf, 0, colHalf*2, H);
   const fade = ctx.createLinearGradient(0, 0, 0, H);
-  fade.addColorStop(0, "rgba(5,4,15,0.05)");
-  fade.addColorStop(0.55, "rgba(5,4,15,0.30)");
-  fade.addColorStop(1, "rgba(5,4,15,0.82)");
+  fade.addColorStop(0, "rgba(5,4,15,0.20)");     // settles the wordmark
+  fade.addColorStop(0.45, "rgba(5,4,15,0.06)");
+  fade.addColorStop(1, "rgba(5,4,15,0.34)");
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, W, H);
 }

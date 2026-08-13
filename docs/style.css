@@ -113,6 +113,17 @@ html, body {
 
 @media (min-width: 700px) {
   .screen { width: min(700px, 100vw); }
+  /*
+   * The two title screens take the whole window and cap their CONTENT instead.
+   * Every other screen is a 700px column on a wide display, which is right for
+   * reading - but on the menus it meant the sky was a 700px strip with black
+   * bars either side, and the first thing anyone saw was the bars. The screen
+   * scrolls vertically and the canvas is exactly its size, so widening it adds
+   * no horizontal overflow.
+   */
+  #screen-profiles, #screen-menu { width: 100vw; }
+  #screen-profiles > *:not(.title-art),
+  #screen-menu > *:not(.title-art) { max-width: 700px; }
   .shop-group { display:grid; grid-template-columns: 1fr 1fr; gap:9px; align-items:start; }
   .group-head { grid-column: 1 / -1; }
   .shop-item { margin-bottom:0; }
@@ -182,9 +193,14 @@ html, body {
   padding-bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + 6px);
 }
 .menu-bg::before { content:""; margin-top:auto; flex: 0 0 0; }
+/*
+ * The bitmap is sized to this box in script now (see fitTitleCanvas), so the
+ * fit is 1:1 - `cover` used to crop the artwork to whatever aspect the window
+ * happened to be, which is how the hero ship lost its nose on a laptop.
+ */
 .title-art {
   position:absolute; inset:0; width:100%; height:100%;
-  object-fit:cover; z-index:0; pointer-events:none;
+  object-fit:fill; z-index:0; pointer-events:none;
 }
 .menu-bg > *:not(.title-art) { position:relative; z-index:1; }
 /* Centred by the same trick, and just as unable to strand its own content. */
