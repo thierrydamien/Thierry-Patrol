@@ -625,6 +625,9 @@ class World {
     e.flash = 0; e.hitTint = 0;
     e.carriesRescue = !!type.carriesRescue;
     e.escaped = false;
+    // Has it ever actually been in the field? Staged back ranks start well
+    // above it, and nothing can "escape off the top" before it arrives.
+    e.entered = y > -40;
     e.fromBoss = false;   // set by the boss for summoned adds
     e.hazard = !!type.hazard;
     // Whether this enemy is part of the mission's planned opposition. Rocks,
@@ -684,9 +687,21 @@ class World {
         }
       }
 
-      // A fleeing thief leaves through the top with your money; everything
-      // else leaves through the bottom or the sides.
-      if(e.y > VH + 40 || e.y < -120 || e.x < -80 || e.x > VW + 80){
+      /*
+       * A fleeing thief leaves through the top with your money; everything
+       * else leaves through the bottom or the sides.
+       *
+       * The top test only applies once a ship has ACTUALLY BEEN in the field.
+       * Formations stage their back ranks far above it - a twelve-strong
+       * column starts at y=-766, and eight of twelve slots in a vee, a
+       * twinColumns or a sides begin past -120 - so without this guard the
+       * back of every deep wave was marked "escaped" on its first tick,
+       * before it had flown in at all. It counted as spawned, it counted
+       * against the kill percentage, and it could never be shot: destroy
+       * everything on screen on a dense tier and the star still read ~70%.
+       */
+      if(e.y > -40) e.entered = true;
+      if(e.y > VH + 40 || (e.entered && e.y < -120) || e.x < -80 || e.x > VW + 80){
         e.alive = false;
         e.escaped = true;
         if(ctxObj.onEscape) ctxObj.onEscape(e);

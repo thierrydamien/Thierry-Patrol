@@ -33,8 +33,11 @@ class WaveDirector {
     // opposition, so "destroy 80% of enemies" doesn't count them.
     this.totalPlanned = mission.waves.reduce((n,w) =>
       n + (ENEMY_TYPES[w.type].hazard ? 0 : this.waveSize(w)), 0);
+    // waveSize, not the raw `w.n`: a tier with density above 1 flies MORE
+    // haulers than the script asks for, and counting the script's number gave
+    // "rescue every stranded pilot 4 / 2" - a total you could beat.
     this.rescuesPlanned = mission.waves.reduce((n,w) =>
-      n + (ENEMY_TYPES[w.type].carriesRescue ? w.n : 0), 0);
+      n + (ENEMY_TYPES[w.type].carriesRescue ? this.waveSize(w) : 0), 0);
   }
 
   get finishedSpawning(){

@@ -730,25 +730,91 @@ function drawActors(ctx, timeMs){
     }
   }
 
-  // Erasers: warn line, then the block itself trailing rubber crumbs.
+  /*
+   * Erasers. This was a cream rectangle with a flat blue band across the top,
+   * which - correctly - read as a FLAG rather than as a school rubber, and a
+   * flag sweeping the screen explains nothing about why it hurts.
+   *
+   * What makes a rubber a rubber: rounded corners, the blue end being a
+   * separate harder block with a seam, a worn leading edge that is dirty from
+   * use, and crumbs coming off the end that is doing the rubbing. It also
+   * travels flat-on now, so the working face leads.
+   */
   for(let i = 0; i < S.erasers.length; i++){
     const er = S.erasers[i];
     if(er.warn > 0){
-      ctx.fillStyle = "rgba(241,228,200," + (0.10 + Math.sin(fxnow/70)*0.05).toFixed(3) + ")";
+      // The warning is the smear it is ABOUT to leave, brightening as it comes.
+      const k = 1 - clamp(er.warn, 0, 1);
+      ctx.save();
+      const g = ctx.createLinearGradient(0, er.y - er.h/2, 0, er.y + er.h/2);
+      g.addColorStop(0, "rgba(241,228,200,0)");
+      g.addColorStop(0.5, "rgba(241,228,200," + (0.10 + k*0.12).toFixed(3) + ")");
+      g.addColorStop(1, "rgba(241,228,200,0)");
+      ctx.fillStyle = g;
       ctx.fillRect(0, er.y - er.h/2, VW(), er.h);
+      ctx.strokeStyle = "rgba(241,228,200," + (0.25 + Math.sin(fxnow/70)*0.15).toFixed(3) + ")";
+      ctx.lineWidth = 2; ctx.setLineDash([9, 9]); ctx.lineDashOffset = -fxnow/40;
+      ctx.beginPath(); ctx.moveTo(0, er.y); ctx.lineTo(VW(), er.y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
       continue;
     }
+    const w = er.w, h = er.h, r = h*0.22;
     ctx.save();
     ctx.translate(er.x, er.y);
     ctx.rotate(-0.06);
-    ctx.fillStyle = "#f1e4c8";
-    ctx.fillRect(-er.w/2, -er.h/2, er.w, er.h);
-    ctx.fillStyle = "#4aa3e0";
-    ctx.fillRect(-er.w/2, -er.h/2, er.w, er.h*0.34);
-    ctx.strokeStyle = "rgba(20,24,36,0.7)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-er.w/2, -er.h/2, er.w, er.h);
+    // The smear it leaves behind - the reason it is dangerous, made visible.
+    const sm = ctx.createLinearGradient(-w/2, 0, -w/2 - 120, 0);
+    sm.addColorStop(0, "rgba(241,228,200,0.22)");
+    sm.addColorStop(1, "rgba(241,228,200,0)");
+    ctx.fillStyle = sm;
+    ctx.fillRect(-w/2 - 120, -h*0.36, 120, h*0.72);
+
+    const body = () => {
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(-w/2, -h/2, w, h, r);
+      else ctx.rect(-w/2, -h/2, w, h);
+    };
+    body();
+    const grad = ctx.createLinearGradient(0, -h/2, 0, h/2);
+    grad.addColorStop(0, "#fdf6e4");
+    grad.addColorStop(0.55, "#f1e4c8");
+    grad.addColorStop(1, "#cbb894");
+    ctx.fillStyle = grad; ctx.fill();
+
+    // The blue end: a separate, harder block, clipped to the body so it keeps
+    // the rounded corner - and on the TRAILING side, because the pale rubber
+    // is the end doing the work.
+    ctx.save();
+    body(); ctx.clip();
+    const blue = ctx.createLinearGradient(0, -h/2, 0, h/2);
+    blue.addColorStop(0, "#63b6ef");
+    blue.addColorStop(1, "#2c7fbc");
+    ctx.fillStyle = blue;
+    ctx.fillRect(w*0.16, -h/2, w*0.34, h);
+    ctx.strokeStyle = "rgba(20,24,36,0.35)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(w*0.16, -h/2); ctx.lineTo(w*0.16, h/2); ctx.stroke();
+    // Worn and grubby at the leading edge: this one has been used.
+    const dirt = ctx.createLinearGradient(-w/2, 0, -w/2 + w*0.3, 0);
+    dirt.addColorStop(0, "rgba(90,84,74,0.45)");
+    dirt.addColorStop(1, "rgba(90,84,74,0)");
+    ctx.fillStyle = dirt;
+    ctx.fillRect(-w/2, -h/2, w*0.3, h);
     ctx.restore();
+
+    body();
+    ctx.strokeStyle = "rgba(20,24,36,0.75)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+
+    // Crumbs, off the working end, drifting back the way it came.
+    for(let q = 0; q < 5; q++){
+      const u = ((fxnow/1000*1.6 + q*0.2 + i*0.11) % 1);
+      ctx.fillStyle = "rgba(226,214,186," + (0.7*(1-u)).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(er.x - er.w*0.5 - u*46, er.y + Math.sin(q*2.1 + u*5)*er.h*0.5,
+              Math.max(0.8, 2.6*(1-u)), 0, TAU);
+      ctx.fill();
+    }
   }
 
   // Letters: giant drawn glyphs with a wobble, cracking as they take fire.

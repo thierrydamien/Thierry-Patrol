@@ -537,6 +537,49 @@ async function run(){
       const slots = SF.enemyData.FORMATIONS[wv.form](wv.n, SF.entityConst.VW);
       return slots.every(sl => sl.x >= 0 && sl.x <= SF.entityConst.VW);
     })));
+  /*
+   * The kill-percentage star was unwinnable and nobody could see why.
+   * Formations stage their back ranks far above the field - eight of twelve
+   * slots in a vee, a twinColumns or a sides start past y=-120, and a
+   * twelve-strong column starts at -766 - and the "left through the top"
+   * test fired on them on their very first tick. They counted as spawned,
+   * counted against the percentage, and could never be shot: a bot killing
+   * everything on screen every frame measured 71%.
+   */
+  check("a wave's back ranks are staged above the field, not off the edge of it",
+    (() => {
+      const F = SF.enemyData.FORMATIONS, VW = SF.entityConst.VW;
+      // At least one formation must stage deep, or this pin is testing nothing.
+      return ["column","vee","twinColumns","sides"].some(k =>
+        F[k](12, VW).some(s => s.y < -120));
+    })());
+  check("nothing can escape off the top before it has arrived",
+    (() => { const e = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+             return /e\.entered = y > -40/.test(e) &&
+                    /\(e\.entered && e\.y < -120\)/.test(e); })());
+  check("a staged back rank flies in instead of vanishing", (() => {
+    const W = SF.game.world, d = SF.config.DIFFICULTIES[1];
+    W.mods = W.mods || {};      // no mission has started this early
+    const deep = W.spawnEnemy("grunt", 200, -400, { difficulty: d });
+    if(!deep.alive || deep.entered !== false) return false;
+    let escaped = 0;
+    // A tick at that height must NOT cull it - it has not arrived yet.
+    W.updateEnemies(0.016, { difficulty: d, smart: 0,
+      onEscape(){ escaped++; }, onPlayerHit(){}, onEnemyKilled(){} });
+    const survived = deep.alive && escaped === 0;
+    // ...but once it has been in the field, leaving through the top still is.
+    deep.y = 100; deep.entered = true; deep.y = -400;
+    W.updateEnemies(0.016, { difficulty: d, smart: 0,
+      onEscape(){ escaped++; }, onPlayerHit(){}, onEnemyKilled(){} });
+    const culled = !deep.alive && escaped === 1;
+    deep.alive = false;
+    return survived && culled;
+  })());
+  check("the rescue total counts the haulers that actually fly", (() => {
+    // Raw `w.n` gave "rescue every stranded pilot 4 / 2" on a dense tier.
+    const s = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+    return /carriesRescue \? this\.waveSize\(w\) : 0/.test(s);
+  })());
   check("every wave references a real formation",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",

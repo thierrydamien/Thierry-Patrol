@@ -816,8 +816,20 @@ const callbacks = {
      */
     if(run.mods.chain && (e.chainDepth || 0) < 3 && !run.ended){
       const depth = (e.chainDepth || 0) + 1;
+      const first = !e.chainDepth;          // this kill STARTED the cascade
+      if(first) run.chainCount = 0;
       const R = 96;
-      fx.ring(e.x, e.y, R, "#fb923c", 4, 0.3);
+      /*
+       * The blast has to be legible, not merely real. The first version was
+       * one thin ring in the middle of the explosion that caused it, and it
+       * measured fine - three-deep cascades, more chained kills than shot
+       * ones - while reading as nothing at all: "I don't see anything special
+       * about it". So the blast now says what it did. A shockwave, an arc of
+       * sparks reaching each neighbour it sets off, and the size of the
+       * cascade shouted at the end of it.
+       */
+      fx.ring(e.x, e.y, R, "#fb923c", 5, 0.34);
+      fx.ring(e.x, e.y, R*0.55, "#ffd23f", 3, 0.22);
       const list = game.world.enemies.items;
       const caught = [];
       for(let i = 0; i < list.length; i++){
@@ -828,8 +840,24 @@ const callbacks = {
         o.hp -= 3; o.flash = 1;
         if(o.hp <= 0){ o.chainDepth = depth; caught.push(o); }
       }
+      // The arc: you can see the blast reach across and take the next one.
+      caught.forEach(o => {
+        const dx = o.x - e.x, dy = o.y - e.y;
+        const d = Math.max(1, Math.hypot(dx, dy));
+        for(let k = 1; k <= 5; k++){
+          const u = k/6;
+          fx.spark(e.x + dx*u, e.y + dy*u, dx/d*90, dy/d*90,
+                   k % 2 ? "#ffd23f" : "#fb923c", 0.22, 2.6);
+        }
+      });
       // Killed outside the scan, so the list can't change under the loop.
-      caught.forEach(o => callbacks.onEnemyKilled(o, null, false));
+      caught.forEach(o => { run.chainCount++; callbacks.onEnemyKilled(o, null, false); });
+      // ...and once the whole cascade has resolved, how big it was.
+      if(first && run.chainCount >= 2){
+        fx.text(e.x, e.y - 34, "CHAIN ×" + (run.chainCount + 1) + "!", "#fb923c", 21, true);
+        fx.shake(Math.min(13, 3 + run.chainCount*1.5));
+        audio.play("combo", run.chainCount);
+      }
     }
   },
 
