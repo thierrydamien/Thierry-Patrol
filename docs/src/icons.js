@@ -221,6 +221,13 @@ const P = {
     c.beginPath(); c.moveTo(34, 12); c.lineTo(30, 19); c.lineTo(24, 14);
     c.closePath(); c.fill();
   },
+  back(c){          // a plain left chevron with a shaft: "that way, out"
+    // Deliberately not `undo`'s loop-arrow. A loop reads as "do it again" to
+    // a child; the way OUT of a room has to be an arrow pointing out of it.
+    c.beginPath(); c.moveTo(33, 20); c.lineTo(13, 20); c.stroke();
+    c.beginPath(); c.moveTo(21, 9); c.lineTo(9, 20); c.lineTo(21, 31);
+    c.closePath(); c.fill();
+  },
   undo(c){          // back arrow
     c.beginPath(); c.moveTo(30, 28); c.quadraticCurveTo(30, 14, 14, 14); c.stroke();
     c.beginPath(); c.moveTo(19, 7); c.lineTo(11, 14); c.lineTo(19, 21);

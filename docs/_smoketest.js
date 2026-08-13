@@ -916,6 +916,31 @@ async function run(){
     check("the rail lists every sector, newest stretch first",
       qa("#sectorRail .rail-stop").length === 11 &&
       /THE EASEL/.test(qa("#sectorRail .rail-stop")[0].textContent));
+    /*
+     * A name on its own explained nothing: "DEEP RUN" beside a dot tells a
+     * seven-year-old neither what the place is nor that it contains stops.
+     * Every sector now carries a number, a line of kid words, and a colour
+     * that the map band, the label and the rail chip all share.
+     */
+    check("every sector says what it is, in words a child would use",
+      SF.ui.SECTORS.every(s => typeof s.sub === "string" && s.sub.length > 12 &&
+                               /^#[0-9a-f]{6}$/i.test(s.hue || "")));
+    check("no two sectors wear the same colour",
+      new Set(SF.ui.SECTORS.map(s => s.hue)).size === SF.ui.SECTORS.length);
+    check("the vaguest two names were made concrete",
+      !SF.ui.SECTORS.some(s => s.name === "DEEP RUN" || s.name === "WARDEN SPACE"));
+    check("the rail chip carries the number, the name and the score", (() => {
+      const chips = qa("#sectorRail .rail-stop");
+      const easel = chips[0];                       // the last stretch, at the top
+      return chips.length === 11 &&
+             easel.querySelector("span b") && easel.querySelector("em") &&
+             chips.every(c => !!c.style.getPropertyValue("--sec")) &&
+             /11/.test(easel.querySelector("span b").textContent);
+    })());
+    check("the map paints each sector as a band, not just a caption",
+      (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+               return /SECTOR \" \+ \(si\+1\) \+ \" · STOPS \"/.test(u) &&
+                      /ctx\.fillText\(sec\.sub/.test(u); })());
 
     // A pilot with every star gets neither a hunt button nor a star to chase.
     SF.missions.MISSIONS.forEach(m => {
@@ -929,6 +954,63 @@ async function run(){
 
     p.missions = keep;
     SF.ui.renderMissions();
+  }
+
+  /* ---------- the way back ----------
+   * The report was "they don't always know how to get back". The old exits
+   * were text links at the BOTTOM of each screen, in a different place on
+   * each - on the Armory, past a whole shelf of upgrades. There is now one
+   * door, in one place, on every screen that has one.
+   */
+  {
+    const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+    check("there is one way back, and it is fixed to the corner",
+      !!id("wayBack") && !!id("backBtn") && !!id("crumbs") &&
+      /\.way-back\s*\{[^}]*position:\s*fixed/.test(css));
+    check("it is a thumb target, not a text link",
+      /--nav-h:\s*46px/.test(css) &&
+      /\.back-btn\s*\{[\s\S]*?min-height:\s*var\(--nav-h\)/.test(css));
+    check("the old bottom-of-the-screen exits are gone from view",
+      /#missionsBackBtn,[\s\S]{0,200}#wsBackBtn\s*\{\s*display:\s*none/.test(css));
+    check("nothing sticky can slide under the door",
+      // The screens that carry a bar are padded by exactly its height, and a
+      // scroll container measures its children's sticky offsets from the
+      // CONTENT edge - so top:0 already means "just below the door".
+      /--sticky-top:\s*calc\(var\(--nav-top\) \+ var\(--nav-h\)/.test(css) &&
+      /#screen-missions,[\s\S]{0,240}padding-top:\s*var\(--sticky-top\)/.test(css));
+
+    const back = () => id("wayBack").classList.contains("hidden");
+    SF.ui.show("screen-menu");
+    check("home has no way back - it IS the way back", back());
+    SF.ui.show("screen-game");
+    check("combat has no way back either; it has a pause button", back());
+    SF.ui.renderMissions(); SF.ui.show("screen-missions");
+    check("the campaign's door says where it goes",
+      !back() && id("backWord").textContent === "MENU");
+    check("...and the trail says where you are",
+      /MENU/.test(id("crumbs").textContent) && /CAMPAIGN/.test(id("crumbs").textContent) &&
+      !!id("crumbs").querySelector(".crumb.here"));
+    clickEl(id("backBtn"));
+    await runFrames(4);
+    check("the door works", id("screen-menu").classList.contains("active"));
+
+    // The escape hatch: MENU is the first crumb everywhere, and tapping it
+    // comes home from any depth.
+    SF.ui.renderMissions(); SF.ui.show("screen-missions");
+    SF.ui.show("screen-armory");
+    const first = id("crumbs").querySelector(".crumb");
+    check("the first crumb is always home", first && first.textContent === "MENU");
+    clickEl(first);
+    await runFrames(4);
+    check("tapping it comes home from anywhere", id("screen-menu").classList.contains("active"));
+
+    check("the phone's own back gesture is wired, not ignored",
+      (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+               return /addEventListener\("popstate"/.test(u) &&
+                      /history\.pushState/.test(u) &&
+                      // ...and a swipe in from the left edge does the same thing
+                      /clientX < 26/.test(u) &&
+                      typeof SF.ui.navBack === "function"; })());
   }
 
   /* ---------- the map reads as a record of what was done ----------

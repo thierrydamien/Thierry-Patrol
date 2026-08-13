@@ -17,6 +17,24 @@
 
 <div id="app">
 
+  <!--
+    THE WAY BACK. One control, outside every screen, so it is in the SAME
+    PLACE on all of them. The old arrangement had a text link called "Back to
+    Menu" at the BOTTOM of each screen - which on the Armory meant scrolling
+    past an entire shelf of upgrades to find the way out. A seven-year-old
+    does not scroll to leave a room.
+
+    The crumb beside it is the escape hatch: MENU is always the first step and
+    always tappable, so home is one visible tap away wherever you are.
+  -->
+  <div id="wayBack" class="way-back hidden">
+    <button id="backBtn" class="back-btn" aria-label="Go back">
+      <canvas class="back-ico" data-glyph="back" width="30" height="30"></canvas>
+      <span id="backWord">MENU</span>
+    </button>
+    <nav id="crumbs" class="crumbs" aria-label="Where you are"></nav>
+  </div>
+
   <!-- ===================== PILOT PICKER ===================== -->
   <section id="screen-profiles" class="screen menu-bg active">
     <canvas id="titleArt" class="title-art" width="720" height="1000"></canvas>

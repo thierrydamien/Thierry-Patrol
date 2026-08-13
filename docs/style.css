@@ -32,6 +32,15 @@
   --sa-bottom: env(safe-area-inset-bottom, 0px);
   --sa-left: env(safe-area-inset-left, 0px);
   --sa-right: env(safe-area-inset-right, 0px);
+  /*
+   * The way back floats over every screen at a fixed spot, so everything that
+   * would otherwise slide under it is measured from the same two numbers: how
+   * far down the door starts, and how tall it is. One place to change, and no
+   * sticky header can ever end up beneath it.
+   */
+  --nav-top: max(10px, env(safe-area-inset-top, 0px));
+  --nav-h: 46px;
+  --sticky-top: calc(var(--nav-top) + var(--nav-h) + 8px);
 
   --accent: #f5a623;
   --gold: #ffd23f;
@@ -1149,6 +1158,87 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
    The full-bleed gradient underlay is the briefing bar's treatment: content
    scrolls OUT under the button instead of showing through it, which used to
    read as a z-order bug. */
+/* ---------------- the way back ----------------
+ *
+ * One door, in the same place on every screen. It floats over the screens
+ * rather than living inside one, which is the entire point: a control that
+ * moves - or that is at the bottom of a long scroll, as the old "Back to
+ * Menu" links were - is a control a seven-year-old cannot rely on.
+ */
+.way-back {
+  position: fixed; z-index: 30;
+  left: max(10px, env(safe-area-inset-left, 0px));
+  top: var(--nav-top);
+  display: flex; align-items: center; gap: 10px;
+  pointer-events: none;                 /* only the controls take taps */
+}
+.way-back.hidden { display: none; }
+/* A scrim the width of the window, so whatever is scrolling past underneath
+   never competes with the door. Without it a mission node can peek out beside
+   the button and the corner reads as clutter rather than as chrome. */
+.way-back::before {
+  content: ""; position: fixed; z-index: -1;
+  left: 0; right: 0; top: 0;
+  height: calc(var(--nav-top) + var(--nav-h) + 10px);
+  background: linear-gradient(to bottom,
+    rgba(6,8,20,0.92) 0%, rgba(6,8,20,0.78) 60%, rgba(6,8,20,0) 100%);
+  pointer-events: none;
+}
+.back-btn {
+  pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: inherit; font-weight: 800; font-size: 13px; letter-spacing: 1.2px;
+  color: #fff; background: rgba(10,14,32,0.82);
+  border: 2px solid rgba(255,255,255,0.22); border-radius: 999px;
+  /* A thumb target, not a text link: 44px is the smallest thing a child
+     reliably hits, and this one is bigger. */
+  min-height: var(--nav-h); padding: 0 16px 0 10px; cursor: pointer;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+.back-btn:active { transform: scale(0.96); background: rgba(20,26,54,0.92); }
+.back-ico { width: 22px; height: 22px; flex: 0 0 auto; }
+/* The trail. MENU is always first and always tappable, so home is one visible
+   tap from anywhere - a signpost rather than a gesture nobody taught them. */
+.crumbs {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  background: rgba(10,14,32,0.72); border-radius: 999px; padding: 6px 11px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  max-width: 52vw; overflow: hidden;
+}
+.crumb {
+  font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  color: rgba(255,255,255,0.62); background: none; border: none;
+  padding: 3px 2px; cursor: pointer; white-space: nowrap;
+}
+.crumb:active { color: #fff; }
+.crumb.here { color: var(--accent); cursor: default; }
+.crumb-sep { color: rgba(255,255,255,0.3); }
+@media (max-width: 420px) {
+  .crumbs { display: none; }            /* the button alone on a small phone */
+}
+/*
+ * Everything that lives under the bar is measured from it, so there is one
+ * number to change and nothing can end up sliding beneath the door. Screens
+ * without a way back (the pilot picker, the menu, the playfield) are left
+ * exactly as they were.
+ */
+#screen-missions, #screen-briefing, #screen-armory,
+#screen-achievements, #screen-leaderboard, #screen-workshop {
+  padding-top: var(--sticky-top);
+}
+
+/*
+ * The old exits. Still wired, so the way back runs exactly the handler each
+ * screen always had - but no longer shown, because six different exits in six
+ * different places at the bottom of six different scrolls is the thing the
+ * kids were getting lost in.
+ */
+#missionsBackBtn, #briefBackBtn, #armoryBackBtn,
+#achievementsBackBtn, #leaderboardBackBtn, #wsBackBtn { display: none; }
+
 .sticky-back {
   position: sticky; bottom: 8px; z-index: 4;
   background: rgba(8,12,28,0.96);
@@ -1490,6 +1580,9 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 /* Sticky: the goal and the hunt toggle are the two controls you want WHILE
    scrolling a 3,000px map, and a header that scrolls away has neither. */
 .camp-progress {
+  /* top:0 is already below the way back: a scroll container measures its
+     children's sticky offsets from the CONTENT edge, and the screen's
+     padding-top is exactly the height of the bar. */
   position: sticky; top:0; z-index:5;
   width:100%; max-width:600px; margin-bottom:10px; padding:6px 10px 8px;
   border-radius:12px;
@@ -1525,7 +1618,7 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .campaign-frame .campaign-map { flex:1 1 auto; min-width:0; }
 .sector-rail {
   flex:0 0 auto; display:flex; flex-direction:column; gap:3px;
-  padding-top:4px; width:96px;
+  padding-top:4px; width:118px;   /* room for a number, a name and a score */
   /* Rides along with the scroll: a table of contents you have to scroll back
      to the top to reach is not a table of contents. */
   position: sticky; top:86px; align-self:flex-start;
@@ -1541,9 +1634,27 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
   flex:0 0 auto; width:6px; height:6px; border-radius:50%;
   background: rgba(255,255,255,0.35);
 }
-.rail-stop span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.rail-stop:not(.locked) i { background: var(--accent); box-shadow: 0 0 6px rgba(245,166,35,0.7); }
+.rail-stop span {
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto;
+}
+/* The sector number, in the sector's own colour: the chip, the band on the
+   map and the label all agree, so a colour is a place. */
+.rail-stop span b {
+  display:inline-block; min-width:11px; margin-right:4px;
+  color: var(--sec, #cfd8ff); font-size:10px;
+}
+.rail-stop em {
+  flex:0 0 auto; font-style:normal; font-size:8px; letter-spacing:0.3px;
+  color: rgba(255,255,255,0.40);
+}
+.rail-stop.cleared em { color:#6ee7a8; }
+.rail-stop.perfect em { color:#ffd23f; }
+.rail-stop:not(.locked) i {
+  background: var(--sec, var(--accent));
+  box-shadow: 0 0 6px var(--sec, rgba(245,166,35,0.7));
+}
 .rail-stop.locked { color: rgba(255,255,255,0.25); }
+.rail-stop.locked span b, .rail-stop.locked em { color: rgba(255,255,255,0.22); }
 .rail-stop:active { background: rgba(255,255,255,0.08); }
 /* A phone has no room for a rail beside a map: it becomes a scrolling strip
    of chips above it, which is the same control in the shape that fits. */

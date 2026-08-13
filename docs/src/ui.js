@@ -33,6 +33,152 @@ function show(id){
   // which owns the title fanfare. Launch swaps in the combat track.
   if(id !== "screen-game")
     audio.setMusic(id === "screen-profiles" ? "title" : "menu");
+  syncWayBack(id);
+}
+
+/* ---------------------------------------------------------
+   THE WAY BACK
+   The report was "my seven-year-olds don't always know how to
+   get back to the previous menu", and the reason was in the
+   markup: the way out was a text link called "Back to Menu",
+   at the BOTTOM of each screen, in a different place on each
+   one. On the Armory that means scrolling past a whole shelf
+   of upgrades to leave the room. Children do not scroll to
+   leave a room, and pre-readers do not find an exit by
+   reading it.
+
+   So there is now exactly ONE way out, and it never moves:
+   top-left, big, an arrow AND the name of where it goes. It
+   works four ways, so whichever one a child reaches for is
+   the right one - the button, the crumb trail beside it, a
+   swipe from the left edge, or the phone's own back gesture.
+   --------------------------------------------------------- */
+
+/*
+ * Where each screen goes when you leave it, and what to call that place.
+ * `run` is the screen's existing exit handler, so the way back does exactly
+ * what the old button did - renders what needs rendering, in the same order -
+ * rather than becoming a second, subtly different way to navigate.
+ */
+const WAY_BACK = {
+  "screen-missions":     { to:"screen-menu",     word:"MENU",     crumbs:["MENU","CAMPAIGN"] },
+  "screen-briefing":     { to:"screen-missions", word:"CAMPAIGN", crumbs:["MENU","CAMPAIGN","MISSION"] },
+  "screen-armory":       { to:"screen-menu",     word:"MENU",     crumbs:["MENU","MY SHIP"] },
+  "screen-achievements": { to:"screen-menu",     word:"MENU",     crumbs:["MENU","MEDALS"] },
+  "screen-leaderboard":  { to:"screen-menu",     word:"MENU",     crumbs:["MENU","CHAMPIONSHIP"] },
+  "screen-workshop":     { to:"screen-menu",     word:"MENU",     crumbs:["MENU","DRAWING BOARD"] },
+};
+/* The pilot picker is the root, the menu is home, and combat has its own
+   pause button - none of them get one. */
+let wayBackScreen = null;
+
+/** The exit each screen already had, so there is one behaviour, not two. */
+function goBackFrom(id){
+  const w = WAY_BACK[id];
+  if(!w) return false;
+  audio.play("uiClick");
+  if(w.to === "screen-menu"){ renderMenu(); show("screen-menu"); }
+  else if(w.to === "screen-missions"){ renderMissions(); show("screen-missions"); }
+  else show(w.to);
+  return true;
+}
+/** The escape hatch: however deep you are, MENU is one visible tap away. */
+function goHome(){
+  if(!WAY_BACK[wayBackScreen]) return false;
+  if(navDepth > 0 && typeof history !== "undefined" && history.go){
+    const n = navDepth;          // drop every entry we own in one jump
+    navDepth = 0;
+    history.go(-n);              // async; lands on a screen with no way out
+  }
+  audio.play("uiClick");
+  renderMenu(); show("screen-menu");
+  return true;
+}
+
+function syncWayBack(id){
+  wayBackScreen = id;
+  const bar = $("wayBack");
+  if(!bar) return;
+  const w = WAY_BACK[id];
+  bar.classList.toggle("hidden", !w);
+  if(!w) return;
+  // Entering a room that has a way out earns a history entry, so the phone's
+  // back gesture leaves it. Not while the browser is already moving us -
+  // that would put an entry back on the stack we are in the middle of
+  // walking, and every press would land on the same screen.
+  if(!inPop) pushNav();
+  $("backWord").textContent = w.word;
+  // The trail: MENU is always the first step and always tappable, so home is
+  // one visible tap away from anywhere. The last step is where you are and is
+  // not a button - a breadcrumb you can tap to "go" to where you already are
+  // teaches a child that taps do nothing.
+  const nav = $("crumbs");
+  nav.innerHTML = "";
+  const parts = w.crumbs.slice();
+  if(id === "screen-briefing" && MISSIONS[selectedMissionIndex])
+    parts[2] = "MISSION " + MISSIONS[selectedMissionIndex].id;
+  parts.forEach((label, i) => {
+    if(i) nav.appendChild(Object.assign(document.createElement("span"),
+      { className:"crumb-sep", textContent:"›" }));
+    const last = i === parts.length - 1;
+    const el = document.createElement(last ? "span" : "button");
+    el.className = "crumb" + (last ? " here" : "");
+    el.textContent = label;
+    if(!last) el.addEventListener("click", () => (i === 0 ? goHome() : navBack()));
+    nav.appendChild(el);
+  });
+}
+
+/*
+ * The phone's own back gesture. Without this, Android's back and the installed
+ * app's system back either did nothing or dropped the kids out of the game
+ * entirely - the most frightening button on the device.
+ *
+ * Everything routes through navBack(), so the screen and the history stack can
+ * never disagree: tapping the button walks the history back, which fires
+ * popstate, which performs the screen change. One path, four triggers.
+ */
+let navDepth = 0;      // history entries we own
+let inPop = false;     // true while the browser is already moving us
+
+function pushNav(){
+  if(typeof history === "undefined" || !history.pushState) return;
+  history.pushState({ sf:1 }, "");
+  navDepth++;
+}
+/** The one back action: the button, the crumb, the swipe and the gesture. */
+function navBack(){
+  if(navDepth > 0 && typeof history !== "undefined" && history.back){
+    history.back();       // popstate does the screen half
+    return true;
+  }
+  return goBackFrom(wayBackScreen);
+}
+if(typeof window !== "undefined" && window.addEventListener){
+  window.addEventListener("popstate", () => {
+    inPop = true;
+    if(navDepth > 0) navDepth--;
+    goBackFrom(wayBackScreen);
+    inPop = false;
+  });
+  /*
+   * A swipe in from the left edge. Kids arrive already knowing this gesture
+   * from every other app on the iPad, and it costs one listener. Only the
+   * first 26px start a swipe, so it can never eat a drag on the campaign map.
+   */
+  let sx = 0, sy = 0, live = false;
+  window.addEventListener("touchstart", e => {
+    const t = e.touches && e.touches[0];
+    live = !!t && t.clientX < 26 && !!WAY_BACK[wayBackScreen];
+    if(live){ sx = t.clientX; sy = t.clientY; }
+  }, { passive:true });
+  window.addEventListener("touchend", e => {
+    if(!live) return;
+    live = false;
+    const t = e.changedTouches && e.changedTouches[0];
+    if(!t) return;
+    if(t.clientX - sx > 62 && Math.abs(t.clientY - sy) < 70) navBack();
+  }, { passive:true });
 }
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
@@ -1155,19 +1301,47 @@ function campaignLayout(){
   });
 }
 
-/* Named stretches, so the route reads as a journey rather than fourteen dots. */
+/*
+ * Named stretches, so the route reads as a journey rather than fourteen dots.
+ *
+ * The names alone were not enough. "DEEP RUN" floating beside a dot tells a
+ * seven-year-old nothing about what it is, whether it contains anything, or
+ * how it relates to the stop they are looking at - and three of the eleven
+ * ("ENEMY SPACE", "WARDEN SPACE", "THEIR STAR") were three ways of saying
+ * "their side", which blurred the middle of the campaign into one long grey
+ * stretch. So every sector now carries three things:
+ *
+ *   a NUMBER - what a kid actually holds on to, and proof these are in order
+ *   a SUB    - what the place is, in the words a child would use
+ *   a HUE    - its own colour, worn by the map band, the label and the rail,
+ *              so a sector is somewhere you can SEE rather than a caption
+ *
+ * `at` is the first node index in the stretch; the last is the next entry's
+ * `at` minus one (see sectorStats).
+ */
 const SECTORS = [
-  { at:0,  name:"HOME PATROL" },     // 1-3: learning the ropes
-  { at:2,  name:"THE BELT" },        // 3-5: rocks and raiders
-  { at:5,  name:"THE STORM" },       // 6: the squall
-  { at:7,  name:"DEEP RUN" },        // 8-9: the gauntlet and the convoy
-  { at:10, name:"ENEMY SPACE" },     // 11-13: behind their lines
-  { at:13, name:"WARDEN SPACE" },    // 14-15: the jailer's ground
-  { at:16, name:"THE TRENCHES" },    // 17-18: their fortress
-  { at:19, name:"THEIR STAR" },      // 20-22: the dark, and the end
-  { at:23, name:"THE CRACK" },       // 24-27: where space stops behaving
-  { at:26, name:"THE WORKSHOP" },    // 28: where space gets made
-  { at:28, name:"THE EASEL" },       // 29: the one Papa never finished
+  { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
+    sub:"our own sky, and how to fly in it" },              // 1-2
+  { at:2,  name:"THE BELT",        hue:"#f5a623",
+    sub:"rocks, raiders and the first big one" },           // 3-5
+  { at:5,  name:"THE STORM",       hue:"#7cc4ff",
+    sub:"wild wind, and friends to get out" },              // 6-7
+  { at:7,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
+    sub:"guard the hauler, all the way to their flagship" },// 8-10
+  { at:10, name:"ENEMY SPACE",     hue:"#f472b6",
+    sub:"behind their lines, where nobody is friendly" },   // 11-13
+  { at:13, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, and his money" },              // 14-16
+  { at:16, name:"THE TRENCHES",    hue:"#94a3b8",
+    sub:"straight down the middle of their fortress" },     // 17-19
+  { at:19, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"the dark at the end, and the thing living in it" },// 20-23
+  { at:23, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 24-26
+  { at:26, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 27-28
+  { at:28, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 29
 ];
 
 /*
@@ -1376,14 +1550,27 @@ function renderSectorRail(){
   rail.innerHTML = "";
   // Top of the screen is the END of the route, so the rail reads top-down in
   // the same order the map does.
-  SECTORS.slice().reverse().forEach(sec => {
+  SECTORS.forEach((sec, si) => {
     const b = document.createElement("button");
+    const st = sectorStats(si);
     const unlocked = isMissionUnlocked(profile, sec.at);
-    b.className = "rail-stop" + (unlocked ? "" : " locked");
-    b.innerHTML = `<i></i><span>${esc(sec.name)}</span>`;
-    b.setAttribute("aria-label", "Jump to " + sec.name);
+    b.className = "rail-stop" + (unlocked ? "" : " locked") +
+                  (st.perfect ? " perfect" : st.cleared ? " cleared" : "");
+    // The rail wears the sector's own colour, so the chip and the band on the
+    // map are visibly the same place. Without that, the rail is a word list.
+    b.style.setProperty("--sec", sec.hue);
+    // A number, the name, and how much of it is done: a table of contents
+    // with a score on each line, which is also what teaches a kid that a
+    // sector is a THING CONTAINING STOPS rather than a label near a dot.
+    const score = !st.reached ? "locked"
+                : st.perfect  ? "★ " + st.stars + "/" + st.starMax
+                : st.done + "/" + st.total;
+    b.innerHTML = `<i></i><span><b>${si+1}</b>${esc(sec.name)}</span>` +
+                  `<em>${esc(score)}</em>`;
+    b.setAttribute("aria-label", "Sector " + (si+1) + ", " + sec.name + ": " + sec.sub);
+    b.title = sec.sub;
     click(b, () => scrollToNextStop(sec.at));
-    rail.appendChild(b);
+    rail.insertBefore(b, rail.firstChild);   // top of the rail is the END of the route
   });
 }
 
@@ -1583,22 +1770,65 @@ function drawCampaign(){
    * a green CLEARED when they all are, and gold when every star in it is
    * home. Scrolling the campaign reads as a record instead of a list.
    */
+  /*
+   * The bands come first, under everything: each sector washes its own
+   * stretch of the map in its own colour, from its first stop to its last.
+   * This is what turns a sector from a caption floating near one dot into a
+   * PLACE with edges - you can see where THE BELT stops and THE STORM starts
+   * without reading a word, which is the whole point for a pre-reader.
+   */
+  SECTORS.forEach((sec, si) => {
+    const st = sectorStats(si);
+    const top = nodes[st.to] ? py(nodes[st.to]) : 0;          // the route climbs
+    const bot = nodes[st.from] ? py(nodes[st.from]) : H;
+    const y0 = top - ROUTE_GAP*0.5, y1 = bot + ROUTE_GAP*0.5;
+    ctx.save();
+    ctx.globalAlpha = st.reached ? 1 : 0.42;
+    const band = ctx.createLinearGradient(0, y0, 0, y1);
+    band.addColorStop(0,    sec.hue + "00");
+    band.addColorStop(0.5,  sec.hue + (st.reached ? "22" : "10"));
+    band.addColorStop(1,    sec.hue + "00");
+    ctx.fillStyle = band;
+    ctx.fillRect(0, y0, W, y1 - y0);
+    // A hairline at the boundary, so two neighbouring bands have a seam
+    // rather than bleeding into one another.
+    if(si > 0){
+      ctx.strokeStyle = sec.hue + "3a";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
+    }
+    ctx.restore();
+  });
+
   SECTORS.forEach((sec, si) => {
     const n = nodes[sec.at];
     if(!n) return;
     const st = sectorStats(si);
     const state = !st.reached ? "locked" : st.perfect ? "perfect" : st.cleared ? "cleared" : "open";
-    const tint = { locked:"#8e96b8", open:"#cfd8ff", cleared:"#6ee7a8", perfect:"#ffd23f" }[state];
+    // The sector's own colour carries the name; state only decides how bright
+    // it is and what the line underneath says. Two jobs, two channels.
+    const tint = state === "locked" ? "#8e96b8" : sec.hue;
     const note = { locked:"LOCKED",
                    open: st.done + " / " + st.total + " STOPS",
                    cleared:"SECTOR CLEARED",
                    perfect:"PERFECT  ★ " + st.stars + "/" + st.starMax }[state];
     ctx.save();
     ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
-    // Opposite side to the ship marker, and clear of the node itself.
-    const away = n.x > 0.5 ? -1 : 1;
-    const lx = px(n) + away*74, ly = py(n) - 2;
-    ctx.textAlign = away < 0 ? "right" : "left";
+    /*
+     * The caption belongs to the whole band, so it hangs at the band's MIDDLE
+     * rather than off its first stop - and on whichever side the route is not
+     * using there. Pinned to the first stop it collided with that stop's own
+     * name (THE WARDEN'S REACH landed straight on "THE WARDEN"), and it read
+     * as a label on one dot, which is exactly the thing being fixed.
+     */
+    const midNode = nodes[Math.round((st.from + st.to)/2)] || n;
+    const my = py(midNode);
+    // Side is decided by the stop the caption is level WITH, not by the
+    // band's average: an average put SECTOR 4 straight on top of THE CONVOY,
+    // which is the stop sitting at exactly that height.
+    const away = midNode.x > 0.5 ? 1 : -1;
+    const lx = away > 0 ? 24 : W - 24, ly = my;
+    ctx.textAlign = away > 0 ? "left" : "right";
 
     // A rule running out to the frame edge: the ribbon that makes a stretch
     // read as a stretch rather than a caption on one stop.
@@ -1611,6 +1841,16 @@ function drawCampaign(){
     ctx.beginPath();
     ctx.moveTo(lx, ly + 6); ctx.lineTo(lx + away*190, ly + 6);
     ctx.stroke();
+    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
+
+    // The number first, small and above: "SECTOR 4 · STOPS 8-10". A name is
+    // flavour; a number is the thing a seven-year-old can actually hold on
+    // to, and the range says out loud that a sector CONTAINS stops.
+    ctx.fillStyle = tint;
+    ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
+    ctx.letterSpacing = "1.5px";
+    ctx.globalAlpha *= 0.8;
+    ctx.fillText("SECTOR " + (si+1) + " · STOPS " + (st.from+1) + "-" + (st.to+1), lx, ly - 15);
     ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
 
     if(state === "perfect"){                 // a mastered stretch gets a glow
@@ -1630,7 +1870,14 @@ function drawCampaign(){
     ctx.letterSpacing = "1.5px";
     ctx.globalAlpha *= 0.85;
     ctx.fillText(note, lx, ly + 17);
+    // ...and what the place actually IS, in words a child would use. The name
+    // is the only part that was ever there, and on its own it explained
+    // nothing: "DEEP RUN" is atmosphere, not information.
+    ctx.font = "italic 11px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "0px";
+    ctx.fillStyle = state === "locked" ? "#8e96b8" : "#cfd8ff";
+    ctx.globalAlpha *= 0.8;
+    ctx.fillText(sec.sub, lx, ly + 31);
     ctx.restore();
   });
 
@@ -4039,12 +4286,20 @@ SF.game.onTestFlightEnd = (r) => {
 click($("storyBtn"), () => $("storyOverlay").classList.add("hidden"));
 click($("achievementsBtn"), () => { renderAchievements(); show("screen-achievements"); });
 click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard"); });
-click($("missionsBackBtn"), () => show("screen-menu"));
+/*
+ * The old per-screen back links. They stay wired - the way back runs the same
+ * handlers - but they are no longer the way OUT, because six exits in six
+ * different places at the bottom of six different scrolls is what the kids
+ * were getting lost in. CSS hides them; #backBtn is the door now.
+ */
+click($("missionsBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("briefBackBtn"), () => { renderMissions(); show("screen-missions"); });
 click($("launchBtn"), () => launch(selectedMissionIndex, briefTier));
 click($("armoryBackBtn"), () => { renderMenu(); show("screen-menu"); });
-click($("achievementsBackBtn"), () => show("screen-menu"));
-click($("leaderboardBackBtn"), () => show("screen-menu"));
+click($("achievementsBackBtn"), () => { renderMenu(); show("screen-menu"); });
+click($("leaderboardBackBtn"), () => { renderMenu(); show("screen-menu"); });
+// One door, always in the same place, on every screen that has one.
+$("backBtn").addEventListener("click", () => navBack());
 click($("pauseBtn"), togglePause);
 click($("resumeBtn"), togglePause);
 
@@ -4111,7 +4366,7 @@ qa(".sb-icon[data-glyph]").forEach(cv => SF.icons.paint(cv, cv.dataset.glyph, "#
 // These used to be typed characters - "II" for pause, ▶ ↻ ↩ ☠ 📱 - which sat
 // off-baseline in Rajdhani and wore a different face on every platform.
 // Painted in the button's own text colour so they always match their label.
-qa(".btn-ico[data-glyph]").forEach(cv => {
+qa(".btn-ico[data-glyph], .back-ico[data-glyph]").forEach(cv => {
   const host = cv.closest("button, span, div") || cv.parentElement;
   cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
   SF.icons.paint(cv, cv.dataset.glyph, host ? getComputedStyle(host).color : "#ffffff");
@@ -4215,7 +4470,8 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile,
-          sectorStats,                  // the map's per-stretch scoreboard
+          sectorStats, SECTORS,         // the map's per-stretch scoreboard
+          navBack, goHome,              // the way back, for the phone's own gesture
           // The Drawing Board's doors into the app: launch a drawn sky, and
           // borrow the game's own dialog instead of window.prompt/confirm.
           launchCustom,
