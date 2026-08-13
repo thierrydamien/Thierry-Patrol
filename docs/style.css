@@ -1110,7 +1110,7 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   flex:0 0 76px; font-size:9px; font-weight:700; letter-spacing:1.5px;
   color: var(--ink-faint); text-align:right;
 }
-.hs-bar {
+.hs-bar { position:relative;
   flex:1; height:7px; border-radius:4px; overflow:hidden;
   background: rgba(255,255,255,0.08);
 }
@@ -1274,6 +1274,30 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 .hs-row.bump { animation: hsBump .5s var(--ease-pop); }
 .hs-row.bump .hs-value { color: var(--accent); }
+/* THE DIAL: the grown chunk of a changed bar, drawn in gold over the track.
+   Rows that didn't move step back so the one that did is the bright one. */
+.hs-row { transition: opacity .3s ease; }
+.hs-row.dim { opacity: 0.32; }
+.hs-row.hot .hs-label { color: var(--accent); }
+.hs-gain {
+  position:absolute; top:0; bottom:0; border-radius:6px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255,210,63,0.9);
+  animation: hsGain 2.4s ease both;
+}
+.hs-gain.loss { background:#ff5d73; box-shadow: 0 0 10px rgba(255,93,115,0.8); }
+@keyframes hsGain {
+  0% { opacity:0; transform:scaleY(0.4); }
+  12% { opacity:1; transform:scaleY(1); }
+  78% { opacity:1; }
+  100% { opacity:0; }
+}
+/* A shelf row the garage just pointed at (pegboard hook / ship tap). */
+.shop-item.flash { animation: shelfFlash 1.6s ease both; }
+@keyframes shelfFlash {
+  0%, 55% { box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(255,210,63,0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(255,210,63,0); }
+}
 .hs-bar i { transition: width .6s var(--ease-pop); }
 
 /* Flight tuning cards (MY SHIP) */

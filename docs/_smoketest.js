@@ -764,10 +764,57 @@ async function run(){
   clickEl(qa("#profileGrid .profile-card")[0]);
   clickEl(id("armoryBtn"));
 
+  /* ---------- the garage ----------
+   * The Armory is a ROOM now: pegboard of parts on the wall, painted bay
+   * circle with the pilot's callsign, the squadron's bays either side, and a
+   * purchase that plays out as a show (fitting -> rev -> dial) instead of a
+   * number changing. The room must never make buying harder: the shop below
+   * is untouched, and the only tappable things in the scene jump INTO it.
+   */
+  check("the armory is a garage: a room with the pilot's own bay",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /function garageBackdrop/.test(u) &&
+                    /BAY 01/.test(u) &&                       // the stencil on the floor
+                    /OUT FLYING/.test(u); })());              // an empty family bay says why
+  await runFrames(3);       // the garage paints on the armory's own rAF loop
+  check("the pegboard hangs the real part ladder",
+    SF.ui._garageHooks().length >= 6 &&
+    SF.ui._garageHooks().every(h => !!SF.config.UPGRADE_BY_ID[h.up]));
+  check("exactly one hook is the NEXT one, and it is the real next part", (() => {
+    const hooks = SF.ui._garageHooks();
+    const next = SF.shipart.nextPart(SF.shipart.levelsOf(SF.ui.getProfile()));
+    return hooks.filter(h => h.next).length === (next ? 1 : 0);
+  })());
+  check("a hook jumps the shop to the upgrade that earns it", (() => {
+    const hook = SF.ui._garageHooks().find(h => h.up !== "spread");
+    const cv = id("hangarCanvas");
+    // jsdom has no layout: give the canvas a fake on-screen box to map against
+    cv.getBoundingClientRect = () => ({ left: 0, top: 0, width: cv.width, height: cv.height });
+    cv.dispatchEvent(new window.MouseEvent("click", { clientX: hook.cx, clientY: hook.cy, bubbles: true }));
+    const badge = qa('#armoryPanel .si-badge[data-glyph="' + hook.up + '"]');
+    return badge.length === 1;                 // the shop is now on that shelf
+  })());
+  clickEl(tabByName("GUNS"));
+
   const buyBtn = i => qa("#armoryPanel .shop-item")[i].querySelector("button");
   const priceBefore = buyBtn(0).textContent;
   clickEl(buyBtn(0));
   check("buying a level raises the next price", buyBtn(0).textContent !== priceBefore);
+  check("a purchase queues its show instead of blocking anything",
+    SF.ui._purchaseShows() >= 1);
+  check("the dial marks exactly what moved, in gold",
+    qa("#hangarSpecs .hs-gain").length >= 1 &&
+    qa("#hangarSpecs .hs-row.dim").length >= 1 &&
+    qa("#hangarSpecs .hs-row.hot").length >= 1);
+  check("the show knows the real before and after",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /before: loadBefore, after: loadAfter/.test(u) &&
+                    // guns fire at the ACTUAL new rate, not a metaphor of it
+                    /sh\.after\.fireInterval/.test(u); })());
+  check("the fitting swaps the hull only at the clang",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /sh\.swapped \? sh\.levelsBefore/.test(u) === false &&
+                    /\(sh && sh\.part && !sh\.swapped\) \? sh\.levelsBefore : levels/.test(u); })());
   clickEl(tabByName("PILOT"));
   check("gear level tracks purchases", /Gear 1\/53/.test(id("pcGear").textContent));
   clickEl(tabByName("GUNS"));

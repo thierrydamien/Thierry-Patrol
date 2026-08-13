@@ -2246,7 +2246,8 @@ function drawCampaign(){
    you shop; the shelves are tabbed so only one is ever on
    screen, which keeps the scroll short on a tablet.
    --------------------------------------------------------- */
-const hangar = { raf:0, t:0, compare:false, ctx:null, celebrate:0 };
+const hangar = { raf:0, t:0, compare:false, ctx:null, celebrate:0,
+                 shows:[], show:null };   // queued purchase ceremonies
 let armoryTab = "guns";
 
 /** Tabs: the four shelves, then the parts ladder, then everything about you. */
@@ -2907,72 +2908,501 @@ function startHangarLoop(){
 }
 
 /*
- * The bay itself, cached per size. The ship used to float in a featureless
- * void - one radial "floor light" was the whole room. A commercial hangar
- * shot has a place in it: a spotlight cone from the ceiling rig, a landing
- * pad with survey ticks, gantry rails up the walls. All of it stays close
- * to the panel's own darkness so the ship remains the only bright thing.
+ * THE GARAGE. The bay used to be a landing pad floating on panel-dark - fine,
+ * but a room nobody lived in. This is the family's garage: a pegboard of
+ * parts on the wall (owned ones hanging, missing ones chalk outlines), the
+ * Style Shop as paint tins on a shelf, a concrete floor with a painted
+ * service circle stencilled with the pilot's own callsign, the squadron's
+ * bays either side, and a service arm that swings in and FITS what you buy.
+ *
+ * Drawn with translate/scale + arc everywhere - the test harness's canvas
+ * build predates ellipse() and roundRect(), so neither may be used raw.
  */
-const bay = { cv: null, key: "" };
-function bayBackdrop(W, H){
-  const key = W + "x" + H;
-  if(bay.key === key) return bay.cv;
+function gRR(c, x, y, w, h, r){
+  r = Math.min(r, w/2, h/2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y); c.arc(x + w - r, y + r, r, -Math.PI/2, 0);
+  c.lineTo(x + w, y + h - r); c.arc(x + w - r, y + h - r, r, 0, Math.PI/2);
+  c.lineTo(x + r, y + h); c.arc(x + r, y + h - r, r, Math.PI/2, Math.PI);
+  c.lineTo(x, y + r); c.arc(x + r, y + r, r, Math.PI, Math.PI*1.5);
+  c.closePath();
+}
+function gEllipse(c, x, y, rx, ry){
+  c.save(); c.translate(x, y); c.scale(1, ry/Math.max(0.0001, rx));
+  c.beginPath(); c.arc(0, 0, rx, 0, Math.PI*2);
+  c.restore();
+}
+function gSeeded(i){ return ((Math.sin(i*127.1 + 311.7)*43758.5453) % 1 + 1) % 1; }
+
+const garage = { cv:null, key:"", hooks:[], nextHook:null, ship:null };
+function garageBackdrop(W, H, compare){
+  const A = SF.shipart;
+  const levels = A.levelsOf(profile);
+  const parts = A.partList(levels);
+  const next = A.nextPart(levels);
+  const mates = P.squadmates(profile.name).slice(0, 2);
+  const key = [W, H, compare ? 1 : 0, profile.callsign || profile.name,
+               profile.shipColor, parts.map(r => r.owned ? 1 : 0).join(""),
+               next ? next.id : "-",
+               mates.map(m => m.name + (m.shipColor || "")).join(",")].join("|");
+  if(garage.key === key) return garage.cv;
   const cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
   const c = cv.getContext("2d");
   if(!c) return null;
   const TAU2 = Math.PI*2;
+  const wallH = H*0.26;
 
-  // Walls: a touch lighter than the panel toward the deck, so there IS a room.
-  const wall = c.createLinearGradient(0, 0, 0, H);
-  wall.addColorStop(0, "rgba(8,12,30,0.5)");
-  wall.addColorStop(0.7, "rgba(12,17,40,0.3)");
-  wall.addColorStop(1, "rgba(22,30,60,0.5)");
-  c.fillStyle = wall; c.fillRect(0, 0, W, H);
-
-  // Ceiling rig: a soft light cone down onto the pad.
-  const cone = c.createLinearGradient(0, 0, 0, H*0.85);
-  cone.addColorStop(0, "rgba(150,190,255,0.11)");
-  cone.addColorStop(1, "rgba(150,190,255,0)");
-  c.fillStyle = cone;
-  c.beginPath();
-  c.moveTo(W*0.40, 0); c.lineTo(W*0.60, 0);
-  c.lineTo(W*0.82, H*0.85); c.lineTo(W*0.18, H*0.85);
-  c.closePath(); c.fill();
-
-  // The landing pad: two survey rings and tick marks, drawn as squashed
-  // circles (translate/scale beats ellipse() - the test harness's canvas
-  // build predates it).
-  const px = W/2, py = H*0.80, rx = W*0.295, squash = 0.30;
-  const ring = (r, style, lw) => {
-    c.save(); c.translate(px, py); c.scale(1, squash);
-    c.strokeStyle = style; c.lineWidth = lw;
-    c.beginPath(); c.arc(0, 0, r, 0, TAU2); c.stroke();
-    c.restore();
-  };
-  ring(rx, "rgba(110,200,255,0.15)", 2);
-  ring(rx*0.7, "rgba(110,200,255,0.08)", 1.5);
-  c.save(); c.translate(px, py); c.scale(1, squash);
-  c.strokeStyle = "rgba(255,210,63,0.20)"; c.lineWidth = 2.5;
-  for(let i=0;i<10;i++){
-    const a = i/10*TAU2;
-    c.beginPath();
-    c.moveTo(Math.cos(a)*rx*0.95, Math.sin(a)*rx*0.95);
-    c.lineTo(Math.cos(a)*rx*1.05, Math.sin(a)*rx*1.05);
-    c.stroke();
+  /* -- the wall -- */
+  const wg = c.createLinearGradient(0, 0, 0, wallH);
+  wg.addColorStop(0, "#151a29");
+  wg.addColorStop(1, "#1b2133");
+  c.fillStyle = wg; c.fillRect(0, 0, W, wallH);
+  c.strokeStyle = "rgba(0,0,0,0.25)"; c.lineWidth = 1;
+  for(let x = 0; x < W; x += 24){
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, wallH - 16); c.stroke();
   }
+  // hazard stripe on the skirting, grimy
+  c.save();
+  c.beginPath(); c.rect(0, wallH - 16, W, 9); c.clip();
+  for(let x = -20; x < W + 20; x += 20){
+    c.fillStyle = "#d8ab3c";
+    c.beginPath();
+    c.moveTo(x, wallH - 7); c.lineTo(x + 10, wallH - 16);
+    c.lineTo(x + 20, wallH - 16); c.lineTo(x + 10, wallH - 7);
+    c.closePath(); c.fill();
+  }
+  c.fillStyle = "rgba(0,0,0,0.3)"; c.fillRect(0, wallH - 16, W, 9);
   c.restore();
+  c.fillStyle = "#0b0e18"; c.fillRect(0, wallH - 7, W, 7);
 
-  // Gantry rails up the walls, riveted. Barely there.
-  [[W*0.05], [W*0.95]].forEach(([gx]) => {
-    c.strokeStyle = "rgba(255,255,255,0.06)"; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(gx, H*0.10); c.lineTo(gx, H*0.88); c.stroke();
-    c.fillStyle = "rgba(255,255,255,0.08)";
-    for(let y=H*0.14; y<H*0.86; y+=H*0.12) c.fillRect(gx-1.5, y, 3, 3);
+  /* -- the pegboard: the upgrade ladder, hanging on the wall -- */
+  garage.hooks = [];
+  garage.nextHook = null;
+  // Centred: the TEST RANGE and COMPARE buttons float over the wall's
+  // corners (bigger on a phone, where CSS scales them up against the fixed
+  // canvas grid), so only the middle of the wall is safely tappable.
+  const pbW = Math.min(W*0.40, 250), pbX = (W - pbW)/2, pbY = 7, pbH = wallH - 30;
+  c.fillStyle = "#232a40";
+  gRR(c, pbX, pbY, pbW, pbH, 6); c.fill();
+  c.strokeStyle = "rgba(0,0,0,0.5)"; c.lineWidth = 2;
+  gRR(c, pbX, pbY, pbW, pbH, 6); c.stroke();
+  c.fillStyle = "rgba(0,0,0,0.33)";
+  for(let yy = pbY + 10; yy < pbY + pbH - 5; yy += 11)
+    for(let xx = pbX + 10; xx < pbX + pbW - 5; xx += 11){
+      c.beginPath(); c.arc(xx, yy, 1.1, 0, TAU2); c.fill();
+    }
+  c.fillStyle = "rgba(226,232,240,0.7)";
+  c.font = "700 9px Rajdhani, Arial, sans-serif";
+  c.textAlign = "left";
+  c.fillText("P A R T S", pbX + 8, pbY + 14);
+  // eight hooks, two rows: the real ladder in order. Owned parts hang as
+  // their upgrade's glyph; missing ones are chalk outlines. Every hook is a
+  // TAP TARGET that jumps the shop to the thing that earns it.
+  const board = parts.slice(0, 8);
+  const cols2 = 4, hcw = (pbW - 16)/cols2, hrh = (pbH - 20)/2;
+  board.forEach((row, i) => {
+    const hx = pbX + 8 + (i % cols2)*hcw + hcw/2;
+    const hy = pbY + 18 + Math.floor(i/cols2)*hrh + hrh/2;
+    c.strokeStyle = "rgba(200,210,235,0.4)"; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(hx, hy - hrh/2 + 6, 2.6, Math.PI*0.15, Math.PI*0.85, true); c.stroke();
+    const up = UPGRADE_BY_ID[row.part.up];
+    const cat = CATEGORIES.find(k => k.id === (up && up.cat));
+    if(row.owned){
+      const ic = SF.icons.el(row.part.up, (cat && cat.color) || "#9fb6ff", 16);
+      c.drawImage(ic, hx - 8, hy - 6, 16, 16);
+    } else {
+      c.save();
+      c.strokeStyle = "rgba(214,226,255,0.38)";
+      c.setLineDash([3, 3]); c.lineWidth = 1.3;
+      c.strokeRect(hx - 8, hy - 6, 16, 16);
+      c.restore();
+    }
+    const isNext = next && row.part.id === next.id;
+    garage.hooks.push({ x: hx - hcw/2, y: hy - hrh/2, w: hcw, h: hrh,
+                        cx: hx, cy: hy + 2, up: row.part.up, next: isNext });
+    if(isNext) garage.nextHook = { x: hx, y: hy + 2 };
   });
 
-  bay.cv = cv; bay.key = key;
+  /* -- the floor -- */
+  const fg = c.createLinearGradient(0, wallH, 0, H);
+  fg.addColorStop(0, "#262b3b");
+  fg.addColorStop(1, "#181c2a");
+  c.fillStyle = fg; c.fillRect(0, wallH, W, H - wallH);
+  c.strokeStyle = "rgba(0,0,0,0.26)"; c.lineWidth = 2;
+  for(let i = 0; i <= 4; i++){
+    const xT = W*0.5 + (i - 2)*W*0.23, xB = W*0.5 + (i - 2)*W*0.31;
+    c.beginPath(); c.moveTo(xT, wallH); c.lineTo(xB, H); c.stroke();
+  }
+  c.beginPath(); c.moveTo(0, H*0.72); c.lineTo(W, H*0.72); c.stroke();
+  for(let i = 0; i < 46; i++){
+    const x = gSeeded(i)*W, y = wallH + gSeeded(i + 60)*(H - wallH);
+    const r = 6 + gSeeded(i + 120)*22;
+    const gg = c.createRadialGradient(x, y, 0, x, y, r);
+    gg.addColorStop(0, gSeeded(i + 180) < 0.6 ? "rgba(0,0,0,0.09)" : "rgba(255,255,255,0.025)");
+    gg.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = gg;
+    c.beginPath(); c.arc(x, y, r, 0, TAU2); c.fill();
+  }
+  // an oil stain and a couple of scuffs: the room has been used
+  const og = c.createRadialGradient(W*0.09, H*0.9, 2, W*0.09, H*0.9, 22);
+  og.addColorStop(0, "rgba(8,10,16,0.5)"); og.addColorStop(1, "rgba(8,10,16,0)");
+  c.fillStyle = og;
+  gEllipse(c, W*0.09, H*0.9, 22, 12); c.fill();
+  c.strokeStyle = "rgba(0,0,0,0.2)"; c.lineWidth = 4; c.lineCap = "round";
+  for(let i = 0; i < 3; i++){
+    c.beginPath();
+    c.arc(W*(0.6 + gSeeded(i + 300)*0.3), wallH + 20 + gSeeded(i + 340)*(H - wallH)*0.6,
+          30 + gSeeded(i + 380)*40, Math.PI*0.2*gSeeded(i + 400), Math.PI*(0.3 + 0.2*gSeeded(i + 440)));
+    c.stroke();
+  }
+
+  /* -- painted service circles, chipped by use -- */
+  const ring2 = (cx, cy, r, alpha) => {
+    c.strokeStyle = "rgba(240,200,90," + alpha + ")";
+    c.lineWidth = 4;
+    c.beginPath(); c.arc(cx, cy, r, 0, TAU2); c.stroke();
+    c.strokeStyle = "rgba(240,200,90," + alpha*0.35 + ")";
+    c.lineWidth = 8;
+    c.beginPath(); c.arc(cx, cy, r, 0, TAU2); c.stroke();
+    c.strokeStyle = "#20253400".slice(0, 7);
+    c.strokeStyle = "#202534"; c.lineWidth = 5;
+    for(let i = 0; i < 8; i++){
+      const a = gSeeded(i + 500 + cx)*TAU2;
+      c.beginPath(); c.arc(cx, cy, r, a, a + 0.05 + gSeeded(i + 540 + cx)*0.05); c.stroke();
+    }
+  };
+  const stencil = (cx, cy, txt, px2, alpha) => {
+    c.save();
+    c.translate(cx, cy); c.scale(1, 0.86);
+    c.fillStyle = "rgba(226,232,240," + alpha + ")";
+    c.font = "700 " + px2 + "px Rajdhani, Arial, sans-serif";
+    c.textAlign = "center";
+    c.letterSpacing = "5px";
+    c.fillText(txt, 0, 0);
+    c.letterSpacing = "0px";
+    c.restore();
+  };
+
+  if(compare){
+    const cy = H*0.58, r = Math.min(W*0.17, H*0.30);
+    ring2(W*0.28, cy, r, 0.6);
+    ring2(W*0.72, cy, r, 0.6);
+    garage.ship = null;
+  } else {
+    const cx = W/2, cy = H*0.60;
+    const r = Math.min(W*0.20, H*0.36);
+    // the neighbours first: the squadron's bays either side of yours.
+    // A mate who exists is parked in theirs; an empty seat is a chalk
+    // outline - out flying.
+    const nbR = r*0.55, nbOff = r + nbR + 30;
+    [[-1, mates[0]], [1, mates[1]]].forEach(([sd, mate]) => {
+      const nx = cx + sd*nbOff, ny = cy + 14;
+      if(nx + nbR < -10 || nx - nbR > W + 10) return;
+      ring2(nx, ny, nbR, 0.35);
+      if(mate){
+        c.save();
+        gEllipse(c, nx, ny + nbR*0.16, nbR*0.5, nbR*0.16);
+        c.fillStyle = "rgba(0,0,0,0.35)"; c.fill();
+        c.restore();
+        A.drawShip(c, nx, ny, nbR*0.9, {
+          color: mate.shipColor || "#f5a623", levels: A.levelsOf(mate), t: 1.7, idle: true });
+        stencil(nx, ny + nbR*0.82, (mate.callsign || mate.name).toUpperCase(), Math.max(8, nbR*0.16), 0.45);
+      } else {
+        c.save();
+        c.strokeStyle = "rgba(214,226,255,0.3)";
+        c.setLineDash([5, 5]); c.lineWidth = 1.6;
+        c.beginPath();
+        c.moveTo(nx, ny - nbR*0.42);
+        c.lineTo(nx + nbR*0.34, ny + nbR*0.3);
+        c.lineTo(nx + nbR*0.12, ny + nbR*0.17);
+        c.lineTo(nx, ny + nbR*0.36);
+        c.lineTo(nx - nbR*0.12, ny + nbR*0.17);
+        c.lineTo(nx - nbR*0.34, ny + nbR*0.3);
+        c.closePath(); c.stroke();
+        c.restore();
+        stencil(nx, ny + nbR*0.82, "OUT FLYING", Math.max(7, nbR*0.13), 0.3);
+      }
+    });
+    ring2(cx, cy, r, 0.75);
+    stencil(cx, cy + r*0.8, (profile.callsign || profile.name).toUpperCase(), Math.max(13, r*0.155), 0.6);
+    stencil(cx, cy + r*0.94, "BAY 01", Math.max(8, r*0.085), 0.35);
+    garage.ship = { x: cx, y: cy, r };
+  }
+
+  /* -- props: the tool chest (with the mug), crates, a floor cable -- */
+  c.fillStyle = "rgba(0,0,0,0.3)";
+  gEllipse(c, W*0.062, H*0.86 + 26, 26, 6); c.fill();
+  c.fillStyle = "#8f2f3b"; gRR(c, W*0.062 - 22, H*0.86 - 20, 44, 42, 4); c.fill();
+  c.fillStyle = "#7a2733";
+  for(let i = 0; i < 3; i++) c.fillRect(W*0.062 - 18, H*0.86 - 14 + i*12, 36, 8);
+  c.fillStyle = "#cbd5e1";
+  for(let i = 0; i < 3; i++) c.fillRect(W*0.062 - 5, H*0.86 - 11 + i*12, 10, 2);
+  // the Style Shop, parked on the chest: three little tins, squadron lids
+  [profile.shipColor || "#4cc9f0"].concat(mates.map(m => m.shipColor || "#f5a623"))
+    .slice(0, 3).forEach((col, i) => {
+      const tx = W*0.062 - 20 + i*13;
+      c.fillStyle = "#39415f"; c.fillRect(tx, H*0.86 - 32, 10, 12);
+      c.fillStyle = col;
+      gEllipse(c, tx + 5, H*0.86 - 32, 5, 1.8); c.fill();
+    });
+  c.fillStyle = "#e2e8f0"; gRR(c, W*0.062 + 20, H*0.86 - 30, 9, 9, 1.5); c.fill();
+  c.strokeStyle = "#e2e8f0"; c.lineWidth = 1.8;
+  c.beginPath(); c.arc(W*0.062 + 31, H*0.86 - 25.5, 3, -Math.PI/2, Math.PI/2); c.stroke();
+  c.strokeStyle = "rgba(226,232,240,0.35)"; c.lineWidth = 1.2;
+  c.beginPath();
+  c.moveTo(W*0.062 + 24, H*0.86 - 33);
+  c.quadraticCurveTo(W*0.062 + 22, H*0.86 - 38, W*0.062 + 25, H*0.86 - 42);
+  c.stroke();
+  const crate = (cx2, cy2, s2) => {
+    c.fillStyle = "#3a415f"; gRR(c, cx2, cy2, s2, s2, 2.5); c.fill();
+    c.strokeStyle = "rgba(0,0,0,0.45)"; c.lineWidth = 1.6;
+    gRR(c, cx2, cy2, s2, s2, 2.5); c.stroke();
+    c.fillStyle = "rgba(240,200,90,0.45)";
+    c.font = "700 7px Rajdhani, Arial, sans-serif"; c.textAlign = "left";
+    c.fillText("SQD", cx2 + 3, cy2 + 9);
+  };
+  crate(W - 64, H*0.82, 28); crate(W - 34, H*0.86, 22); crate(W - 56, H*0.82 - 24, 24);
+  // the family photo, leaning against the crates
+  c.save();
+  c.translate(W - 86, H*0.86); c.rotate(-0.08);
+  c.fillStyle = "#d8ceb4"; c.fillRect(-16, -12, 32, 22);
+  c.fillStyle = "#0e1424"; c.fillRect(-13, -9, 26, 16);
+  [profile.shipColor || "#4cc9f0"].concat(mates.map(m => m.shipColor || "#999"))
+    .slice(0, 3).forEach((col, i) => {
+      c.fillStyle = col;
+      const sx2 = -7 + i*7.5;
+      c.beginPath();
+      c.moveTo(sx2, -4); c.lineTo(sx2 + 2.6, 3); c.lineTo(sx2, 1); c.lineTo(sx2 - 2.6, 3);
+      c.closePath(); c.fill();
+    });
+  c.restore();
+  c.strokeStyle = "rgba(12,14,22,0.75)"; c.lineWidth = 3.5; c.lineCap = "round";
+  c.beginPath();
+  c.moveTo(-4, H*0.68);
+  c.quadraticCurveTo(W*0.16, H*0.76, W*0.3, H*0.72);
+  c.stroke();
+
+  garage.cv = cv; garage.key = key;
   return cv;
+}
+
+/*
+ * THE PURCHASE SHOW - fitting, rev, dial (the dial lives in renderShipSpecs).
+ * Queued, never blocking: money and the part land the instant you buy; this
+ * is the ceremony that plays over the bay afterwards. Buy five things fast
+ * and five little shows run back to back.
+ */
+function queuePurchaseShow(show){
+  hangar.shows.push(show);
+  if(hangar.shows.length > 4) hangar.shows.shift();   // a spree stays a show, not a backlog
+}
+const REV_KIND = {
+  spread:"guns", rapid:"guns", damage:"guns", pierce:"guns", homing:"guns",
+  thrusters:"engines", magnet:"magnet", fortune:"coins",
+  shield:"bubble", life:"bubble", armor:"bubble",
+  wingman:"drone", bomb:"badge", overdrive:"badge",
+};
+function stepShow(dt){
+  if(!hangar.show && hangar.shows.length) hangar.show = hangar.shows.shift();
+  const sh = hangar.show;
+  if(!sh) return;
+  sh.t = (sh.t || 0) + dt;
+  const fitLen = sh.part ? 1.5 : 0;
+  if(sh.part && !sh.swapped && sh.t >= 1.0){
+    sh.swapped = true;                       // the part visibly POPS on
+    audio.play("armourClang");
+  }
+  if(sh.kind === "guns" && sh.t >= fitLen){
+    // fire at the ACTUAL new rate - faster guns are something you see
+    sh.gunT = (sh.gunT || 0) - dt;
+    if(sh.gunT <= 0){
+      sh.gunT = Math.max(0.07, sh.after.fireInterval);
+      sh.bolts = sh.bolts || [];
+      const g2 = garage.ship;
+      if(g2){
+        const S = sh.shipS || 100;
+        [[-0.10, -0.33], [0.10, -0.33], [-0.26, -0.13], [0.26, -0.13]].forEach(([fx3, fy3]) => {
+          sh.bolts.push({ x: g2.x + fx3*S, y: g2.y + fy3*S, age: 0 });
+        });
+        sh.muzzle = 0.09;
+      }
+    }
+  }
+  sh.muzzle = Math.max(0, (sh.muzzle || 0) - dt);
+  (sh.bolts || []).forEach(b => { b.age += dt; b.y -= 340*dt; });
+  if(sh.bolts) sh.bolts = sh.bolts.filter(b => b.age < 0.8);
+  if(sh.t > fitLen + 2.0){ hangar.show = null; }
+}
+
+function drawShow(ctx, W, H, S){
+  const sh = hangar.show, g2 = garage.ship;
+  if(!sh || !g2) return;
+  sh.shipS = S;
+  const t2 = sh.t, fitLen = sh.part ? 1.5 : 0;
+  const TAU2 = Math.PI*2;
+
+  /* -- the fitting: the arm swings in with the part and bolts it on -- */
+  if(sh.part && t2 < fitLen + 0.3){
+    const reach = clamp(t2/0.5, 0, 1);
+    const retreat = clamp((t2 - 1.2)/0.3, 0, 1);
+    const k = reach - retreat;
+    const parkX = W + 4, parkY = H*0.30;
+    const tipX = parkX + (g2.x + S*0.34 - parkX)*k;
+    const tipY = parkY + (g2.y - S*0.06 - parkY)*k;
+    const elbX = (parkX + tipX)/2 + 22, elbY = (parkY + tipY)/2 - 34;
+    ctx.lineCap = "round";
+    const seg = (x1, y1, x2, y2, w1, w2) => {
+      ctx.strokeStyle = "#0c101d"; ctx.lineWidth = w1;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.strokeStyle = "#3a415f"; ctx.lineWidth = w2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    };
+    seg(parkX, parkY, elbX, elbY, 12, 8);
+    seg(elbX, elbY, tipX, tipY - 16, 9, 6);
+    [[parkX, parkY], [elbX, elbY]].forEach(([jx, jy]) => {
+      ctx.fillStyle = "#232a40";
+      ctx.beginPath(); ctx.arc(jx, jy, 7, 0, TAU2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1.6; ctx.stroke();
+    });
+    ctx.fillStyle = "#2c3350"; gRR(ctx, tipX - 8, tipY - 24, 16, 12, 3); ctx.fill();
+    if(!sh.swapped){                        // still carrying the part
+      ctx.fillStyle = "#ffd23f"; gRR(ctx, tipX - 5, tipY - 10, 10, 8, 2); ctx.fill();
+    }
+    // sparks while it works
+    if(t2 > 0.55 && t2 < 1.3){
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for(let i = 0; i < 7; i++){
+        const a = -Math.PI/2 + (gSeeded(i + Math.floor(t2*30)) - 0.5)*2.4;
+        const d = 4 + gSeeded(i + 40 + Math.floor(t2*20))*16;
+        ctx.fillStyle = i % 3 ? "rgba(255,214,90,0.95)" : "#ffffff";
+        ctx.fillRect(tipX + Math.cos(a)*d, tipY - 4 + Math.sin(a)*d, 2, 2);
+      }
+      const sg2 = ctx.createRadialGradient(tipX, tipY - 4, 0, tipX, tipY - 4, 18);
+      sg2.addColorStop(0, "rgba(255,230,150,0.55)");
+      sg2.addColorStop(1, "rgba(255,230,150,0)");
+      ctx.fillStyle = sg2;
+      ctx.beginPath(); ctx.arc(tipX, tipY - 4, 18, 0, TAU2); ctx.fill();
+      ctx.restore();
+    }
+    // the moment it pops on: one white kiss
+    if(sh.swapped && t2 < 1.18){
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 1 - (t2 - 1.0)/0.18;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(g2.x + S*0.2, g2.y - S*0.05, S*0.2, 0, TAU2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  if(t2 < fitLen) return;
+  const rt = t2 - fitLen, rk = clamp(rt/0.25, 0, 1);
+
+  /* -- the rev: the ship shows off the thing you bought -- */
+  if(sh.kind === "guns"){
+    // the practice hologram it fires into
+    const hx = g2.x, hy = Math.max(H*0.30, g2.y - S*0.82);
+    ctx.save();
+    ctx.globalAlpha = rk;
+    ctx.strokeStyle = "rgba(76,201,240,0.7)";
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 2;
+    [S*0.16, S*0.10, S*0.045].forEach((rr, i) => {
+      ctx.beginPath(); ctx.arc(hx, hy, rr, rt*(i % 2 ? -1.2 : 1.2), rt*(i % 2 ? -1.2 : 1.2) + TAU2); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.globalCompositeOperation = "lighter";
+    const hg = ctx.createRadialGradient(hx, hy, 2, hx, hy, S*0.24);
+    hg.addColorStop(0, "rgba(76,201,240,0.3)");
+    hg.addColorStop(1, "rgba(76,201,240,0)");
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(hx, hy, S*0.24, 0, TAU2); ctx.fill();
+    // tracers + muzzle stars
+    (sh.bolts || []).forEach(b => {
+      const bg = ctx.createLinearGradient(b.x, b.y + 8, b.x, b.y - 8);
+      bg.addColorStop(0, "rgba(255,214,90,0)");
+      bg.addColorStop(1, "rgba(255,255,255,0.95)");
+      ctx.fillStyle = bg;
+      gRR(ctx, b.x - 2, b.y - 8, 4, 16, 2); ctx.fill();
+    });
+    if(sh.muzzle > 0){
+      [[-0.10, -0.33], [0.10, -0.33], [-0.26, -0.13], [0.26, -0.13]].forEach(([fx3, fy3]) => {
+        ctx.fillStyle = "rgba(255,240,190,0.9)";
+        for(let q = 0; q < 3; q++){
+          gEllipse(ctx, g2.x + fx3*S, g2.y + fy3*S, 6, 2);
+          ctx.save(); ctx.translate(g2.x + fx3*S, g2.y + fy3*S);
+          ctx.rotate(q*TAU2/3 + 0.5);
+          ctx.fillRect(-5, -1, 10, 2);
+          ctx.restore();
+        }
+      });
+    }
+    ctx.restore();
+  } else if(sh.kind === "engines"){
+    // it strains against the floor: hot plume + speed streaks
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const pg2 = ctx.createLinearGradient(0, g2.y + S*0.3, 0, g2.y + S*0.85);
+    pg2.addColorStop(0, "rgba(120,190,255,0.5)");
+    pg2.addColorStop(1, "rgba(120,190,255,0)");
+    ctx.fillStyle = pg2;
+    ctx.beginPath();
+    ctx.moveTo(g2.x - S*0.09, g2.y + S*0.3);
+    ctx.lineTo(g2.x + S*0.09, g2.y + S*0.3);
+    ctx.lineTo(g2.x + S*0.03, g2.y + S*(0.72 + Math.sin(rt*22)*0.08));
+    ctx.lineTo(g2.x - S*0.03, g2.y + S*(0.72 + Math.sin(rt*22)*0.08));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(160,200,255,0.4)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    for(let i = 0; i < 6; i++){
+      const sx3 = g2.x + (gSeeded(i + 60) - 0.5)*S*1.3;
+      const sy3 = g2.y + S*0.5 - ((rt*260 + i*57) % (S*1.1));
+      ctx.beginPath(); ctx.moveTo(sx3, sy3); ctx.lineTo(sx3, sy3 + 16); ctx.stroke();
+    }
+    ctx.restore();
+  } else if(sh.kind === "bubble"){
+    const pulse = Math.abs(Math.sin(rt*Math.PI*1.5));
+    ctx.save();
+    ctx.globalAlpha = 0.25 + pulse*0.45;
+    ctx.strokeStyle = "#3fc9ff"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(g2.x, g2.y, S*0.56 + pulse*6, 0, TAU2); ctx.stroke();
+    ctx.globalAlpha = 0.1 + pulse*0.14;
+    ctx.fillStyle = "#3fc9ff";
+    ctx.beginPath(); ctx.arc(g2.x, g2.y, S*0.56 + pulse*6, 0, TAU2); ctx.fill();
+    ctx.restore();
+  } else if(sh.kind === "magnet" || sh.kind === "coins"){
+    const col = sh.kind === "coins" ? "255,210,63" : "120,220,255";
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for(let i = 0; i < 10; i++){
+      const u2 = ((rt*0.9 + i*0.1) % 1);
+      const a = gSeeded(i + 800)*TAU2;
+      const d = (1 - u2)*S*0.95;
+      ctx.fillStyle = "rgba(" + col + "," + (0.25 + u2*0.7).toFixed(2) + ")";
+      ctx.beginPath();
+      ctx.arc(g2.x + Math.cos(a + u2*1.8)*d, g2.y + Math.sin(a + u2*1.8)*d*0.7,
+              sh.kind === "coins" ? 3 : 2, 0, TAU2);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if(sh.kind === "drone"){
+    const u2 = clamp(rt/0.6, 0, 1);
+    const dx2 = g2.x + (S*0.52)*u2, dy2 = g2.y + S*0.1 - Math.sin(rt*3)*5;
+    SF.shipart.drawShip(ctx, dx2, dy2, S*0.2, {
+      color: (P.squadmates(profile.name)[0] || {}).shipColor || profile.shipColor,
+      levels: {}, t: hangar.t, idle: false });
+  } else if(sh.kind === "badge"){
+    const u2 = clamp(rt/1.2, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 1 - u2*0.7;
+    ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(g2.x, g2.y - S*0.5, S*(0.1 + u2*0.35), 0, TAU2); ctx.stroke();
+    ctx.restore();
+    const ic = SF.icons.el(sh.up, "#ffd23f", 22);
+    ctx.drawImage(ic, g2.x - 11, g2.y - S*0.5 - 11 - u2*14, 22, 22);
+  }
 }
 
 function drawHangar(){
@@ -2983,65 +3413,92 @@ function drawHangar(){
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
 
-  const backdrop = bayBackdrop(W, H);
+  const backdrop = garageBackdrop(W, H, hangar.compare);
   if(backdrop) ctx.drawImage(backdrop, 0, 0);
+  stepShow(1/60);
 
-  // The pad's status beacons breathe on the live clock - the one moving
-  // thing the cached backdrop can't carry.
-  const blink = 0.5 + Math.sin(hangar.t*2.2)*0.5;
-  [[W*0.155, H*0.815], [W*0.845, H*0.785]].forEach(([bx, by], i) => {
-    ctx.fillStyle = i ? `rgba(110,200,255,${0.25 + blink*0.35})`
-                      : `rgba(255,210,63,${0.6 - blink*0.35})`;
-    ctx.beginPath(); ctx.arc(bx, by, 2.5, 0, Math.PI*2); ctx.fill();
-  });
+  const wallH = H*0.26;
+  // The work light over the hero bay: a beam, its pool, and dust drifting in
+  // it - the live things the cached room can't carry.
+  const litX = hangar.compare ? W/2 : W/2;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const beam = ctx.createLinearGradient(0, wallH - 8, 0, H*0.86);
+  beam.addColorStop(0, "rgba(255,236,190,0.11)");
+  beam.addColorStop(1, "rgba(255,236,190,0)");
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(litX - W*0.07, wallH - 8); ctx.lineTo(litX + W*0.07, wallH - 8);
+  ctx.lineTo(litX + W*0.3, H*0.86); ctx.lineTo(litX - W*0.3, H*0.86);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,244,214,0.5)";
+  for(let i = 0; i < 10; i++){
+    const u2 = ((hangar.t*0.03 + i*0.1) % 1);
+    const yy = wallH + u2*(H*0.8 - wallH);
+    const xx = litX + (gSeeded(i + 20) - 0.5)*W*0.5*u2 + Math.sin(hangar.t*0.7 + i)*4;
+    ctx.fillRect(xx, yy, 1.3, 1.3);
+  }
+  ctx.restore();
+  ctx.fillStyle = "#0d1120"; gRR(ctx, litX - 18, wallH - 13, 36, 8, 3); ctx.fill();
+  ctx.fillStyle = "rgba(255,236,190,0.9)"; gRR(ctx, litX - 13, wallH - 7, 26, 3, 1.5); ctx.fill();
 
-  // Parked, not floating: a soft shadow on the pad under each hull.
-  const padShadow = (sx, r) => {
+  // the NEXT hook on the pegboard breathes gold: what to save for, said in
+  // the room itself
+  if(!hangar.compare && garage.nextHook){
+    const pulse = 0.5 + Math.sin(hangar.t*3)*0.5;
+    ctx.strokeStyle = "rgba(255,210,63," + (0.25 + pulse*0.5).toFixed(2) + ")";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(garage.nextHook.x, garage.nextHook.y, 12 + pulse*2, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Parked, not floating: a contact shadow directly under each hull.
+  const padShadow = (sx, sy, r) => {
     ctx.save();
-    ctx.translate(sx, H*0.80); ctx.scale(1, 0.3);
-    const sh = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
-    sh.addColorStop(0, "rgba(0,0,0,0.42)");
-    sh.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = sh;
+    ctx.translate(sx, sy); ctx.scale(1, 0.3);
+    const sfx = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+    sfx.addColorStop(0, "rgba(0,0,0,0.42)");
+    sfx.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = sfx;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   };
-  if(hangar.compare){ padShadow(W*0.28, W*0.14); padShadow(W*0.72, W*0.14); }
-  else padShadow(W/2, W*0.20);
-
-  // A floor light so the ship reads as parked in a bay rather than floating.
-  const g = ctx.createRadialGradient(W/2, H*0.62, 8, W/2, H*0.62, W*0.55);
-  g.addColorStop(0, "rgba(120,160,255,0.20)");
-  g.addColorStop(1, "rgba(120,160,255,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
 
   const levels = A.levelsOf(profile);
   const next = A.nextPart(levels);
 
   if(hangar.compare){
-    // Side by side, same scale: the whole point is that the difference is obvious.
-    A.drawShip(ctx, W*0.28, H*0.52, Math.min(W*0.30, H*0.62), {
+    const cy = H*0.58;
+    padShadow(W*0.28, cy + H*0.08, W*0.13);
+    padShadow(W*0.72, cy + H*0.08, W*0.13);
+    A.drawShip(ctx, W*0.28, cy, Math.min(W*0.27, H*0.54), {
       color: profile.shipColor, levels: {}, t: hangar.t });
-    A.drawShip(ctx, W*0.72, H*0.52, Math.min(W*0.30, H*0.62), {
+    A.drawShip(ctx, W*0.72, cy, Math.min(W*0.27, H*0.54), {
       color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
       decal: profile.decal });
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(W/2, H*0.10); ctx.lineTo(W/2, H*0.90); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2, H*0.14); ctx.lineTo(W/2, H*0.92); ctx.stroke();
   } else {
-    // Sized so the widest parts - the aegis halo and the drone cradle - still
-    // sit inside the bay rather than being cropped by it.
-    const S = Math.min(W*0.40, H*0.66);
-    A.drawShip(ctx, W/2, H*0.50, S, {
-      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
+    const S = Math.min(W*0.34, H*0.54);
+    const g2 = garage.ship || { x: W/2, y: H*0.60 };
+    // The fitting swap: until the arm's spark moment the ship still wears its
+    // OLD levels, so the part visibly ARRIVES rather than having always been.
+    const sh = hangar.show;
+    const wear = (sh && sh.part && !sh.swapped) ? sh.levelsBefore : levels;
+    // engines rev: the ship strains forward against the floor
+    const strain = sh && sh.kind === "engines" && sh.t >= (sh.part ? 1.5 : 0)
+      ? Math.sin((sh.t)*18)*1.5 - 4 : 0;
+    padShadow(g2.x, g2.y + S*0.14, S*0.55);
+    A.drawShip(ctx, g2.x, g2.y + strain, S, {
+      color: profile.shipColor, levels: wear, t: hangar.t, tune: profile.tune,
       decal: profile.decal,
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
     });
-    // With an installed portrait, the pilot is visible at the controls.
     const bob = Math.sin(hangar.t*1.6)*S*0.018;
-    SF.pilotart.paint(ctx, W/2, H*0.50 + bob - S*0.055, S*0.15, profile);
+    SF.pilotart.paint(ctx, g2.x, g2.y + strain + bob - S*0.055, S*0.15, profile);
+
+    drawShow(ctx, W, H, S);
 
     // Part-fitted celebration: a white flash and a gold ring rolling off the
     // hull for a beat after a purchase bolts something new on.
@@ -3052,14 +3509,57 @@ function drawHangar(){
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = (1-k)*0.5;
       ctx.fillStyle = "#ffffff";
-      ctx.beginPath(); ctx.arc(W/2, H*0.50, S*0.55*(0.6+k*0.2), 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(g2.x, g2.y, S*0.55*(0.6+k*0.2), 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1-k;
       ctx.strokeStyle = "#ffd23f";
       ctx.lineWidth = 4*(1-k) + 1;
-      ctx.beginPath(); ctx.arc(W/2, H*0.50, S*(0.4 + k*0.55), 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(g2.x, g2.y, S*(0.4 + k*0.55), 0, Math.PI*2); ctx.stroke();
       ctx.restore();
     }
   }
+}
+
+/*
+ * The garage answers taps: a pegboard hook jumps the shop to the upgrade
+ * that earns that part, and the ship jumps to the next part on the ladder.
+ * NOTHING else in the room takes a tap - the mug is a mug - so a stray
+ * finger never does anything surprising.
+ */
+function jumpToUpgrade(id){
+  const u = UPGRADE_BY_ID[id];
+  if(!u) return;
+  audio.play("uiClick");
+  armoryTab = u.cat;
+  renderArmory();
+  requestAnimationFrame(() => {
+    const badge = $("armoryPanel").querySelector('.si-badge[data-glyph="' + id + '"]');
+    const row = badge && badge.closest(".shop-item");
+    if(row){
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.remove("flash");
+      void row.offsetWidth;
+      row.classList.add("flash");
+    }
+  });
+}
+function initGarageTaps(){
+  const cv = $("hangarCanvas");
+  if(!cv) return;
+  cv.addEventListener("click", ev => {
+    if(hangar.compare) return;
+    const rect = cv.getBoundingClientRect();
+    const sx = rect.width ? cv.width/rect.width : 1;
+    const sy = rect.height ? cv.height/rect.height : 1;
+    const x = (ev.clientX - (rect.left || 0))*sx;
+    const y = (ev.clientY - (rect.top || 0))*sy;
+    const hook = garage.hooks.find(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
+    if(hook){ jumpToUpgrade(hook.up); return; }
+    const g2 = garage.ship;
+    if(g2 && Math.hypot(x - g2.x, y - g2.y) <= g2.r){
+      const next = SF.shipart.nextPart(SF.shipart.levelsOf(profile));
+      if(next) jumpToUpgrade(next.up);
+    }
+  });
 }
 
 /*
@@ -3112,20 +3612,56 @@ function renderShipSpecs(){
         <span class="hs-value"></span>
       </div>`).join("");
   }
+  const changedRows = [];
   rows.forEach((r, i) => {
     const rowEl = el.children[i];
     const bar = rowEl.querySelector(".hs-bar i");
     const val = rowEl.querySelector(".hs-value");
     const pct = Math.max(3, Math.round(Math.min(1, r.value/r.max) * 100)) + "%";
     const changed = val.textContent !== "" && val.textContent !== r.show;
+    const prevPct = parseFloat(bar.style.width) || 0;
     if(bar.style.width !== pct) requestAnimationFrame(() => { bar.style.width = pct; });
     val.textContent = r.show;
     if(changed){
       rowEl.classList.remove("bump");
       void rowEl.offsetWidth;               // restart the animation
       rowEl.classList.add("bump");
+      changedRows.push({ rowEl, prevPct, newPct: parseFloat(pct) });
     }
   });
+  /*
+   * THE DIAL. A changed bar used to bump and that was all - honest, but easy
+   * to miss under a thumb. Now the grown chunk itself is drawn in gold, from
+   * where the bar WAS to where it IS, and every row that didn't move steps
+   * back for two seconds, so the one that did is the only bright thing on
+   * the panel. Losses (a tune trade) show the same chunk in red, shrinking.
+   */
+  if(changedRows.length){
+    clearTimeout(hangar.dialTimer);
+    Array.from(el.children).forEach(rowEl => {
+      rowEl.classList.toggle("dim", !changedRows.some(c => c.rowEl === rowEl));
+      rowEl.classList.remove("hot");
+      const old = rowEl.querySelector(".hs-gain");
+      if(old) old.remove();
+    });
+    changedRows.forEach(({ rowEl, prevPct, newPct }) => {
+      rowEl.classList.add("hot");
+      const track = rowEl.querySelector(".hs-bar");
+      const gain = document.createElement("span");
+      gain.className = "hs-gain" + (newPct < prevPct ? " loss" : "");
+      const a2 = Math.min(prevPct, newPct), b2 = Math.max(prevPct, newPct);
+      gain.style.left = a2 + "%";
+      gain.style.width = Math.max(2, b2 - a2) + "%";
+      track.appendChild(gain);
+    });
+    hangar.dialTimer = setTimeout(() => {
+      Array.from(el.children).forEach(rowEl => {
+        rowEl.classList.remove("dim", "hot");
+        const g2 = rowEl.querySelector(".hs-gain");
+        if(g2) g2.remove();
+      });
+    }, 2400);
+  }
 }
 
 /* ---------------------------------------------------------
@@ -3405,10 +3941,21 @@ function buyUpgrade(id){
   const cost = P.nextCost(profile, u);
   if(cost === null || profile.money < cost) return false;
   const rankBefore = P.rankFor(profile).name;
-  const partsBefore = SF.shipart.ownedCount(SF.shipart.levelsOf(profile));
+  const levelsBefore = SF.shipart.levelsOf(profile);
+  const partsBefore = SF.shipart.ownedCount(levelsBefore);
+  // Captured around the purchase so the rev can DEMONSTRATE the difference -
+  // guns fire at the actual new rate, not at a metaphor of it.
+  const loadBefore = SF.game.buildLoadout(profile, SF.config.DIFFICULTY_BY_ID.pilot);
   profile.money -= cost;
   profile.upgrades[id] = P.upgradeLevel(profile, id) + 1;
   P.save(profile);
+  const loadAfter = SF.game.buildLoadout(profile, SF.config.DIFFICULTY_BY_ID.pilot);
+  const newLevel = P.upgradeLevel(profile, id);
+  const fitted = SF.shipart.PARTS.find(pt => pt.up === id && pt.at === newLevel) || null;
+  queuePurchaseShow({
+    up: id, kind: REV_KIND[id] || "badge", part: fitted,
+    levelsBefore, before: loadBefore, after: loadAfter, t: 0,
+  });
   audio.play("uiBuy");
   P.checkAchievements(profile).forEach(queueToast);
   renderArmory();
@@ -4358,6 +4905,7 @@ SF.game.onMissionEnd = (result) => {
    --------------------------------------------------------- */
 SF.game.attach($("game"), document.querySelector(".game-frame"), $("screen-game"));
 SF.workshop.init();               // the Drawing Board wires its own controls
+initGarageTaps();                 // pegboard hooks and the ship answer taps
 paintMuteBtn();
 // The chrome's drawn glyphs: ability buttons and the settings gears. Painted
 // once at boot - they never change shape, only visibility.
@@ -4472,6 +5020,8 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           getProfile: () => profile,
           sectorStats, SECTORS,         // the map's per-stretch scoreboard
           navBack, goHome,              // the way back, for the phone's own gesture
+          _garageHooks: () => garage.hooks,   // test harness only
+          _purchaseShows: () => hangar.shows.length + (hangar.show ? 1 : 0),
           // The Drawing Board's doors into the app: launch a drawn sky, and
           // borrow the game's own dialog instead of window.prompt/confirm.
           launchCustom,
