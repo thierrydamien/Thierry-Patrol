@@ -884,6 +884,27 @@ function drawBullets(ctx, world){
   for(let i=0;i<ebs.length;i++){
     const b = ebs[i];
     if(!b.alive) continue;
+    // BUBBLE SHOTS draws its own thing: a soap bubble with a highlight, no
+    // comet tail. Reusing the bolt sprite would have made a slow shot look
+    // like a fast one, which is a lie about how much time the kid has.
+    if(b.kind === "bubble"){
+      const r = b.r*1.5, wob = Math.sin(b.age*7 + b.x*0.05)*0.12;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.scale(1 + wob, 1 - wob);
+      const g = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.1, 0, 0, r);
+      g.addColorStop(0, "rgba(255,255,255,0.75)");
+      g.addColorStop(0.45, "rgba(165,243,252,0.30)");
+      g.addColorStop(1, "rgba(56,189,248,0.55)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(224,252,255,0.8)"; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath(); ctx.arc(-r*0.34, -r*0.36, r*0.20, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      continue;
+    }
     const kind = b.kind === "orb" ? "orb" : "aimed";
     const sp = Math.hypot(b.vx || 0, b.vy || 0);
     /*
@@ -1262,6 +1283,44 @@ function drawAct4(ctx, run, world, timeMs){
       ctx.fill();
     }
   }
+}
+
+/*
+ * DISCO SKY. The Wacky Sky's rule is that a modifier must be visible in
+ * seconds, and nothing is more visible than the entire screen changing
+ * colour on a beat. Four gel lights sweep the field and the whole frame gets
+ * a wash that cycles hue every couple of seconds. It is drawn OVER the world
+ * and UNDER the HUD, at low alpha with "overlay" and "lighter", so it recolours
+ * the sky without ever hiding a bullet - the one thing the silly mode is not
+ * allowed to do.
+ */
+function drawDisco(ctx, timeMs){
+  const t = timeMs/1000;
+  const hue = (t*84) % 360;
+  ctx.save();
+  ctx.globalCompositeOperation = "overlay";
+  ctx.globalAlpha = 0.20 + Math.sin(t*3.2)*0.06;
+  ctx.fillStyle = "hsl(" + hue.toFixed(0) + ",90%,55%)";
+  ctx.fillRect(0, 0, VW, VH);
+  // Gel beams from above, each on its own hue and its own slow sweep.
+  ctx.globalCompositeOperation = "lighter";
+  for(let i = 0; i < 4; i++){
+    const h = (hue + i*90) % 360;
+    const x = VW*0.5 + Math.sin(t*0.8 + i*1.7)*VW*0.55;
+    const g = ctx.createLinearGradient(x, 0, x + Math.sin(t*0.5 + i)*160, VH);
+    g.addColorStop(0, "hsla(" + h.toFixed(0) + ",95%,62%,0.20)");
+    g.addColorStop(1, "hsla(" + h.toFixed(0) + ",95%,62%,0)");
+    ctx.fillStyle = g;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 26, -10);
+    ctx.lineTo(x + 26, -10);
+    ctx.lineTo(x + 150 + Math.sin(t*0.5 + i)*160, VH + 10);
+    ctx.lineTo(x - 150 + Math.sin(t*0.5 + i)*160, VH + 10);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawBlackout(ctx, world, timeMs, soft){
@@ -3147,7 +3206,7 @@ SF.render = {
   _papaPhoto: papaPhoto, _papaState: () => ({ ready: papaImgReady, tryIdx: papaTry, sweeps: papaSweeps }),
   initBackground, updateBackground, drawBackground, drawForeground,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
-  drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout,
+  drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
   drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.

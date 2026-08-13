@@ -86,6 +86,14 @@ const MODIFIERS = [
     blurb:"Your ship is super fast. Hold on!" },               // game.startMission -> player
   { id:"sleepy",   name:"SLEEPY ENEMIES",  color:"#9bb0ff",
     blurb:"They fly half asleep, slow as clouds." },           // entities.spawnEnemy
+  { id:"disco",    name:"DISCO SKY",       color:"#f472b6",
+    blurb:"The whole sky is a dance floor. Everything changes colour!" }, // render.drawDisco
+  { id:"vacuum",   name:"SUPER MAGNET",    color:"#38bdf8",
+    blurb:"Every coin in the sky comes flying to you." },      // entities.updatePickups
+  { id:"chain",    name:"CHAIN REACTION",  color:"#fb923c",
+    blurb:"Pop one and its neighbours go off too. BOOM BOOM BOOM!" }, // game.onEnemyKilled
+  { id:"bubbles",  name:"BUBBLE SHOTS",    color:"#a5f3fc",
+    blurb:"Their bullets are slow floaty bubbles. Pop!" },     // entities.spawnEnemyBullet
 ];
 const MOD_BY_ID = {};
 MODIFIERS.forEach(m => MOD_BY_ID[m.id] = m);
@@ -94,7 +102,12 @@ MODIFIERS.forEach(m => MOD_BY_ID[m.id] = m);
  * The pairs that cannot share a sky. Only one so far: a ship cannot be tiny
  * and enormous at once.
  */
-const CONFLICTS = [["tiny", "mega"]];
+const CONFLICTS = [
+  ["tiny", "mega"],
+  // BOUNCY COINS is a joke about coins going where you aren't; SUPER MAGNET
+  // is a joke about coins coming to you. Together, neither one happens.
+  ["bouncy", "vacuum"],
+];
 function conflicts(a, b){
   return CONFLICTS.some(pair => pair.includes(a.id) && pair.includes(b.id) && a.id !== b.id);
 }

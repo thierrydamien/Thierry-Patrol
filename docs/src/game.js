@@ -785,6 +785,32 @@ const callbacks = {
       pod.vy = 30;
       fx.text(e.x, e.y - 26, "PILOT FREED!", "#ffd23f", 17, true);
     }
+
+    /*
+     * CHAIN REACTION: a pop takes its neighbours with it, and theirs. The
+     * depth cap is the whole safety design - three hops is enough for a
+     * packed formation to go up like a string of firecrackers, and it stops
+     * one lucky shot from clearing the sky (and stops this from recursing
+     * forever). Chained kills score and pay exactly like shot ones, because
+     * a kid who set off a nine-enemy cascade earned all nine.
+     */
+    if(run.mods.chain && (e.chainDepth || 0) < 3 && !run.ended){
+      const depth = (e.chainDepth || 0) + 1;
+      const R = 96;
+      fx.ring(e.x, e.y, R, "#fb923c", 4, 0.3);
+      const list = game.world.enemies.items;
+      const caught = [];
+      for(let i = 0; i < list.length; i++){
+        const o = list[i];
+        if(!o.alive || o === e || o.entering) continue;
+        const dx = o.x - e.x, dy = o.y - e.y;
+        if(dx*dx + dy*dy > R*R) continue;
+        o.hp -= 3; o.flash = 1;
+        if(o.hp <= 0){ o.chainDepth = depth; caught.push(o); }
+      }
+      // Killed outside the scan, so the list can't change under the loop.
+      caught.forEach(o => callbacks.onEnemyKilled(o, null, false));
+    }
   },
 
   onEnemyEscaped(e){
@@ -2122,6 +2148,10 @@ function draw(timeMs){
   // except what glows. HUD and texts draw after - instruments still work.
   if(game.run && game.run.mission.blackout && !game.run.ended)
     SF.render.drawBlackout(ctx, world, timeMs, game.run.mission.blackout === "soft");
+  // DISCO SKY: over the world, under the HUD - it recolours the sky and never
+  // hides a bullet.
+  if(game.run && game.run.mods.disco && !game.run.ended)
+    SF.render.drawDisco(ctx, timeMs);
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&

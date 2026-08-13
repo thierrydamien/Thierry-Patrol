@@ -3855,8 +3855,11 @@ async function run(){
     C.sanitizePilots(honest);
     check("honest stamps pass through the sanitizer untouched", honest.Marc.savedAt === before);
     // And the local compare clamps too, so a poisoned stored record can lose.
+    // The incoming stamp needs real margin, not +1ms: applyPilots caps the
+    // stored stamp at ITS OWN Date.now(), sampled after this line, so a
+    // one-millisecond lead made the assertion a coin flip on a slow run.
     SF.profile.saveRaw({ name:"Clock", callsign:"Clock", money: 1, savedAt: Date.now() + 3600000 });
-    C.applyPilots({ Clock: { name:"Clock", callsign:"Clock", money: 50, savedAt: Date.now() + 1 } });
+    C.applyPilots({ Clock: { name:"Clock", callsign:"Clock", money: 50, savedAt: Date.now() + 250 } });
     check("a poisoned local record no longer wins every sync",
       SF.profile.load("Clock").money === 50);
   }
@@ -4164,6 +4167,7 @@ async function run(){
       return ok;
     })());
 
+
     await runFrames(400);   // ~13s: past the intro and the first PAPA RAIN drop
     check("the reveal pops drain as the run starts",
       SF.game.run.modReveal.queue.length === 0);
@@ -4218,6 +4222,72 @@ async function run(){
       }
       return true;
     })());
+    check("bouncy coins and the super magnet never share a sky either", (() => {
+      // One joke is coins going where you aren't; the other is coins coming
+      // to you. Together, neither one happens.
+      for(let i = 0; i < 300; i++){
+        const ids = SF.wacky.roll().map(m => m.id);
+        if(ids.includes("bouncy") && ids.includes("vacuum")) return false;
+      }
+      return true;
+    })());
+
+    /*
+     * The newer half of the table. Same contract as the old half: visible in
+     * seconds, and never harder than the campaign.
+     */
+    check("SUPER MAGNET pulls a coin in from the far corner", (() => {
+      const real = SF.wacky.build;
+      SF.wacky.build = () => real(["vacuum"]);
+      SF.game.startMission("wacky", "pilot");
+      SF.wacky.build = real;
+      const p2 = SF.game.world.player;
+      p2.x = 60; p2.y = SF.entityConst.VH - 80;
+      const c = SF.game.world.spawnPickup("coin", SF.entityConst.VW - 20, 40, { value: 1 });
+      c.vx = 0; c.vy = 0;
+      SF.game.world.updatePickups(0.05, () => {});
+      const ok = c.vx < -10 && c.vy > 10;      // heading for the ship, hard
+      c.alive = false;
+      SF.game.endMission(false);
+      return ok;
+    })());
+    check("BUBBLE SHOTS makes their fire slow and floaty, never fatter", (() => {
+      const real = SF.wacky.build;
+      SF.wacky.build = () => real(["bubbles"]);
+      SF.game.startMission("wacky", "pilot");
+      SF.wacky.build = real;
+      const b = SF.game.world.spawnEnemyBullet(100, 100, 0, 400, "bolt", 4);
+      const ok = !!b && b.kind === "bubble" && b.vy < 400*0.5 && b.r === 4;
+      if(b) b.alive = false;
+      SF.game.endMission(false);
+      return ok;
+    })());
+    check("CHAIN REACTION takes the neighbours with it, and only them", (() => {
+      const real = SF.wacky.build;
+      SF.wacky.build = () => real(["chain"]);
+      SF.game.startMission("wacky", "pilot");
+      SF.wacky.build = real;
+      const d = SF.game.run.difficulty;
+      const near = SF.game.world.spawnEnemy("grunt", 240, 200, { difficulty: d });
+      const far  = SF.game.world.spawnEnemy("grunt", 240, 640, { difficulty: d });
+      near.hp = 1; far.hp = 1; near.entering = false; far.entering = false;
+      const victim = SF.game.world.spawnEnemy("grunt", 200, 200, { difficulty: d });
+      SF.game.callbacks.onEnemyKilled(victim, null, false);
+      const ok = !near.alive && far.alive;     // the blast has a radius
+      [near, far, victim].forEach(e => { e.alive = false; });
+      SF.game.endMission(false);
+      return ok;
+    })());
+    check("...and a cascade can never recurse forever",
+      (() => { const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+               return /\(e\.chainDepth \|\| 0\) < 3/.test(g); })());
+    check("DISCO SKY recolours the world, over the fight and under the HUD",
+      (() => { const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+               const at = g.indexOf("SF.render.drawDisco(ctx, timeMs)");
+               return typeof SF.render.drawDisco === "function" && at > 0 &&
+                      /run\.mods\.disco/.test(g) &&
+                      at > g.indexOf("SF.render.drawBullets(ctx, world)") &&
+                      at < g.indexOf("SF.render.drawHud(ctx, game)"); })());
     check("an exclusion does not shrink the hand",
       (() => { for(let i = 0; i < 60; i++){ const n = SF.wacky.roll().length;
                if(n !== 2 && n !== 3) return false; } return true; })());

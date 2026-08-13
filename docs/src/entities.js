@@ -520,6 +520,15 @@ class World {
     }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
+    // BUBBLE SHOTS: their fire drifts in at just over a third speed and wobbles
+    // on the way. Strictly easier - which is the Wacky Sky's whole contract -
+    // and readable in the first second, because a bubble does not look like a
+    // bolt. The radius is left alone: a fatter bubble would take the gift back.
+    if(this.mods.bubbles){
+      b.vx = vx*0.38 + (Math.random() - 0.5)*22;
+      b.vy = vy*0.38;
+      b.kind = "bubble";
+    }
     return b;
   }
 
@@ -791,9 +800,14 @@ class World {
       if(p && p.alive){
         const dx = p.x - it.x, dy = p.y - it.y;
         const d = Math.hypot(dx, dy);
-        const range = p.magnetRange + (it.kind === "coin" ? 20 : 0);
+        // SUPER MAGNET: the tractor beam is the whole sky, and it does not
+        // weaken with distance - coins streak in from the corners the moment
+        // they exist. Loud, free money, and the reason it can't share a sky
+        // with BOUNCY COINS (see wacky.js CONFLICTS).
+        const vac = this.mods.vacuum;
+        const range = vac ? 4000 : p.magnetRange + (it.kind === "coin" ? 20 : 0);
         if(d < range && d > 0.01){       // tractor beam
-          const pull = (1 - d/range) * 900 * dt;
+          const pull = (vac ? 1500 : (1 - d/range) * 900) * dt;
           it.vx += dx/d * pull; it.vy += dy/d * pull;
         }
         if(d < p.r + 20){
