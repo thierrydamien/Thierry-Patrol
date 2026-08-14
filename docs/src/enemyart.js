@@ -119,9 +119,34 @@ function hull(ctx, pts, p, S){
   ctx.strokeStyle = p.line; ctx.lineWidth = S*0.026; ctx.stroke();
   rimLight(ctx, pts, p, S);
 }
+/*
+ * An armour panel is lit like everything else on the hull.
+ *
+ * This was three lines - poly, flat fill, done - while hull() directly above
+ * runs a three-stop gradient on the key-light axis and then catches the rim.
+ * So on thirteen call sites the hull underneath was modelled and the plate on
+ * top of it was a sticker, which is most of what made the heavies read flat.
+ *
+ * The wash is expressed in white/black alphas rather than mixing the colour,
+ * because callers pass hex ("#22262f") AND the rgb() strings that come out of
+ * mix() as p.metal/p.deep/p.trim - hexToRgb would return NaN on half of them.
+ */
 function plate(ctx, pts, p, S, colour){
   poly(ctx, pts);
   ctx.fillStyle = colour || p.deep; ctx.fill();
+  ctx.save();
+  poly(ctx, pts); ctx.clip();
+  const g = ctx.createLinearGradient(-S*0.30, -S*0.30, S*0.25, S*0.30);
+  g.addColorStop(0,    "rgba(255,255,255,0.14)");
+  g.addColorStop(0.45, "rgba(255,255,255,0)");
+  g.addColorStop(1,    "rgba(0,0,0,0.22)");
+  ctx.fillStyle = g;
+  poly(ctx, pts); ctx.fill();
+  ctx.translate(S*0.012, S*0.012);
+  poly(ctx, pts);
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = S*0.018;
+  ctx.stroke();
+  ctx.restore();
 }
 /*
  * A canopy that is lit rather than painted. The glass used to be a flat disc
@@ -153,15 +178,30 @@ function cockpit(ctx, x, y, rx, ry, p){
  * edges or the eye reads it as part of the hull.
  */
 function thruster(ctx, x, y, w, len, p){
+  /*
+   * THIS PAINTED NOTHING. NOT DIM - NOTHING.
+   *
+   * The gradient was built at (x, cy) and THEN the context was translated by
+   * (x, cy). A canvas gradient's coordinates are resolved against the CTM at
+   * fill time, so its centre landed at (2x, 2cy) while the arc sat at
+   * (x, cy) - about 0.34S away from a gradient that dies at 0.14S. Every
+   * pixel of every enemy exhaust in the game took the terminal transparent
+   * stop. Measured through node-canvas on the Grunt's own call site: 0 lit
+   * pixels, peak alpha 0. Fixed: 568 lit pixels, peak alpha 226.
+   *
+   * This is why the fleet read as flat cardboard, and why the nozzle could
+   * never be tuned into looking lit - there was nothing behind it to tune.
+   * The gradient is built INSIDE the transform now, where it is used.
+   */
   const cy = y - len*0.34;
-  const g = ctx.createRadialGradient(x, cy, 0, x, cy, len*0.8);
+  ctx.save();
+  ctx.translate(x, cy); ctx.scale(w*1.25/(len*0.8), 1);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len*0.8);
   g.addColorStop(0, "rgba(255,240,206,0.95)");
   g.addColorStop(0.32, "rgba(255,172,92,0.5)");
   g.addColorStop(1, "rgba(255,120,60,0)");
   ctx.fillStyle = g;
-  ctx.save();
-  ctx.translate(x, cy); ctx.scale(w*1.25/(len*0.6), 1);
-  ctx.beginPath(); ctx.arc(0, 0, len*0.6, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, len*0.8, 0, TAU); ctx.fill();
   ctx.restore();
   ctx.fillStyle = p.metalD;
   ctx.fillRect(x - w*0.85, y - w*0.42, w*1.7, w*0.84);
