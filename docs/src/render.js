@@ -2835,20 +2835,43 @@ function drawComms(ctx){
 
   const PAD = Math.round(VW*0.03);
   const W = Math.min(VW - PAD*2 - 76, 330), H = 62;
-  const inT = Math.min(1, msg.life/0.22);
   const outT = Math.min(1, Math.max(0, (msg.max - msg.life)/0.28));
-  const slide = (1 - easeOutCubic(inT)) * -(W + PAD);
   // High enough to clear the ship and its wingmen at the bottom of the field.
-  const x = PAD + slide, y = VH - 225;
+  const y = VH - 225;
 
-  // The panel sits inside the flight envelope, so the ship can end up BEHIND
-  // it mid-fight. When the player is anywhere near, the panel ducks to a
-  // whisper - a message is never worth hiding the thing you're steering.
-  let duck = 1;
+  /*
+   * THE PANEL GETS OUT OF THE WAY. IT DOES NOT HIDE.
+   *
+   * This used to drop to 0.25 alpha whenever the ship was near it, which
+   * sounds careful and was catastrophic: the box is 330px wide in a ~600px
+   * field and sits at y=575, right in the middle of where the ship actually
+   * flies. The test was therefore true most of the time, and the practical
+   * effect was that nearly every line of dialogue in the game - all of the
+   * writing, the whole reason the squadron talks to each other - was drawn at
+   * a quarter opacity and never read by anyone.
+   *
+   * The ship is ONE object. It cannot be on both sides of the field at once,
+   * so there is always a free side to be on: the panel slides across to it
+   * and stays perfectly legible. The dim survives only as a backstop for the
+   * frames when it is genuinely mid-slide.
+   */
   const pl = SF.game.world && SF.game.world.player;
-  if(pl && pl.alive &&
-     pl.x > x - 40 && pl.x < x + W + 40 &&
-     pl.y > y - 50 && pl.y < y + H + 50) duck = 0.25;
+  const xL = PAD, xR = VW - PAD - W;
+  const blocked = bx => !!(pl && pl.alive &&
+                           pl.x > bx - 40 && pl.x < bx + W + 40 &&
+                           pl.y > y - 50 && pl.y < y + H + 50);
+  if(msg.side === undefined){
+    msg.side = 0;
+    msg.px = xL - (W + PAD);            // the old slide-in, from off the left
+  }
+  // Only move if the side we are heading for is actually free.
+  const here = msg.side ? xR : xL, there = msg.side ? xL : xR;
+  if(blocked(here) && !blocked(there)) msg.side ^= 1;
+  const target = msg.side ? xR : xL;
+  msg.px += (target - msg.px) * 0.18;
+  const x = msg.px;
+
+  const duck = blocked(x) ? 0.62 : 1;
 
   ctx.save();
   ctx.globalAlpha = outT * duck;
