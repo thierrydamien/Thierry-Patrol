@@ -564,6 +564,7 @@ html, body {
 .ct-buy  { flex:1; min-width:0; font-size:13px; color: rgba(255,255,255,0.9);
            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ct-buy b { color: var(--cat, #ffd23f); }
+.ct-fits { display:block; font-style:normal; font-size:10px; color:#8fd3a7; margin-top:1px; }
 .ct-cost { flex:0 0 auto; font-weight:700; font-size:14px; color: var(--cat, #ffd23f); }
 
 /* The new part, reported on the results card the flight after you buy it. */
@@ -938,21 +939,34 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .hn-how { font-size:11px; color: rgba(255,255,255,0.6); }
 .armory-bar .pc-money { margin:0; font-size:17px; white-space:nowrap; }
 
-/* Shelves as tabs: only one is ever on screen. */
-.armory-tabs {
-  display:flex; gap:6px; width:100%; margin:10px 0 12px;
-  overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;
+/*
+ * THE SHELF SELECTOR, VERTICAL AND STICKY.
+ *
+ * It was a sideways-scrolling strip of seven, and on a 390px phone two of them
+ * - MY SHIP and PILOT - sat off the right edge with nothing but a soft mask to
+ * hint at it. A seven-year-old does not discover a horizontal scroller inside a
+ * vertical page. Worse, it sat above a very tall scroll, so switching shelf
+ * meant scrolling all the way back up past the whole bay.
+ *
+ * Down the left instead: all seven visible at once, and stuck to the top so the
+ * shelf you want is one tap away from anywhere in the list.
+ */
+.armory-body {
+  display:flex; align-items:flex-start; gap:9px; width:100%; margin-top:10px;
 }
-/* More tabs live off the right edge; the fade says so. Lifted by JS the
-   moment you scroll to the end, so no tab is ever left half-lit. */
-.armory-tabs:not(.at-end) {
-  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 99%);
-  mask-image: linear-gradient(90deg, #000 88%, transparent 99%);
+.armory-rail {
+  flex:0 0 auto; width:64px;
+  display:flex; flex-direction:column; gap:5px;
+  position: sticky; top: var(--sticky-top); align-self:flex-start; z-index:3;
 }
 .armory-tab {
-  flex:1 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px;
-  font-family:inherit; font-weight:700; font-size:10px; letter-spacing:0.6px;
-  padding:8px 9px; border-radius:12px; cursor:pointer; white-space:nowrap;
+  width:100%; display:flex; flex-direction:column; align-items:center; gap:3px;
+  font-family:inherit; font-weight:700; font-size:8px; letter-spacing:0.3px;
+  line-height:1.15; text-align:center;
+  /* Two lines of label are allowed, so "STAYING ALIVE" keeps the name a child
+     was given rather than being shortened to "ARMOUR" to fit a box. */
+  padding:7px 3px; border-radius:12px; cursor:pointer; white-space:normal;
+  min-height:52px; justify-content:center;
   background: rgba(0,0,0,0.30); border:2px solid transparent; color: rgba(255,255,255,0.5);
 }
 .armory-tab .icon-glyph { display:block; }
@@ -994,7 +1008,38 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
   button:disabled { cursor: default; }
 }
 .armory-tab.on { border-color: var(--cat); color:#fff; background: rgba(255,255,255,0.07); }
-.armory-panel { width:100%; }
+
+/*
+ * A PHONE PUTS THE SELECTOR BACK ON TOP - but as a grid, never a scroller.
+ *
+ * The vertical rail is plainly right on a tablet: there is width to spare and
+ * the shelf runs two columns beside it. On a 390px phone the same rail costs
+ * 73px of a 354px content box, and the shop rows pay for it - "Spread Shot"
+ * wraps to two lines, "fits Quad Barrels to your ship" wraps to two more, and
+ * the row that was doing the real work gets worse to fix a selector.
+ *
+ * So below the breakpoint it wraps into two rows of chips instead. That still
+ * fixes the actual defect - all seven visible, nothing hidden off an edge a
+ * child will never think to scroll - and it still sticks, so changing shelf
+ * never means scrolling back up past the whole bay. It costs ~45px of height
+ * against the old strip, which is a price worth paying for "no tab is hidden".
+ */
+@media (max-width: 560px) {
+  .armory-body { flex-direction:column; gap:0; }
+  .armory-rail {
+    flex-direction:row; flex-wrap:wrap; width:100%; gap:5px;
+    top: var(--sticky-top); padding:5px 0 7px;
+    background:#090818;            /* opaque: the shelf must not ghost through */
+  }
+  .armory-tab {
+    flex:1 1 22%; min-width:0; min-height:46px;
+    flex-direction:row; gap:5px; padding:6px 5px; font-size:8px;
+  }
+  /* The bay is shorter now the wall is bare - there is no pegboard left to
+     give room to, and the shelf is what the screen is for. */
+  .armory-stage { aspect-ratio: 620 / 250; }
+}
+.armory-panel { flex:1 1 auto; min-width:0; }
 .parts-head { font-size:11px; color: rgba(255,255,255,0.6); margin-bottom:8px; letter-spacing:0.5px; }
 .si-part { font-size:10px; color:#8fd3a7; margin-top:3px; }
 

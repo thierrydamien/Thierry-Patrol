@@ -1009,22 +1009,29 @@ async function run(){
              return !/OUT FLYING/.test(g) && !/SQD/.test(g) &&
                     !/the tool chest/.test(g); })());
   await runFrames(3);       // the garage paints on the armory's own rAF loop
-  check("the pegboard hangs the real part ladder",
-    SF.ui._garageHooks().length >= 6 &&
-    SF.ui._garageHooks().every(h => !!SF.config.UPGRADE_BY_ID[h.up]));
-  check("exactly one hook is the NEXT one, and it is the real next part", (() => {
-    const hooks = SF.ui._garageHooks();
-    const next = SF.shipart.nextPart(SF.shipart.levelsOf(SF.ui.getProfile()));
-    return hooks.filter(h => h.next).length === (next ? 1 : 0);
-  })());
-  check("a hook jumps the shop to the upgrade that earns it", (() => {
-    const hook = SF.ui._garageHooks().find(h => h.up !== "spread");
+  /*
+   * The pegboard is gone. It hung the upgrade ladder on the wall as eight
+   * hooks - owned parts as glyphs, the rest as chalk outlines - and on a phone
+   * that was a 150px strip of 16px icons restating, cryptically, the line
+   * directly beneath the bay: which part is next, and what buys it. Two
+   * answers to one question, and the worse one held the top third of the room.
+   *
+   * The ship is now the only thing in the room that answers a tap, and it
+   * answers the only question the room poses.
+   */
+  check("the wall carries no pegboard to decode",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return !/garage\.hooks/.test(u) && !/nextHook/.test(u) &&
+                    !/P A R T S/.test(u); })());
+  check("tapping the ship jumps the shop to the next part", (() => {
     const cv = id("hangarCanvas");
+    const next = SF.shipart.nextPart(SF.shipart.levelsOf(SF.ui.getProfile()));
+    if(!next) return true;
     // jsdom has no layout: give the canvas a fake on-screen box to map against
     cv.getBoundingClientRect = () => ({ left: 0, top: 0, width: cv.width, height: cv.height });
-    cv.dispatchEvent(new window.MouseEvent("click", { clientX: hook.cx, clientY: hook.cy, bubbles: true }));
-    const badge = qa('#armoryPanel .si-badge[data-glyph="' + hook.up + '"]');
-    return badge.length === 1;                 // the shop is now on that shelf
+    cv.dispatchEvent(new window.MouseEvent("click",
+      { clientX: cv.width/2, clientY: cv.height*0.60, bubbles: true }));
+    return qa('#armoryPanel .si-badge[data-glyph="' + next.up + '"]').length === 1;
   })());
   clickEl(tabByName("GUNS"));
 

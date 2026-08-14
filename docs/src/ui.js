@@ -2312,19 +2312,26 @@ function renderArmory(){
   const next = A.nextPart(levels);
 
   $("armoryMoney").textContent = money(profile.money);
+  /*
+   * ONE ANSWER TO "WHAT NEXT".
+   *
+   * This strip said NEXT PART TO FIT, and the coach chip at the top of the
+   * shelf said "you keep losing lives - try Extra Life". Two answers to the
+   * same question, 107px apart, from different sources - the part ladder and
+   * how you have actually been dying - so they could and did disagree. The
+   * coach owns the recommendation now (see renderCoach); this line's job is
+   * reduced to the one thing it knew that the coach did not: what the purchase
+   * BOLTS ON, which is the part a child actually cares about.
+   */
   if(next){
     const u = UPGRADE_BY_ID[next.up];
-    const atNext = P.upgradeLevel(profile, u.id) === next.at - 1;
-    const cost = atNext ? P.nextCost(profile, u) : null;
     $("hangarNext").innerHTML =
-      `<span class="hn-label">NEXT PART TO FIT</span><b>${esc(next.name)}</b>
-       <span class="hn-how">buy ${esc(u.name)} Lv ${next.at}${cost !== null ? " — " + money(cost) : ""} · tap to shop</span>`;
-    $("hangarNext").onclick = () => { audio.play("uiClick"); armoryTab = u.cat; renderArmory(); };
+      `<span class="hn-label">NEXT PART TO FIT</span><b>${esc(next.name)}</b>`;
+    $("hangarNext").onclick = () => { audio.play("uiClick"); jumpToUpgrade(u.id); };
     $("hangarNext").classList.add("tappable");
   } else {
     $("hangarNext").innerHTML =
-      `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>
-       <span class="hn-how">Nothing left to bolt on</span>`;
+      `<span class="hn-label">COMPLETE</span><b>Every part fitted.</b>`;
     $("hangarNext").onclick = null;
     $("hangarNext").classList.remove("tappable");
   }
@@ -2347,10 +2354,7 @@ function renderArmory(){
     click(el, () => { armoryTab = t.id; renderArmory(); });
     tabs.appendChild(el);
   });
-  const syncTabFade = () =>
-    tabs.classList.toggle("at-end", tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 4);
-  tabs.onscroll = syncTabFade;
-  syncTabFade();
+  // (The rail shows all seven at once - there is no longer an edge to fade.)
 
   const panel = $("armoryPanel");
   panel.innerHTML = "";
@@ -2415,8 +2419,18 @@ function renderCoach(panel){
   const row = document.createElement("button");
   row.className = "coach-tip";
   row.style.setProperty("--cat", (CATEGORIES.find(c => c.id === pick.u.cat) || {}).color || "#ffd23f");
+  /*
+   * If the thing the coach recommends ALSO bolts a visible part onto the ship,
+   * say so on the same line. That was the one piece of information the old
+   * NEXT PART TO FIT strip carried that this does not, and it is the half a
+   * seven-year-old is actually moved by: not "+18% fire rate" but "this puts
+   * Twin Barrels on my ship".
+   */
+  const lvlNow = P.upgradeLevel(profile, pick.u.id);
+  const fits = SF.shipart.PARTS.find(pt => pt.up === pick.u.id && pt.at === lvlNow + 1);
   row.innerHTML = `<span class="ct-why">${esc(pick.why)}</span>` +
-                  `<span class="ct-buy">Try <b>${esc(pick.u.name)}</b></span>` +
+                  `<span class="ct-buy">Try <b>${esc(pick.u.name)}</b>` +
+                  (fits ? `<i class="ct-fits">fits ${esc(fits.name)}</i>` : "") + `</span>` +
                   `<span class="ct-cost">${money(P.nextCost(profile, pick.u))}</span>`;
   click(row, () => { audio.play("uiClick"); jumpToUpgrade(pick.u.id); });
   panel.appendChild(row);
@@ -3053,7 +3067,7 @@ function gEllipse(c, x, y, rx, ry){
 }
 function gSeeded(i){ return ((Math.sin(i*127.1 + 311.7)*43758.5453) % 1 + 1) % 1; }
 
-const garage = { cv:null, key:"", hooks:[], nextHook:null, ship:null };
+const garage = { cv:null, key:"", ship:null };
 function garageBackdrop(W, H, compare){
   const A = SF.shipart;
   const levels = A.levelsOf(profile);
@@ -3098,53 +3112,14 @@ function garageBackdrop(W, H, compare){
   c.restore();
   c.fillStyle = "#0b0e18"; c.fillRect(0, wallH - 7, W, 7);
 
-  /* -- the pegboard: the upgrade ladder, hanging on the wall -- */
-  garage.hooks = [];
-  garage.nextHook = null;
-  // Centred: the TEST RANGE and COMPARE buttons float over the wall's
-  // corners (bigger on a phone, where CSS scales them up against the fixed
-  // canvas grid), so only the middle of the wall is safely tappable.
-  const pbW = Math.min(W*0.40, 250), pbX = (W - pbW)/2, pbY = 7, pbH = wallH - 30;
-  c.fillStyle = "#232a40";
-  gRR(c, pbX, pbY, pbW, pbH, 6); c.fill();
-  c.strokeStyle = "rgba(0,0,0,0.5)"; c.lineWidth = 2;
-  gRR(c, pbX, pbY, pbW, pbH, 6); c.stroke();
-  c.fillStyle = "rgba(0,0,0,0.33)";
-  for(let yy = pbY + 10; yy < pbY + pbH - 5; yy += 11)
-    for(let xx = pbX + 10; xx < pbX + pbW - 5; xx += 11){
-      c.beginPath(); c.arc(xx, yy, 1.1, 0, TAU2); c.fill();
-    }
-  c.fillStyle = "rgba(226,232,240,0.7)";
-  c.font = "700 9px Rajdhani, Arial, sans-serif";
-  c.textAlign = "left";
-  c.fillText("P A R T S", pbX + 8, pbY + 14);
-  // eight hooks, two rows: the real ladder in order. Owned parts hang as
-  // their upgrade's glyph; missing ones are chalk outlines. Every hook is a
-  // TAP TARGET that jumps the shop to the thing that earns it.
-  const board = parts.slice(0, 8);
-  const cols2 = 4, hcw = (pbW - 16)/cols2, hrh = (pbH - 20)/2;
-  board.forEach((row, i) => {
-    const hx = pbX + 8 + (i % cols2)*hcw + hcw/2;
-    const hy = pbY + 18 + Math.floor(i/cols2)*hrh + hrh/2;
-    c.strokeStyle = "rgba(200,210,235,0.4)"; c.lineWidth = 1.5;
-    c.beginPath(); c.arc(hx, hy - hrh/2 + 6, 2.6, Math.PI*0.15, Math.PI*0.85, true); c.stroke();
-    const up = UPGRADE_BY_ID[row.part.up];
-    const cat = CATEGORIES.find(k => k.id === (up && up.cat));
-    if(row.owned){
-      const ic = SF.icons.el(row.part.up, (cat && cat.color) || "#9fb6ff", 16);
-      c.drawImage(ic, hx - 8, hy - 6, 16, 16);
-    } else {
-      c.save();
-      c.strokeStyle = "rgba(214,226,255,0.38)";
-      c.setLineDash([3, 3]); c.lineWidth = 1.3;
-      c.strokeRect(hx - 8, hy - 6, 16, 16);
-      c.restore();
-    }
-    const isNext = next && row.part.id === next.id;
-    garage.hooks.push({ x: hx - hcw/2, y: hy - hrh/2, w: hcw, h: hrh,
-                        cx: hx, cy: hy + 2, up: row.part.up, next: isNext });
-    if(isNext) garage.nextHook = { x: hx, y: hy + 2 };
-  });
+  /*
+   * The wall is bare. It carried a PARTS pegboard - eight hooks showing the
+   * upgrade ladder, owned parts as glyphs and the rest as chalk outlines -
+   * and on a phone it was a 150px strip of 16px icons: a cryptic restatement
+   * of the line directly beneath the bay, which already says which part is
+   * next and what buys it, in words. Two answers to one question, and the
+   * worse one was taking the top third of the room.
+   */
 
   /* -- the floor -- */
   const fg = c.createLinearGradient(0, wallH, 0, H);
@@ -3212,7 +3187,9 @@ function garageBackdrop(W, H, compare){
     ring2(W*0.72, cy, r, 0.6);
     garage.ship = null;
   } else {
-    const cx = W/2, cy = H*0.60;
+    // 0.57, not 0.60: on the shorter phone frame the bay ring's lower edge and
+    // the BAY 01 stencil under it were landing on the frame's rounded border.
+    const cx = W/2, cy = H*0.57;
     const r = Math.min(W*0.20, H*0.36);
     /*
      * ONE BAY. The room used to park a chalk outline or a sibling's ship
@@ -3461,6 +3438,22 @@ function drawHangar(dt){
   if(!ctx || !profile) return;
   const A = SF.shipart;
   const cv = ctx.canvas;
+  /*
+   * The backing store follows the FRAME's shape.
+   *
+   * The canvas is a fixed 620x360 and the stage is `object-fit: contain`, so
+   * the moment the stage got shorter on phones the room was letterboxed - the
+   * wall and floor rendered as a band across the middle with dead bars either
+   * side. Matching the backing height to the box's real aspect makes the room
+   * fill its frame at any shape; every coordinate in here is already a fraction
+   * of W or H, so the drawing follows on its own. `garage.key` carries H, so
+   * the backdrop rebuilds itself the one frame this changes.
+   */
+  const box = cv.getBoundingClientRect ? cv.getBoundingClientRect() : null;
+  if(box && box.width > 4 && box.height > 4){
+    const want = clamp(Math.round(cv.width * box.height / box.width), 180, 520);
+    if(Math.abs(cv.height - want) > 2) cv.height = want;
+  }
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
 
@@ -3493,14 +3486,7 @@ function drawHangar(dt){
   ctx.fillStyle = "#0d1120"; gRR(ctx, litX - 18, wallH - 13, 36, 8, 3); ctx.fill();
   ctx.fillStyle = "rgba(255,236,190,0.9)"; gRR(ctx, litX - 13, wallH - 7, 26, 3, 1.5); ctx.fill();
 
-  // the NEXT hook on the pegboard breathes gold: what to save for, said in
-  // the room itself
-  if(!hangar.compare && garage.nextHook){
-    const pulse = 0.5 + Math.sin(hangar.t*3)*0.5;
-    ctx.strokeStyle = "rgba(255,210,63," + (0.25 + pulse*0.5).toFixed(2) + ")";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(garage.nextHook.x, garage.nextHook.y, 12 + pulse*2, 0, Math.PI*2); ctx.stroke();
-  }
+
 
   // Parked, not floating: a contact shadow directly under each hull.
   const padShadow = (sx, sy, r) => {
@@ -3571,10 +3557,9 @@ function drawHangar(dt){
 }
 
 /*
- * The garage answers taps: a pegboard hook jumps the shop to the upgrade
- * that earns that part, and the ship jumps to the next part on the ladder.
- * NOTHING else in the room takes a tap - the mug is a mug - so a stray
- * finger never does anything surprising.
+ * The garage answers taps: the ship jumps the shop to the next part on the
+ * ladder. NOTHING else in the room takes one, so a stray finger never does
+ * anything surprising.
  */
 function jumpToUpgrade(id){
   const u = UPGRADE_BY_ID[id];
@@ -3603,8 +3588,8 @@ function initGarageTaps(){
     const sy = rect.height ? cv.height/rect.height : 1;
     const x = (ev.clientX - (rect.left || 0))*sx;
     const y = (ev.clientY - (rect.top || 0))*sy;
-    const hook = garage.hooks.find(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
-    if(hook){ jumpToUpgrade(hook.up); return; }
+    // The ship is the only thing in the room that answers a tap now, and it
+    // answers the only question the room poses: what goes on next.
     const g2 = garage.ship;
     if(g2 && Math.hypot(x - g2.x, y - g2.y) <= g2.r){
       const next = SF.shipart.nextPart(SF.shipart.levelsOf(profile));
@@ -5061,7 +5046,7 @@ SF.game.onMissionEnd = (result) => {
    --------------------------------------------------------- */
 SF.game.attach($("game"), document.querySelector(".game-frame"), $("screen-game"));
 SF.workshop.init();               // the Drawing Board wires its own controls
-initGarageTaps();                 // pegboard hooks and the ship answer taps
+initGarageTaps();                 // the ship answers taps
 paintMuteBtn();
 // The chrome's drawn glyphs: ability buttons and the settings gears. Painted
 // once at boot - they never change shape, only visibility.
@@ -5176,7 +5161,6 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           getProfile: () => profile,
           sectorStats, SECTORS,         // the map's per-stretch scoreboard
           navBack, goHome,              // the way back, for the phone's own gesture
-          _garageHooks: () => garage.hooks,   // test harness only
           _purchaseShows: () => hangar.shows.length + (hangar.show ? 1 : 0),
           // The Drawing Board's doors into the app: launch a drawn sky, and
           // borrow the game's own dialog instead of window.prompt/confirm.

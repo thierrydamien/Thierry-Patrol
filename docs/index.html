@@ -176,8 +176,16 @@
       </div>
     </div>
 
-    <div id="armoryTabs" class="armory-tabs"></div>
-    <div id="armoryPanel" class="armory-panel"></div>
+    <!-- The shelf and its selector sit side by side. The seven categories
+         used to be a sideways-scrolling strip, which hid two of them off the
+         right edge with nothing to say so, and put the selector above a very
+         tall scroll - so changing shelf meant scrolling all the way back up
+         past the bay. Vertical, and sticky, fixes both: all seven are always
+         on screen and always reachable. -->
+    <div class="armory-body">
+      <div id="armoryTabs" class="armory-rail"></div>
+      <div id="armoryPanel" class="armory-panel"></div>
+    </div>
 
     <!-- Lives in the PILOT tab; kept here so the markup stays static. -->
     <template id="pilotTabTpl">
