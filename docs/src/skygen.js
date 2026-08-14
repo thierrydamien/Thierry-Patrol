@@ -93,7 +93,7 @@ const SKIES = [
      home star, so the run has a direction you can see. --- */
 
   { name:"The Blockade", clouds:["#0b1d3a","#173a6b","#050c1c"], dust:"#020409", star:"#9fc0e8",
-    density:0.65, stars:0.55, bright:1,
+    lum:0.6, density:0.65, stars:0.55, bright:1,
     props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
             {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
 
@@ -184,12 +184,12 @@ const SKIES = [
      approach: near-black, almost starless, and the Devourer itself sitting
      in it. The second is the fight - the dead star's last embers. --- */
   { name:"Lights Out",   clouds:["#111827","#1e2a4a","#05070f"], dust:"#010207", star:"#7d8bb0",
-    density:0.7, stars:0.45, bright:1,
+    lum:0.6, density:0.7, stars:0.45, bright:1,
     props:[ {k:"planet", x:0.80, y:0.20, r:0.10, lit:"#26324e", dark:"#0a0e1c", crescent:true},
             {k:"rocks",  x:0.18, y:0.68, r:0.12, n:8} ] },
 
   { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
-    density:0.4, stars:0.45, bright:1,
+    lum:0.6, density:0.4, stars:0.45, bright:1,
     props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
             {k:"planet", x:0.16, y:0.86, r:0.10, lit:"#1b2136", dark:"#02030a", crescent:true} ] },
 
@@ -870,11 +870,25 @@ function paint(sky, seed, W, H, dpr, wrap){
   // is what made the first attempt look like wallpaper. The tints peak just
   // inside the edges, not at them: row 0 must equal row H or the wrap carries
   // a hard colour step through every scroll.
+  /*
+   * The sky's own colour used to appear at 0.22 and 0.14 alpha in two narrow
+   * edge bands with hardcoded near-black everywhere between, so 27 of the
+   * skies landed inside a 20-point luminance band and the campaign never
+   * visibly travelled anywhere - every stop was the same dark room with a
+   * different tint in the corners.
+   *
+   * Stops 0 and 1 stay black on purpose: row 0 must equal row H or the
+   * vertical wrap carries a hard colour step through every scroll. The four
+   * skies whose whole point is darkness carry lum:0.6 and stay where they
+   * were, so they finally read as a deliberate contrast beat rather than as
+   * the house style.
+   */
+  const lum = sky.lum === undefined ? 1 : sky.lum;
   const base = ctx.createLinearGradient(0, 0, 0, H);
   base.addColorStop(0, "#03030a");
-  base.addColorStop(0.06, rgba(sky.clouds[2], 0.22));
-  base.addColorStop(0.5, "#03030a");
-  base.addColorStop(0.94, rgba(sky.clouds[0], 0.14));
+  base.addColorStop(0.06, rgba(sky.clouds[2], 0.45 * lum));
+  base.addColorStop(0.5, rgba(sky.clouds[1], 0.14 * lum));
+  base.addColorStop(0.94, rgba(sky.clouds[0], 0.30 * lum));
   base.addColorStop(1, "#03030a");
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, W, H);
@@ -902,7 +916,7 @@ function paint(sky, seed, W, H, dpr, wrap){
     } else { x = rand()*W; y = rand()*H; }
     const r = (0.03 + Math.pow(rand(), 1.6)*0.26) * W;
     const col = sky.clouds[Math.floor(rand()*sky.clouds.length)];
-    const a = 0.022 + rand()*0.055;
+    const a = (0.05 + rand()*0.09) * lum;
     tiled(ctx, H, y, yy => {
       const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
       g.addColorStop(0, rgba(col, a));
