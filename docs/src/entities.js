@@ -561,7 +561,7 @@ class World {
      *
      * b.fromMirror must be cleared on the normal path above too: the pool
      * hands back recycled objects, and a slot that stayed flagged would credit
-     * phantom kills to the level, s own star.
+     * phantom kills to the level's own star.
      */
     if(volley){
       for(let i = 0; i < volley.length; i++){
@@ -825,7 +825,15 @@ class World {
      * person to author a behaviour field has an obvious place to add it.
      */
     e.chainDepth = 0;
-    e.armoured = false; e.weak = false;
+    /*
+     * This hard-set false, which made the static `type.armoured` flag DEAD:
+     * a pooled enemy always came back unarmoured however its archetype was
+     * written, so the Tithe Serpent's own type flags were decorative. One
+     * word, and the data means what it says.
+     */
+    e.armoured = !!type.armoured; e.weak = false;
+    e.pushable = !!type.pushable;   // a Sky Ox steers; nothing else does
+    e.attached = false; e.holdAngle = 0;   // the Limpet's grip
     e.headRef = null; e.segIndex = 0; e.trailPts = null;
     e.hungry = false; e.huntX = null; e.huntY = null;
     e.beltDir = 0; e.beltSpeed = 0; e.beltY = 0;
@@ -974,6 +982,7 @@ class World {
     p.value = (data && data.value) || 0;
     p.data = data || null;
     p.bounces = 3;   // BOUNCY COINS' budget; inert unless that mod is rolled
+    p.floatFor = 0;  // a dropped crate hovers; the pool must not carry that over
     return p;
   }
 
@@ -997,7 +1006,13 @@ class World {
       if(!it.alive) continue;
       it.life += dt;
       it.angle += dt*2.4;
-      it.vy += 95*dt;                        // fall, gently - coins are worth chasing
+      /*
+       * A dropped crate HOVERS before it sinks. That pause is the whole
+       * mercy of the Lifeline: being hit costs you the trip back, not the
+       * delivery.
+       */
+      if(it.floatFor > 0){ it.floatFor -= dt; it.vy = 0; it.vx *= 0.9; }
+      else it.vy += 95*dt;                   // fall, gently - coins are worth chasing
       it.vy = Math.min(it.vy, it.kind === "rescue" ? 55 : it.kind === "supply" ? 58 : 86);
       /*
        * BOUNCY COINS. Walls reflect, and the floor gives back three bounces

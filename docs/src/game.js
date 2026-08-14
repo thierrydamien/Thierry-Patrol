@@ -480,9 +480,20 @@ function startMission(missionIndex, difficultyId){
     limpets: mission.limpets ? { wig: 0, lastSign: 0, prompted: false,
       baseSpeed: 0, baseAccel: 0 } : null,
     // The Bright Side: the star underneath throws a sheet of fire up the
-    // screen. The Storm, s clock with one extra beat.
+    // screen. The Storm's clock with one extra beat.
     flare: mission.flare ? { y: VH + 60, mode:"calm", timer: 6, top: VH,
       hitThisBurn: false } : null,
+    // The Stampede: three or four Sky Oxen on the field at all times.
+    stampede: mission.stampede ? { next: 3 } : null,
+    /*
+     * The Lifeline: you ARE the hauler. doorX drifts so the drop point is
+     * never the same twice, and the crate hangs under the hull so a child can
+     * SEE they are loaded. baseSpeed is cached after every modifier, for the
+     * same reason the limpets cache theirs.
+     */
+    ferry: mission.ferry ? { left: mission.ferry, carried: false, delivered: 0,
+      dropped: 0, spawnIn: 3, doorX: VW*0.5, doorDir: 1, baseSpeed: 0,
+      done: false } : null,
     /* --- Act 4's rule-breakers. Each is a small state machine ticked in the
        main update, the same pattern as the storm above. --- */
     // The Undertow: drifting gravity wells that curve every loose thing.
@@ -550,6 +561,7 @@ function startMission(missionIndex, difficultyId){
     game.run.limpets.baseSpeed = game.world.player.maxSpeed;
     game.run.limpets.baseAccel = game.world.player.accel;
   }
+  if(game.run.ferry) game.run.ferry.baseSpeed = game.world.player.maxSpeed;
   // The guns-cold run keeps its blue card; its goal already says "just DODGE".
   if(mission.noGuns) game.run.bannerColor = "#3fc9ff";
 
@@ -780,7 +792,7 @@ const callbacks = {
    * words. It still routes through HERE rather than setting e.alive = false,
    * because this function owns two things the level depends on: the kill
    * ledger, and freeing the pilot out of a carrier. Bypass it and a burned
-   * carrier never drops its pilot, so rescueAll - the level, s own second
+   * carrier never drops its pilot, so rescueAll - the level's own second
    * star, with three carriers deliberately diving toward the flame - becomes
    * unreachable through no fault of the player.
    */
@@ -1076,6 +1088,25 @@ const callbacks = {
     // Every contact, absorbed or not. The garage's coach reads this to notice
     // "you're taking a lot of hits" - a shield eating them is still evidence.
     run.stats.hitsTaken = (run.stats.hitsTaken || 0) + 1;
+
+    /*
+     * THE LIFELINE: a hit makes you drop the load - and this is the softest
+     * version of that rule that still costs something. The crate pops out and
+     * FLOATS where it was for four seconds inside a bright ring before it
+     * begins to sink, so the price of being hit is the trip back, never the
+     * crate. A rule that takes the whole delivery away on one graze is a rule
+     * a seven-year-old stops trying.
+     */
+    if(run.ferry && run.ferry.carried){
+      run.ferry.carried = false;
+      run.ferry.dropped++;
+      run.stats.dropped++;
+      p.maxSpeed = run.ferry.baseSpeed;
+      const c = game.world.spawnPickup("crate", p.x, p.y + 16);
+      c.vy = 0; c.floatFor = 4;
+      fx.ring(p.x, p.y, 52, "#7dd3fc", 4, 0.5);
+      fx.text(p.x, p.y - 30, "DROPPED IT!", "#7dd3fc", 19, true);
+    }
 
     if(p.shield > 0){
       /*
@@ -1943,6 +1974,125 @@ function update(dt, timeMs){
     }
   }
 
+  /*
+   * THE STAMPEDE. The biggest thing on screen is a tool rather than a target.
+   *
+   * `hazard:true` on the archetype is doing nearly all the work and needs no
+   * special cases: it keeps the ox out of the kill ledger, out of Guardian
+   * bubbles, out of the hauler-ram loop, and it makes ramming one cost YOU a
+   * life while the animal walks on. All four are exactly this level's rule.
+   */
+  if(run.stampede && !run.ended && run.phase === "waves"){
+    const items = game.world.enemies.items;
+    let herd = 0;
+    for(let i = 0; i < items.length; i++)
+      if(items[i].alive && items[i].typeId === "grazer") herd++;
+
+    run.stampede.next -= dt;
+    if(herd < 4 && run.stampede.next <= 0){
+      game.world.spawnEnemy("grazer", rand(80, VW - 80), -60,
+                            { difficulty: run.difficulty });
+      run.stampede.next = rand(4, 7);
+    }
+
+    /*
+     * THE CRUSH. Collected first, killed second - because onEnemyKilled may
+     * spawn (splitter shards, a rescue pod) into the very list being walked.
+     * The chain-reaction block solved this exact problem already and says so
+     * in its own comment; this is the same shape.
+     *
+     * Routing through onEnemyKilled is also what makes an ox flattening a
+     * prison hauler free its pilot: funny AND kind, for free.
+     */
+    const caught = [];
+    for(let i = 0; i < items.length; i++){
+      const g = items[i];
+      if(!g.alive || g.typeId !== "grazer") continue;
+      for(let j = 0; j < items.length; j++){
+        const o = items[j];
+        if(!o.alive || o === g || o.type.hazard || o.fromBoss) continue;
+        const reach = g.r + o.r*0.7;
+        if((o.x-g.x)*(o.x-g.x) + (o.y-g.y)*(o.y-g.y) < reach*reach && caught.indexOf(o) < 0)
+          caught.push(o);
+      }
+    }
+    for(let i = 0; i < caught.length; i++){
+      const o = caught[i];
+      run.stats.crushed++;
+      fx.text(o.x, o.y - 18, "SQUASH!", "#e7d8c9", 16, true);
+      // Paid in full: the ox is a tool the player AIMED, so this is their kill.
+      callbacks.onEnemyKilled(o, null, true);
+    }
+  }
+
+  /*
+   * THE LIFELINE. Mission 9 you protect the ship that carries; here you ARE
+   * the ship that carries.
+   *
+   * The drop is deliberately soft, and it is the difference between a rule
+   * and a punishment. Take a hit and the crate does not fall to the floor -
+   * it pops out and FLOATS where it was, inside a bright ring, for four full
+   * seconds before it starts to sink. You lose ground. You never lose the
+   * crate, unless you decide to leave it.
+   */
+  if(run.ferry && !run.ended && run.phase === "waves"){
+    const fr = run.ferry;
+    const pl = game.world.player;
+    const TOP = SF.entityConst.PLAY_TOP;
+
+    // The door drifts, so the run up the screen is never the same twice.
+    fr.doorX += fr.doorDir * 40 * dt;
+    if(fr.doorX < 90){ fr.doorX = 90; fr.doorDir = 1; }
+    if(fr.doorX > VW - 90){ fr.doorX = VW - 90; fr.doorDir = -1; }
+
+    let crate = null;
+    const pk = game.world.pickups.items;
+    for(let i = 0; i < pk.length; i++)
+      if(pk[i].alive && pk[i].kind === "crate"){ crate = pk[i]; break; }
+
+    if(!fr.carried && !crate && fr.left > 0){
+      fr.spawnIn -= dt;
+      if(fr.spawnIn <= 0){
+        const c = game.world.spawnPickup("crate", rand(70, VW - 70), -30);
+        c.vy = 60;
+        fr.left--;
+        fr.spawnIn = 999;   // the next one waits until this one is delivered
+        fx.text(VW/2, VH*0.30, "CRATE INBOUND", "#7dd3fc", 20, true);
+        audio.play("telegraph");
+      }
+    }
+
+    if(fr.carried && pl && pl.alive){
+      pl.maxSpeed = fr.baseSpeed * 0.86;          // loaded, and it shows
+      if(Math.abs(pl.x - fr.doorX) < 62 && pl.y < TOP + 34){
+        fr.carried = false;
+        fr.delivered++;
+        fr.spawnIn = 2.5;
+        pl.maxSpeed = fr.baseSpeed;
+        run.stats.delivered++;
+        game.world.dropCoins(fr.doorX, TOP + 20, 60);
+        fx.ring(fr.doorX, TOP + 14, 60, "#7dd3fc", 4, 0.45);
+        fx.text(VW/2, VH*0.34, "DELIVERED!", "#7dd3fc", 24, true);
+        audio.play("rescue");
+        /*
+         * The only stop in the campaign that can end because you FINISHED the
+         * job. It can never dead-end: miss the crates and the waves simply
+         * run out as usual - you clear the level, you just lose the star.
+         */
+        if(fr.delivered >= (run.mission.ferry || 4) && !fr.done){
+          fr.done = true;
+          run.bannerText = "ALL FOUR HOME — GO!";
+          run.bannerSub = "everything still up here is someone else's problem";
+          run.bannerColor = "#7dd3fc";
+          run.bannerUntil = simMs + 2600;
+          run.phase = "clearing"; run.phaseTimer = 1.2;
+        }
+      }
+    } else if(pl && pl.alive && !fr.carried){
+      pl.maxSpeed = fr.baseSpeed;
+    }
+  }
+
   if(run.storm && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const st = run.storm;
@@ -2560,6 +2710,14 @@ function onPickupCollected(item, lost){
     fx.text(item.x, item.y - 16,
             ["Bien joué !","Amuse-toi bien !","Je t'aime !","Bravo !"][run.stats.papaHeads % 4],
             "#ffd23f", 17, true);
+  } else if(item.kind === "crate"){
+    // Picked up, not consumed: it rides under the hull until it is delivered.
+    if(run.ferry && !run.ferry.carried){
+      run.ferry.carried = true;
+      audio.play("supplyGet");
+      fx.ring(item.x, item.y, 34, "#7dd3fc", 3, 0.3);
+      fx.text(item.x, item.y - 20, "LOADED", "#7dd3fc", 17, true);
+    }
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;
     run.score += 150;

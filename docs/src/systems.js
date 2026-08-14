@@ -250,8 +250,20 @@ function resolve(world, ctxObj, dt){
        * slot would be permanently bulletproof.)
        */
       if(e.armoured){
-        fx.sparks(hx, hy, 5, "#9ff0d8", 150);
-        fx.ring(hx, hy, 14, "#2fbf9a", 2, 0.18);
+        /*
+         * THE STAMPEDE. Nothing gets through a Sky Ox - but the round still
+         * SHOVES, and that recoil ring is how a seven-year-old learns the
+         * whole level in two seconds without a word being said. Divided by
+         * radius, so a big animal takes real work to steer.
+         */
+        if(e.pushable){
+          const bs = Math.hypot(b.vx, b.vy) || 1;
+          e.vx += (b.vx/bs) * 120 / (e.r/13);
+          fx.ring(hx, hy, 18, "#e7d8c9", 2, 0.2);
+        } else {
+          fx.sparks(hx, hy, 5, "#9ff0d8", 150);
+          fx.ring(hx, hy, 14, "#2fbf9a", 2, 0.18);
+        }
         audio.play("hitArmour");
         b.x = hx; b.y = hy; b.alive = false;
         return true;

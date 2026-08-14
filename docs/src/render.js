@@ -1182,6 +1182,57 @@ function drawAct4(ctx, run, world, timeMs){
     });
   }
 
+  /* --- THE LIFELINE: the door, and the load ------------------------------
+     The dock sits exactly at PLAY_TOP, which is the ship's real ceiling - so
+     the target is at the top of the band the ship can actually reach rather
+     than somewhere off-screen it can never touch. It drifts, so the run is
+     never the same twice. */
+  if(run.ferry){
+    const fr = run.ferry;
+    const TOP = SF.entityConst.PLAY_TOP;
+    const open = fr.carried;              // lit green only when you have a load
+    const puls = 0.55 + Math.sin(timeMs/240)*0.35;
+    ctx.save();
+    // the mouth
+    const g = ctx.createLinearGradient(0, TOP - 26, 0, TOP + 22);
+    g.addColorStop(0, open ? "rgba(74,222,128,0.55)" : "rgba(125,211,252,0.22)");
+    g.addColorStop(1, "rgba(74,222,128,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(fr.doorX - 62, TOP - 26, 124, 48);
+    ctx.strokeStyle = open
+      ? "rgba(74,222,128," + (0.6 + puls*0.4).toFixed(2) + ")"
+      : "rgba(125,211,252,0.45)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(fr.doorX - 62, TOP + 8); ctx.lineTo(fr.doorX - 62, TOP - 18);
+    ctx.lineTo(fr.doorX + 62, TOP - 18); ctx.lineTo(fr.doorX + 62, TOP + 8);
+    ctx.stroke();
+    // landing lights along the sill
+    for(let i = -2; i <= 2; i++){
+      ctx.fillStyle = open ? "#4ade80" : "#7dd3fc";
+      ctx.globalAlpha = 0.35 + (open ? puls*0.6 : 0.2);
+      ctx.beginPath(); ctx.arc(fr.doorX + i*26, TOP + 8, 3, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // The crate hanging under the hull, so "I am loaded" is visible, not remembered.
+    if(open && world && world.player && world.player.alive){
+      const p = world.player;
+      ctx.translate(p.x, p.y + 26);
+      ctx.fillStyle = "#8a6a45";
+      roundRect(ctx, -11, -9, 22, 18, 3); ctx.fill();
+      ctx.strokeStyle = "#5c4526"; ctx.lineWidth = 1.4;
+      roundRect(ctx, -11, -9, 22, 18, 3); ctx.stroke();
+      ctx.strokeStyle = "#cfe9fb"; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(-11, -1); ctx.lineTo(11, -1); ctx.stroke();
+      // two short straps back up to the ship
+      ctx.strokeStyle = "rgba(207,233,251,0.6)"; ctx.lineWidth = 1.6;
+      [-7, 7].forEach(x => {
+        ctx.beginPath(); ctx.moveTo(x, -9); ctx.lineTo(x*0.6, -20); ctx.stroke();
+      });
+    }
+    ctx.restore();
+  }
+
   /* --- THE BRIGHT SIDE: the flare ----------------------------------------
      A warning line first, then a sheet of fire with tongues licking off its
      top edge. No new entity and no new collision shape - the lethal thing is
@@ -1552,6 +1603,32 @@ function drawPickups(ctx, world, timeMs){
         ctx.fillStyle = "#fff";
         ctx.beginPath(); ctx.arc(7, -6, 1.6 + pulse, 0, TAU); ctx.fill();
       }
+      ctx.restore();
+    } else if(it.kind === "crate"){
+      /*
+       * THE LIFELINE's cargo. A plain strapped box, deliberately unglamorous
+       * next to the powerups - it is not a prize, it is a job. While it is
+       * floating after a drop it wears a bright ring so it can be found again
+       * in a busy sky, which is the point of the four-second grace.
+       */
+      const bob = Math.sin(timeMs/260)*2;
+      if(it.floatFor > 0){
+        const puls = 0.5 + Math.sin(timeMs/110)*0.5;
+        ctx.save();
+        ctx.strokeStyle = "rgba(125,211,252," + (0.4 + puls*0.5).toFixed(2) + ")";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, bob, 22 + puls*5, 0, TAU); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.translate(0, bob);
+      ctx.fillStyle = "#8a6a45";
+      roundRect(ctx, -13, -11, 26, 22, 3); ctx.fill();
+      ctx.strokeStyle = "#5c4526"; ctx.lineWidth = 1.6;
+      roundRect(ctx, -13, -11, 26, 22, 3); ctx.stroke();
+      ctx.strokeStyle = "#cfe9fb"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-13, -2); ctx.lineTo(13, -2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(-3, 11); ctx.stroke();
       ctx.restore();
     } else if(it.kind === "rescue"){
       // A drifting survivor: capsule, glass visor, gold rescue ring - and a
