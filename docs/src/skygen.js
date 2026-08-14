@@ -954,7 +954,28 @@ function paint(sky, seed, W, H, dpr, wrap){
      Three grades: a dense field of specks, a middle grade with a halo, and a
      handful of suns with diffraction spikes. The spikes are what sell it -
      real astrophotography has them, and they cost four lines. */
-  const small = Math.round(165 * sky.stars);
+  /*
+   * The counts were absolute - 165 specks whatever the field size - while the
+   * live parallax layers in render.js scale by area off the same frame. So
+   * the two star systems on screen disagreed about whether the sky was big,
+   * and the generated backdrops came out about a tenth the density of the two
+   * photographic ones sitting next to them in the campaign.
+   *
+   * Everything scales by area now, and a micro grade goes down FIRST so the
+   * brighter grades land on top of it. sky.stars still gates the whole thing,
+   * so the deliberately empty skies - The Long Dark at 0.45, The Bright Side
+   * at 0.12 - stay empty and keep working as a contrast beat.
+   */
+  const areaK = (W*H) / (390*620);
+  const micro = Math.round(1400 * sky.stars * areaK);
+  for(let i=0;i<micro;i++){
+    ctx.globalAlpha = 0.05 + rand()*0.13;
+    ctx.fillStyle = sky.star;
+    ctx.fillRect(rand()*W, rand()*H, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  const small = Math.round(700 * sky.stars * areaK);
   for(let i=0;i<small;i++){
     const x = rand()*W, y = rand()*H;
     const s = 0.6 + rand()*1.5;
@@ -966,7 +987,7 @@ function paint(sky, seed, W, H, dpr, wrap){
 
   // A star is a hard point with a tight glow. The first pass used a wide pale
   // halo and every one of them read as a grey bubble.
-  const mid = Math.round(22 * sky.stars);
+  const mid = Math.round(22 * sky.stars * areaK);
   for(let i=0;i<mid;i++){
     const x = rand()*W, y = rand()*H, r = 0.9 + rand()*1.1;
     tiled(ctx, H, y, yy => {
@@ -980,7 +1001,7 @@ function paint(sky, seed, W, H, dpr, wrap){
     });
   }
 
-  for(let i=0;i<sky.bright;i++){
+  for(let i=0;i<Math.round(sky.bright * areaK);i++){
     const x = rand()*W, y = rand()*H;
     const r = 1.6 + rand()*1.6, reach = r*(5 + rand()*4);
     tiled(ctx, H, y, yy => {

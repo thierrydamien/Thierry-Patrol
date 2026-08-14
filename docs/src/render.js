@@ -590,6 +590,26 @@ function drawEnemies(ctx, world, timeMs){
     if(e.type.behaviour === "mine"){ drawMine(ctx, e, size, t); continue; }
     ctx.save();
     ctx.translate(e.x, e.y);
+    /*
+     * THE FLEET LEANS INTO ITS TURNS.
+     *
+     * Nothing here ever rotated - the only ctx.rotate in this block is inside
+     * the legacy-PNG fallback below - so a diving Swooper flew dead vertical
+     * and the sky read as sliding stickers rather than flying machines.
+     *
+     * The lean is derived from POSITION, not from e.vx, and that distinction
+     * is the whole fix: entities.js zeroes e.vx on spawn and only kamikaze and
+     * shielder ever write it again. `weave` assigns e.x directly and `swoop`
+     * lerps it, so a velocity-based bank would give precisely zero lean to the
+     * two archetypes that most obviously should have one.
+     *
+     * Station-keepers (turrets, hives, gun platforms) move 0 per frame and
+     * stay upright with no special case, and a pooled object's first frame
+     * yields 0 because of the null guard.
+     */
+    const _px = e._px == null ? e.x : e._px; e._px = e.x;
+    const bank = Math.max(-0.35, Math.min(0.35, (e.x - _px) * 6));
+    if(bank) ctx.rotate(-bank);
     // (Elite glow is baked into the cached sprite - no per-frame shadowBlur.)
     // Drawn art where we have it (one silhouette per archetype), the old
     // recoloured PNG only as a fallback.
@@ -3189,13 +3209,22 @@ function drawHud(ctx, game){
       const lw = ctx.measureText("\u2605 " + def.label + "  " + def.progress(run.stats)).width;
       if(lw > chipW) chipW = lw;
     }
-    ctx.fillStyle = "rgba(4,8,20,0.45)";
-    roundRect(ctx, PAD - 8, oy - 6, chipW + 16, run.objectiveDefs.length*oLH + 10, 8);
+    /*
+     * The house HUD plate is rgba(4,8,18,0.72) with a 0.22 hairline - the
+     * mission bar, the power-up strip and the boss block all use it. This one
+     * element sat at 0.45 with no stroke, and it is the element carrying the
+     * most text: the three lines telling a seven-year-old what to actually do.
+     */
+    ctx.fillStyle = "rgba(4,8,18,0.72)";
+    roundRect(ctx, PAD - 8, oy - 6, chipW + 16, run.objectiveDefs.length*oLH + 10, 12);
     ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1; ctx.stroke();
     for(let i=0;i<run.objectiveDefs.length;i++){
       const def = run.objectiveDefs[i];
       const met = def.test(run.stats);
-      ctx.fillStyle = met ? "rgba(74,222,128,0.9)"
+      // Gold, not green: the briefing card promised this star in gold
+      // (style.css .bo-star.on), so the star you win in flight is the same one.
+      ctx.fillStyle = met ? "#ffd23f"
                           : (intro ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.72)");
       ctx.fillText((met ? "\u2605 " : "\u2606 ") + def.label + "  " + def.progress(run.stats), PAD, oy);
       oy += oLH;
