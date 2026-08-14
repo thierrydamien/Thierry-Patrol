@@ -517,7 +517,7 @@ const ENEMY_TYPES = {
   },
   swooper: {
     name:"Swooper", behaviour:"swoop", hp:2, r:15, size:44, speed:188,
-    score:12, money:11, tint:"#4ade80",
+    score:12, money:11, tint:"#f8fafc",
     fire:{ pattern:"straight", every:[1.3,2.2], speed:268 },
   },
   kamikaze: {
@@ -567,7 +567,7 @@ const ENEMY_TYPES = {
   },
   thief: {
     name:"Coin Thief", behaviour:"thief", hp:3, r:15, size:46, speed:190,
-    score:18, money:16, tint:"#facc15", fire:null,
+    score:18, money:16, tint:"#4f46e5", fire:null,
     toughSeconds:0.7,          // stealing takes time; catching him must too
   },
   asteroid: {
@@ -664,7 +664,7 @@ const ENEMY_TYPES = {
    */
   part: {
     name:"Ship Part", behaviour:"beltPart", hp:3, r:15, size:42, speed:0,
-    score:15, money:12, tint:"#fb923c", fire:null,
+    score:15, money:12, tint:"#a16207", fire:null,
   },
   /*
    * THE LIMPET. Carries no gun at all, which is the whole point: it never

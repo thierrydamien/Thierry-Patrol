@@ -394,10 +394,15 @@ function drawPlayer(ctx, p, timeMs){
   for(let i=0;i<p.trail.length;i++){
     const t = p.trail[i];
     const a = 1 - t.life/0.3;
-    ctx.globalAlpha = a*(overdrive ? 0.5 : 0.3);
+    ctx.globalAlpha = a*(overdrive ? 0.6 : 0.38);
     ctx.fillStyle = overdrive ? "#ffb35c" : p.color;
     const h = (11 + speed*0.02)*a;
-    ctx.fillRect(t.x-2.5, t.y, 5, h);
+    // A tapered ellipse, not a rect. A column of hard axis-aligned rectangles
+    // directly under the object the player is looking at reads as a rendering
+    // glitch, not as thrust. The alphas rise because an ellipse covers about
+    // 78% of the rect's area under "lighter".
+    const w = 6*a + 2;
+    ctx.beginPath(); ctx.ellipse(t.x, t.y + h/2, w/2, h/2, 0, 0, TAU); ctx.fill();
   }
   ctx.restore();
   ctx.globalAlpha = 1;
@@ -445,8 +450,11 @@ function drawPlayer(ctx, p, timeMs){
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     const fg = ctx.createLinearGradient(0, size*0.3, 0, size*0.3 + fl);
-    fg.addColorStop(0, overdrive ? "rgba(255,220,160,0.95)" : "rgba(140,210,255,0.85)");
-    fg.addColorStop(0.5, overdrive ? "rgba(255,150,60,0.55)" : "rgba(90,150,255,0.4)");
+    // The throat is hot and the tail fades cold into the sky. It used to be
+    // cold all the way through, so buying the "hotter" thruster made your
+    // exhaust colder - a purchase that reads as a punishment.
+    fg.addColorStop(0, overdrive ? "rgba(255,220,160,0.95)" : "rgba(255,244,214,0.9)");
+    fg.addColorStop(0.5, overdrive ? "rgba(255,150,60,0.55)" : "rgba(120,180,255,0.45)");
     fg.addColorStop(1, "rgba(60,110,255,0)");
     ctx.fillStyle = fg;
     ctx.beginPath();

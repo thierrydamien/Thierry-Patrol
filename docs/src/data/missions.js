@@ -282,9 +282,16 @@ const BOSSES = {
     hp: 1700, fightSeconds: 50, size: 250, tint: "#f97316", entryY: 190,
     armoured: true,
     weakPoints: [
-      { id:"core",      x:  0, y:-40, r:24, hp:220, disables:"sweepBeam" },
-      { id:"leftPod",   x:-96, y:  6, r:20, hp:150, disables:"spiralArms" },
-      { id:"rightPod",  x: 96, y:  6, r:20, hp:150, disables:"ringBurst" },
+      /*
+       * These are offsets into the drawn hull, and they were off-register
+       * with it - the target rings sat up and out from the panels they mark,
+       * which on an armoured fight is the whole mechanic. Data only; the
+       * alternative (rescaling bossart) would shrink the largest hull in the
+       * game by a third.
+       */
+      { id:"core",      x:  0, y:-26, r:24, hp:220, disables:"sweepBeam" },
+      { id:"leftPod",   x:-88, y: 20, r:20, hp:150, disables:"spiralArms" },
+      { id:"rightPod",  x: 88, y: 20, r:20, hp:150, disables:"ringBurst" },
       { id:"hatch",     x:  0, y: 62, r:21, hp:165, disables:"callMinions" },
     ],
     phases: [

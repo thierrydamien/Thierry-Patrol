@@ -170,9 +170,19 @@ html, body {
   background: linear-gradient(180deg, #fff, var(--accent));
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.6));
+  /* Stacked drop-shadows, not text-shadow: the fill is transparent, so a
+     text-shadow would paint through the letterforms instead of edging them.
+     This is what lets the fleet fly behind the wordmark and stay readable. */
+  filter: drop-shadow(0 0 2px #05040f) drop-shadow(0 0 2px #05040f)
+          drop-shadow(0 4px 12px rgba(0,0,0,0.7));
 }
-.game-title span { -webkit-text-fill-color: #ff6b4a; }
+/* PATROL used to be a flat fill, so the two halves of the logo read as two
+   different logos. It gets its own clipped ramp at the same angle. */
+.game-title span {
+  background: linear-gradient(180deg, #ffd9b0, #ff6b4a 55%, #e03a12);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 /* The home screens paint their own sky (see drawTitleArt). The artwork that
    used to live here was the real Sky Force game's promotional image - its

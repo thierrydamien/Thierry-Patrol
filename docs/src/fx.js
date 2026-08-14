@@ -577,7 +577,12 @@ function drawParticles(ctx){
         ctx.fillRect(-p.size*k, -p.size/2, p.size*2*k, p.size);
         ctx.restore();
       } else {
-        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+        // A hot core with a soft skirt. The rotated square just above is a
+        // deliberate contract (confetti reads as pixels, not glitter); this
+        // branch is the engine spark, and a hard square is a glitch.
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*0.62, 0, TAU); ctx.fill();
+        ctx.globalAlpha *= 0.4;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*1.15, 0, TAU); ctx.fill();
       }
     }
   }

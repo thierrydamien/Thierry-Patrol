@@ -443,10 +443,19 @@ function drawTitleArt(canvasId, p, t){
      * clear the first card - depth, not clutter.
      */
     const band = Math.min(topH*0.15, u*0.34);
+    /*
+     * On a narrow screen this band overlaps THIERRY PATROL - there is simply
+     * not enough sky above the type - so the fleet flies at half strength
+     * here and the wordmark keeps its own hard edge (style.css .game-title).
+     * The wide branch above is left at full alpha; its gutters are clear.
+     */
+    ctx.save();
+    ctx.globalAlpha = 0.5;
     [[0.16, 0.42, 0.17], [0.83, 0.52, 0.15], [0.40, 0.20, 0.10], [0.66, 0.78, 0.12]]
       .forEach(([x, y, sz], i) =>
         fly(W*x, band*y, Math.min(u*sz, band*0.62), i*2.4 + 0.6,
             i === 0 ? me : fleet[i % fleet.length]));
+    ctx.restore();
   }
   // The scroll's middle third gets quiet traffic, so the road down to
   // SETTINGS isn't dead space.
@@ -1057,7 +1066,9 @@ function drawStarPip(ctx, x, y, r, earned){
     ctx.fillStyle = "#ffd23f";
     ctx.fill();
   } else {
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    // A hollow pip over lit hull art needs its own edge, same as the number.
+    ctx.shadowColor = "rgba(4,6,16,0.9)"; ctx.shadowBlur = 4;
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
     ctx.lineWidth = 1.2;
     ctx.stroke();
   }
@@ -2194,7 +2205,13 @@ function drawCampaign(){
       ctx.restore();
     }
 
-    const starY = y - R - (hull ? 14 : boss ? 26 : 10);
+    /*
+     * A boss node draws a hull, and the pips sat ABOVE it - far enough up to
+     * land on the next stop's name, so the map read "THE TRENCH RUN ★★☆".
+     * Tucked inside the hull's own upper silhouette instead, which is dark
+     * on every boss, so they are countable and belong to the right stop.
+     */
+    const starY = hull ? y - R + 10 : y - R - (boss ? 26 : 10);
     if(unlocked){                                  // stars earned, on the rim
       // Drawn pips, not font glyphs: the text star rendered as a smudge over
       // the nebula and clashed with every other star the game draws.
