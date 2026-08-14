@@ -277,7 +277,7 @@ const MAX_FIELDS = ["highscore", "totalKills", "bossesDefeated", "maxCombo",
                     "flawlessMissions", "powerupsCollected"];
 const OR_FIELDS  = ["vaultDone", "sky29Done"];
 const SET_FIELDS = ["achievements"];
-const COSMETIC_SETS = ["paints", "trails", "decals", "fireworks"];
+const COSMETIC_SETS = ["paints", "trails", "decals", "fireworks", "customs"];
 
 function unionList(a, b){
   const out = Array.isArray(a) ? a.slice() : [];

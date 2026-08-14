@@ -159,6 +159,20 @@
     <button id="briefBackBtn" class="ghost-btn">Back to Missions</button>
   </section>
 
+  <!-- Mix your own colour: the one shelf that never runs out. -->
+  <div id="mixOverlay" class="overlay hidden">
+    <div class="mix-box">
+      <h3 class="mix-title">MIX YOUR OWN</h3>
+      <canvas id="mixPreview" width="240" height="150"></canvas>
+      <label class="mix-row"><span>COLOUR</span><input type="color" id="mixColor" value="#ff6b4a"></label>
+      <label class="mix-row"><span>NAME IT</span><input type="text" id="mixName" maxlength="14" placeholder="MY COLOUR"></label>
+      <div class="mix-actions">
+        <button id="mixBuy" class="main-btn"></button>
+        <button id="mixCancel" class="ghost-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== ARMORY ===================== -->
   <section id="screen-armory" class="screen">
     <!-- Scrolls with the page: the bay is the top of the Armory, not a frozen

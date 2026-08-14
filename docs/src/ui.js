@@ -2687,11 +2687,46 @@ function renderPaintTab(panel){
    */
   const FREE_NAMES = ["SKY BLUE","CRIMSON","JADE","VIOLET","AMBER","ROSE"];
   SHIP_COLORS.forEach((hex, i) => paintCard(FREE_NAMES[i] || "CLASSIC", hex, null, null));
+  // Colours the family mixed themselves, already owned, shown first-class
+  // among the rest - a colour is a colour, whoever chose it.
+  (owned.customs || []).forEach(str => {
+    const cut = str.lastIndexOf("|");
+    if(cut < 0) return;
+    paintCard(str.slice(0, cut), str.slice(cut + 1), null, null);
+  });
+  const mixCard = () => {
+    const card = document.createElement("div");
+    card.className = "paint-card";
+    const cv = document.createElement("canvas");
+    cv.width = 120; cv.height = 84;
+    card.appendChild(cv);
+    const c = cv.getContext("2d");
+    if(c){
+      // A ship in mid-change, so the card says what it does without a word.
+      const t = (Date.now() % 3000) / 3000;
+      const hue = Math.round(t * 360);
+      SF.shipart.drawShip(c, 60, 46, 66,
+        { color: "hsl(" + hue + " 90% 62%)", levels, t: 0.6,
+          tune: profile.tune, decal: profile.decal });
+    }
+    const nm = document.createElement("div");
+    nm.className = "paint-name";
+    nm.textContent = "MIX YOUR OWN";
+    card.appendChild(nm);
+    const btn = document.createElement("button");
+    btn.className = "small-btn";
+    btn.textContent = money(SF.config.MIX_COST);
+    btn.disabled = profile.money < SF.config.MIX_COST;
+    click(btn, openMixer);
+    card.appendChild(btn);
+    pg.appendChild(card);
+  };
   PAINTS.forEach(pt => {
     if(pt.secret && !owned.paints.includes(pt.id)) return;   // the shop hides the secret
     paintCard(pt.name, pt.hex, pt.secret ? null : pt.cost, pt.id);
   });
 
+  mixCard();
   head("ENGINE TRAILS — burns behind you in every fight");
   const tg = grid();
   const noneCard = document.createElement("div");
@@ -2857,6 +2892,50 @@ function renderPaintTab(panel){
    for how it travels), so the drawing flies every mission.
    --------------------------------------------------------- */
 const pe = { cells: null, color: 1, undo: [], down: false, wired: false };
+
+/*
+ * THE COLOUR MIXER.
+ *
+ * Eight fixed paints is a finite shelf, and this game's problem is that every
+ * shelf is finite while the income is not. Mixing is the one purchase that
+ * can always be made again, and it is the one a child will spend the longest
+ * on - naming a colour is more fun than buying one.
+ *
+ * A native colour input on purpose: on an iPad it opens the system wheel,
+ * which is a far better instrument than anything worth hand-rolling here.
+ */
+function openMixer(){
+  const inC = $("mixColor"), inN = $("mixName"), buy = $("mixBuy");
+  inC.value = profile.shipColor || "#ff6b4a";
+  inN.value = "";
+  const draw = () => {
+    const cv = $("mixPreview"), c = cv && cv.getContext("2d");
+    if(!c) return;
+    c.clearRect(0, 0, cv.width, cv.height);
+    SF.shipart.drawShip(c, cv.width/2, cv.height/2 + 6, 108,
+      { color: inC.value, levels: SF.shipart.levelsOf(profile), t: 0.6,
+        tune: profile.tune, decal: profile.decal });
+  };
+  buy.textContent = "BUY IT — " + money(SF.config.MIX_COST);
+  inC.oninput = draw;
+  draw();
+  $("mixOverlay").classList.remove("hidden");
+  click(buy, () => {
+    if(profile.money < SF.config.MIX_COST){ audio.play("error"); return; }
+    const hex = inC.value;
+    const name = (inN.value || "MY COLOUR").trim().toUpperCase().slice(0, 14);
+    profile.money -= SF.config.MIX_COST;
+    profile.cosmetics.customs = profile.cosmetics.customs || [];
+    profile.cosmetics.customs.push(name + "|" + hex);
+    profile.shipColor = hex;
+    P.save(profile);
+    audio.play("uiBuy");
+    hangar.celebrate = performance.now();
+    $("mixOverlay").classList.add("hidden");
+    renderArmory(); renderMenu();
+  }, true);
+  click($("mixCancel"), () => $("mixOverlay").classList.add("hidden"), true);
+}
 
 function openPaintEditor(){
   const PJ = SF.paintjob;

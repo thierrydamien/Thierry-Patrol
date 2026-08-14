@@ -116,7 +116,7 @@ function blank(name){
     tune: "vanguard",   // flight tuning (MY SHIP) - stats trade, never art
     // The Paint Shop: owned cosmetics, and the trail currently burning.
     // (Applied paint just becomes shipColor - one pipeline colours it all.)
-    cosmetics: { paints: [], trails: [], decals: [], fireworks: [] },
+    cosmetics: { paints: [], trails: [], decals: [], fireworks: [], customs: [] },
     trail: null,
     decal: null,
     fireworks: "classic",

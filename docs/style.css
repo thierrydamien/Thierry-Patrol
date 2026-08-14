@@ -1225,6 +1225,26 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 .hs-value { flex:0 0 58px; font-size:11px; font-weight:700; color:#fff; }
 
+/* ---- the colour mixer ---- */
+.mix-box {
+  background: var(--panel); border:1px solid var(--panel-border);
+  border-radius:20px; padding:18px; width:min(320px, 92vw);
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  box-shadow: var(--lift), var(--bevel);
+}
+.mix-title { margin:0; font-size:15px; letter-spacing:2px; color:#fff; }
+#mixPreview { border-radius:14px; background: rgba(0,0,0,0.35); }
+.mix-row { display:flex; align-items:center; justify-content:space-between;
+  width:100%; gap:10px; font-size:11px; letter-spacing:1.5px;
+  color: var(--ink-dim); font-weight:700; }
+.mix-row input[type=color] { width:74px; height:38px; padding:0; border:none;
+  border-radius:10px; background:none; cursor:pointer; }
+.mix-row input[type=text] { flex:1 1 0; min-width:0; font-family:inherit;
+  font-size:13px; font-weight:700; letter-spacing:1px; color:#fff;
+  background: rgba(0,0,0,0.35); border:1px solid var(--panel-border);
+  border-radius:10px; padding:9px 11px; text-transform:uppercase; }
+.mix-actions { display:flex; flex-direction:column; gap:8px; width:100%; }
+
 /* ---- pre-flight kit ---- */
 .kit-slots { color: var(--accent); font-weight:700; margin-left:6px; }
 .kit-list { display:grid; gap:8px; margin-bottom:10px;

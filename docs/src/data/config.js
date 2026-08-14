@@ -377,6 +377,8 @@ const SUPPLIES = [
   { id:"life",       label:"EXTRA LIFE",     color:"#ff5d73", weight:15, calm:true, cost:1600 },
 ];
 const KIT_SLOTS = 2;
+/** What one mixed colour costs. Repeatable, forever - that is the point. */
+const MIX_COST = 700;
 /** What this crate costs on this tier. */
 function kitCost(def, difficulty){
   const mult = difficulty ? (difficulty.pay || 1) : 1;
@@ -442,7 +444,7 @@ SF.config = {
   DECALS, DECAL_BY_ID, FIREWORKS, FIREWORK_BY_ID,
   BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
-  KIT_SLOTS, kitCost,
+  KIT_SLOTS, kitCost, MIX_COST,
   spreadPattern, fireRateMult,
 };
 })();
