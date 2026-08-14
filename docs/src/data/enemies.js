@@ -517,7 +517,7 @@ const ENEMY_TYPES = {
   },
   swooper: {
     name:"Swooper", behaviour:"swoop", hp:2, r:15, size:44, speed:188,
-    score:12, money:11, tint:"#f8fafc",
+    score:12, money:11, tint:"#eaf2ff",
     fire:{ pattern:"straight", every:[1.3,2.2], speed:268 },
   },
   kamikaze: {
@@ -608,7 +608,7 @@ const ENEMY_TYPES = {
   },
   bomber: {
     name:"Minelayer", behaviour:"bomber", hp:9, r:22, size:68, speed:96,
-    score:32, money:32, tint:"#a3e635", fire:null,
+    score:32, money:32, tint:"#bef264", fire:null,
     toughSeconds:0.9,          // it exists to leave mines behind - let it
   },
   mine: {

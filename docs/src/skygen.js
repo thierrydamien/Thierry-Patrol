@@ -32,19 +32,19 @@ const SKIES = [
   { name:"Home Reach",   photo:"playfieldBg" },
 
   { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
-    density:1.0, stars:1.0, bright:3,
+    lum:1.15, density:1.0, stars:1.0, bright:3,
     props:[ {k:"planet", x:0.20, y:0.30, r:0.177, lit:"#8b6bd8", dark:"#241245", rings:true},
             {k:"planet", x:0.82, y:0.70, r:0.047, lit:"#c9b6f0", dark:"#3a2a5c", craters:true},
             {k:"galaxy", x:0.78, y:0.16, r:0.22} ] },
 
   { name:"Emerald Veil", clouds:["#059669","#14b8a6","#065f46"], dust:"#02100c", star:"#d1fae5",
-    density:0.95, stars:0.9, bright:3,
+    lum:1.2, density:0.95, stars:0.9, bright:3,
     props:[ {k:"planet", x:0.80, y:0.24, r:0.146, lit:"#3fbf95", dark:"#0a3b2c", bands:true},
             {k:"rocks",  x:0.22, y:0.62, r:0.156, n:16},
             {k:"planet", x:0.14, y:0.14, r:0.036, lit:"#9ad9c4", dark:"#1d3a32", craters:true} ] },
 
   { name:"Rust Belt",    clouds:["#c2410c","#f59e0b","#7c2d12"], dust:"#140803", star:"#ffedd5",
-    density:1.15, stars:0.8, bright:3,
+    lum:1.1, density:1.15, stars:0.8, bright:3,
     props:[ {k:"planet", x:0.74, y:0.62, r:0.239, lit:"#d2703a", dark:"#2f1105", bands:true, crescent:true},
             {k:"rocks",  x:0.25, y:0.30, r:0.177, n:22},
             {k:"sun",    x:0.10, y:0.82, r:0.026, color:"#ffd9a0"} ] },
@@ -52,24 +52,24 @@ const SKIES = [
   { name:"Ice Fields",   photo:"backAlt" },
 
   { name:"Squall Line",  clouds:["#0891b2","#67e8f9","#164e63"], dust:"#03090c", star:"#cffafe",
-    density:1.5, stars:0.7, bright:2,
+    lum:0.9, density:1.5, stars:0.7, bright:2,
     props:[ {k:"planet", x:0.16, y:0.22, r:0.09, lit:"#5eead4", dark:"#134e4a", bands:true},
             {k:"rocks",  x:0.78, y:0.66, r:0.14, n:10} ] },
 
   { name:"Crimson Run",  clouds:["#be123c","#f43f5e","#881337"], dust:"#12030a", star:"#ffe4e6",
-    density:1.05, stars:0.85, bright:2,
+    lum:1.05, density:1.05, stars:0.85, bright:2,
     props:[ {k:"sun",    x:0.78, y:0.22, r:0.083, color:"#ff8a6b"},
             {k:"planet", x:0.24, y:0.66, r:0.156, lit:"#8d3550", dark:"#210711", craters:true},
             {k:"planet", x:0.60, y:0.88, r:0.052, lit:"#c96b80", dark:"#2b0d18"} ] },
 
   { name:"Gold Reach",   clouds:["#b45309","#fbbf24","#78350f"], dust:"#120b02", star:"#fef3c7",
-    density:1.1, stars:0.9, bright:3,
+    lum:1.3, density:1.1, stars:0.9, bright:3,
     props:[ {k:"planet", x:0.26, y:0.26, r:0.198, lit:"#e0a13e", dark:"#3a1f04", bands:true, rings:true},
             {k:"planet", x:0.80, y:0.74, r:0.068, lit:"#f2d79a", dark:"#4a3410", craters:true},
             {k:"rocks",  x:0.72, y:0.34, r:0.114, n:12} ] },
 
   { name:"The Trade Lane", clouds:["#a16207","#fcd34d","#713f12"], dust:"#0e0a02", star:"#fef9c3",
-    density:0.9, stars:1.0, bright:3,
+    lum:1.15, density:0.9, stars:1.0, bright:3,
     props:[ {k:"planet", x:0.82, y:0.30, r:0.13, lit:"#e8b45a", dark:"#4a2c08", rings:true},
             {k:"planet", x:0.14, y:0.72, r:0.05, lit:"#f5deb0", dark:"#5c4318", craters:true},
             {k:"galaxy", x:0.24, y:0.14, r:0.18} ] },
@@ -78,13 +78,13 @@ const SKIES = [
      table, dropped between the gold Trade Lane and the purple Deep so the
      contrast lands. First sky to fly the aurora painter. */
   { name:"The Relief Line", clouds:["#7dd3fc","#e0f2fe","#1e3a5f"], dust:"#040a12", star:"#f0f9ff",
-    density:0.7, stars:1.15, bright:4,
+    lum:1.25, density:0.7, stars:1.15, bright:4,
     props:[ {k:"aurora", x:0.50, y:0.28, r:0.34},
             {k:"planet", x:0.16, y:0.70, r:0.13, lit:"#bcd9f2", dark:"#0d1a2e", craters:true},
             {k:"sun",    x:0.86, y:0.16, r:0.024, color:"#eaf6ff"} ] },
 
   { name:"The Deep",     clouds:["#6d28d9","#db2777","#1e1b4b"], dust:"#05030f", star:"#ede9fe",
-    density:1.3, stars:1.0, bright:4,
+    lum:0.8, density:1.3, stars:1.0, bright:4,
     props:[ {k:"planet", x:0.66, y:0.52, r:0.322, lit:"#4b3a7a", dark:"#07040f", crescent:true},
             {k:"galaxy", x:0.18, y:0.20, r:0.26},
             {k:"planet", x:0.14, y:0.80, r:0.047, lit:"#a78bfa", dark:"#1b1436"} ] },
@@ -93,12 +93,12 @@ const SKIES = [
      home star, so the run has a direction you can see. --- */
 
   { name:"The Blockade", clouds:["#0b1d3a","#173a6b","#050c1c"], dust:"#020409", star:"#9fc0e8",
-    lum:0.6, density:0.65, stars:0.55, bright:1,
+    lum:0.62, density:0.65, stars:0.55, bright:1,
     props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
             {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
 
   { name:"The Wreck Line", clouds:["#475569","#64748b","#1e293b"], dust:"#05070c", star:"#e2e8f0",
-    density:0.8, stars:1.1, bright:2,
+    lum:0.75, density:0.8, stars:1.1, bright:2,
     props:[ {k:"rocks",  x:0.50, y:0.42, r:0.30, n:34},
             {k:"planet", x:0.16, y:0.76, r:0.104, lit:"#6b7c94", dark:"#0d131f", craters:true},
             {k:"rocks",  x:0.80, y:0.14, r:0.14, n:14} ] },
@@ -108,31 +108,31 @@ const SKIES = [
      hard against both edges at the same height, so the backdrop is left-right
      continuous and the eye reads "this place joins up". */
   { name:"The Ring",     clouds:["#0f766e","#f59e0b","#04211f"], dust:"#020c0b", star:"#ccfbf1",
-    density:1.1, stars:0.8, bright:3,
+    lum:1, density:1.1, stars:0.8, bright:3,
     props:[ {k:"planet", x:0.02, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
             {k:"planet", x:0.98, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
             {k:"galaxy", x:0.50, y:0.18, r:0.24} ] },
 
   { name:"Duelling Ground", clouds:["#9d174d","#f472b6","#4a044e"], dust:"#12030c", star:"#fce7f3",
-    density:0.85, stars:1.1, bright:3,
+    lum:1.1, density:0.85, stars:1.1, bright:3,
     props:[ {k:"planet", x:0.18, y:0.24, r:0.12, lit:"#e879b0", dark:"#4a0d33", crescent:true},
             {k:"galaxy", x:0.80, y:0.66, r:0.20},
             {k:"planet", x:0.88, y:0.18, r:0.045, lit:"#f9c9e4", dark:"#54173c", craters:true} ] },
 
   { name:"Hatchery",     clouds:["#4d7c0f","#84cc16","#1a2e05"], dust:"#050b02", star:"#ecfccb",
-    density:1.2, stars:0.75, bright:2,
+    lum:0.95, density:1.2, stars:0.75, bright:2,
     props:[ {k:"planet", x:0.78, y:0.34, r:0.208, lit:"#7fa83c", dark:"#16250a", bands:true},
             {k:"planet", x:0.20, y:0.72, r:0.073, lit:"#b6dd6e", dark:"#2b3d13", craters:true},
             {k:"galaxy", x:0.28, y:0.18, r:0.19} ] },
 
   { name:"Warden's Watch", clouds:["#0e7490","#22d3ee","#083344"], dust:"#020a0e", star:"#cffafe",
-    density:1.0, stars:0.9, bright:3,
+    lum:0.85, density:1.0, stars:0.9, bright:3,
     props:[ {k:"planet", x:0.24, y:0.28, r:0.234, lit:"#2f8ba3", dark:"#04202b", rings:true},
             {k:"sun",    x:0.84, y:0.78, r:0.031, color:"#a5f3fc"},
             {k:"rocks",  x:0.72, y:0.44, r:0.13, n:12} ] },
 
   { name:"The Treasury", clouds:["#92400e","#eab308","#451a03"], dust:"#0f0902", star:"#fde68a",
-    density:1.1, stars:0.85, bright:3,
+    lum:1.2, density:1.1, stars:0.85, bright:3,
     props:[ {k:"planet", x:0.76, y:0.30, r:0.21, lit:"#d9a441", dark:"#33200a", rings:true},
             {k:"rocks",  x:0.24, y:0.60, r:0.17, n:18},
             {k:"sun",    x:0.14, y:0.16, r:0.03, color:"#ffe9a8"} ] },
@@ -141,23 +141,23 @@ const SKIES = [
      them. The only deep-indigo-over-near-white in the table, and deliberately
      NOT green: limpet lime has to pop off it. First sky to fly the wreck. */
   { name:"The Breaker's Yard", clouds:["#1e1b4b","#e0e7ff","#050414"], dust:"#02020c", star:"#c7d2fe",
-    density:0.85, stars:0.7, bright:2,
+    lum:0.8, density:0.85, stars:0.7, bright:2,
     props:[ {k:"wreck",  x:0.44, y:0.52, r:1.15, thick:0.26, tilt:0.08},
             {k:"rocks",  x:0.78, y:0.24, r:0.18, n:22},
             {k:"sun",    x:0.12, y:0.84, r:0.03, color:"#dbeafe"} ] },
 
   { name:"Cold Approach", clouds:["#1e3a8a","#3b82f6","#0c1836"], dust:"#020510", star:"#dbeafe",
-    density:0.75, stars:1.15, bright:4,
+    lum:0.7, density:0.75, stars:1.15, bright:4,
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
             {k:"planet", x:0.22, y:0.20, r:0.057, lit:"#93b8f5", dark:"#152540", craters:true} ] },
 
   { name:"The Fortress Wall", clouds:["#7f1d1d","#57534e","#1c1917"], dust:"#0a0505", star:"#e7e5e4",
-    density:1.3, stars:0.5, bright:1,
+    lum:0.9, density:1.3, stars:0.5, bright:1,
     props:[ {k:"rocks", x:0.12, y:0.30, r:0.17, n:18},
             {k:"rocks", x:0.88, y:0.62, r:0.17, n:18} ] },
 
   { name:"Last Harbour", clouds:["#7e22ce","#e879f9","#2e1065"], dust:"#0a0316", star:"#fae8ff",
-    density:1.15, stars:0.95, bright:3,
+    lum:1, density:1.15, stars:0.95, bright:3,
     props:[ {k:"galaxy", x:0.30, y:0.30, r:0.28},
             {k:"planet", x:0.78, y:0.62, r:0.182, lit:"#a855c9", dark:"#2a0a3c", bands:true, rings:true},
             {k:"planet", x:0.14, y:0.84, r:0.042, lit:"#f0abfc", dark:"#3b1049"} ] },
@@ -168,14 +168,14 @@ const SKIES = [
      at all. The pillars are rooted at the very bottom edge and rim-lit, so
      they read as prominences arching off the surface. */
   { name:"The Bright Side", clouds:["#fde68a","#fff6df","#c2410c"], dust:"#2a0d00", star:"#fff7d6",
-    density:1.05, stars:0.12, bright:0,
+    lum:1, density:1.05, stars:0.12, bright:0,
     props:[ {k:"sun",     x:0.50, y:0.94, r:0.55, color:"#ffe6b8"},
             {k:"pillars", x:0.32, y:1.00, h:0.52, n:2, w:0.30, hi:"#fff8e6", lo:"#ff9a3c"},
             {k:"pillars", x:0.76, y:1.00, h:0.44, n:2, w:0.26, hi:"#fff8e6", lo:"#ffb257"},
             {k:"planet",  x:0.14, y:0.30, r:0.055, lit:"#7c3a1a", dark:"#160500", craters:true} ] },
 
   { name:"Their Star",   clouds:["#9a3412","#fb923c","#450a0a"], dust:"#100301", star:"#ffedd5",
-    density:1.35, stars:0.7, bright:4,
+    lum:1.25, density:1.35, stars:0.7, bright:4,
     props:[ {k:"sun",    x:0.70, y:0.26, r:0.125, color:"#ffb46b"},
             {k:"planet", x:0.26, y:0.68, r:0.244, lit:"#b8501f", dark:"#280702", bands:true, crescent:true},
             {k:"rocks",  x:0.68, y:0.82, r:0.14, n:16} ] },
@@ -189,12 +189,12 @@ const SKIES = [
             {k:"rocks",  x:0.18, y:0.68, r:0.12, n:8} ] },
 
   { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
-    lum:0.6, density:0.4, stars:0.45, bright:1,
+    lum:0.55, density:0.4, stars:0.45, bright:1,
     props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
             {k:"planet", x:0.16, y:0.86, r:0.10, lit:"#1b2136", dark:"#02030a", crescent:true} ] },
 
   { name:"The Last Star", clouds:["#7f1d1d","#dc2626","#1c0505"], dust:"#0d0202", star:"#ffd9d9",
-    density:1.4, stars:0.6, bright:4,
+    lum:0.7, density:1.4, stars:0.6, bright:4,
     props:[ {k:"sun",    x:0.50, y:0.30, r:0.20, color:"#ff6b4a"},
             {k:"rocks",  x:0.22, y:0.70, r:0.20, n:24},
             {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
@@ -204,7 +204,7 @@ const SKIES = [
      space gets MADE. --- */
 
   { name:"The Undertow",  clouds:["#155e75","#2dd4bf","#0b1c3c"], dust:"#020810", star:"#ccfbf1",
-    density:0.95, stars:0.85, bright:2,
+    lum:0.85, density:0.95, stars:0.85, bright:2,
     props:[ {k:"planet", x:0.78, y:0.28, r:0.17, lit:"#2a9db0", dark:"#062030", crescent:true},
             {k:"galaxy", x:0.20, y:0.62, r:0.24},
             {k:"planet", x:0.16, y:0.16, r:0.045, lit:"#7fd8d0", dark:"#0e3a3a", craters:true} ] },
@@ -214,13 +214,13 @@ const SKIES = [
      organic and old the instant it loads, between the teal Undertow and the
      magenta Chorus. */
   { name:"Bonefields",   clouds:["#78350f","#e7d8c9","#0c0a09"], dust:"#080604", star:"#fef3c7",
-    density:0.7, stars:1.0, bright:2,
+    lum:1, density:0.7, stars:1.0, bright:2,
     props:[ {k:"planet", x:0.22, y:0.36, r:0.28, lit:"#8c7a68", dark:"#0b0907", craters:true},
             {k:"rocks",  x:0.76, y:0.66, r:0.22, n:26},
             {k:"planet", x:0.86, y:0.16, r:0.04, lit:"#d6c3ad", dark:"#2a2018"} ] },
 
   { name:"The Chorus",    clouds:["#c026d3","#f59e0b","#4a0450"], dust:"#0e0312", star:"#fdf4ff",
-    density:1.05, stars:0.9, bright:4,
+    lum:1.15, density:1.05, stars:0.9, bright:4,
     props:[ {k:"galaxy", x:0.72, y:0.20, r:0.26},
             {k:"planet", x:0.18, y:0.74, r:0.11, lit:"#d879e8", dark:"#3a0d44", rings:true},
             {k:"sun",    x:0.14, y:0.24, r:0.028, color:"#ffd9f4"} ] },
@@ -232,7 +232,7 @@ const SKIES = [
      sphere from the NEARER nebula core, so the twins come out lit from
      opposite sides, exactly as a reflection should be. */
   { name:"The Glass Sea", clouds:["#0e7490","#e2e8f0","#1e1b4b"], dust:"#04060f", star:"#f0f9ff",
-    density:0.8, stars:1.1, bright:4,
+    lum:1.05, density:0.8, stars:1.1, bright:4,
     props:[ {k:"comet",  x:0.16, y:0.30, r:0.018, len:0.66, angle:-0.5, color:"#e0f2fe"},
             {k:"comet",  x:0.84, y:0.30, r:0.018, len:0.66, angle:Math.PI+0.5, color:"#e0f2fe"},
             {k:"planet", x:0.22, y:0.70, r:0.16, lit:"#a9c8de", dark:"#0b1220", rings:true},
@@ -241,13 +241,13 @@ const SKIES = [
             {k:"galaxy", x:0.70, y:0.14, r:0.20} ] },
 
   { name:"The Foundry",   clouds:["#7c2d12","#f97316","#1c0a04"], dust:"#0d0502", star:"#ffedd5",
-    density:1.2, stars:0.6, bright:2,
+    lum:1.1, density:1.2, stars:0.6, bright:2,
     props:[ {k:"planet", x:0.80, y:0.66, r:0.21, lit:"#c96a2a", dark:"#2a1004", bands:true},
             {k:"rocks",  x:0.24, y:0.28, r:0.19, n:20},
             {k:"sun",    x:0.68, y:0.16, r:0.04, color:"#ffb46b"} ] },
 
   { name:"The Serpent's Garden", clouds:["#047857","#22d3ee","#032f2b"], dust:"#02100b", star:"#d1fae5",
-    density:1.0, stars:0.95, bright:3,
+    lum:0.9, density:1.0, stars:0.95, bright:3,
     props:[ {k:"planet", x:0.24, y:0.30, r:0.15, lit:"#2fbf9a", dark:"#083328", rings:true},
             {k:"galaxy", x:0.78, y:0.70, r:0.22},
             {k:"planet", x:0.86, y:0.18, r:0.05, lit:"#9fe8cf", dark:"#1d4038", craters:true} ] },
@@ -257,7 +257,7 @@ const SKIES = [
      so the base sky stays deliberately quiet - it is the canvas, not the
      painting. */
   { name:"Behind the Sky", clouds:["#3d3a55","#c9b458","#15131f"], dust:"#0a0a12", star:"#e2e8f0",
-    density:0.5, stars:0.55, bright:1,
+    lum:1.2, density:0.5, stars:0.55, bright:1,
     props:[ {k:"galaxy", x:0.30, y:0.24, r:0.20},
             {k:"planet", x:0.80, y:0.76, r:0.09, lit:"#6b6787", dark:"#191627", crescent:true} ] },
 
@@ -267,7 +267,7 @@ const SKIES = [
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
   { name:"Sky 35", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
-    density:1.3, stars:1.25, bright:5,
+    lum:1.35, density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
             {k:"planet", x:0.16, y:0.62, r:0.06, lit:"#ffb6a3", dark:"#4a1d2e", craters:true},
