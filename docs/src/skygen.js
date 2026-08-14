@@ -489,6 +489,207 @@ function drawGalaxy(ctx, W, H, p, rand){
 }
 
 /*
+ * MORE THAN PLANETS.
+ *
+ * For a long time the whole vocabulary was planet / sun / galaxy / rocks, and
+ * with 29 skies to fill that meant most of them were "a coloured haze with a
+ * planet in it" - the campaign changed hue as it went but it never changed
+ * PLACE. These four give a sky something else to be about. Each follows the
+ * same contract as the others: draw around `p.y*H`, wrap through `tiled`, take
+ * the shared seeded `rand` so a sky is identical every time it is built.
+ */
+
+/*
+ * Curtains of light. The first pass drew evenly spaced straight columns and
+ * came out as a barcode - the thing that makes an aurora an aurora is that no
+ * two folds are alike, so every curtain now varies in width, height, lean and
+ * brightness, and each is drawn as two offset sheets so the fold has an edge.
+ */
+function drawAurora(ctx, W, H, p, rand){
+  const cy = p.y*H, hgt = (p.h || 0.34)*H, cols = p.n || 5;
+  tiled(ctx, H, cy, yy => {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for(let i = 0; i < cols; i++){
+      const t = cols === 1 ? 0.5 : i/(cols - 1);
+      const jitter = (rand() - 0.5)*0.16;
+      const x = (p.x + (t - 0.5 + jitter)*(p.w || 0.9))*W;
+      const wide = W*(0.05 + rand()*0.11);
+      const tall = hgt*(0.55 + rand()*0.9);
+      const lean = (rand() - 0.5)*W*0.16;
+      const lift = (rand() - 0.5)*hgt*0.3;
+      const amp  = 0.55 + rand()*0.65;
+      // Two sheets per fold, the back one offset and dimmer: that overlap is
+      // what stops a curtain reading as a painted stripe.
+      for(let s = 0; s < 2; s++){
+        const off = s ? wide*0.42 : 0, dim = s ? 0.45 : 1;
+        const top = yy + lift - tall*0.5, bot = yy + lift + tall*0.5;
+        const g = ctx.createLinearGradient(0, top, 0, bot);
+        g.addColorStop(0,    rgba(p.hi || "#7ef0cf", 0));
+        g.addColorStop(0.30, rgba(p.hi || "#7ef0cf", 0.26*amp*dim));
+        g.addColorStop(0.70, rgba(p.lo || "#4f7ce0", 0.13*amp*dim));
+        g.addColorStop(1,    rgba(p.lo || "#4f7ce0", 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x + off - wide*0.5, top);
+        ctx.bezierCurveTo(x + off + lean*0.7, top + tall*0.35,
+                          x + off - lean*0.5, bot - tall*0.35,
+                          x + off + lean - wide*0.15, bot);
+        ctx.lineTo(x + off + lean + wide*0.55, bot);
+        ctx.bezierCurveTo(x + off - lean*0.5 + wide, bot - tall*0.35,
+                          x + off + lean*0.7 + wide, top + tall*0.35,
+                          x + off + wide*0.5, top);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  });
+}
+
+/*
+ * A dead hull, and it has to be BIG - the first pass drew it at a third of the
+ * frame in a fill barely darker than the sky, so all that showed was a thin
+ * outline and it read as a paper aeroplane. It is a black bulk now, wider than
+ * the playfield, with plating, a torn stern trailing debris, and one lit
+ * window: a dead ship with nobody in it is scenery, a dead ship with somebody
+ * in it is a story.
+ */
+function drawWreck(ctx, W, H, p, rand){
+  const cx = p.x*W, L = (p.r || 0.95)*W, T = L*(p.thick || 0.22);
+  tiled(ctx, H, p.y*H, yy => {
+    ctx.save();
+    ctx.translate(cx, yy); ctx.rotate(p.tilt == null ? -0.20 : p.tilt);
+    // Sits in front of the haze, so it is drawn nearly black rather than tinted.
+    ctx.fillStyle = "rgba(6,8,14,0.96)";
+    ctx.beginPath();
+    ctx.moveTo(-L*0.52, -T*0.05);
+    ctx.lineTo(-L*0.40, -T*0.40);
+    ctx.lineTo(-L*0.05, -T*0.52);
+    ctx.lineTo( L*0.14, -T*0.44);
+    ctx.lineTo( L*0.22, -T*0.92);      // the dorsal fin
+    ctx.lineTo( L*0.31, -T*0.88);
+    ctx.lineTo( L*0.34, -T*0.36);
+    ctx.lineTo( L*0.46,  T*0.02);      // torn stern
+    ctx.lineTo( L*0.30,  T*0.16);
+    ctx.lineTo( L*0.38,  T*0.40);
+    ctx.lineTo( L*0.08,  T*0.62);
+    ctx.lineTo(-L*0.34,  T*0.50);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(150,170,205,0.16)"; ctx.lineWidth = 1.3; ctx.stroke();
+    // Plating: long lines down the body, so the scale reads.
+    ctx.strokeStyle = "rgba(150,170,205,0.10)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 4; i++){
+      const ly = -T*0.30 + i*T*0.26;
+      ctx.beginPath(); ctx.moveTo(-L*0.44, ly); ctx.lineTo(L*0.28, ly*0.9); ctx.stroke();
+    }
+    for(let i = 0; i < 7; i++){
+      const rx = -L*0.30 + i*L*0.10;
+      ctx.beginPath(); ctx.moveTo(rx, -T*0.40); ctx.lineTo(rx, T*0.44); ctx.stroke();
+    }
+    // Debris drifting off the tear.
+    for(let i = 0; i < 14; i++){
+      const dx = L*(0.42 + rand()*0.30), dy = (rand() - 0.5)*T*1.5;
+      const ds = L*0.004*(0.6 + rand());
+      ctx.fillStyle = "rgba(12,15,24,0.9)";
+      ctx.fillRect(dx, dy, ds*(1 + rand()*2), ds);
+    }
+    ctx.fillStyle = "rgba(255,214,120,0.8)";
+    ctx.fillRect(-L*0.16, -T*0.12, L*0.009, T*0.13);
+    ctx.restore();
+  });
+}
+
+/*
+ * Backlit columns of gas. The first pass produced three smooth cones, which is
+ * a mountain range, not a nebula - so the silhouette is now built from a run of
+ * jittered segments down each side, and the rim light only touches the side
+ * facing the core. Small dark knots ride the flanks to break the outline again.
+ */
+function drawPillars(ctx, W, H, p, rand){
+  const base = p.y*H, hgt = (p.h || 0.42)*H, n = p.n || 3;
+  tiled(ctx, H, base, yy => {
+    ctx.save();
+    for(let i = 0; i < n; i++){
+      const t = n === 1 ? 0.5 : i/(n - 1);
+      const x = (p.x + (t - 0.5)*(p.w || 0.34))*W + (rand() - 0.5)*W*0.03;
+      const wide = W*(0.05 + rand()*0.06);
+      const tall = hgt*(0.6 + rand()*0.6);
+      const lean = (rand() - 0.5)*wide*1.6;
+      const STEPS = 9;
+      const left = [], right = [];
+      for(let k = 0; k <= STEPS; k++){
+        const u = k/STEPS;                       // 0 at the base, 1 at the tip
+        const y = yy - tall*u;
+        const taper = wide*(1 - u*0.72);
+        const wob = (rand() - 0.5)*wide*0.42;
+        left.push([x + lean*u - taper + wob, y]);
+        right.push([x + lean*u + taper + (rand() - 0.5)*wide*0.42, y]);
+      }
+      const g = ctx.createLinearGradient(0, yy, 0, yy - tall);
+      g.addColorStop(0,   rgba(p.lo || "#080410", 0.97));
+      g.addColorStop(0.55, rgba(p.lo || "#080410", 0.82));
+      g.addColorStop(1,   rgba(p.hi || "#c58cff", 0.12));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(left[0][0], left[0][1]);
+      left.forEach(pt => ctx.lineTo(pt[0], pt[1]));
+      for(let k = right.length - 1; k >= 0; k--) ctx.lineTo(right[k][0], right[k][1]);
+      ctx.closePath(); ctx.fill();
+      // Rim light down the lit flank only.
+      ctx.strokeStyle = rgba(p.hi || "#c58cff", 0.26);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      right.forEach((pt, k) => k ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+      ctx.stroke();
+      // Knots: darker lumps clinging to the column.
+      for(let k = 0; k < 4; k++){
+        const u = 0.15 + rand()*0.7, idx = Math.round(u*STEPS);
+        const pt = (rand() < 0.5 ? left : right)[idx];
+        ctx.fillStyle = rgba(p.lo || "#080410", 0.92);
+        ctx.beginPath();
+        ctx.arc(pt[0], pt[1], wide*(0.14 + rand()*0.18), 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  });
+}
+
+/** One long visitor, head and tail, crossing the whole frame. */
+function drawComet(ctx, W, H, p){
+  const cx = p.x*W, head = (p.r || 0.014)*W, len = (p.len || 0.7)*W;
+  const ang = p.angle == null ? -0.42 : p.angle;
+  tiled(ctx, H, p.y*H, yy => {
+    ctx.save();
+    ctx.translate(cx, yy); ctx.rotate(ang);
+    ctx.globalCompositeOperation = "lighter";
+    // Two tails: a broad diffuse one and a tight bright one inside it. A single
+    // hard-edged wedge read as a drawn triangle rather than as dust.
+    for(let s = 0; s < 2; s++){
+      const spread = s ? 8.5 : 3.2, alpha = s ? 0.13 : 0.5, ln = s ? len : len*0.72;
+      const g = ctx.createLinearGradient(0, 0, -ln, 0);
+      g.addColorStop(0, rgba(p.color || "#cfe9ff", alpha));
+      g.addColorStop(0.22, rgba(p.color || "#cfe9ff", alpha*0.32));
+      g.addColorStop(1, rgba(p.color || "#cfe9ff", 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, -head*0.8);
+      ctx.quadraticCurveTo(-ln*0.5, -head*spread*0.5, -ln, -head*spread);
+      ctx.lineTo(-ln, head*spread);
+      ctx.quadraticCurveTo(-ln*0.5, head*spread*0.5, 0, head*0.8);
+      ctx.closePath(); ctx.fill();
+    }
+    const hg = ctx.createRadialGradient(0, 0, 0, 0, 0, head*4.2);
+    hg.addColorStop(0, "rgba(255,255,255,0.98)");
+    hg.addColorStop(0.28, rgba(p.color || "#cfe9ff", 0.6));
+    hg.addColorStop(1, rgba(p.color || "#cfe9ff", 0));
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(0, 0, head*4.2, 0, TAU); ctx.fill();
+    ctx.restore();
+  });
+}
+
+/*
  * The Devourer, seen from a long way off. Painted into the SKY of the
  * approach mission - a black bulk with a ring of cold running lights and one
  * red eye, too big to fight, hanging where their star used to be. Nothing
@@ -773,6 +974,10 @@ function paint(sky, seed, W, H, dpr, wrap){
         else if(pr.k === "sun") drawSun(px, W, H, pr);
         else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
         else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand);
+        else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
+        else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
+        else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
+        else if(pr.k === "comet") drawComet(px, W, H, pr);
         else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
       });
       px.globalCompositeOperation = "source-atop";
