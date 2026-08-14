@@ -579,7 +579,11 @@ const LIVERY_ART = {
    */
   stripes(ctx, S){
     ctx.save(); hullClip(ctx, S);
-    [-S*0.145, S*0.020].forEach(x => {
+    // Moved OUT to leave a channel down the spine. They used to run
+    // -0.145..0.145 with a 0.04 gap, which is narrower than the canopy - so
+    // the one baked highlight on the hull, the thing that makes it read as a
+    // cockpit rather than a blade, was painted over on every striped ship.
+    [-S*0.235, S*0.110].forEach(x => {
       ctx.fillStyle = "#10131c";
       ctx.fillRect(x - S*0.022, -S*0.52, S*0.169, S*1.04);
       ctx.fillStyle = "#ffffff";

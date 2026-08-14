@@ -1937,6 +1937,43 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
     ctx.moveTo(-S*0.40, S*fy); ctx.lineTo(S*0.40, S*fy); ctx.stroke();
   });
 
+  /*
+   * --- armour plates, one under each weak point.
+   *
+   * The targets used to be rings painted on flat hull: nothing to aim AT, on
+   * the boss whose entire fight is aiming at parts. Each plate is a raised
+   * slab with its own lit edge and a dark seam around it, and it is derived
+   * from the boss's OWN weakPoints rather than hand-placed, so a plate can
+   * never drift out of register with the ring that marks it. A destroyed part
+   * leaves a burnt socket, which is the progress a child is looking for.
+   */
+  const wps = (boss && boss.weakPoints) || [];
+  for(let i = 0; i < wps.length; i++){
+    const wp = wps[i];
+    const px = wp.ox*s, py = wp.oy*s, pr = (wp.r || 20)*s*1.34;
+    ctx.save();
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(px - pr, py - pr, pr*2, pr*2, pr*0.42);
+    else ctx.arc(px, py, pr, 0, TAU);
+    if(wp.destroyed){
+      ctx.fillStyle = "rgba(12,4,10,0.92)"; ctx.fill();
+      ctx.strokeStyle = "rgba(120,40,60,0.75)"; ctx.lineWidth = 2.5*s; ctx.stroke();
+    } else {
+      const pg = ctx.createLinearGradient(px - pr, py - pr, px + pr, py + pr);
+      pg.addColorStop(0, "#8e3a63");
+      pg.addColorStop(0.55, "#5c2140");
+      pg.addColorStop(1, "#3a1229");
+      ctx.fillStyle = pg; ctx.fill();
+      ctx.strokeStyle = "rgba(10,4,10,0.7)"; ctx.lineWidth = 3*s; ctx.stroke();
+      // a lit top edge, so it reads as standing off the hull
+      ctx.beginPath();
+      ctx.moveTo(px - pr*0.78, py - pr*0.82);
+      ctx.lineTo(px + pr*0.78, py - pr*0.82);
+      ctx.strokeStyle = "rgba(255,190,220,0.30)"; ctx.lineWidth = 2*s; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // --- the crown: a ridge of sensor spines along the leading edge
   ctx.fillStyle = "#7d3a5c";
   for(let i = -3; i <= 3; i++){
