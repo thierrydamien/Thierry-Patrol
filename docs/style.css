@@ -45,6 +45,10 @@
   --accent: #f5a623;
   --gold: #ffd23f;
   --hud: #6ec8ff;                      /* the HUD's cyan hairline, everywhere */
+  /* One lift and one bevel, shared. Exactly one card in the whole app sat
+     on a shadow plane before this; everything else was flat on flat. */
+  --lift: 0 8px 20px -10px rgba(0,0,0,0.85);
+  --bevel: inset 0 1px 0 rgba(255,255,255,0.07);
   --panel: rgba(255,255,255,0.055);
   --panel-border: rgba(255,255,255,0.12);
   --line: rgba(110,200,255,0.28);      /* accent hairlines */
@@ -452,6 +456,7 @@ html, body {
 .brief-block {
   flex:1 1 190px; background: var(--panel); border:1px solid var(--panel-border);
   border-radius:16px; padding:12px;
+  box-shadow: var(--lift), var(--bevel);
 }
 .brief-objectives { display:flex; flex-direction:column; gap:7px; }
 .bo-row { font-size:12px; color: rgba(255,255,255,0.82); display:flex; gap:8px; align-items:center; }
@@ -476,10 +481,13 @@ html, body {
   flex:1 1 0; min-width:0; font-family:inherit; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; gap:3px;
   padding:10px 4px; border-radius:12px;
-  background: rgba(0,0,0,0.30); border:2px solid rgba(255,255,255,0.08);
+  background: color-mix(in srgb, var(--tier) 8%, rgba(0,0,0,0.30));
+  border:1px solid color-mix(in srgb, var(--tier) 45%, transparent);
   color: rgba(255,255,255,0.55);
+  box-shadow: var(--lift), var(--bevel);
 }
-.diff-card .diff-name { font-weight:700; font-size:11px; letter-spacing:0.5px; }
+.diff-card .diff-name { font-weight:700; font-size:11px; letter-spacing:0.5px;
+  color: color-mix(in srgb, var(--tier) 70%, white); }
 .diff-card .diff-tag { font-size:9px; opacity:0.75; }
 .diff-card .diff-stars { font-size:10px; letter-spacing:1px; }
 .diff-card .diff-stars i { font-style:normal; color: rgba(255,255,255,0.2); }
@@ -496,7 +504,10 @@ html, body {
   display:flex; flex-direction:column; gap:2px; text-align:center;
   font-size:12px; color: rgba(255,255,255,0.75); margin:10px 0 4px; max-width:440px;
 }
-.diff-detail span { font-size:11px; color: rgba(255,255,255,0.45); }
+.diff-detail span { font-size:11px; color: rgba(255,255,255,0.62); }
+/* The blurb is its own element now, so it stops rendering as a centred line
+   that begins with an orphaned em dash. */
+.diff-detail em { font-style:normal; }
 .launch-btn { color:#0d0a02; font-size:17px; letter-spacing:2px; margin:0; }
 /*
  * The launch bar sticks to the bottom of the briefing's scroll box, so the
@@ -585,6 +596,7 @@ html, body {
 .shop-group {
   background: rgba(0,0,0,0.22); border:1px solid var(--panel-border);
   border-radius:16px; padding:12px;
+  box-shadow: var(--lift), var(--bevel);
 }
 .group-head {
   display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; letter-spacing:2px;
@@ -657,6 +669,7 @@ html, body {
   display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px;
   padding:11px 7px; border-radius:16px;
   background: rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.12);
+  box-shadow: var(--lift), var(--bevel);
 }
 /* Locked medals are silhouettes, not absences: you can see the shape of the
    thing you have not won yet. */
@@ -1765,6 +1778,9 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 }
 .rail-stop.locked { color: rgba(255,255,255,0.25); }
 .rail-stop.locked span b, .rail-stop.locked em { color: rgba(255,255,255,0.22); }
+/* You are here. The rail computed this already and never showed it. */
+.rail-stop.here { background: color-mix(in srgb, var(--sec) 20%, transparent);
+  box-shadow: inset 3px 0 0 var(--sec); color:#fff; }
 .rail-stop:active { background: rgba(255,255,255,0.08); }
 /* A phone has no room for a rail beside a map: it becomes a scrolling strip
    of chips above it, which is the same control in the shape that fits. */

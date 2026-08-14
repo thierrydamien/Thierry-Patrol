@@ -1298,8 +1298,24 @@ const DEVOURER_END = MISSIONS.findIndex(m => m.boss === "devourer");
 const MAP_W = 640;
 const ROUTE_GAP = 108;          // vertical pixels between stops, canvas-space
 const ROUTE_SPAN = 0.80;        // fraction of the height the route occupies
+/*
+ * THE MAP CANVAS HAS A CEILING, AND THE CAMPAIGN JUST GREW PAST IT.
+ *
+ * This is ROUTE_GAP*(n-1)/ROUTE_SPAN, which at 29 stops was 3,780 and at 35
+ * stops is 4,590 - over the 4,096 max canvas dimension older iOS Safari
+ * enforces, where an oversized canvas does not clip, it renders BLANK.
+ * Adding six levels quietly put the family map one iPad-version away from
+ * being an empty screen, and nothing in the suite would have said so.
+ *
+ * Clamped HERE rather than at the canvas, so the node layout squeezes with
+ * it - clamping only the canvas would leave the last stops positioned below
+ * the artwork. At 35 stops the route tightens from 108px to 96px between
+ * stops, still comfortably clear of the 76px tap targets over it.
+ */
+const MAX_CANVAS_DIM = 4096;
 function mapHeight(){
-  return Math.round(ROUTE_GAP * (MISSIONS.length - 1) / ROUTE_SPAN);
+  return Math.min(MAX_CANVAS_DIM,
+                  Math.round(ROUTE_GAP * (MISSIONS.length - 1) / ROUTE_SPAN));
 }
 
 /**
@@ -1355,7 +1371,7 @@ const SECTORS = [
     sub:"behind their lines, where nobody is friendly" },   // 12-15
   { at:15, name:"WARDEN'S REACH",  hue:"#34d399",
     sub:"his nest, his ring, his money — and what crawled aboard after" }, // 16-19
-  { at:19, name:"THE TRENCHES",    hue:"#94a3b8",
+  { at:19, name:"THE TRENCHES",    hue:"#8ab4f8",
     sub:"straight down the middle of their fortress" },     // 20-22
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
@@ -1483,6 +1499,22 @@ function renderMissions(){
   renderSectorRail();
 
   // Size the map to the campaign, not the other way round.
+  /*
+   * THE MAP CANVAS HAS A CEILING, AND THE CAMPAIGN JUST GREW PAST IT.
+   *
+   * mapHeight() is ROUTE_GAP*(n-1)/ROUTE_SPAN, which at 29 stops was 3,780
+   * and at 35 stops is 4,590 - over the 4,096 max canvas dimension that older
+   * iOS Safari enforces, where an oversized canvas does not clip, it renders
+   * BLANK. Adding six levels quietly put the family's map one iPad-version
+   * away from being an empty screen, and nothing in the suite would have said
+   * so. The route is squeezed to fit rather than allowed to run off the end.
+   *
+   * Note what this deliberately does NOT do: give the canvas a
+   * devicePixelRatio backing store. At 4,590 logical pixels tall there is no
+   * room for one - dpr 2 would need 9,180 - so the honest win here is the
+   * ceiling plus scaling the TYPE to its display size, which is the half a
+   * child actually sees.
+   */
   const cv = $("campaignCanvas");
   const wantH = mapHeight();
   if(cv && (cv.width !== MAP_W || cv.height !== wantH)){
@@ -1578,6 +1610,11 @@ function renderSectorRail(){
   const rail = $("sectorRail");
   if(!rail) return;
   rail.innerHTML = "";
+  // Which stretch are we actually in? This scan already existed further down,
+  // where it was used only to pick a scroll target - so the rail knew the
+  // answer and never said it.
+  let here = null;
+  SECTORS.forEach((sec, si) => { if(isMissionUnlocked(profile, sec.at)) here = si; });
   // Top of the screen is the END of the route, so the rail reads top-down in
   // the same order the map does.
   SECTORS.forEach((sec, si) => {
@@ -1585,7 +1622,8 @@ function renderSectorRail(){
     const st = sectorStats(si);
     const unlocked = isMissionUnlocked(profile, sec.at);
     b.className = "rail-stop" + (unlocked ? "" : " locked") +
-                  (st.perfect ? " perfect" : st.cleared ? " cleared" : "");
+                  (st.perfect ? " perfect" : st.cleared ? " cleared" : "") +
+                  (si === here ? " here" : "");
     // The rail wears the sector's own colour, so the chip and the band on the
     // map are visibly the same place. Without that, the rail is a word list.
     b.style.setProperty("--sec", sec.hue);
@@ -1620,8 +1658,6 @@ function renderSectorRail(){
    * generation counter drops a pending scroll if another render supersedes it,
    * and the try budget stops a screen that is never opened asking forever.
    */
-  let here = null;
-  SECTORS.forEach((sec, si) => { if(isMissionUnlocked(profile, sec.at)) here = si; });
   if(here === null) return;
   const chip = rail.children[SECTORS.length - 1 - here];   // built in reverse
   if(!chip) return;
@@ -1881,7 +1917,7 @@ function drawCampaign(){
                    cleared:"SECTOR CLEARED",
                    perfect:"PERFECT  ★ " + st.stars + "/" + st.starMax }[state];
     ctx.save();
-    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
+    ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
     /*
      * The caption belongs to the whole band, so it hangs at the band's MIDDLE
      * rather than off its first stop - and on whichever side the route is not
@@ -1909,7 +1945,7 @@ function drawCampaign(){
     ctx.beginPath();
     ctx.moveTo(lx, ly + 6); ctx.lineTo(lx + away*190, ly + 6);
     ctx.stroke();
-    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
+    ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
 
     // The number first, small and above: "SECTOR 4 · STOPS 8-10". A name is
     // flavour; a number is the thing a seven-year-old can actually hold on
@@ -1919,7 +1955,7 @@ function drawCampaign(){
     ctx.letterSpacing = "1.5px";
     ctx.globalAlpha *= 0.8;
     ctx.fillText("SECTOR " + (si+1) + " · STOPS " + (st.from+1) + "-" + (st.to+1), lx, ly - 15);
-    ctx.globalAlpha = state === "locked" ? 0.30 : 0.92;
+    ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
 
     if(state === "perfect"){                 // a mastered stretch gets a glow
       ctx.save();
@@ -1936,7 +1972,9 @@ function drawCampaign(){
     ctx.fillText(sec.name, lx, ly);
     ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "1.5px";
-    ctx.globalAlpha *= 0.85;
+    // One step, not two multiplied together: the italic sub used to land at
+    // 0.30 x 0.85 x 0.8 = 0.204, i.e. a fifth of full opacity.
+    ctx.globalAlpha *= 0.9;
     ctx.fillText(note, lx, ly + 17);
     // ...and what the place actually IS, in words a child would use. The name
     // is the only part that was ever there, and on its own it explained
@@ -1996,12 +2034,12 @@ function drawCampaign(){
         ctx.textAlign = "center";
         ctx.fillText(String(SF.missions.GIFT.id), x, y + 8);
         ctx.font = "italic bold 13px Rajdhani, Arial, sans-serif";
-        ctx.fillText(SF.missions.giftName(), x, y + R + 20);
+        ctx.fillText(SF.missions.giftName(), x, y - R - 46);
         // The requirement, in plain kid words, always visible.
         const have = P.totalStars(profile), want = P.maxStars();
         ctx.fillStyle = "rgba(255,210,63,0.85)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
-        ctx.fillText("★ " + have + " / " + want + " — EARN EVERY STAR", x, y + R + 37);
+        ctx.fillText("★ " + have + " / " + want + " — EARN EVERY STAR", x, y - R - 29);
         ctx.restore();
       } else {
         // Painted (or ready to be): the disc wears the dawn itself.
@@ -2025,14 +2063,14 @@ function drawCampaign(){
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.font = "bold 24px Rajdhani, Arial, sans-serif";
-        ctx.fillText("29", x, y + 9);
+        ctx.fillText(String(SF.missions.GIFT.id), x, y + 9);
         ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-        ctx.fillText(SF.missions.giftName(), x, y + R + 20);
+        ctx.fillText(SF.missions.giftName(), x, y - R - 46);
         ctx.restore();
         ctx.fillStyle = painted ? "rgba(150,255,205,0.9)" : "rgba(255,210,63,0.95)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(painted ? "✓ PAINTED" : "READY TO PAINT", x, y + R + 37);
+        ctx.fillText(painted ? "✓ PAINTED" : "READY TO PAINT", x, y - R - 29);
       }
       if(starHunt) ctx.restore();        // the hunt's dimming, balanced
       return;                            // fully bespoke - skip the shared node kit
@@ -3926,7 +3964,7 @@ function renderBriefTiers(index){
                 : d.pay < 1 ? "smaller pay"
                 : `pays ${d.pay}× the money`;
   $("briefDiffDetail").innerHTML =
-    `<b style="color:${d.color}">${d.name}</b> — ${esc(d.blurb)}` +
+    `<b style="color:${d.color}">${d.name}</b><em>${esc(d.blurb)}</em>` +
     `<span>${crowd} · ${armour} · ${payLine}</span>`;
   $("launchBtn").style.background = `linear-gradient(135deg, ${d.color}, ${d.color}bb)`;
 }
