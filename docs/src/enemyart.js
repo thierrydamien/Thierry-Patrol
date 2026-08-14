@@ -515,6 +515,70 @@ const SHAPES = {
    RASTER CACHE
    --------------------------------------------------------- */
 const cache = {};
+/*
+ * THE ELITE CARAPACE - an elite you can pick out by SHAPE.
+ *
+ * An elite was the same silhouette 18% larger with a gold glow round it, which
+ * in a wall of twelve ships at arm's length is no difference at all: size reads
+ * as distance, and the glow is one more bright thing in a sky full of them. A
+ * child cannot pick the dangerous one without stopping to look, and stopping to
+ * look is exactly what they cannot afford.
+ *
+ * So it gets a spiked shell, drawn UNDER the hull. Underneath is what makes it
+ * work on all seventeen archetypes without a single bespoke variant: the
+ * outline changes - a ring of blades fanning out past the wings - while the
+ * archetype's own shape stays completely legible on top of it. A Guardian is
+ * still obviously a Guardian; it just has teeth now.
+ *
+ * Nine blades, deliberately odd, so it never reads as a symmetrical flower, and
+ * rotated off-axis so no blade lines up with the nose and gets read as a gun.
+ */
+function eliteCarapace(ctx, S, p){
+  /*
+   * SEPARATE SPINES, not a star polygon.
+   *
+   * The first attempt drew a nine-point star ring under the hull and it was a
+   * lesson: it fringed the outline correctly and ruined everything else. The
+   * blades were so wide they read as a sunburst BADGE rather than armour, and
+   * between the ring's gold rim, the elite palette's gold canopy and the gold
+   * shadow already on the sprite, the archetype's own colour disappeared - a
+   * red Grunt and a purple Striker both came out gold. That is the wrong trade:
+   * you learn "elite" and lose "which enemy is this", when the whole point was
+   * to gain one without spending the other.
+   *
+   * So: six narrow spines, dark metal, tipped rather than rimmed, and no inner
+   * collar (the collar was what muddied the hull interiors). The colour work is
+   * left entirely to the archetype underneath.
+   */
+  /*
+   * BASE sits deliberately deep - well inside even the narrowest hull (the
+   * Marksman's funnel, the Interceptor's dart). At 0.32 the spines started
+   * outside those two and hung in open space like loose darts; from 0.22 every
+   * spine emerges from UNDER the ship, which is what makes it read as something
+   * bolted on rather than something floating nearby.
+   */
+  const N = 6, BASE = S*0.22, TIP = S*0.52, HALF = 0.125, TURN = 0.42;
+  for(let i = 0; i < N; i++){
+    const a = TURN + (i/N)*TAU;
+    const bx0 = Math.cos(a - HALF)*BASE, by0 = Math.sin(a - HALF)*BASE;
+    const bx1 = Math.cos(a + HALF)*BASE, by1 = Math.sin(a + HALF)*BASE;
+    const tx = Math.cos(a)*TIP,          ty = Math.sin(a)*TIP;
+    ctx.beginPath();
+    ctx.moveTo(bx0, by0); ctx.lineTo(tx, ty); ctx.lineTo(bx1, by1);
+    ctx.closePath();
+    ctx.fillStyle = p.metalD; ctx.fill();
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.018; ctx.stroke();
+    // Just the point catches the light - enough to carry at arm's length,
+    // not enough to repaint the ship.
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a - HALF*0.42)*TIP*0.74, Math.sin(a - HALF*0.42)*TIP*0.74);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(Math.cos(a + HALF*0.42)*TIP*0.74, Math.sin(a + HALF*0.42)*TIP*0.74);
+    ctx.closePath();
+    ctx.fillStyle = p.trim; ctx.fill();
+  }
+}
+
 function spriteFor(typeId, tint, elite){
   const key = typeId + "|" + tint + "|" + (elite ? 1 : 0);
   if(cache[key]) return cache[key];
@@ -528,7 +592,12 @@ function spriteFor(typeId, tint, elite){
   ctx.translate(cv.width/2, cv.height/2);
   ctx.lineJoin = "round";
   if(elite){ ctx.shadowColor = "#ffd23f"; ctx.shadowBlur = RES*0.10; }
-  try { shape(ctx, RES, p); } catch(e){ return null; }
+  try {
+    // Shell first, hull on top: the blades fringe the silhouette while the
+    // archetype underneath stays exactly as readable as its ordinary twin.
+    if(elite) eliteCarapace(ctx, RES, p);
+    shape(ctx, RES, p);
+  } catch(e){ return null; }
   cache[key] = cv;
   return cv;
 }

@@ -111,6 +111,7 @@ function create(defId, difficulty, dps){
    --------------------------------------------------------- */
 const ATTACKS = {
   spreadVolley: {
+    label:"THE FAN GUN",
     telegraphKind: "muzzle",
     fire(boss, world){
       const n = boss.phase.enrage ? 9 : 6;
@@ -123,6 +124,7 @@ const ATTACKS = {
     },
   },
   aimedBurst: {
+    label:"THE SNAP GUN",
     telegraphKind: "lock",
     fire(boss, world){
       boss.burst = { attack:"aimedBurst", left: boss.phase.enrage ? 6 : 4, timer: 0, gap: 0.12 };
@@ -135,6 +137,7 @@ const ATTACKS = {
     },
   },
   ringBurst: {
+    label:"THE RING GUN",
     telegraphKind: "charge",
     fire(boss, world){
       const n = boss.phase.enrage ? 24 : 16;
@@ -146,6 +149,7 @@ const ATTACKS = {
     },
   },
   sweepBeam: {
+    label:"THE BIG BEAM",
     telegraphKind: "beam",
     fire(boss, world){
       // A wide column that sweeps across the playfield - the "get out of the
@@ -161,6 +165,7 @@ const ATTACKS = {
    * first genuinely new thing to dodge since the Sentinel.
    */
   spiralArms: {
+    label:"THE SPIRAL",
     telegraphKind: "charge",
     fire(boss, world){
       boss.burst = { attack:"spiralArms", left: boss.phase.enrage ? 22 : 15,
@@ -181,6 +186,7 @@ const ATTACKS = {
    * to touch you to make the fight harder.
    */
   mineField: {
+    label:"THE MINE DROP",
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
       const n = boss.phase.enrage ? 5 : 3;
@@ -199,6 +205,7 @@ const ATTACKS = {
    * a bullet. Escapable by design: the pull is ~a third of player thrust.
    */
   tractorPull: {
+    label:"THE TRACTOR",
     telegraphKind: "beam",
     fire(boss, world){
       boss.pull = { timer: 1.5 };
@@ -212,6 +219,7 @@ const ATTACKS = {
    * sidestep NOW".
    */
   blink: {
+    label:"THE VANISHING",
     telegraphKind: "charge",
     fire(boss, world){
       const p = world.player;
@@ -241,6 +249,7 @@ const ATTACKS = {
   /* Columns of fire. Three of five lanes light up, then burn. The most
      readable attack in the game: stand in an unlit column. */
   laneBeams: {
+    label:"THE LANE BEAMS",
     telegraphKind: "beam",
     fire(boss){
       const LANES = 5, xs = [];
@@ -255,6 +264,7 @@ const ATTACKS = {
   /* A claw arm reaches down out of the hull and sweeps across a band of the
      screen. You can be above it or below it - just not in it. */
   clawSweep: {
+    label:"THE CLAW",
     telegraphKind: "hatch",
     fire(boss, world){
       const p = world.player;
@@ -271,6 +281,7 @@ const ATTACKS = {
   /* Both hangar bays open and pour ships out. Twice what any other boss
      summons, because it is the size of a moon. */
   hangarLaunch: {
+    label:"THE HANGAR",
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
       const n = boss.phase.enrage ? 8 : 6;
@@ -291,6 +302,7 @@ const ATTACKS = {
   /* The signature. The whole sky ignites EXCEPT one circle - fly into the
      ring and nothing can touch you. Kids read this instantly. */
   novaSafeZone: {
+    label:"THE NOVA",
     telegraphKind: "charge",
     fire(boss, world){
       const p = world.player;
@@ -306,6 +318,7 @@ const ATTACKS = {
 
   /* It turns the star's fire on half the sky. Pick a side and commit. */
   starLance: {
+    label:"THE STAR LANCE",
     telegraphKind: "charge",
     fire(boss, world){
       const p = world.player;
@@ -325,6 +338,7 @@ const ATTACKS = {
    * teach "read the wind-up, then move", and a charge teaches it in one go.
    */
   chargeRam: {
+    label:"THE CHARGE",
     telegraphKind: "lock",
     fire(boss, world){
       const p = world.player;
@@ -334,6 +348,7 @@ const ATTACKS = {
     },
   },
   callMinions: {
+    label:"THE CALL FOR HELP",
     telegraphKind: "hatch",
     fire(boss, world, ctxObj){
       const n = boss.phase.enrage ? 4 : 3;
@@ -566,6 +581,24 @@ function damage(boss, amount, x, y){
       fx.shake(12);
       fx.hitStop(70);
       audio.play("enemyExplode", true);
+      /*
+       * SAY WHAT YOU JUST SWITCHED OFF.
+       *
+       * Knocking a part off a boss set `disabled[attack]` and the attack simply
+       * never came again - which is a real, permanent reward the player had no
+       * way of connecting to what they had just done. The explosion looked the
+       * same as every other explosion, and a thing that stops happening is the
+       * hardest kind of feedback to notice: you cannot see an absence.
+       *
+       * So it is named, at the part, in words a seven-year-old can read - and
+       * the HUD's system row (see render.js) strikes the same name out and
+       * leaves it struck out, so the answer is still there ten seconds later.
+       */
+      const att = onWeak.disables && ATTACKS[onWeak.disables];
+      if(att && att.label){
+        fx.text(boss.x + onWeak.ox, boss.y + onWeak.oy - 26,
+                att.label + " IS OFF!", "#4ade80", 18, true);
+      }
     }
   } else if(sealed){
     // Armour eats most of it, and the hull can never drop below a sliver.

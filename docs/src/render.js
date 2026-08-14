@@ -3210,6 +3210,77 @@ function drawHud(ctx, game){
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       ctx.fillRect(bx0 + w*ph.at, barY, 2, bh);
     });
+
+    /*
+     * ITS SYSTEMS, AND WHICH ONES YOU HAVE TURNED OFF.
+     *
+     * Shooting a part off a boss permanently removes one of its attacks. That
+     * is the biggest tactical reward in the game and it was invisible: the
+     * explosion looked like every other explosion, and the payoff was an attack
+     * that never came - an absence, which is the one thing you cannot see
+     * happen. A child had no way to learn that the parts are worth the detour.
+     *
+     * One chip per part that switches something off, named in plain words and
+     * struck through the moment it goes. It persists, so the answer is still on
+     * screen long after the bang, and it doubles as a to-do list: the chips
+     * still lit are the things that can still hurt you.
+     */
+    /*
+     * One chip per SYSTEM, not per part. The Warden carries two hatches that
+     * both switch off the mine drop, so keying off the parts printed "THE MINE
+     * DROP" twice - and struck both out the moment either hatch went, which
+     * reads as a bug even though the attack really is gone.
+     */
+    const seen = {};
+    const systems = boss.def.weakPoints.filter(wp => {
+      if(!wp.disables || seen[wp.disables]) return false;
+      const a = SF.bosses.ATTACKS[wp.disables];
+      if(!a || !a.label) return false;
+      seen[wp.disables] = 1;
+      return true;
+    });
+    if(systems.length){
+      const sy = barY + bh + 7;
+      ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
+      ctx.textAlign = "left";
+      // Measure first so the row can be centred as one block.
+      const gap = 9, dot = 5;
+      let total = 0;
+      const widths = systems.map(wp => {
+        const t = SF.bosses.ATTACKS[wp.disables].label;
+        const wpx = dot + 4 + ctx.measureText(t).width;
+        total += wpx + gap;
+        return wpx;
+      });
+      total -= gap;
+      let sx = VW/2 - total/2;
+      // A soft plate behind it: the boss parks at roughly this height, and small
+      // struck-through type over a lit hull is exactly where legibility goes.
+      roundRect(ctx, sx - 8, sy - 3, total + 16, 15, 7);
+      ctx.fillStyle = "rgba(4,8,18,0.62)";
+      ctx.fill();
+      systems.forEach((wp, i) => {
+        const off = !!boss.disabled[wp.disables];
+        const t = SF.bosses.ATTACKS[wp.disables].label;
+        ctx.globalAlpha = off ? 0.42 : 1;
+        ctx.fillStyle = off ? "#6ee7a8" : "rgba(255,210,63,0.95)";
+        ctx.beginPath(); ctx.arc(sx + dot/2, sy + 4, dot/2, 0, TAU); ctx.fill();
+        ctx.fillStyle = off ? "rgba(160,230,190,0.95)" : "rgba(255,255,255,0.88)";
+        ctx.fillText(t, sx + dot + 4, sy);
+        if(off){
+          // Struck through: the same read as a crossed-off list.
+          ctx.strokeStyle = "rgba(160,230,190,0.9)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx + dot + 3, sy + 5);
+          ctx.lineTo(sx + widths[i] + 1, sy + 5);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        sx += widths[i] + gap;
+      });
+      ctx.textAlign = "center";
+    }
     ctx.textAlign = "center";
     ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
     ctx.lineWidth = 3; ctx.strokeStyle = "rgba(6,8,18,0.8)";

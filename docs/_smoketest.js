@@ -779,6 +779,49 @@ async function run(){
     /SF\.backstage\.progress01\(\)/.test(
       fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
 
+  /* ---------- shooting a part off has to be visibly worth it ---------- */
+  check("every part that switches something off can name it", (() => {
+    // The reward for a weak point is an attack that never comes again - an
+    // absence, which is the hardest thing to notice. Every one of them has to
+    // have a plain-English name for the callout and the HUD row to use.
+    return Object.values(SF.missions.BOSSES).every(b =>
+      b.weakPoints.every(wp => {
+        if(!wp.disables) return true;
+        const a = SF.bosses.ATTACKS[wp.disables];
+        return !!(a && a.label && a.label.length);
+      }));
+  })());
+  check("the boss's system row lists each system once", (() => {
+    // The Warden carries two hatches that both stop the mine drop; the row is
+    // keyed by SYSTEM, so it must not print that twice.
+    return Object.values(SF.missions.BOSSES).every(b => {
+      const seen = {};
+      const rows = b.weakPoints.filter(wp => {
+        if(!wp.disables || seen[wp.disables]) return false;
+        seen[wp.disables] = 1; return true;
+      });
+      return rows.length === Object.keys(seen).length;
+    });
+  })());
+  check("a destroyed part says what it switched off", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/bosses.js"), "utf8");
+    return /att\.label \+ " IS OFF!"/.test(s);
+  })());
+  check("the HUD keeps the answer on screen after the bang", (() => {
+    const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+    return /boss\.disabled\[wp\.disables\]/.test(r) && /SF\.bosses\.ATTACKS\[wp\.disables\]/.test(r);
+  })());
+  check("an elite is a different silhouette, not just a bigger one", (() => {
+    const e = fs.readFileSync(path.join(__dirname, "src/enemyart.js"), "utf8");
+    return /function eliteCarapace/.test(e) && /if\(elite\) eliteCarapace\(ctx, RES, p\)/.test(e);
+  })());
+  check("the elite shell goes UNDER the hull, so the archetype still reads", (() => {
+    const e = fs.readFileSync(path.join(__dirname, "src/enemyart.js"), "utf8");
+    const shell = e.indexOf("if(elite) eliteCarapace(ctx, RES, p)");
+    const hull  = e.indexOf("shape(ctx, RES, p)", shell);
+    return shell > 0 && hull > shell;
+  })());
+
   check("every wave references a real formation",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",
