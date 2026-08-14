@@ -251,13 +251,158 @@ function adoptSquad(mine, theirs){
   return out;
 }
 
+/*
+ * MERGING ONE PILOT WHO WAS PLAYED IN TWO PLACES.
+ *
+ * This used to replace the whole record: newest savedAt wins, take everything.
+ * But savedAt answers "which was saved last", not "which is the real one", and
+ * two devices diverge for perfectly ordinary reasons - the iPad in the car with
+ * no signal, the iPhone at home. Marc three-stars mission 12 on one and clears
+ * mission 5 on the other, and whichever syncs second silently deleted the
+ * other's afternoon. The feature whose whole purpose is "your progress follows
+ * you" was the thing eating it.
+ *
+ * Almost everything in a profile is MONOTONIC - it only ever goes up, or a set
+ * only ever gains members - so it merges without needing to know which device
+ * is "right". Stars take the max. Cleared is an OR. Medals, paints, stories and
+ * saved skies are unions. Only the genuinely conflicting fields - the spendable
+ * wallet, and the cosmetic choices where there IS one right answer and it is
+ * "whatever they picked most recently" - fall back to the timestamp.
+ *
+ * Pure and exported, because this is the part that can lose somebody's
+ * afternoon if it is wrong, and pure things can be pinned in the test suite.
+ */
+const MAX_FIELDS = ["highscore", "totalKills", "bossesDefeated", "maxCombo",
+                    "lifetimeMoney", "rescues", "missionsCompleted",
+                    "flawlessMissions", "powerupsCollected"];
+const OR_FIELDS  = ["vaultDone", "sky29Done"];
+const SET_FIELDS = ["achievements"];
+const COSMETIC_SETS = ["paints", "trails", "decals", "fireworks"];
+
+function unionList(a, b){
+  const out = Array.isArray(a) ? a.slice() : [];
+  (Array.isArray(b) ? b : []).forEach(v => { if(out.indexOf(v) < 0) out.push(v); });
+  out.sort();
+  return out;
+}
+
+/*
+ * Key order is part of the result, not an accident of it.
+ *
+ * The merge is compared with JSON.stringify in two places that matter - "has
+ * this actually changed since the copy on disk?" and "does the squad already
+ * have this?" - and Object.assign preserves insertion order, so merging A into
+ * B and B into A produced byte-different records with identical meaning. That
+ * would have made every sync look like a change, write the store, and push
+ * again: a quiet loop of pointless traffic. Sorting the keys makes the merge
+ * genuinely order-independent, which is also the property worth pinning.
+ */
+function sortedMap(obj){
+  const out = {};
+  Object.keys(obj).sort().forEach(k => { out[k] = obj[k]; });
+  return out;
+}
+
+/** Merges one pilot's two records. `newer`/`older` decided by savedAt. */
+function mergeRecord(a, b){
+  if(!a) return b;
+  if(!b) return a;
+  const newer = (b.savedAt || 0) > (a.savedAt || 0) ? b : a;
+  const older = newer === b ? a : b;
+  // Start from the newer record so any field this function does not know about
+  // - including anything a future version adds - keeps newest-wins behaviour.
+  const out = Object.assign({}, older, newer);
+
+  MAX_FIELDS.forEach(k => { out[k] = Math.max(a[k] || 0, b[k] || 0); });
+  OR_FIELDS.forEach(k => { out[k] = !!(a[k] || b[k]); });
+  SET_FIELDS.forEach(k => { out[k] = unionList(a[k], b[k]); });
+
+  /*
+   * The wallet is the one number that is not monotonic - it goes DOWN when you
+   * buy something - so it cannot take the max, or a purchase made on one device
+   * would be refunded by the other. The newer record's wallet wins, which is
+   * the honest reading of "this is what they have left".
+   */
+  out.money = newer.money || 0;
+
+  // Upgrades only go up, and a level bought on either device is bought.
+  const ups = {};
+  Object.keys(Object.assign({}, a.upgrades, b.upgrades)).forEach(k => {
+    ups[k] = Math.max((a.upgrades && a.upgrades[k]) || 0,
+                      (b.upgrades && b.upgrades[k]) || 0);
+  });
+  out.upgrades = sortedMap(ups);
+
+  // The campaign ledger, mission by mission and tier by tier. This is the part
+  // that actually held the lost afternoons.
+  const missions = {};
+  const ids = Object.assign({}, a.missions, b.missions);
+  Object.keys(ids).forEach(id => {
+    const ra = (a.missions && a.missions[id]) || null;
+    const rb = (b.missions && b.missions[id]) || null;
+    if(!ra || !rb){ missions[id] = ra || rb; return; }
+    const rec = { cleared: !!(ra.cleared || rb.cleared), stars: {}, best: {} };
+    Object.keys(Object.assign({}, ra.stars, rb.stars)).sort().forEach(t => {
+      rec.stars[t] = Math.max((ra.stars && ra.stars[t]) || 0, (rb.stars && rb.stars[t]) || 0);
+    });
+    Object.keys(Object.assign({}, ra.best, rb.best)).sort().forEach(t => {
+      rec.best[t] = Math.max((ra.best && ra.best[t]) || 0, (rb.best && rb.best[t]) || 0);
+    });
+    // `met` names WHICH objectives were ticked, and has to agree with the star
+    // count beside it - so it comes from whichever side actually scored higher.
+    const metA = ra.met || {}, metB = rb.met || {};
+    const met = {};
+    Object.keys(Object.assign({}, metA, metB)).sort().forEach(t => {
+      const sa = (ra.stars && ra.stars[t]) || 0, sbb = (rb.stars && rb.stars[t]) || 0;
+      met[t] = (sa >= sbb ? metA[t] : metB[t]) || metA[t] || metB[t];
+    });
+    if(Object.keys(met).length) rec.met = met;
+    missions[id] = rec;
+  });
+  out.missions = sortedMap(missions);
+
+  // Sets of things owned or seen. A medal claimed anywhere is claimed.
+  out.cosmetics = {};
+  COSMETIC_SETS.forEach(k => {
+    out.cosmetics[k] = unionList((a.cosmetics || {})[k], (b.cosmetics || {})[k]);
+  });
+  out.stories = sortedMap(Object.assign({}, a.stories, b.stories));
+  out.medalsClaimed = sortedMap(Object.assign({}, a.medalsClaimed, b.medalsClaimed));
+
+  // Saved skies: union by id, newest first, capped the same way the board caps.
+  const skies = [];
+  const seenSky = {};
+  [].concat(newer.workshopSkies || [], older.workshopSkies || []).forEach(s => {
+    if(s && s.id && !seenSky[s.id]){ seenSky[s.id] = 1; skies.push(s); }
+  });
+  if(skies.length) out.workshopSkies = skies.slice(0, 8);
+
+  // Best score per custom sky - a record, so it takes the max.
+  const wbA = a.workshopBest || {}, wbB = b.workshopBest || {};
+  const wb = {};
+  Object.keys(Object.assign({}, wbA, wbB)).sort().forEach(id => {
+    const x = wbA[id], y = wbB[id];
+    wb[id] = (!x || (y && y.score > x.score)) ? y : x;
+  });
+  if(Object.keys(wb).length) out.workshopBest = sortedMap(wb);
+
+  // Endless and rush bests are records too.
+  ["endlessBest", "endlessLongest", "bossRushBest"].forEach(k => {
+    const v = Math.max(a[k] || 0, b[k] || 0);
+    if(v) out[k] = v;
+  });
+
+  out.savedAt = Math.max(a.savedAt || 0, b.savedAt || 0);
+  return out;
+}
+
 function mergePilots(mine, theirs){
   const out = {};
   Object.keys(mine || {}).forEach(n => { out[n] = mine[n]; });
   Object.keys(theirs || {}).forEach(n => {
-    const a = out[n], b = theirs[n];
+    const b = theirs[n];
     if(!b) return;
-    if(!a || (b.savedAt || 0) > (a.savedAt || 0)) out[n] = b;
+    out[n] = mergeRecord(out[n], b);
   });
   return out;
 }
@@ -270,21 +415,49 @@ function mergePilots(mine, theirs){
  */
 function applyPilots(map, force){
   const P = SF.profile;
-  const now = Date.now();
+  /*
+   * Read the store ONCE. This used to call P.snapshot() inside the loop, which
+   * re-reads and re-parses every pilot on the device for every pilot in the
+   * map - sixteen full JSON.parses for a family of four where four would do.
+   */
+  const localAll = P.snapshot();
   let changed = 0;
   Object.keys(map).forEach(n => {
     const rec = map[n];
     if(!rec || typeof rec !== "object" || !rec.name) return;
-    const local = P.snapshot()[n];
-    // The stored copy is read raw, so for the comparison its stamp is capped
-    // at *now* - otherwise a poisoned future-stamped local record could not
-    // lose to an honest incoming one until the wall clock caught up. (The
-    // sanitizer's slack is only about when to rewrite a stamp, not about who
-    // wins.)
-    const localStamp = local ? Math.min(local.savedAt || 0, now) : -1;
-    if(!force && local && localStamp >= (rec.savedAt || 0)) return;
-    if(force && local && JSON.stringify(local) === JSON.stringify(rec)) return;
-    P.saveRaw(rec);
+    const local = localAll[n];
+    /*
+     * MERGE against the local copy, then write if anything actually changed.
+     *
+     * Two things had to be true at once here and a timestamp could only ever
+     * deliver one of them. The incoming record is a field-level merge of both
+     * sides (see mergeRecord), so its savedAt is the MAX of the two - which
+     * means a "is it newer than mine?" guard skips it precisely when this
+     * device held the later stamp, throwing away the other device's stars,
+     * which is the bug the merge exists to fix. But writing unconditionally
+     * would let a stale record clobber a newer local save, which is the bug the
+     * guard existed to prevent.
+     *
+     * Merging again here settles both: the result is a superset of the local
+     * record by construction, so nothing local can be lost, and anything the
+     * incoming side knows about is picked up. `force` (adopting a squad) still
+     * overwrites outright - that is the one case where the incoming record is
+     * meant to win even though it is older.
+     */
+    /*
+     * The STORED stamp is capped at now before the merge decides which side is
+     * newer. A record dated into the future beats every honest save until the
+     * wall clock catches up, so one device with a wrong clock could pin the
+     * whole squad to its stale state and quietly revert every fix anyone made.
+     * (sanitizePilots re-stamps future records on both sides of a real sync;
+     * this covers the copy already sitting on disk, which nobody sanitized.)
+     */
+    const localSafe = local
+      ? Object.assign({}, local, { savedAt: Math.min(local.savedAt || 0, Date.now()) })
+      : local;
+    const next = force ? rec : mergeRecord(localSafe, rec);
+    if(local && JSON.stringify(local) === JSON.stringify(next)) return;
+    P.saveRaw(next);
     changed++;
   });
   return changed;
@@ -355,9 +528,14 @@ function sync(opts){
       const adopt = switching && hasRemote;
       const merged = adopt ? adoptSquad(mine, theirs) : mergePilots(mine, theirs);
       const pulled = applyPilots(merged, adopt);
-      // Only write back when we actually hold something they don't.
+      /*
+       * Only write back when the merge actually produced something the squad
+       * does not already hold. Timestamps can no longer answer that - a merged
+       * record carries the max of both stamps, so it can equal theirs while
+       * containing strictly more - so compare the content.
+       */
       const needsPush = Object.keys(merged).some(n =>
-        !theirs[n] || (merged[n].savedAt || 0) > (theirs[n].savedAt || 0));
+        !theirs[n] || JSON.stringify(merged[n]) !== JSON.stringify(theirs[n]));
       return (needsPush ? putRemote(c, merged) : Promise.resolve(true))
         .then(() => {
           rememberSquad(c);
@@ -413,7 +591,7 @@ SF.cloud = {
   configured, code, ensureCode, setCode, clearCode, newCode, formatCode, validCode,
   isDefaultCode, DEFAULT_CODE, adoptFamilySquad,
   sync, touch, join, boot, onStatus,
-  mergePilots, applyPilots, adoptSquad, sanitizePilots,
+  mergePilots, mergeRecord, applyPilots, adoptSquad, sanitizePilots,
   backups, snapshotBackup, restoreBackup,
   get status(){ return status; },
 };

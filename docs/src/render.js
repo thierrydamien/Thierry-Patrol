@@ -2824,6 +2824,55 @@ let hudBannerKey = "", hudBannerT0 = 0;
 let hudBossCard = "", hudBossCardT0 = 0;
 let hudPanelGrad = null;   // identical every frame - built once
 
+/*
+ * GLOWING TEXT, BAKED.
+ *
+ * `shadowBlur` is far and away the most expensive thing you can ask a 2D canvas
+ * to do - on older iOS Safari each enable forces a separate offscreen blur pass
+ * - and the HUD was asking for five of them on every single frame, to glow
+ * strings that change a few times a second at most. Measured on a busy
+ * NIGHTMARE frame: 5.8 shadowBlur enables, sixty times a second, for a score
+ * that ticks maybe twice.
+ *
+ * So bake each string once into a small offscreen canvas keyed by everything
+ * that affects its pixels, and blit it thereafter. The cache is bounded: the
+ * score and the wallet turn over as they count up, so it is swept rather than
+ * left to grow.
+ */
+const glowCache = {};
+let glowCacheN = 0;
+function glowText(ctx, text, x, y, font, fill, glow, blur, align){
+  const key = text + "|" + font + "|" + fill + "|" + glow + "|" + blur;
+  let c = glowCache[key];
+  if(!c){
+    if(glowCacheN > 120){ for(const k in glowCache) delete glowCache[k]; glowCacheN = 0; }
+    ctx.save();
+    ctx.font = font;
+    const w = Math.ceil((ctx.measureText(text).width || 10)) + blur*2 + 8;
+    ctx.restore();
+    const size = parseInt(/(\d+)px/.exec(font) ? /(\d+)px/.exec(font)[1] : 20, 10) || 20;
+    const h = Math.ceil(size * 1.6) + blur*2;
+    const off = document.createElement("canvas");
+    off.width = Math.max(1, w * BAKE); off.height = Math.max(1, h * BAKE);
+    const oc = off.getContext("2d");
+    if(!oc) return null;
+    oc.scale(BAKE, BAKE);
+    oc.textBaseline = "top";
+    oc.textAlign = "left";
+    oc.font = font;
+    oc.fillStyle = fill;
+    oc.shadowColor = glow; oc.shadowBlur = blur;
+    oc.fillText(text, blur + 4, blur);
+    oc.shadowBlur = 0;
+    c = glowCache[key] = { cv: off, w, h, pad: blur + 4, top: blur };
+    glowCacheN++;
+  }
+  const dx = align === "right" ? x - (c.w - c.pad*2) - c.pad
+           : align === "center" ? x - c.w/2 : x - c.pad;
+  ctx.drawImage(c.cv, dx, y - c.top, c.w, c.h);
+  return c;
+}
+
 function drawHud(ctx, game){
   const p = game.world.player;
   const run = game.run;
@@ -2858,13 +2907,10 @@ function drawHud(ctx, game){
   ctx.fillStyle = "rgba(140,200,255,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText("SCORE", PAD + CLEAR, 8);
-  ctx.fillStyle = "white";
-  ctx.shadowColor = "rgba(120,200,255,0.55)"; ctx.shadowBlur = 8;
   // Zero-padded in the identity face - the padding is what keeps the column
   // steady now that the digits aren't typewriter-tabular.
-  ctx.font = "700 22px " + FONT;
-  ctx.fillText(String(run.score).padStart(6, "0"), PAD + CLEAR, 19);
-  ctx.shadowBlur = 0;
+  glowText(ctx, String(run.score).padStart(6, "0"), PAD + CLEAR, 19,
+           "700 22px " + FONT, "white", "rgba(120,200,255,0.55)", 8, "left");
 
   ctx.textAlign = "center";
   ctx.fillStyle = run.difficulty.color;
@@ -2892,11 +2938,8 @@ function drawHud(ctx, game){
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
-  ctx.fillStyle = "#ffd23f";
-  ctx.shadowColor = "rgba(255,180,40,0.5)"; ctx.shadowBlur = 8;
-  ctx.font = "700 20px " + FONT;
-  ctx.fillText("£" + run.money, VW-PAD-CLEAR, 19);
-  ctx.shadowBlur = 0;
+  glowText(ctx, "£" + run.money, VW-PAD-CLEAR, 19,
+           "700 20px " + FONT, "#ffd23f", "rgba(255,180,40,0.5)", 8, "right");
   ctx.textAlign = "left";
 
   // Lives and shields, labelled like every other readout. These were bare

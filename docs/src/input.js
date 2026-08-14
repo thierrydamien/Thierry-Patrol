@@ -176,6 +176,15 @@ function attach(canvasEl, vw, vh){
   window.addEventListener("keyup", keyUp);
   canvas.addEventListener("pointerdown", e => {
     if(locked) return;                       // clientX is meaningless under lock
+    /*
+     * ONE FINGER FLIES. There is one iPad and there are two brothers: a palm
+     * resting on the edge of the screen, a second child reaching in, or a stray
+     * thumb during a boss fight used to take the ship instantly, because this
+     * overwrote dragPointerId whichever pointer arrived. It read as the game
+     * glitching, and mid-fight it was unrecoverable. A mouse may still take
+     * over from anything - there is only ever one of those.
+     */
+    if(dragPointerId !== null && e.pointerType === "touch") return;
     state.dragging = true; dragPointerId = e.pointerId; pointerToVirtual(e.clientX, e.clientY, liftFor(e));
   });
   window.addEventListener("pointermove", e => {

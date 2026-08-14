@@ -13,9 +13,47 @@
  * a deploy MUST be picked up - it is the blunt instrument that guarantees a
  * clean slate.
  */
-const CACHE = "patrol-v30";
+const CACHE = "patrol-v31";
 
-self.addEventListener("install", e => { self.skipWaiting(); });
+/*
+ * The shell, cached at install time.
+ *
+ * The header above promises the game "works in the car, on a plane, anywhere",
+ * and that was only true from the SECOND visit: nothing was cached until it had
+ * been fetched once, so a family that installed the game and then drove out of
+ * signal got a blank page. Precaching the shell makes the promise true on the
+ * first flight. Deliberately shell-only - the 13MB of art and music stay
+ * cache-on-first-use, because forcing that down the wire at install would turn
+ * "add to home screen" into a several-minute download.
+ *
+ * Failures here must never block activation: a single 404 in this list would
+ * reject the whole addAll and leave the worker uninstalled, which is a far
+ * worse outcome than a cold cache.
+ */
+const SHELL = [
+  "./", "./index.html", "./style.css", "./manifest.webmanifest",
+  "./src/core.js", "./src/data/config.js", "./src/data/enemies.js",
+  "./src/data/missions.js", "./src/data/comms.js", "./src/data/story.js",
+  "./src/profile.js", "./src/cloud.js", "./src/audio.js", "./src/haptics.js",
+  "./src/fx.js", "./src/skygen.js", "./src/icons.js", "./src/insignia.js",
+  "./src/pilotart.js", "./src/shipart.js", "./src/paintjob.js",
+  "./src/enemyart.js", "./src/bossart.js", "./src/entities.js",
+  "./src/systems.js", "./src/bosses.js", "./src/bossintro.js",
+  "./src/render.js", "./src/rewind.js", "./src/input.js", "./src/comms.js",
+  "./src/backstage.js", "./src/finale.js", "./src/papadeath.js",
+  "./src/sky29.js", "./src/wacky.js", "./src/workshop.js",
+  "./src/game.js", "./src/ui.js",
+  "./assets/fonts/rajdhani-latin-700-normal.woff2",
+];
+
+self.addEventListener("install", e => {
+  self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {}))))
+      .catch(() => {})
+  );
+});
 
 self.addEventListener("activate", e => {
   e.waitUntil(

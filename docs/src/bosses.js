@@ -42,11 +42,21 @@ const audio = SF.audio;
 const ACCURACY = 0.8;
 function bossHpFor(def, difficulty, dps){
   const target = def.fightSeconds || 30;
-  // The dps floor only guards against a divide-by-nothing loadout; it is
-  // deliberately low, because scaling *down* for a weak ship is the whole
-  // point - a stock ship should get a boss it can actually chew through.
-  const scaled = target * Math.max(5, dps) * ACCURACY;
-  return Math.round(clamp(scaled, def.hp*0.15, def.hp*20) * difficulty.bossHp);
+  /*
+   * The dps floor only guards against a divide-by-nothing loadout; it is
+   * deliberately low, because scaling *down* for a weak ship is the whole
+   * point - a stock ship should get a boss it can actually chew through.
+   *
+   * Both floors were still too high for a genuinely un-upgraded ship, and the
+   * `def.hp*0.15` clamp was the worse of the two. Measured on a stock loadout:
+   * the Leviathan ran 96s against a 50s target, the Forgery 135s against 55s,
+   * and the Devourer 236s against 58s - 354s on NIGHTMARE, which is six minutes
+   * of one fight for a pilot who has bought nothing. From £750 of shopping
+   * upward every boss already lands on its target exactly; this only has to
+   * stop punishing the pilot who has not shopped at all.
+   */
+  const scaled = target * Math.max(3, dps) * ACCURACY;
+  return Math.round(clamp(scaled, def.hp*0.05, def.hp*20) * difficulty.bossHp);
 }
 
 function create(defId, difficulty, dps){

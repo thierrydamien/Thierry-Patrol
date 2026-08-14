@@ -897,6 +897,30 @@ async function run(){
   // No single purchase may dominate the shop. Salvage Rig L5 alone used to be
   // £214,920 against a £944,170 total - 23% of everything, in one item that
   // could never repay itself (it needed £1.43M of earnings to break even).
+  /*
+   * The Style Shop lives UNDER the Armory. When the Armory was mis-priced at
+   * £944,170 the cosmetics were a rounding error beside it; re-pricing the
+   * Armory inverted the hierarchy without anyone touching the cosmetics table,
+   * and a trail ended up dearer than any gun. Pinned as a ratio so the two
+   * tables can never drift apart silently again.
+   */
+  check("looking good costs less than fighting well", (() => {
+    const sum = a => a.reduce((n, x) => n + (x.cost || 0), 0);
+    const cos = sum(SF.config.PAINTS) + sum(SF.config.TRAILS) +
+                sum(SF.config.DECALS) + sum(SF.config.FIREWORKS);
+    return cos > 0 && cos < SF.config.TOTAL_UPGRADE_COST * 0.55;
+  })());
+  check("no hat costs more than the best gun in the game", (() => {
+    const all = [].concat(SF.config.PAINTS, SF.config.TRAILS,
+                          SF.config.DECALS, SF.config.FIREWORKS);
+    const dearestCosmetic = Math.max.apply(null, all.map(x => x.cost || 0));
+    const dearestUpgrade = Math.max.apply(null,
+      SF.config.UPGRADES.map(u => Math.max.apply(null, u.costs)));
+    return dearestCosmetic < dearestUpgrade;
+  })());
+  check("a first paint job is inside a child's first few missions",
+    SF.config.PAINTS.filter(p => !p.secret).every(p => p.cost <= 1200));
+
   check("no single upgrade level costs more than an eighth of the shop",
     SF.config.UPGRADES.every(u => u.costs.every(c => c < SF.config.TOTAL_UPGRADE_COST/8)));
   check("passing 20 gear levels plays the ace story",
@@ -4228,6 +4252,51 @@ async function run(){
     C.mergePilots({ X: { name:"X", money: 3, savedAt: 1 } }, { X: { name:"X", money: 9 } }).X.money === 3);
   check("merging nothing in changes nothing",
     JSON.stringify(C.mergePilots(mineSide, {})) === JSON.stringify(mineSide));
+
+  /* ---------- two devices, one pilot, nothing lost ----------
+   * The scenario that used to delete an afternoon: Marc plays the iPad in the
+   * car with no signal and three-stars mission 12, then plays the iPhone at
+   * home and clears mission 5. Whichever synced second replaced the WHOLE
+   * record, so the other device's work was gone, silently. Everything in a
+   * profile that matters is monotonic, so it merges without needing to know
+   * which device was "right".
+   */
+  {
+    const iPad = { name:"Marc", callsign:"MARC", savedAt: 5000, money: 900,
+      upgrades: { spread: 3, rapid: 1 },
+      missions: { m12: { cleared:true, stars:{ pilot:3 }, best:{ pilot: 8000 } },
+                  m1:  { cleared:true, stars:{ pilot:2 }, best:{ pilot: 1200 } } },
+      totalKills: 900, highscore: 8000, cosmetics:{ paints:["solar"], trails:[], decals:[], fireworks:[] },
+      achievements:["firstBlood"], stories:{ ace:true } };
+    const iPhone = { name:"Marc", callsign:"MARC", savedAt: 9000, money: 40,
+      upgrades: { spread: 1, damage: 2 },
+      missions: { m5:  { cleared:true, stars:{ pilot:3 }, best:{ pilot: 5000 } },
+                  m1:  { cleared:true, stars:{ pilot:1 }, best:{ pilot: 300 } } },
+      totalKills: 400, highscore: 5000, cosmetics:{ paints:[], trails:["rainbow"], decals:[], fireworks:[] },
+      achievements:["sharpshooter"], stories:{ silent:true } };
+    const m = C.mergeRecord(iPad, iPhone);
+    check("a merge keeps the stars won on BOTH devices",
+      m.missions.m12.stars.pilot === 3 && m.missions.m5.stars.pilot === 3);
+    check("a mission played on both keeps the better result",
+      m.missions.m1.stars.pilot === 2 && m.missions.m1.best.pilot === 1200);
+    check("upgrades bought on either device are owned",
+      m.upgrades.spread === 3 && m.upgrades.rapid === 1 && m.upgrades.damage === 2);
+    check("lifetime counters take the higher of the two",
+      m.totalKills === 900 && m.highscore === 8000);
+    check("cosmetics, medals and story cards are unions",
+      m.cosmetics.paints.includes("solar") && m.cosmetics.trails.includes("rainbow") &&
+      m.achievements.length === 2 && m.stories.ace && m.stories.silent);
+    check("the wallet is the one field that follows the newer save",
+      m.money === 40);
+    check("the merge is symmetric",
+      JSON.stringify(C.mergeRecord(iPhone, iPad)) === JSON.stringify(m));
+    // And through the real door, not just the pure function.
+    SF.profile.saveRaw(iPad);
+    C.applyPilots({ Marc: iPhone });
+    const disk = SF.profile.load("Marc");
+    check("syncing a diverged pilot loses nothing on disk",
+      (disk.missions.m12.stars.pilot === 3) && (disk.missions.m5.stars.pilot === 3));
+  }
 
   // Applying a merge must not resurrect an older record over a newer local one.
   SF.profile.saveRaw({ name:"SyncTest", callsign:"SyncTest", money: 500, savedAt: 9000 });

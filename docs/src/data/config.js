@@ -31,12 +31,33 @@ const SHIP_COLORS = ["#3399ff", "#e74c3c", "#2ecc71", "#9b59b6", "#f39c12", "#ff
    The `secret` paint is never sold: it is the Star Vault's
    prize, and the shop doesn't admit it exists.
    --------------------------------------------------------- */
+/*
+ * THE STYLE SHOP'S PRICES SIT UNDER THE ARMORY'S, DELIBERATELY.
+ *
+ * When the upgrade shop was mis-priced at £944,170 these numbers were a
+ * rounding error beside it. Re-pricing the Armory to ~£71k inverted the
+ * hierarchy without anyone touching this table: the cosmetics came to £65,600,
+ * ninety-two per cent of the entire combat shop, and RAINBOW BURN at £9,800 was
+ * dearer than the most expensive upgrade in the game. A hat should not cost
+ * more than a gun.
+ *
+ * They now total about £23k - roughly a third of the Armory - which puts the
+ * first paint job inside a child's first few missions (a reward you can
+ * actually reach is the whole point of a reward) and keeps the rainbow trail as
+ * a genuine trophy without it out-pricing Plasma Rounds. Pinned in the suite
+ * against the Armory total so the ratio cannot drift again.
+ */
 const PAINTS = [
-  { id:"hotpink",  name:"HOT PINK",   hex:"#ff4fd8", cost:2400 },
-  { id:"icewhite", name:"ICE WHITE",  hex:"#e8f4ff", cost:2400 },
-  { id:"lime",     name:"LASER LIME", hex:"#a3e635", cost:2400 },
-  { id:"aqua",     name:"DEEP AQUA",  hex:"#2dd4bf", cost:2400 },
-  { id:"tangerine",name:"TANGERINE",  hex:"#ff7a1a", cost:2400 },
+  { id:"hotpink",  name:"HOT PINK",   hex:"#ff4fd8", cost:700 },
+  { id:"icewhite", name:"ICE WHITE",  hex:"#e8f4ff", cost:700 },
+  { id:"lime",     name:"LASER LIME", hex:"#a3e635", cost:700 },
+  { id:"aqua",     name:"DEEP AQUA",  hex:"#2dd4bf", cost:700 },
+  { id:"tangerine",name:"TANGERINE",  hex:"#ff7a1a", cost:700 },
+  // Three more, because a colour is the first thing a child wants to change
+  // about their ship and five was a thin row on the shelf.
+  { id:"violet",   name:"ULTRAVIOLET",hex:"#a855f7", cost:700 },
+  { id:"midnight", name:"MIDNIGHT",   hex:"#3b5bdb", cost:700 },
+  { id:"mint",     name:"MINT",       hex:"#6ee7b7", cost:700 },
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
   // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
   // painting the sky is the only way to wear it.
@@ -44,13 +65,13 @@ const PAINTS = [
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [
-  { id:"ember",    name:"EMBER TRAIL", color:"#ff8a3d", cost:5200,
+  { id:"ember",    name:"EMBER TRAIL", color:"#ff8a3d", cost:1800,
     desc:"A river of hot sparks behind your engines." },
-  { id:"ion",      name:"ION STREAM",  color:"#3fc9ff", cost:5200,
+  { id:"ion",      name:"ION STREAM",  color:"#3fc9ff", cost:1800,
     desc:"A cool blue ribbon of charged light." },
-  { id:"stardust", name:"STARDUST",    color:"#ffffff", cost:6800,
+  { id:"stardust", name:"STARDUST",    color:"#ffffff", cost:2400,
     desc:"Twinkling star-stuff wherever you fly." },
-  { id:"rainbow",  name:"RAINBOW BURN", color:"rainbow", cost:9800,
+  { id:"rainbow",  name:"RAINBOW BURN", color:"rainbow", cost:3600,
     desc:"Every colour at once. The whole sky watches." },
 ];
 const TRAIL_BY_ID = Object.fromEntries(TRAILS.map(t => [t.id, t]));
@@ -61,13 +82,13 @@ const TRAIL_BY_ID = Object.fromEntries(TRAILS.map(t => [t.id, t]));
  * finale fleet.
  */
 const DECALS = [
-  { id:"stripes",  name:"RACING STRIPES", cost:3200,
+  { id:"stripes",  name:"RACING STRIPES", cost:1100,
     desc:"Two fat white stripes, nose to tail." },
-  { id:"flames",   name:"FLAME JOB",      cost:3600,
+  { id:"flames",   name:"FLAME JOB",      cost:1300,
     desc:"Fire pouring up the hull from the engines." },
-  { id:"bolt",     name:"LIGHTNING",      cost:3600,
+  { id:"bolt",     name:"LIGHTNING",      cost:1300,
     desc:"One giant gold bolt across the whole ship." },
-  { id:"checkers", name:"CHEQUERED",      cost:4200,
+  { id:"checkers", name:"CHEQUERED",      cost:1500,
     desc:"A racing flag painted round the middle." },
 ];
 const DECAL_BY_ID = Object.fromEntries(DECALS.map(d => [d.id, d]));
@@ -78,11 +99,11 @@ const DECAL_BY_ID = Object.fromEntries(DECALS.map(d => [d.id, d]));
 const FIREWORKS = [
   { id:"classic",  name:"CLASSIC",        free:true,
     colors:["#ffd23f","#ff5d73","#4ade80","#3fc9ff","#c084fc"] },
-  { id:"goldrain", name:"GOLD RAIN",      cost:3400,
+  { id:"goldrain", name:"GOLD RAIN",      cost:1200,
     colors:["#ffd23f","#ffe9a8","#f5c518","#ff8a3d"] },
-  { id:"emerald",  name:"EMERALD SKY",    cost:3400,
+  { id:"emerald",  name:"EMERALD SKY",    cost:1200,
     colors:["#4ade80","#a3e635","#2dd4bf","#d1fae5"] },
-  { id:"rainbow",  name:"RAINBOW SALUTE", cost:5200,
+  { id:"rainbow",  name:"RAINBOW SALUTE", cost:1900,
     colors:["#ff4fd8","#ffd23f","#4ade80","#3fc9ff","#c084fc","#ff8a3d"] },
 ];
 const FIREWORK_BY_ID = Object.fromEntries(FIREWORKS.map(f => [f.id, f]));

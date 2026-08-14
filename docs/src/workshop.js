@@ -109,7 +109,26 @@ function toMission(saved){
     skyIndex: d.sky,
     face: d.waves[0] ? d.waves[0].type : "grunt",
     waves,
-    objectives: hasCarrier ? ["complete","kill80","rescueAll"] : ["complete","kill80"],
+    /*
+     * The stars have to be winnable on the sky that was actually drawn.
+     * Every custom sky used to get "Destroy 80%", including one built out of
+     * mines - and a mine is a hazard, so it counts toward neither `spawned` nor
+     * `totalPlanned`. The reading sat at 0% for the whole flight and the star
+     * could never light, with nothing on screen to say why. A seven-year-old
+     * had authored a level whose own objectives were impossible.
+     */
+    objectives: (() => {
+      const counted = d.waves.reduce((n, w) => {
+        const t = SF.enemyData.ENEMY_TYPES[w.type];
+        return n + (t && t.hazard ? 0 : w.n);
+      }, 0);
+      const list = ["complete"];
+      if(counted >= 3) list.push("kill80");
+      if(hasCarrier) list.push("rescueAll");
+      // A sky with nothing to shoot still deserves three stars to chase.
+      while(list.length < 3) list.push(list.indexOf("coinRush") < 0 ? "coinRush" : "noDamage");
+      return list.slice(0, 3);
+    })(),
   };
   if(d.boss) m.boss = d.boss;
   if(d.rule && d.rule !== "none") m[d.rule] = true;

@@ -329,6 +329,7 @@ function startMission(missionIndex, difficultyId){
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.backstage.reset();                   // the workshop sleeps until asked
   if(mission.backstage) SF.backstage.begin();
+  SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
   SF.bossintro.reset();
@@ -449,7 +450,9 @@ function startMission(missionIndex, difficultyId){
     bannerColor: "#ffd23f", bannerUntil: simMs + 6000,
     objectiveDefs: mission.objectives.map(id => OBJECTIVES[id]),
     objectiveIds: mission.objectives.slice(),   // for the map's star hunt
-    objectiveIds: mission.objectives.slice(),
+    // The upgrade bought since the last flight, if there is one - named at
+    // launch and reported on the results card, then cleared. Set below.
+    freshGear: null,
     // The ship LAUNCHES - rockets up from below the screen for the first
     // second, engines wide open, before control is handed over.
     introFly: 1.1,
@@ -500,6 +503,26 @@ function startMission(missionIndex, difficultyId){
     // day - which is every day, for these two - is exactly when they need it.
     // The bonus gets its own popup underneath instead.
     fx.text(VW/2, VH*0.52, "FIRST FLIGHT TODAY — DOUBLE PAY!", "#ffd23f", 20, true);
+  }
+  /*
+   * FIRST FLIGHT WITH THE NEW PART.
+   *
+   * Buying something now genuinely changes how the sky behaves - that was the
+   * point of the whole balance repair - but a change nobody points at is a
+   * change nobody credits. So the flight after a purchase says what is new,
+   * once, under the mission card, and the results screen reports what it did.
+   * Not on the test range, which is where you go to try things out anyway.
+   */
+  if(profile.freshGear && !mission.testFlight){
+    const fg = SF.config.UPGRADE_BY_ID[profile.freshGear.id];
+    if(fg){
+      game.run.freshGear = { id: fg.id, name: fg.name, cat: fg.cat,
+                             level: profile.freshGear.level,
+                             effect: fg.effect(profile.freshGear.level) };
+      fx.text(VW/2, VH*0.60, "NEW: " + fg.name.toUpperCase(), "#4ade80", 19, true);
+    }
+    profile.freshGear = null;
+    P.save(profile);
   }
   // The guns-cold run keeps its blue card; its goal already says "just DODGE".
   if(mission.noGuns) game.run.bannerColor = "#3fc9ff";
@@ -592,6 +615,22 @@ function endMission(completed){
   // The double-pay day is spent only once a flight has actually ENDED, so a
   // quit or a first-wave death leaves tomorrow's bonus still on the table.
   if(run.dailyDouble) profile.lastFlightDay = new Date().toDateString();
+
+  /*
+   * A rolling read on HOW the last few flights went, so the garage can answer
+   * the question fourteen upgrade tracks pose to a seven-year-old: which one?
+   * Decayed rather than summed, so it tracks how they are flying NOW and a bad
+   * afternoon three weeks ago does not still be advising them. Cheap, and it
+   * costs the save nothing worth measuring.
+   */
+  if(!run.mission.testFlight){
+    const co = profile.coach = profile.coach || { runs:0, livesLost:0, escaped:0, hits:0 };
+    const decay = 0.7;
+    co.runs     = co.runs*decay + 1;
+    co.livesLost= co.livesLost*decay + (run.stats.livesLost || 0);
+    co.escaped  = co.escaped*decay + (run.stats.escaped || 0);
+    co.hits     = co.hits*decay + (run.stats.damageTaken || 0);
+  }
 
   profile.money += run.money;
   profile.lifetimeMoney += run.money;

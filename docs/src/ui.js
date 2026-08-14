@@ -2316,12 +2316,72 @@ function renderArmory(){
 
   const panel = $("armoryPanel");
   panel.innerHTML = "";
+  renderCoach(panel);
   if(armoryTab === "parts") renderPartsTab(panel, levels, next);
   else if(armoryTab === "pilot") renderPilotTab(panel);
   else if(armoryTab === "paint") renderPaintTab(panel);
   else renderShelf(panel, armoryTab);
 
   startHangarLoop();
+}
+
+/*
+ * "WHAT SHOULD I BUY?"
+ *
+ * Fourteen upgrade tracks is a wall to a seven-year-old, and the honest answer
+ * to which one is not "the cheapest" - it is "the one that fixes how you keep
+ * dying". profile.coach carries a decayed read of the last few flights, so this
+ * can say something true and specific rather than generic advice: enemies kept
+ * getting past you, or you kept getting hit, or you kept losing lives.
+ *
+ * One line, it names ONE thing, it says why, and tapping it goes there. It only
+ * ever recommends something affordable - advice you cannot act on is just a
+ * reminder that you are poor.
+ */
+function coachPick(){
+  const co = profile.coach;
+  const afford = id => {
+    const u = UPGRADE_BY_ID[id];
+    const c = u ? P.nextCost(profile, u) : null;
+    return c !== null && profile.money >= c ? u : null;
+  };
+  const first = ids => { for(let i=0;i<ids.length;i++){ const u = afford(ids[i]); if(u) return u; } return null; };
+  if(co && co.runs >= 1){
+    const perRun = k => (co[k] || 0) / Math.max(1, co.runs);
+    const lives = perRun("livesLost"), escaped = perRun("escaped"), hits = perRun("hits");
+    // Ranked by how loudly the last few flights complained.
+    if(lives >= 1.2){
+      const u = first(["life", "shield", "armor"]);
+      if(u) return { u, why: "You keep losing lives" };
+    }
+    if(escaped >= 6){
+      const u = first(["spread", "rapid", "damage", "wingman"]);
+      if(u) return { u, why: "Too many are slipping past you" };
+    }
+    if(hits >= 3){
+      const u = first(["shield", "armor", "thrusters"]);
+      if(u) return { u, why: "You're taking a lot of hits" };
+    }
+  }
+  // Nothing to diagnose: point at the cheapest thing they can actually have.
+  const buyable = UPGRADES.map(u => ({ u, cost: P.nextCost(profile, u) }))
+    .filter(x => x.cost !== null && profile.money >= x.cost);
+  if(!buyable.length) return null;
+  const cheap = buyable.reduce((a, b) => b.cost < a.cost ? b : a).u;
+  return { u: cheap, why: "Good next step" };
+}
+
+function renderCoach(panel){
+  const pick = coachPick();
+  if(!pick) return;
+  const row = document.createElement("button");
+  row.className = "coach-tip";
+  row.style.setProperty("--cat", (CATEGORIES.find(c => c.id === pick.u.cat) || {}).color || "#ffd23f");
+  row.innerHTML = `<span class="ct-why">${esc(pick.why)}</span>` +
+                  `<span class="ct-buy">Try <b>${esc(pick.u.name)}</b></span>` +
+                  `<span class="ct-cost">${money(P.nextCost(profile, pick.u))}</span>`;
+  click(row, () => { audio.play("uiClick"); jumpToUpgrade(pick.u.id); });
+  panel.appendChild(row);
 }
 
 /** One shelf of upgrades - only ever the tab you're looking at. */
@@ -4010,6 +4070,17 @@ function buyUpgrade(id){
   P.save(profile);
   const loadAfter = SF.game.buildLoadout(profile, SF.config.DIFFICULTY_BY_ID.pilot);
   const newLevel = P.upgradeLevel(profile, id);
+  /*
+   * Remember what was just bought, so the NEXT flight can point at it.
+   *
+   * The whole repair to this game's economy was making an upgrade change what
+   * happens in the sky - but a change you cannot see is still a change you do
+   * not believe in, and a seven-year-old who saved for three sessions deserves
+   * to be told, in the air, that the thing they bought is the reason it went
+   * better. Cleared at the end of that flight, so it names itself exactly once.
+   */
+  profile.freshGear = { id: id, level: newLevel };
+  P.save(profile);
   const fitted = SF.shipart.PARTS.find(pt => pt.up === id && pt.at === newLevel) || null;
   queuePurchaseShow({
     up: id, kind: REV_KIND[id] || "badge", part: fitted,
@@ -4390,6 +4461,7 @@ function showResults(result){
     <div class="rl"><span>Pilots rescued</span><b>${(endless || rush) ? s.rescues
       : s.rescues + "/" + s.rescuesTotal}</b></div>
     ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
+    ${freshGearLine(run)}
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}" data-prefix="£">£0</b></div>
     ${medalLines(unlocked)}
@@ -4495,6 +4567,37 @@ function renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest){
       levels: SF.shipart.levelsOf(who || profile), t: 0.6, idle: false });
   }
   box.classList.remove("hidden");
+}
+
+/*
+ * THE NEW PART, AND WHAT IT DID.
+ *
+ * One line, only on the first flight after a purchase. It names the upgrade,
+ * repeats its own plain-English effect (the same string the shop shelf shows,
+ * already written for a seven-year-old), and adds the one tally from this run
+ * that the part is actually responsible for - so "3 damage per hit" arrives
+ * attached to "47 enemies destroyed" rather than floating as a number.
+ *
+ * The tally is chosen per shelf, because "enemies destroyed" says nothing about
+ * a Tractor Beam and "coins grabbed" says nothing about Hull Plating.
+ */
+function freshGearLine(run){
+  const fg = run.freshGear;
+  if(!fg) return "";
+  const s = run.stats;
+  let proof = "";
+  if(fg.cat === "guns")
+    proof = s.kills + (s.kills === 1 ? " enemy destroyed" : " enemies destroyed");
+  else if(fg.id === "fortune")  proof = "£" + Math.round(run.money) + " banked";
+  else if(fg.id === "magnet")   proof = (s.coins || 0) + " coins grabbed";
+  else if(fg.id === "thrusters")proof = "a faster ship all flight";
+  else if(fg.id === "wingman")  proof = "your drones flew with you";
+  else if(fg.id === "life" || fg.id === "armor" || fg.id === "shield")
+    proof = s.livesLost === 0 ? "and you never lost a life" : s.livesLost + " lives lost";
+  else if(fg.id === "bomb")     proof = "a bomb in your pocket";
+  else if(fg.id === "overdrive")proof = "overdrive ready when you needed it";
+  return `<div class="rl rl-fresh"><span>NEW — ${esc(fg.name)}</span>` +
+         `<b>${esc(fg.effect)}${proof ? " · " + esc(proof) : ""}</b></div>`;
 }
 
 /** Names the squadmates who flew as your wingmen this run. */
