@@ -609,7 +609,16 @@ html, body {
   border-radius:16px; padding:11px; margin-bottom:9px;
 }
 .shop-item:last-child { margin-bottom:0; }
-.shop-item.affordable { border-color: var(--cat, var(--accent)); box-shadow: 0 0 14px -2px var(--cat, var(--accent)); }
+/* Affordable is a border. The GLOW is reserved for the one card the shop is
+   actually pointing at, or it signals nothing. */
+.shop-item.affordable { border-color: color-mix(in srgb, var(--cat, var(--accent)) 55%, transparent); }
+.shop-item.beacon { border-color: var(--cat, var(--accent));
+  box-shadow: 0 0 18px -2px var(--cat, var(--accent));
+  background: rgba(255,255,255,0.075); }
+/* Owned/equipped is never amber - amber is always the affordable action. */
+.paint-card .small-btn:disabled { background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.72); border:1px solid rgba(255,255,255,0.22);
+  box-shadow:none; transform:none; }
 .shop-item.beacon button:not(:disabled) { animation: buyPulse 1.6s ease-in-out infinite; }
 @keyframes buyPulse {
   0%, 100% { box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
@@ -1210,10 +1219,11 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 .hs-bar i {
   display:block; height:100%; border-radius:4px;
-  background: linear-gradient(90deg, #3fc9ff, #7c9bff);
+  background: linear-gradient(90deg, var(--hue, #3fc9ff),
+              color-mix(in srgb, var(--hue, #3fc9ff) 55%, #fff));
   transition: width .45s var(--ease-pop);
 }
-.hs-value { flex:0 0 58px; font-size:10px; font-weight:700; color: var(--ink-dim); }
+.hs-value { flex:0 0 58px; font-size:11px; font-weight:700; color:#fff; }
 
 /* ===================== MY PILOT EDITOR ===================== */
 .avatar-editor .ae-preview { display:flex; justify-content:center; margin-bottom:10px; }

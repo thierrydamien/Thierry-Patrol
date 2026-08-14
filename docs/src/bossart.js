@@ -277,11 +277,20 @@ function cracks(ctx, boss, S, damage, timeMs){
     const beat = 0.5 + Math.sin(t*6.4)*0.5;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    const eg = ctx.createRadialGradient(0, 0, S*0.05, 0, 0, S*0.62);
-    eg.addColorStop(0, "rgba(255,60,70," + (0.10 + beat*0.16).toFixed(3) + ")");
-    eg.addColorStop(1, "rgba(255,40,60,0)");
+    /*
+     * An ANNULUS, not a disc. This was a radial gradient filled from (0,0),
+     * which is fine on a solid hull and paints into thin air on a ring-shaped
+     * one - the Warden's battle damage glowed in the empty hole in the middle
+     * of it. A band centred on the plating lands on hull for every boss in
+     * the game, ring or not, and reads as the structure heating up rather
+     * than as a lamp behind it.
+     */
+    const eg = ctx.createRadialGradient(0, 0, S*0.20, 0, 0, S*0.66);
+    eg.addColorStop(0,    "rgba(255,40,60,0)");
+    eg.addColorStop(0.45, "rgba(255,60,70," + (0.12 + beat*0.20).toFixed(3) + ")");
+    eg.addColorStop(1,    "rgba(255,40,60,0)");
     ctx.fillStyle = eg;
-    ctx.beginPath(); ctx.arc(0, 0, S*0.62, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, S*0.66, 0, TAU); ctx.fill();
     ctx.restore();
   }
 }

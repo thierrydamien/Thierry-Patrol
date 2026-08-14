@@ -492,10 +492,19 @@ function medal(id, px, locked){
   const tier = medalTier(id);
 
   // Ribbon straps, meeting behind the top of the disc - in the metal's colour.
-  c.fillStyle = locked ? "#2b3044" : tier.ribbon[0];
+  /*
+   * A locked medal keeps its METAL, drained. The wall is 27 rewards and it
+   * used to be one gunmetal disc 27 times until a pilot started winning them
+   * - so the screen whose job is to make a child want things could not say
+   * which ones were worth wanting. Earned still reads instantly: full colour
+   * against a wall of ghosts.
+   */
+  const drain = hex => "rgba(" + [1,3,5].map(i => Math.round(
+    parseInt(hex.slice(i, i+2), 16) * 0.34 + 42)).join(",") + ",1)";
+  c.fillStyle = locked ? drain(tier.ribbon[0]) : tier.ribbon[0];
   c.beginPath(); c.moveTo(11, 2); c.lineTo(19, 2); c.lineTo(17, 15); c.lineTo(9, 12);
   c.closePath(); c.fill();
-  c.fillStyle = locked ? "#232738" : tier.ribbon[1];
+  c.fillStyle = locked ? drain(tier.ribbon[1]) : tier.ribbon[1];
   c.beginPath(); c.moveTo(21, 2); c.lineTo(29, 2); c.lineTo(31, 12); c.lineTo(23, 15);
   c.closePath(); c.fill();
 
@@ -503,7 +512,9 @@ function medal(id, px, locked){
   const cx = 20, cy = 24, r = 13.5;
   const face = c.createRadialGradient(cx - r*0.4, cy - r*0.45, r*0.15, cx, cy, r);
   if(locked){
-    face.addColorStop(0, "#4a5068"); face.addColorStop(0.7, "#31374c"); face.addColorStop(1, "#232838");
+    face.addColorStop(0, drain(tier.face[0]));
+    face.addColorStop(0.7, drain(tier.face[1]));
+    face.addColorStop(1, drain(tier.face[2]));
   } else {
     face.addColorStop(0, tier.face[0]); face.addColorStop(0.55, tier.face[1]); face.addColorStop(1, tier.face[2]);
   }

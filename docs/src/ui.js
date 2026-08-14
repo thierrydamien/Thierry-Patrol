@@ -3693,10 +3693,13 @@ function renderShipSpecs(){
   const top = SF.game.buildLoadout(maxed, diff);
 
   const rows = [
-    { label:"FIREPOWER", value: Math.round(now.dps),        max: Math.round(top.dps),        show: Math.round(now.dps) + "/s" },
-    { label:"FIRE RATE", value: 1/now.fireInterval,         max: 1/top.fireInterval,         show: (1/now.fireInterval).toFixed(1) + "/s" },
-    { label:"SPEED",     value: now.speedMult,              max: top.speedMult,              show: "x" + now.speedMult.toFixed(2) },
-    { label:"TOUGHNESS", value: now.lives + now.shieldMax,  max: top.lives + top.shieldMax,  show: now.lives + "\u2665 " + now.shieldMax + "\u26e8" },
+    // Each bar wears its own shelf's colour. They shared one blue-violet
+    // ramp, so length was the only thing telling FIREPOWER from TOUGHNESS -
+    // and the panel wore the armour shelf's blue whatever it was describing.
+    { label:"FIREPOWER", hue:"#ff8a3d", value: Math.round(now.dps),        max: Math.round(top.dps),        show: Math.round(now.dps) + "/s" },
+    { label:"FIRE RATE", hue:"#ffb066", value: 1/now.fireInterval,         max: 1/top.fireInterval,         show: (1/now.fireInterval).toFixed(1) + "/s" },
+    { label:"SPEED",     hue:"#9b6bff", value: now.speedMult,              max: top.speedMult,              show: "x" + now.speedMult.toFixed(2) },
+    { label:"TOUGHNESS", hue:"#3fc9ff", value: now.lives + now.shieldMax,  max: top.lives + top.shieldMax,  show: now.lives + "\u2665 " + now.shieldMax + "\u26e8" },
   ];
 
   /*
@@ -3706,7 +3709,7 @@ function renderShipSpecs(){
    * changed row gets a bump so the eye lands on exactly what improved.
    */
   if(el.children.length !== rows.length){
-    el.innerHTML = rows.map(r => `<div class="hs-row">
+    el.innerHTML = rows.map(r => `<div class="hs-row" style="--hue:${r.hue}">
         <span class="hs-label">${r.label}</span>
         <div class="hs-bar"><i style="width:0%"></i></div>
         <span class="hs-value"></span>
@@ -3715,6 +3718,10 @@ function renderShipSpecs(){
   const changedRows = [];
   rows.forEach((r, i) => {
     const rowEl = el.children[i];
+    // Set here as well as in the template: the strip is only re-emitted when
+    // the row COUNT changes, and it is always four - so an already-mounted
+    // panel would never pick the colours up.
+    rowEl.style.setProperty("--hue", r.hue);
     const bar = rowEl.querySelector(".hs-bar i");
     const val = rowEl.querySelector(".hs-value");
     const pct = Math.max(3, Math.round(Math.min(1, r.value/r.max) * 100)) + "%";
