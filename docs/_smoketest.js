@@ -986,17 +986,28 @@ async function run(){
   clickEl(id("armoryBtn"));
 
   /* ---------- the garage ----------
-   * The Armory is a ROOM now: pegboard of parts on the wall, painted bay
-   * circle with the pilot's callsign, the squadron's bays either side, and a
-   * purchase that plays out as a show (fitting -> rev -> dial) instead of a
-   * number changing. The room must never make buying harder: the shop below
-   * is untouched, and the only tappable things in the scene jump INTO it.
+   * The Armory is a ROOM: pegboard of parts on the wall, a painted bay circle
+   * with the pilot's callsign, and a purchase that plays out as a show
+   * (fitting -> rev -> dial) instead of a number changing. The room must never
+   * make buying harder: the shop below is untouched, and the only tappable
+   * things in the scene jump INTO it.
+   *
+   * ONE bay, deliberately. It used to park the siblings' ships either side and
+   * a chalk outline where one was missing; on a phone those were 40px wide,
+   * unreadable, and sitting between a child and the thing they came to change.
+   * Same for the tool chest, the mug and the crates. The room shows you YOUR
+   * ship - anything else is competing with the only object that matters.
    */
   check("the armory is a garage: a room with the pilot's own bay",
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /function garageBackdrop/.test(u) &&
-                    /BAY 01/.test(u) &&                       // the stencil on the floor
-                    /OUT FLYING/.test(u); })());              // an empty family bay says why
+                    /BAY 01/.test(u); })());                  // the stencil on the floor
+  check("the room is not cluttered with things nobody can use",
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             const g = u.slice(u.indexOf("function garageBackdrop"),
+                               u.indexOf("function queuePurchaseShow"));
+             return !/OUT FLYING/.test(g) && !/SQD/.test(g) &&
+                    !/the tool chest/.test(g); })());
   await runFrames(3);       // the garage paints on the armory's own rAF loop
   check("the pegboard hangs the real part ladder",
     SF.ui._garageHooks().length >= 6 &&

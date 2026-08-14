@@ -3059,11 +3059,14 @@ function garageBackdrop(W, H, compare){
   const levels = A.levelsOf(profile);
   const parts = A.partList(levels);
   const next = A.nextPart(levels);
-  const mates = P.squadmates(profile.name).slice(0, 2);
+  /*
+   * The squadmates are out of the key because they are out of the room. While
+   * their bays were drawn here, a brother repainting his ship correctly threw
+   * this cache away; now it would be a repaint for nothing.
+   */
   const key = [W, H, compare ? 1 : 0, profile.callsign || profile.name,
                profile.shipColor, parts.map(r => r.owned ? 1 : 0).join(""),
-               next ? next.id : "-",
-               mates.map(m => m.name + (m.shipColor || "")).join(",")].join("|");
+               next ? next.id : "-"].join("|");
   if(garage.key === key) return garage.cv;
   const cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
@@ -3211,96 +3214,26 @@ function garageBackdrop(W, H, compare){
   } else {
     const cx = W/2, cy = H*0.60;
     const r = Math.min(W*0.20, H*0.36);
-    // the neighbours first: the squadron's bays either side of yours.
-    // A mate who exists is parked in theirs; an empty seat is a chalk
-    // outline - out flying.
-    const nbR = r*0.55, nbOff = r + nbR + 30;
-    [[-1, mates[0]], [1, mates[1]]].forEach(([sd, mate]) => {
-      const nx = cx + sd*nbOff, ny = cy + 14;
-      if(nx + nbR < -10 || nx - nbR > W + 10) return;
-      ring2(nx, ny, nbR, 0.35);
-      if(mate){
-        c.save();
-        gEllipse(c, nx, ny + nbR*0.16, nbR*0.5, nbR*0.16);
-        c.fillStyle = "rgba(0,0,0,0.35)"; c.fill();
-        c.restore();
-        A.drawShip(c, nx, ny, nbR*0.9, {
-          color: mate.shipColor || "#f5a623", levels: A.levelsOf(mate), t: 1.7, idle: true });
-        stencil(nx, ny + nbR*0.82, (mate.callsign || mate.name).toUpperCase(), Math.max(8, nbR*0.16), 0.45);
-      } else {
-        c.save();
-        c.strokeStyle = "rgba(214,226,255,0.3)";
-        c.setLineDash([5, 5]); c.lineWidth = 1.6;
-        c.beginPath();
-        c.moveTo(nx, ny - nbR*0.42);
-        c.lineTo(nx + nbR*0.34, ny + nbR*0.3);
-        c.lineTo(nx + nbR*0.12, ny + nbR*0.17);
-        c.lineTo(nx, ny + nbR*0.36);
-        c.lineTo(nx - nbR*0.12, ny + nbR*0.17);
-        c.lineTo(nx - nbR*0.34, ny + nbR*0.3);
-        c.closePath(); c.stroke();
-        c.restore();
-        stencil(nx, ny + nbR*0.82, "OUT FLYING", Math.max(7, nbR*0.13), 0.3);
-      }
-    });
+    /*
+     * ONE BAY. The room used to park a chalk outline or a sibling's ship
+     * either side of yours, and on a phone they were 40px wide, unreadable,
+     * and directly between a child and the thing they came here to change.
+     * The garage exists to show you YOUR ship; anything else in it is
+     * competing with the only object on the screen that matters.
+     */
     ring2(cx, cy, r, 0.75);
     stencil(cx, cy + r*0.8, (profile.callsign || profile.name).toUpperCase(), Math.max(13, r*0.155), 0.6);
     stencil(cx, cy + r*0.94, "BAY 01", Math.max(8, r*0.085), 0.35);
     garage.ship = { x: cx, y: cy, r };
   }
 
-  /* -- props: the tool chest (with the mug), crates, a floor cable -- */
-  c.fillStyle = "rgba(0,0,0,0.3)";
-  gEllipse(c, W*0.062, H*0.86 + 26, 26, 6); c.fill();
-  c.fillStyle = "#8f2f3b"; gRR(c, W*0.062 - 22, H*0.86 - 20, 44, 42, 4); c.fill();
-  c.fillStyle = "#7a2733";
-  for(let i = 0; i < 3; i++) c.fillRect(W*0.062 - 18, H*0.86 - 14 + i*12, 36, 8);
-  c.fillStyle = "#cbd5e1";
-  for(let i = 0; i < 3; i++) c.fillRect(W*0.062 - 5, H*0.86 - 11 + i*12, 10, 2);
-  // the Style Shop, parked on the chest: three little tins, squadron lids
-  [profile.shipColor || "#4cc9f0"].concat(mates.map(m => m.shipColor || "#f5a623"))
-    .slice(0, 3).forEach((col, i) => {
-      const tx = W*0.062 - 20 + i*13;
-      c.fillStyle = "#39415f"; c.fillRect(tx, H*0.86 - 32, 10, 12);
-      c.fillStyle = col;
-      gEllipse(c, tx + 5, H*0.86 - 32, 5, 1.8); c.fill();
-    });
-  c.fillStyle = "#e2e8f0"; gRR(c, W*0.062 + 20, H*0.86 - 30, 9, 9, 1.5); c.fill();
-  c.strokeStyle = "#e2e8f0"; c.lineWidth = 1.8;
-  c.beginPath(); c.arc(W*0.062 + 31, H*0.86 - 25.5, 3, -Math.PI/2, Math.PI/2); c.stroke();
-  c.strokeStyle = "rgba(226,232,240,0.35)"; c.lineWidth = 1.2;
-  c.beginPath();
-  c.moveTo(W*0.062 + 24, H*0.86 - 33);
-  c.quadraticCurveTo(W*0.062 + 22, H*0.86 - 38, W*0.062 + 25, H*0.86 - 42);
-  c.stroke();
-  const crate = (cx2, cy2, s2) => {
-    c.fillStyle = "#3a415f"; gRR(c, cx2, cy2, s2, s2, 2.5); c.fill();
-    c.strokeStyle = "rgba(0,0,0,0.45)"; c.lineWidth = 1.6;
-    gRR(c, cx2, cy2, s2, s2, 2.5); c.stroke();
-    c.fillStyle = "rgba(240,200,90,0.45)";
-    c.font = "700 7px Rajdhani, Arial, sans-serif"; c.textAlign = "left";
-    c.fillText("SQD", cx2 + 3, cy2 + 9);
-  };
-  crate(W - 64, H*0.82, 28); crate(W - 34, H*0.86, 22); crate(W - 56, H*0.82 - 24, 24);
-  // the family photo, leaning against the crates
-  c.save();
-  c.translate(W - 86, H*0.86); c.rotate(-0.08);
-  c.fillStyle = "#d8ceb4"; c.fillRect(-16, -12, 32, 22);
-  c.fillStyle = "#0e1424"; c.fillRect(-13, -9, 26, 16);
-  [profile.shipColor || "#4cc9f0"].concat(mates.map(m => m.shipColor || "#999"))
-    .slice(0, 3).forEach((col, i) => {
-      c.fillStyle = col;
-      const sx2 = -7 + i*7.5;
-      c.beginPath();
-      c.moveTo(sx2, -4); c.lineTo(sx2 + 2.6, 3); c.lineTo(sx2, 1); c.lineTo(sx2 - 2.6, 3);
-      c.closePath(); c.fill();
-    });
-  c.restore();
-  c.strokeStyle = "rgba(12,14,22,0.75)"; c.lineWidth = 3.5; c.lineCap = "round";
-  c.beginPath();
-  c.moveTo(-4, H*0.68);
-  c.quadraticCurveTo(W*0.16, H*0.76, W*0.3, H*0.72);
-  c.stroke();
+  /*
+   * The room is deliberately bare. It carried a tool chest with a mug and
+   * paint tins, a stack of crates and a leaning family photo - nice to draw,
+   * and all of it scenery a player can neither use nor tap. On a phone the
+   * hangar is already the biggest thing between them and the shelf, so every
+   * pixel it spends has to earn its place, and none of that did.
+   */
 
   garage.cv = cv; garage.key = key;
   return cv;
