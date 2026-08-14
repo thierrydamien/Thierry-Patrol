@@ -1037,6 +1037,28 @@ class World {
         it.vx *= Math.pow(0.96, dt*60);
       }
 
+      /*
+       * THE GLASS SEA's twin reaches as well as shoots. It has no collision
+       * of its own - it is a drawn gun, not a ship - so its reach is modelled
+       * here: the same magnet and the same pickup radius, mirrored across the
+       * field. Without this the reflection could kill a hauler on the far
+       * side and then watch the pilot it freed fall past.
+       */
+      if(this.mirror && p && p.alive){
+        const mx = VW - p.x;
+        const dxm = mx - it.x, dym = p.y - it.y;
+        const dm = Math.hypot(dxm, dym);
+        const rangeM = p.magnetRange + (it.kind === "coin" ? 20 : 0);
+        if(dm < rangeM && dm > 0.01){
+          const pull = (1 - dm/rangeM) * 900 * dt;
+          it.vx += dxm/dm * pull; it.vy += dym/dm * pull;
+        }
+        if(dm < p.r + 20){
+          it.alive = false;
+          onCollect(it);
+          continue;
+        }
+      }
       if(p && p.alive){
         const dx = p.x - it.x, dy = p.y - it.y;
         const d = Math.hypot(dx, dy);

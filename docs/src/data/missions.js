@@ -61,9 +61,9 @@ const OBJECTIVES = {
   roundUp:   { label:"Flatten 15 ships with the herd", icon:"🐂",
                test: s => (s.crushed || 0) >= 15,
                progress: s => (s.crushed || 0) + "/15" },
-  twin20:    { label:"Let your reflection get 20 kills", icon:"🪞",
-               test: s => (s.mirrorKills || 0) >= 20,
-               progress: s => (s.mirrorKills || 0) + "/20" },
+  twin20:    { label:"Let your reflection get 100 kills", icon:"🪞",
+               test: s => (s.mirrorKills || 0) >= 100,
+               progress: s => (s.mirrorKills || 0) + "/100" },
   /* --- Act 4 --- */
   denyParts: { label:"Stop 10 parts on the belts", icon:"🛠",
                test: s => (s.partsDenied || 0) >= 10,

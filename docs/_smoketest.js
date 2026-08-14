@@ -670,6 +670,27 @@ async function run(){
              new RegExp("mission\\." + flag + " \\? \"" + key + "\"").test(g);
     });
   })());
+  /*
+   * A MISSION-LEVEL SPAWNER MUST HAVE AN END.
+   *
+   * The Stampede shipped spawning a Sky Ox every few seconds for as long as
+   * the phase was "waves", with no stop condition. A mission ends on
+   * finishedSpawning && countEnemies() === 0, and countEnemies counts EVERY
+   * live enemy including hazards - so the herd held the field open forever.
+   * The bar read 100%, both stars were won, and the level could not be
+   * finished. It was found by a child playing it, not by this suite.
+   *
+   * Any block in game.js that calls spawnEnemy on a timer has to consult the
+   * director before adding to a field the mission is waiting to see empty.
+   */
+  check("a mission's own spawner stops when the wave script does", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    const block = g.slice(g.indexOf("run.stampede && !run.ended"),
+                          g.indexOf("run.storm && !run.ended"));
+    return block.length > 200 &&
+           /run\.director\.finishedSpawning/.test(block) &&
+           /spawnEnemy\("grazer"/.test(block);
+  })());
   check("no mission flag in the data is missing an opener", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
     const TEACHABLE = ["cover","bounty","nearMiss","lentDrones","wells","beat",

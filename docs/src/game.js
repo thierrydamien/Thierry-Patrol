@@ -1988,11 +1988,34 @@ function update(dt, timeMs){
     for(let i = 0; i < items.length; i++)
       if(items[i].alive && items[i].typeId === "grazer") herd++;
 
-    run.stampede.next -= dt;
-    if(herd < 4 && run.stampede.next <= 0){
-      game.world.spawnEnemy("grazer", rand(80, VW - 80), -60,
-                            { difficulty: run.difficulty });
-      run.stampede.next = rand(4, 7);
+    /*
+    * THE HERD HAS TO STOP COMING.
+    *
+    * This spawned an ox every few seconds for as long as the phase was
+    * "waves", with no end condition - and a mission ends on
+    * finishedSpawning && countEnemies() === 0. countEnemies counts EVERY
+    * live enemy including hazards, so the oxen I kept adding held the field
+    * open forever: the bar sat at 100%, both stars were won, and the level
+    * could not be finished. Reported from a real NIGHTMARE run at 50/15
+    * crushed and 8/8 rescued.
+    *
+    * The wave script's own hazards drain because the script runs out. Mine
+    * had to be told to. Once the director is done the herd stops arriving
+    * and the animals already out are sent on their way at a pace that does
+    * not leave a child waiting twenty seconds for an empty sky.
+    */
+    if(run.director.finishedSpawning){
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(e.alive && e.typeId === "grazer") e.vy = Math.max(e.vy, 300);
+      }
+    } else {
+      run.stampede.next -= dt;
+      if(herd < 4 && run.stampede.next <= 0){
+        game.world.spawnEnemy("grazer", rand(80, VW - 80), -60,
+                              { difficulty: run.difficulty });
+        run.stampede.next = rand(4, 7);
+      }
     }
 
     /*
