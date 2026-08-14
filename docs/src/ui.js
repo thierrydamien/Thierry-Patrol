@@ -1582,7 +1582,45 @@ function renderSectorRail(){
     click(b, () => scrollToNextStop(sec.at));
     rail.insertBefore(b, rail.firstChild);   // top of the rail is the END of the route
   });
+  /*
+   * A PHONE OPENS THE STRIP WHERE THE PILOT IS.
+   *
+   * The rail is built end-of-route first, because on a tablet it sits vertically
+   * beside the map and has to read top-down in the same order the map does. On a
+   * phone the same list becomes a horizontal scrolling strip - and "first" there
+   * means LEFTMOST, which is where a scroller starts. So the campaign opened
+   * showing three locked sectors nobody can visit yet, and finding your own
+   * sector meant scrolling a strip you had no reason to think was scrollable.
+   * The map below it already opens on the stop you are going to fly next; the
+   * strip above it should agree.
+   *
+   * Deferred for the same reason scrollToNextStop is: every caller does
+   * `renderMissions(); show(...)` - render, THEN show - so this runs while the
+   * section is still display:none and every measurement comes back 0. The
+   * generation counter drops a pending scroll if another render supersedes it,
+   * and the try budget stops a screen that is never opened asking forever.
+   */
+  let here = null;
+  SECTORS.forEach((sec, si) => { if(isMissionUnlocked(profile, sec.at)) here = si; });
+  if(here === null) return;
+  const chip = rail.children[SECTORS.length - 1 - here];   // built in reverse
+  if(!chip) return;
+  const gen = ++railScrollGen;
+  let tries = 0;
+  const apply = () => {
+    if(gen !== railScrollGen) return;
+    if(!(rail.clientWidth > 0 && chip.offsetWidth > 0)){
+      if(++tries < 40) requestAnimationFrame(apply);
+      return;
+    }
+    // Vertical rail (tablet and up): it already reads top-down with the map.
+    if(rail.scrollWidth <= rail.clientWidth + 4) return;
+    rail.scrollLeft = Math.max(0,
+      chip.offsetLeft - (rail.clientWidth - chip.offsetWidth) / 2);
+  };
+  apply();
 }
+let railScrollGen = 0;
 
 /*
  * A twenty-three stop map is far taller than the screen - about 2200px of it -

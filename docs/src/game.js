@@ -544,6 +544,12 @@ function startMission(missionIndex, difficultyId){
              : mission.serpent ? "serpentStart"
              : mission.backstage ? "backstageStart"
              : mission.sky29 ? "sky29Start"
+             // The early-mission rules sit below the set pieces, so a mission
+             // carrying both announces the bigger thing.
+             : mission.lentDrones ? "dronesStart"
+             : mission.bounty ? "bountyStart"
+             : mission.cover ? "coverStart"
+             : mission.nearMiss ? "nearMissStart"
              : "missionStart");
   SF.input.clearMovement();
   audio.init();
@@ -961,6 +967,7 @@ const callbacks = {
       run.bannerColor = "#ff5d73";
       run.bannerUntil = game.now() + 2400;
       audio.play("alarm");
+      SF.comms.say("oneGotAway");
     }
   },
 
@@ -1547,6 +1554,7 @@ function update(dt, timeMs){
         fx.text(pl.x, pl.y - 46, "SHIELD UP", "#2ecc71", 17, true);
         fx.ring(pl.x, pl.y, pl.r + 26, "#2ecc71", 3, 0.45);
         audio.play("pickup");
+        SF.comms.say("shieldRefill");
       }
     }
   }

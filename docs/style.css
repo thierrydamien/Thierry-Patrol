@@ -1671,10 +1671,15 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 }
 .rail-stop {
   display:flex; align-items:center; gap:5px; width:100%;
-  font-family:inherit; font-weight:700; font-size:9px; letter-spacing:0.2px;
+  font-family:inherit; font-weight:700; font-size:10px; letter-spacing:0.2px;
   text-align:left; color: rgba(255,255,255,0.55);
-  background:transparent; border:none; padding:5px 2px; cursor:pointer;
-  border-radius:7px; min-height:26px;
+  background:transparent; border:none; padding:5px 3px; cursor:pointer;
+  /* 26px of chip carrying 9px type was a hairline. The rail is a SECONDARY
+     control - the map's own nodes are the primary one - but a seven-year-old
+     still has to be able to hit it, and everything else tappable in this game
+     targets 44. Eleven stops at 38 plus their gaps is ~450px against a 900px
+     map, so the sticky rail still fits comfortably beside it. */
+  border-radius:7px; min-height:38px;
 }
 .rail-stop i {
   flex:0 0 auto; width:6px; height:6px; border-radius:50%;
@@ -1712,5 +1717,7 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
     background:#090818;              /* opaque: the map must not ghost through */
   }
 
-  .rail-stop { width:auto; flex:0 0 auto; padding:5px 9px; background: rgba(0,0,0,0.3); }
+  /* Height is free on a horizontal strip, so the chips take a full fingertip. */
+  .rail-stop { width:auto; flex:0 0 auto; padding:6px 11px; min-height:44px;
+               background: rgba(0,0,0,0.3); }
 }

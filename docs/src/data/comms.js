@@ -35,10 +35,12 @@ const COMMS = {
     "Careful - that one had your name on it.",
     "Nice dodge, {you}.",
   ]},
+  // "Life", because that is what the shop, the HUD and the star objectives all
+  // call it. This bucket was the only place in the game that said "ship".
   lowLives: { speaker:"control", cooldown:25, lines:[
-    "Last ship, {you}. Make it count.",
-    "You're down to your last one - fly smart.",
-    "One left. Take your time out there.",
+    "Last life, {you}. Make it count.",
+    "You're down to your last life - fly smart.",
+    "One life left. Take your time out there.",
   ]},
   lifeLost: { speaker:"mate", cooldown:14, lines:[
     "You okay? Keep going, {you}.",
@@ -67,9 +69,11 @@ const COMMS = {
     "Got your money back.",
     "Cash recovered, {you}.",
   ]},
+  // Pounds, like every other number in this game. This bucket said "$120"
+  // while the banner two inches above it said "£120".
   thiefEscaped: { speaker:"mate", cooldown:8, lines:[
-    "It got away with ${n}! Get the next one.",
-    "There goes ${n}. Faster next time, {you}.",
+    "It got away with £{n}! Get the next one.",
+    "There goes £{n}. Faster next time, {you}.",
   ]},
   sniper: { speaker:"control", cooldown:22, lines:[
     "Marksman locking on - get out of that line!",
@@ -94,7 +98,7 @@ const COMMS = {
   boulders: { speaker:"control", cooldown:40, lines:[
     "Those big ones take a beating, {you} - keep on them.",
     "Boulder field. Break them up and collect, or fly around.",
-    "That rock won't budge for a couple of shots, {you}.",
+    "A couple of shots won't dent that one, {you}. Keep firing.",
   ]},
   asteroids: { speaker:"control", cooldown:30, lines:[
     "Rocks ahead - fly around them or break them up.",
@@ -176,10 +180,36 @@ const COMMS = {
     "You got Vesper! Nobody has ever done that, {you}.",
     "She's down! That was proper flying, {you}.",
   ]},
+  /*
+   * THE EARLY MISSIONS TEACH THEIR RULE TOO.
+   *
+   * Eleven mission mechanics have a bespoke opener that says, in one sentence,
+   * what today is about - and the four newest had none, so they fell through to
+   * "You're clear for launch". Those four sit on missions 1, 2, 3, 5 and 12:
+   * the very first flights, where a seven-year-old is least able to work a rule
+   * out from the sky alone and most likely to decide the game is just confusing.
+   */
+  dronesStart: { speaker:"mate", cooldown:999, lines:[
+    "I've lent you two of my drones, {you} - they shoot when you shoot.",
+    "Borrowed drones on your wing, {you}. Free guns. Use them.",
+  ]},
+  bountyStart: { speaker:"control", cooldown:999, lines:[
+    "One ship out there is worth FIVE times the rest, {you}. Look for the gold ring.",
+    "Bounty flight: find the one with the gold ring round it and take it down.",
+  ]},
+  coverStart: { speaker:"control", cooldown:999, lines:[
+    "Those rocks will eat their bullets, {you}. Hide behind them.",
+    "Use the rocks as cover, {you} - nothing gets through them.",
+  ]},
+  nearMissStart: { speaker:"mate", cooldown:999, lines:[
+    "Fly CLOSE to the divers today, {you} - a near miss pays.",
+    "Points for nerve on this one, {you}. Let them get close, then slip past.",
+  ]},
+
   /* --- Act 4 openers and beats --- */
   wellsStart: { speaker:"control", cooldown:999, lines:[
     "Gravity's broken out here, {you}. Your shots will CURVE - swing them.",
-    "See the whirlpools? Everything loose falls in. Don't be everything.",
+    "See the whirlpools? They pull in everything loose - including YOU.",
   ]},
   chorusStart: { speaker:"control", cooldown:999, lines:[
     "Listen, {you} - they fire on the beat. Move BETWEEN the drums.",
@@ -265,6 +295,19 @@ const COMMS = {
   ]},
   flawless: { speaker:"control", cooldown:999, lines:[
     "Not a scratch on you, {you}.",
+  ]},
+  /*
+   * Two moments that had a picture and a sound but no voice. Both are RULES,
+   * so both are said once and then trusted - the long cooldown is what keeps a
+   * rule from becoming nagging.
+   */
+  shieldRefill: { speaker:"control", cooldown:999, lines:[
+    "Sky's clear - and your shield charged back up. It does that every wave, {you}.",
+    "Wave down, shield full again. That's what you paid for, {you}.",
+  ]},
+  oneGotAway: { speaker:"mate", cooldown:999, lines:[
+    "One slipped past us, {you} - no clean sweep this time.",
+    "That one got by. Clean sweep's gone, but finish the job, {you}.",
   ]},
 };
 

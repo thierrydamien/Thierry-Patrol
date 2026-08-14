@@ -645,6 +645,42 @@ async function run(){
     return !/[-+*(]\s*b\.damage/.test(b) && !/b\.damage\s*\|\|/.test(b) &&
            (b.match(/b\.dmg\s*\|\|\s*1/g) || []).length >= 3;
   })());
+  /* ---------- every rule the game plays by, it says out loud ----------
+   * A mission mechanic teaches itself through one radio line at launch. Eleven
+   * of them had one; the four newest did not, and those four sit on missions 1,
+   * 2, 3, 5 and 12 - the first flights a seven-year-old takes, where working a
+   * rule out from the sky alone is least likely to happen.
+   */
+  check("every mission mechanic has a radio line that teaches it", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    const C = SF.commsData.COMMS;
+    const FLAGS = { noGuns:"silentStart", rival:"rivalStart", storm:"stormStart",
+      convoy:"convoyStart", trench:"trenchStart", blackout:"blackoutStart",
+      wells:"wellsStart", beat:"chorusStart", foundry:"foundryStart",
+      serpent:"serpentStart", backstage:"backstageStart", sky29:"sky29Start",
+      lentDrones:"dronesStart", bounty:"bountyStart", cover:"coverStart",
+      nearMiss:"nearMissStart" };
+    return Object.keys(FLAGS).every(flag => {
+      const key = FLAGS[flag];
+      // the bucket exists and is wired into startMission's opener chain
+      return C[key] && C[key].lines.length &&
+             new RegExp("mission\\." + flag + " \\? \"" + key + "\"").test(g);
+    });
+  })());
+  check("no mission flag in the data is missing an opener", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    const TEACHABLE = ["cover","bounty","nearMiss","lentDrones","wells","beat",
+                       "foundry","serpent","storm","blackout","convoy","trench"];
+    return TEACHABLE.every(f =>
+      !SF.missions.MISSIONS.some(m => m[f]) ||
+      new RegExp("mission\\." + f + " \\?").test(g));
+  })());
+  check("the radio talks in pounds, like the rest of the game", (() => {
+    const c = fs.readFileSync(path.join(__dirname, "src/data/comms.js"), "utf8");
+    const lines = c.match(/"[^"]*\{n\}[^"]*"/g) || [];
+    return lines.length > 0 && !lines.some(l => /\$\{n\}/.test(l));
+  })());
+
   check("every wave references a real formation",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",
@@ -1546,9 +1582,19 @@ async function run(){
   // legitimately empty, and asserting on one instant made this flap whenever
   // anything else touched the RNG stream.
   check("mission spawns enemies", SF.game.run.director.spawnedCount > 0);
-  check("comms greeted the pilot by name at launch",
-    !!SF.comms._state.lastAt.missionStart ||
-    SF.comms._state.lastAt.missionStart === 0);
+  /*
+   * SOMETHING greeted the pilot - not necessarily the generic bucket. Mission 1
+   * lends the squadron, so it now opens with `dronesStart`, and this used to
+   * name `missionStart` specifically. The contract that matters is that the
+   * radio speaks at launch and that what it says is the mission's own rule.
+   */
+  check("comms greeted the pilot by name at launch", (() => {
+    const said = SF.comms._state.lastAt;
+    const openers = Object.keys(said).filter(k => /Start$/.test(k) || k === "missionStart");
+    return openers.length > 0;
+  })());
+  check("the mission that lends you drones says so on the radio",
+    SF.comms._state.lastAt.dronesStart !== undefined);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
   // Mission 1 lends the squadron: nobody's first ninety seconds are flown
   // alone, whatever the pilot has or hasn't bought.
