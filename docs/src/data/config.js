@@ -359,12 +359,29 @@ ACHIEVEMENTS.forEach(a => { a.pay = MEDAL_PAY[a.id] || MEDAL_PAY_DEFAULT; });
    from the entries marked `calm`, because a bomb you cannot
    fire is a prize that insults the winner.
    --------------------------------------------------------- */
+/*
+ * The same four crates that drop mid-flight can also be BOUGHT before one,
+ * two at a time, on the briefing screen. That is the game's only bottomless
+ * money sink: the catalogue of upgrades is finite (53 levels, about £71,000)
+ * and a late mission pays five figures, so within a few flights of finishing
+ * it money stopped meaning anything at all.
+ *
+ * The cost field is the PILOT price; the kit scales with the tier, because a life is
+ * worth more on NIGHTMARE and NIGHTMARE pays more for it. Priced so a full
+ * two-slot loadout is a real decision rather than a default purchase.
+ */
 const SUPPLIES = [
-  { id:"bomb",       label:"SMART BOMB +1",  color:"#ff8a3d", weight:30 },
-  { id:"overdrive",  label:"OVERDRIVE +1",   color:"#ffd23f", weight:30 },
-  { id:"shieldFull", label:"SHIELDS FULL",   color:"#7cc4ff", weight:25, calm:true },
-  { id:"life",       label:"EXTRA LIFE",     color:"#ff5d73", weight:15, calm:true },
+  { id:"bomb",       label:"SMART BOMB +1",  color:"#ff8a3d", weight:30, cost: 700 },
+  { id:"overdrive",  label:"OVERDRIVE +1",   color:"#ffd23f", weight:30, cost: 800 },
+  { id:"shieldFull", label:"SHIELDS FULL",   color:"#7cc4ff", weight:25, calm:true, cost: 600 },
+  { id:"life",       label:"EXTRA LIFE",     color:"#ff5d73", weight:15, calm:true, cost:1600 },
 ];
+const KIT_SLOTS = 2;
+/** What this crate costs on this tier. */
+function kitCost(def, difficulty){
+  const mult = difficulty ? (difficulty.pay || 1) : 1;
+  return Math.round((def.cost || 500) * mult / 50) * 50;
+}
 
 /* ---------------------------------------------------------
    FLIGHT TUNING
@@ -425,6 +442,7 @@ SF.config = {
   DECALS, DECAL_BY_ID, FIREWORKS, FIREWORK_BY_ID,
   BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
   RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
+  KIT_SLOTS, kitCost,
   spreadPattern, fireRateMult,
 };
 })();

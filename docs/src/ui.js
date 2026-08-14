@@ -3974,6 +3974,61 @@ function renderBriefTiers(index){
     `<b style="color:${d.color}">${d.name}</b><em>${esc(d.blurb)}</em>` +
     `<span>${crowd} · ${armour} · ${payLine}</span>`;
   $("launchBtn").style.background = `linear-gradient(135deg, ${d.color}, ${d.color}bb)`;
+  renderKit();
+}
+
+/*
+ * THE PRE-FLIGHT KIT.
+ *
+ * The upgrade catalogue is finite - 53 levels, about £71,000 - and a late
+ * mission pays five figures, so a few flights after finishing it money stops
+ * meaning anything. This is the sink that never runs out: two crates, bought
+ * before a flight and spent on it, priced by the tier you picked.
+ *
+ * Bought stock rides on the profile rather than on the launch, so backing out
+ * of the briefing never costs a child their money.
+ */
+function renderKit(){
+  const host = $("briefKit");
+  if(!host) return;
+  const d = SF.config.DIFFICULTY_BY_ID[briefTier] || SF.config.DIFFICULTIES[1];
+  const kit = profile.kit || (profile.kit = []);
+  const slots = SF.config.KIT_SLOTS;
+  $("kitSlots").textContent = kit.length + "/" + slots;
+  host.innerHTML = "";
+  SF.config.SUPPLIES.forEach(def => {
+    const cost = SF.config.kitCost(def, d);
+    const held = kit.filter(x => x === def.id).length;
+    const full = kit.length >= slots;
+    const canBuy = !full && profile.money >= cost;
+    const b = document.createElement("button");
+    b.className = "kit-item" + (held ? " held" : "") + (!held && !canBuy ? " cant" : "");
+    b.style.setProperty("--kit", def.color);
+    b.innerHTML = `<span class="kit-name">${esc(def.label)}</span>` +
+                  `<span class="kit-cost">${held ? "\u00d7" + held + " ABOARD" : "\u00a3" + cost.toLocaleString("en-GB")}</span>`;
+    click(b, () => {
+      const k = profile.kit;
+      // Tapping something you already bought puts it back and refunds it -
+      // a shop a seven-year-old cannot undo is a shop that eats pocket money.
+      const at = k.indexOf(def.id);
+      if(at >= 0){
+        k.splice(at, 1);
+        profile.money += cost;
+        audio.play("pickup");
+      } else if(k.length < slots && profile.money >= cost){
+        k.push(def.id);
+        profile.money -= cost;
+        audio.play("buy");
+      } else {
+        audio.play("error");
+        return;
+      }
+      P.save(profile);
+      renderKit();
+      renderMenu();
+    });
+    host.appendChild(b);
+  });
 }
 
 /** The mission's own sky behind its own ship - the level, before you fly it. */

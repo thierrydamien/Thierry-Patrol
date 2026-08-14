@@ -133,6 +133,8 @@ function blank(name){
     medalsClaimed: {},
     // Story beats already seen, so a chapter close only lands once.
     stories: {},
+    // Pre-flight kit: supply ids bought on the briefing, consumed at launch.
+    kit: [],
   };
 }
 

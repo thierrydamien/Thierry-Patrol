@@ -562,6 +562,29 @@ function startMission(missionIndex, difficultyId){
     game.run.limpets.baseAccel = game.world.player.accel;
   }
   if(game.run.ferry) game.run.ferry.baseSpeed = game.world.player.maxSpeed;
+  /*
+   * THE PRE-FLIGHT KIT is spent here, once, and cleared - it is a consumable,
+   * not an upgrade. It routes through applySupply, the same function a crate
+   * uses mid-flight, so a bought bomb and a found bomb can never drift apart.
+   *
+   * Skipped on the test range and the guns-cold run: a bomb you cannot fire
+   * is not a prize, which is the rule the crate table already follows.
+   */
+  if(profile.kit && profile.kit.length && !mission.testFlight){
+    const taken = [];
+    profile.kit.forEach(id => {
+      const def = SF.config.SUPPLIES.find(sp => sp.id === id);
+      if(!def) return;
+      if(mission.noGuns && !def.calm) return;      // it would be wasted
+      applySupply(def, false);
+      taken.push(def.label);
+    });
+    profile.kit = [];
+    P.save(profile);
+    if(taken.length){
+      fx.text(VW/2, VH*0.66, "KIT ABOARD — " + taken.join(" · "), "#7cc4ff", 17, true);
+    }
+  }
   // The guns-cold run keeps its blue card; its goal already says "just DODGE".
   if(mission.noGuns) game.run.bannerColor = "#3fc9ff";
 
@@ -1195,6 +1218,30 @@ function pickSupply(){
     if(roll <= 0) return pool[i];
   }
   return pool[pool.length - 1];
+}
+
+/*
+ * What a supply crate actually gives you. Shared by the crate you fly into
+ * and the kit you bought on the briefing, so the two can never disagree
+ * about what "SHIELDS FULL" means.
+ */
+function applySupply(def, loud){
+  const p = game.world.player;
+  if(!p) return;
+  if(def.id === "bomb"){
+    p.bombsMax = Math.max(p.bombsMax, 1);        // the button must exist to shine
+    p.bombs = Math.min(p.bombs + 1, 9);
+  } else if(def.id === "overdrive"){
+    p.overdrivesMax = Math.max(p.overdrivesMax, 1);
+    p.overdrives = Math.min(p.overdrives + 1, 9);
+  } else if(def.id === "life"){
+    p.lives = Math.min(p.lives + 1, 8);
+    p.maxLives = Math.max(p.maxLives || 0, p.lives);
+  } else if(def.id === "shieldFull"){
+    p.shield = Math.max(p.shield, Math.max(1, p.shieldMax));
+  }
+  if(SF.ui && SF.ui.syncAbilityButtons) SF.ui.syncAbilityButtons(true);
+  return loud;
 }
 
 function spawnSupply(x, y){
@@ -2737,18 +2784,7 @@ function onPickupCollected(item, lost){
     fx.sparks(item.x, item.y, 3, "#ffd23f", 90);
   } else if(item.kind === "supply"){
     const def = item.data.supply;
-    if(def.id === "bomb"){
-      p.bombsMax = Math.max(p.bombsMax, 1);      // the button must exist to shine
-      p.bombs = Math.min(p.bombs + 1, 9);
-    } else if(def.id === "overdrive"){
-      p.overdrivesMax = Math.max(p.overdrivesMax, 1);
-      p.overdrives = Math.min(p.overdrives + 1, 9);
-    } else if(def.id === "life"){
-      p.lives = Math.min(p.lives + 1, 8);
-    } else if(def.id === "shieldFull"){
-      p.shield = Math.max(p.shield, Math.max(1, p.shieldMax));
-    }
-    if(SF.ui && SF.ui.syncAbilityButtons) SF.ui.syncAbilityButtons(true);
+    applySupply(def, true);
     audio.play("supplyGet");
     fx.ring(item.x, item.y, 70, def.color, 4, 0.5);
     fx.sparks(item.x, item.y, 20, def.color, 240);

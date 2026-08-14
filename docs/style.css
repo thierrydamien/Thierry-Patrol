@@ -1225,6 +1225,25 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 }
 .hs-value { flex:0 0 58px; font-size:11px; font-weight:700; color:#fff; }
 
+/* ---- pre-flight kit ---- */
+.kit-slots { color: var(--accent); font-weight:700; margin-left:6px; }
+.kit-list { display:grid; gap:8px; margin-bottom:10px;
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); }
+.kit-item {
+  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  font-family:inherit; cursor:pointer; text-align:left;
+  padding:9px 11px; border-radius:12px;
+  background: color-mix(in srgb, var(--kit) 10%, rgba(0,0,0,0.30));
+  border:1px solid color-mix(in srgb, var(--kit) 40%, transparent);
+  box-shadow: var(--lift), var(--bevel);
+}
+.kit-item .kit-name { font-weight:700; font-size:11px; letter-spacing:0.6px; color:#fff; }
+.kit-item .kit-cost { font-size:11px; font-weight:700; color: var(--kit); }
+.kit-item.held { background: color-mix(in srgb, var(--kit) 26%, rgba(0,0,0,0.30));
+  border-color: var(--kit); }
+.kit-item.cant { opacity:0.42; }
+.kit-item:active { transform: scale(0.97); }
+
 /* ===================== MY PILOT EDITOR ===================== */
 .avatar-editor .ae-preview { display:flex; justify-content:center; margin-bottom:10px; }
 .ae-face { display:block; }
