@@ -1182,6 +1182,57 @@ function drawAct4(ctx, run, world, timeMs){
     });
   }
 
+  /* --- THE BRIGHT SIDE: the flare ----------------------------------------
+     A warning line first, then a sheet of fire with tongues licking off its
+     top edge. No new entity and no new collision shape - the lethal thing is
+     one y coordinate, and all of this is the picture of it. */
+  if(run.flare){
+    const fl = run.flare;
+    if(fl.mode === "warn"){
+      const a = 0.35 + Math.sin(timeMs/60)*0.25;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,214,138," + a.toFixed(3) + ")";
+      ctx.lineWidth = 3; ctx.setLineDash([14, 10]);
+      ctx.beginPath(); ctx.moveTo(0, fl.top); ctx.lineTo(VW, fl.top); ctx.stroke();
+      ctx.setLineDash([]);
+      const g = ctx.createLinearGradient(0, fl.top, 0, fl.top + 70);
+      g.addColorStop(0, "rgba(255,180,90,0.16)");
+      g.addColorStop(1, "rgba(255,180,90,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, fl.top, VW, 70);
+      ctx.restore();
+    }
+    if(fl.y < VH + 40){
+      ctx.save();
+      // The body of the fire.
+      const body = ctx.createLinearGradient(0, fl.y, 0, VH);
+      body.addColorStop(0, "rgba(255,236,190,0.92)");
+      body.addColorStop(0.25, "rgba(255,166,64,0.85)");
+      body.addColorStop(1, "rgba(180,52,8,0.80)");
+      ctx.fillStyle = body;
+      ctx.fillRect(0, fl.y, VW, VH - fl.y + 10);
+      // Tongues off the top edge, so it never reads as a flat rectangle.
+      ctx.beginPath();
+      ctx.moveTo(0, fl.y);
+      for(let i = 0; i <= 14; i++){
+        const x = (i/14) * VW;
+        const h = 40 + Math.sin(timeMs/170 + i*1.7) * 26 + Math.sin(timeMs/70 + i) * 18;
+        ctx.quadraticCurveTo(x - VW/28, fl.y - h, x, fl.y);
+      }
+      ctx.lineTo(VW, VH + 10); ctx.lineTo(0, VH + 10); ctx.closePath();
+      const lick = ctx.createLinearGradient(0, fl.y - 80, 0, fl.y + 20);
+      lick.addColorStop(0, "rgba(255,240,200,0)");
+      lick.addColorStop(1, "rgba(255,190,96,0.75)");
+      ctx.fillStyle = lick; ctx.fill();
+      // A full-screen wash while it is actually lethal.
+      if(fl.mode === "burn"){
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255,190,110,0.12)";
+        ctx.fillRect(0, 0, VW, VH);
+      }
+      ctx.restore();
+    }
+  }
+
   // --- THE UNDERTOW: the wells -------------------------------------------
   if(run.wells){
     const list = run.wells.list;

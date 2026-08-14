@@ -471,6 +471,18 @@ function startMission(missionIndex, difficultyId){
     storm: mission.storm ? { mode:"calm", timer: 5, dir: 1, str: 0 } : null,
     // The Convoy: ONE hauler, escorted the whole way.
     convoy: mission.convoy ? { launched: false, released: false } : null,
+    /*
+     * Shake Them Off: the bases are CACHED, not multiplied per frame.
+     * buildLoadout has already applied the tune multipliers and the Wacky
+     * Sky TURBO mod also writes maxSpeed, so a per-frame multiply would decay
+     * both toward zero over a two-minute mission and never come back.
+     */
+    limpets: mission.limpets ? { wig: 0, lastSign: 0, prompted: false,
+      baseSpeed: 0, baseAccel: 0 } : null,
+    // The Bright Side: the star underneath throws a sheet of fire up the
+    // screen. The Storm, s clock with one extra beat.
+    flare: mission.flare ? { y: VH + 60, mode:"calm", timer: 6, top: VH,
+      hitThisBurn: false } : null,
     /* --- Act 4's rule-breakers. Each is a small state machine ticked in the
        main update, the same pattern as the storm above. --- */
     // The Undertow: drifting gravity wells that curve every loose thing.
@@ -531,6 +543,12 @@ function startMission(missionIndex, difficultyId){
     }
     profile.freshGear = null;
     P.save(profile);
+  }
+  // Shake Them Off caches the ship as it flies TODAY, once, after every
+  // modifier has been applied. Everything else here would be a moving target.
+  if(game.run.limpets){
+    game.run.limpets.baseSpeed = game.world.player.maxSpeed;
+    game.run.limpets.baseAccel = game.world.player.accel;
   }
   // The guns-cold run keeps its blue card; its goal already says "just DODGE".
   if(mission.noGuns) game.run.bannerColor = "#3fc9ff";
@@ -754,7 +772,19 @@ function endMission(completed){
 const callbacks = {
   godMode: false,
 
-  onEnemyKilled(e, bullet, byRamming){
+  /*
+   * `noPay` is for kills that are not yours. The Bright Side is the only
+   * caller: the star burns whatever is low when it flares, and that must
+   * cost the enemy its life without paying you a penny or advancing your
+   * combo - "get them before the fire does" then teaches itself, with no
+   * words. It still routes through HERE rather than setting e.alive = false,
+   * because this function owns two things the level depends on: the kill
+   * ledger, and freeing the pilot out of a carrier. Bypass it and a burned
+   * carrier never drops its pilot, so rescueAll - the level, s own second
+   * star, with three carriers deliberately diving toward the flame - becomes
+   * unreachable through no fault of the player.
+   */
+  onEnemyKilled(e, bullet, byRamming, noPay){
     const run = game.run;
     e.alive = false;
     /*
@@ -862,6 +892,7 @@ const callbacks = {
       fx.ring(e.x, e.y, 34, "#86efac", 3, 0.3);
     }
 
+    if(!noPay){
     run.combo++;
     run.comboTimer = 1.4;
     if(run.combo > run.maxCombo) run.maxCombo = run.combo;
@@ -880,6 +911,7 @@ const callbacks = {
       audio.play("coin", true);
     }
     game.world.dropCoins(e.x, e.y, coin);
+    }
 
     if(run.mods.confetti){
       // CONFETTI BLASTS: every pop is the celebration firework. The plain
@@ -894,12 +926,14 @@ const callbacks = {
     if(e.elite || e.maxHp >= 6) fx.hitStop(55);
     audio.play("enemyExplode", e.elite || e.maxHp >= 5);
 
-    if(run.combo > 0 && run.combo % 5 === 0){
+    if(!noPay && run.combo > 0 && run.combo % 5 === 0){
       fx.text(e.x, e.y - 20, "x" + run.combo + "!", "#ffd23f", 19);
       audio.play("combo", run.combo);
       if(run.combo >= 10) SF.comms.say("bigCombo", { n: run.combo });
     }
-    if(e.elite){
+    if(noPay){
+      // Nothing falls out of a ship the star took. Not even luck.
+    } else if(e.elite){
       fx.text(e.x, e.y - 30, "ELITE DOWN", "#ffd23f", 17, true);
       spawnPowerup(e.x, e.y);
     } else if(chance(0.045)){
@@ -1777,6 +1811,138 @@ function update(dt, timeMs){
     * climb out of the sky, and the ship sat pinned at the top being tugged
     * sideways until the 1.6s safety net ended the scene.
     */
+  /*
+   * SHAKE THEM OFF. Every limpet on the hull makes the ship heavier, and you
+   * get it off by waggling - which is a gesture a seven-year-old invents
+   * before anyone explains it, and the reason this level exists.
+   *
+   * Three things keep it from being a punishment. The riders cost speed and
+   * never a life (systems.js skips an attached one entirely). They cap at
+   * four, so the ship can always still be flown. And the waggle is not the
+   * only way off - they are three hit points and your guns fire themselves,
+   * so a child who never works out the gesture still finishes, just slowly.
+   */
+  if(run.limpets && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const lm = run.limpets;
+    const pl = game.world.player;
+    const items = game.world.enemies.items;
+    let on = 0, oldest = null;
+    for(let i = 0; i < items.length; i++){
+      const e = items[i];
+      if(e.alive && e.attached){ on++; if(!oldest || e.life > oldest.life) oldest = e; }
+    }
+    if(pl && pl.alive){
+      pl.maxSpeed = lm.baseSpeed * (1 - 0.16*on);
+      pl.accel    = lm.baseAccel * (1 - 0.12*on);
+      /*
+       * The detector reads p.vx, which under a finger is a damped SPRING
+       * rather than raw input - so the threshold is tuned against the drag
+       * model in entities.js, not against a key press.
+       */
+      const s = Math.sign(pl.vx);
+      if(s && s !== lm.lastSign && Math.abs(pl.vx) > 140){ lm.lastSign = s; lm.wig++; }
+      lm.wig = Math.max(0, lm.wig - dt*1.2);
+      if(on > 0 && !lm.prompted){
+        lm.prompted = true;
+        run.bannerText = "SHAKE IT OFF!";
+        run.bannerSub = "waggle left and right, fast";
+        run.bannerColor = "#a3e635";
+        run.bannerUntil = simMs + 2600;
+      }
+      if(lm.wig >= 3 && oldest){
+        // Thrown clear, stunned and cheap - the reward for working it out is
+        // a free kill, not just the weight coming off.
+        oldest.attached = false;
+        oldest.behaviour = "dive";
+        oldest.vx = rand(-160, 160); oldest.vy = 200; oldest.hp = 1;
+        run.stats.limpetsShaken++;
+        fx.text(oldest.x, oldest.y - 22, "OFF!", "#a3e635", 18, true);
+        fx.ring(pl.x, pl.y, 40, "#a3e635", 3, 0.3);
+        audio.play("victory");
+        lm.wig = 0;
+      }
+    }
+    // A ship that just died is not carrying anything. Without this the riders
+    // stay latched to a corpse and reappear on the respawned hull for free.
+    if(pl && !pl.alive && on > 0){
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(e.alive && e.attached){ e.attached = false; e.behaviour = "dive"; e.vy = 220; }
+      }
+      pl.maxSpeed = lm.baseSpeed; pl.accel = lm.baseAccel; lm.wig = 0;
+    }
+    // Nothing may hold the field open: a rider still counts toward the clear,
+    // so once the last wave is done they let go rather than stall the mission.
+    if(run.phase === "clearing" || run.phase === "gone"){
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(e.alive && e.attached){ e.attached = false; e.behaviour = "dive"; e.vy = 220; }
+      }
+      if(pl){ pl.maxSpeed = lm.baseSpeed; pl.accel = lm.baseAccel; }
+    }
+  }
+
+  /*
+   * THE BRIGHT SIDE. The star underneath flares, and everything low burns -
+   * them as readily as you. It is the Storm's clock with one extra beat, and
+   * it inherits the Storm's guard verbatim for the reason that guard exists:
+   * the weather used to keep running through the victory lap and pin the
+   * autopilot to the top of the sky.
+   *
+   * The WARN beat is the whole fairness of the level. A bright line is drawn
+   * at the height the fire will reach, for over a second, doing no damage at
+   * all - so being burned is always something you watched coming.
+   */
+  if(run.flare && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const fl = run.flare;
+    const pl = game.world.player;
+    fl.timer -= dt;
+    if(fl.mode === "calm"){
+      if(fl.timer <= 0){
+        fl.mode = "warn"; fl.timer = 1.2;
+        fl.top = rand(VH*0.42, VH*0.70);
+        fl.hitThisBurn = false;
+        audio.play("telegraph");
+      }
+    } else if(fl.mode === "warn"){
+      if(fl.timer <= 0){ fl.mode = "rise"; fl.timer = 0.45; fx.shake(4); }
+    } else if(fl.mode === "rise"){
+      const k = 1 - Math.max(0, fl.timer)/0.45;
+      fl.y = (VH + 60) + (fl.top - (VH + 60)) * (k*k*(3 - 2*k));
+      if(fl.timer <= 0){ fl.mode = "burn"; fl.timer = 1.3; fl.y = fl.top; audio.play("gust"); }
+    } else if(fl.mode === "burn"){
+      if(pl && pl.alive && pl.y > fl.y && !fl.hitThisBurn && pl.invuln <= 0){
+        fl.hitThisBurn = true;
+        run.stats.flareHits++;
+        callbacks.onPlayerHit("flare", null);
+      }
+      /*
+       * Everything alive below the line goes with it - and pays NOTHING.
+       * Routed through onEnemyKilled with the no-pay flag so the ledger stays
+       * honest and a burned carrier still lets its pilot out.
+       */
+      const items = game.world.enemies.items;
+      const caught = [];
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(e.alive && !e.fromBoss && e.y > fl.y) caught.push(e);
+      }
+      // Killed outside the scan, so the list can't change under the loop.
+      for(let i = 0; i < caught.length; i++){
+        const e = caught[i];
+        fx.spark(e.x, e.y, rand(-40, 40), -rand(120, 220), "#ffd08a", 0.5, 3);
+        callbacks.onEnemyKilled(e, null, false, true);
+      }
+      if(fl.timer <= 0){ fl.mode = "fall"; fl.timer = 0.7; }
+    } else if(fl.mode === "fall"){
+      const k = 1 - Math.max(0, fl.timer)/0.7;
+      fl.y = fl.top + ((VH + 60) - fl.top) * k;
+      if(fl.timer <= 0){ fl.mode = "calm"; fl.timer = rand(4, 7); fl.y = VH + 60; }
+    }
+  }
+
   if(run.storm && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const st = run.storm;
@@ -2482,6 +2648,33 @@ function draw(timeMs){
     }
   }
   SF.render.drawPlayer(ctx, world.player, timeMs);
+  /*
+   * SHAKE THEM OFF: a pair of pulsing chevrons flank the ship while anything
+   * is riding it. The prompt IS the tutorial - a child who has not read a
+   * word of the briefing still sees "go this way, then that way".
+   *
+   * The riders themselves need no drawing here. They ride at p.r + 10 from
+   * the centre, which is outside the hull, so drawEnemies has already put
+   * them where they can be seen.
+   */
+  if(game.run && game.run.limpets && world.player.alive){
+    const items = world.enemies.items;
+    let on = 0;
+    for(let i = 0; i < items.length; i++)
+      if(items[i].alive && items[i].attached) on++;
+    if(on > 0){
+      const p = world.player, puls = 0.45 + Math.sin(timeMs/90)*0.35;
+      ctx.save();
+      ctx.globalAlpha = puls; ctx.fillStyle = "#a3e635";
+      [-1, 1].forEach(s => {
+        const x = p.x + s*46;
+        ctx.beginPath();
+        ctx.moveTo(x + s*12, p.y); ctx.lineTo(x, p.y - 11); ctx.lineTo(x, p.y + 11);
+        ctx.closePath(); ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
   fx.drawParticles(ctx);
   SF.render.drawForeground(ctx);
   // The Searchlight: the world above is finished, now the dark eats all of it

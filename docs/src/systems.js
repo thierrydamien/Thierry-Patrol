@@ -414,6 +414,14 @@ function resolve(world, ctxObj, dt){
     for(let i=0;i<enemies.length;i++){
       const e = enemies[i];
       if(!e.alive) continue;
+      /*
+       * A Limpet that has hold of you is not a collision. It is riding the
+       * hull by design, and it must never cost a life - a clinger that kills
+       * is just a Kamikaze in a hat, and it would kill EVERY frame it stayed
+       * on. This one line skips both the near-miss test and the ram branch,
+       * which is exactly right: the ride is not a dodge either.
+       */
+      if(e.attached) continue;
       const rr = e.r + p.r;
       const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
       /*
