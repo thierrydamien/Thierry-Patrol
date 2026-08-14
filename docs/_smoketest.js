@@ -1458,11 +1458,28 @@ async function run(){
   // Sky 29 is an ENDING, not stop twenty-nine. The chart is torn short of it,
   // the last leg is a pencil line, and nothing that belongs to a painted sky -
   // twinkling stars, shooting stars, the supply convoy - crosses the rip.
-  check("the campaign map is torn short of Sky 29",
+  check("the campaign map is torn short of the gift stop",
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /function mapTearY/.test(u) &&
                     /THE EDGE OF THE MAP/.test(u) &&
-                    /sky 29 — for the boys/.test(u); })());
+                    /" — for the boys"/.test(u); })());
+  /*
+   * The gift stop's NAME is one fact, not a dozen string literals. It used to
+   * be written out by hand in the map caption, the star-hunt line, both node
+   * labels, two toasts, the paint it awards and its own PAINTED banner - all
+   * saying "SKY 29", which was true only while the campaign was 29 stops long.
+   * Adding a level anywhere before it made every one of them lie at once.
+   */
+  check("nothing hard-codes the gift stop's name",
+    (() => { const files = ["src/ui.js", "src/sky29.js", "src/game.js"];
+             return files.every(f =>
+               !/"[Ss][Kk][Yy] 29"/.test(fs.readFileSync(path.join(__dirname, f), "utf8"))); })());
+  check("the gift stop names itself from the mission data",
+    SF.missions.GIFT && SF.missions.GIFT.gift === true &&
+    SF.missions.giftName() === SF.missions.GIFT.name.toUpperCase());
+  check("the paint the gift stop awards is named after it",
+    (() => { const paint = SF.config.PAINT_BY_ID.sky29;
+             return !!paint && paint.name.toUpperCase() === SF.missions.giftName(); })());
   check("the last leg of the route is drawn in pencil",
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /const offMap = !!b\.mission\.gift/.test(u); })());

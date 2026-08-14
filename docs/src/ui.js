@@ -1012,7 +1012,9 @@ function buildSky(W, H){
   c.fillStyle = "rgba(186,204,245,0.55)";
   c.font = "italic 16px Rajdhani, Arial, sans-serif";
   c.textAlign = "left";
-  c.fillText("sky 29 — for the boys", W*0.33, tearY*0.13);
+  // Papa's own note names the sky, so it tracks the sky's name - lowercased,
+  // because he wrote it in pencil and not in a stylesheet.
+  c.fillText(SF.missions.GIFT.name.toLowerCase() + " — for the boys", W*0.33, tearY*0.13);
   c.fillStyle = "rgba(174,195,239,0.32)";
   c.font = "italic 12px Rajdhani, Arial, sans-serif";
   c.fillText("never finished it", W*0.33, tearY*0.13 + 19);
@@ -1443,9 +1445,9 @@ function renderMissions(){
     const giftDone = giftIdx >= 0 && profile.missions[MISSIONS[giftIdx].id] &&
                      profile.missions[MISSIONS[giftIdx].id].cleared;
     goal.textContent = left > 0
-      ? left + " more ★ to open SKY 29 — the sky Papa never finished"
-      : giftDone ? "Every star home, and Sky 29 painted. Nothing left but the flying."
-                 : "Every star is home — SKY 29 is open at the top of the map";
+      ? left + " more ★ to open " + SF.missions.giftName() + " — the sky Papa never finished"
+      : giftDone ? "Every star home, and " + SF.missions.GIFT.name + " painted. Nothing left but the flying."
+                 : "Every star is home — " + SF.missions.giftName() + " is open at the top of the map";
     goal.classList.toggle("camp-goal-done", left <= 0);
   }
   const debts = starDebts();
@@ -1489,7 +1491,7 @@ function renderMissions(){
     else if(node.mission.gift) click(btn, () => {
       audio.play("uiClick");
       dialog({
-        title: "SKY 29",
+        title: SF.missions.giftName(),
         text: "Papa left one sky unfinished - this one. It has your names pencilled in the corner." +
               "\n\nEarn EVERY star in the campaign - all " + P.maxStars() + " - and the squadron paints it together." +
               "\n\n★ " + P.totalStars(profile) + " / " + P.maxStars() + " so far.",
@@ -1974,9 +1976,9 @@ function drawCampaign(){
         ctx.fillStyle = "rgba(200,210,240,0.8)";
         ctx.font = "italic bold 22px Rajdhani, Arial, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("29", x, y + 8);
+        ctx.fillText(String(SF.missions.GIFT.id), x, y + 8);
         ctx.font = "italic bold 13px Rajdhani, Arial, sans-serif";
-        ctx.fillText("SKY 29", x, y + R + 20);
+        ctx.fillText(SF.missions.giftName(), x, y + R + 20);
         // The requirement, in plain kid words, always visible.
         const have = P.totalStars(profile), want = P.maxStars();
         ctx.fillStyle = "rgba(255,210,63,0.85)";
@@ -2007,7 +2009,7 @@ function drawCampaign(){
         ctx.font = "bold 24px Rajdhani, Arial, sans-serif";
         ctx.fillText("29", x, y + 9);
         ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-        ctx.fillText("SKY 29", x, y + R + 20);
+        ctx.fillText(SF.missions.giftName(), x, y + R + 20);
         ctx.restore();
         ctx.fillStyle = painted ? "rgba(150,255,205,0.9)" : "rgba(255,210,63,0.95)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
@@ -4448,12 +4450,12 @@ function showResults(result){
     queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
       label:"SECRET FOUND" });
   if(result.sky29Won)
-    queueToast({ glyph:"star", name:"SKY 29 — the dawn off Papa's last canvas. Wear it well.",
+    queueToast({ glyph:"star", name: SF.missions.giftName() + " — the dawn off Papa's last canvas. Wear it well.",
       label:"PAINT WON" });
   // The 84th star is a door opening, and the door is at the top of the map.
   if(result.allStarsNow)
-    queueToast({ glyph:"star", name:"EVERY STAR IS HOME — Sky 29 is waiting at the top of the map.",
-      label:"SKY 29 UNLOCKED" });
+    queueToast({ glyph:"star", name:"EVERY STAR IS HOME — " + SF.missions.GIFT.name + " is waiting at the top of the map.",
+      label: SF.missions.giftName() + " UNLOCKED" });
   // The true curtain lives behind the sky now; the Devourer keeps its own.
   // Anchoring the old finale to its mission (not to campaignComplete) matters:
   // with Act 4 in the campaign, a fresh profile would otherwise get the

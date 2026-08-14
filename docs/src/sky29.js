@@ -105,7 +105,7 @@ function update(dt, run, world, simMs){
     if(S.strokeY > H + 160){
       S.paint = 1;
       S.phase = "photo"; S.photoT = 0; S.flashed = false;
-      run.bannerText = "SKY 29 — PAINTED";
+      run.bannerText = SF.missions.giftName() + " — PAINTED";
       run.bannerSub = "every star became a colour";
       run.bannerColor = "#ffd23f";
       run.bannerUntil = simMs + 3600;

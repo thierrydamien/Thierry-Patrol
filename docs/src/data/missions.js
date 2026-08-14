@@ -1222,5 +1222,23 @@ function enemyCount(mission){
   return mission.waves.reduce((n, wv) => n + wv.n, 0);
 }
 
-SF.missions = { MISSIONS, BOSSES, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount };
+/*
+ * THE GIFT STOP, AS ONE FACT.
+ *
+ * Its name was written out by hand in a dozen places - the map's caption, the
+ * star-hunt line, two node labels, the unlock toast, the paint it awards, the
+ * banner when it is finished. Every one of those said "SKY 29", which was true
+ * only for as long as the campaign was twenty-nine stops long. Adding a level
+ * anywhere before it silently made all of them lie.
+ *
+ * So it is derived. `GIFT` is whichever mission carries the gift flag, and
+ * everything that wants to name it asks here. The next time the campaign grows,
+ * the whole game renames itself.
+ */
+const GIFT = MISSIONS.find(m => m.gift) || MISSIONS[MISSIONS.length - 1];
+/** The gift stop's name in caps, for the places that shout it. */
+function giftName(){ return (GIFT.name || "").toUpperCase(); }
+
+SF.missions = { MISSIONS, BOSSES, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount,
+                GIFT, giftName };
 })();
