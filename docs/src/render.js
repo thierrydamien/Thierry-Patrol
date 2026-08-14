@@ -3354,11 +3354,31 @@ function drawHud(ctx, game){
   // fill that goes from tint to warning amber to red.
   const boss = game.world.boss;
   if(boss && boss.alive){
-    const w = VW - Math.round(VW*0.2), barY = 122, bh = 14, bx0 = (VW-w)/2;
+    /*
+     * THE BOSS BLOCK IS ONE STACK, AND IT SITS ON ITS OWN GROUND.
+     *
+     * Two things were wrong and both were invisible in code review. The
+     * ARMOURED counter printed at barY+22 and the weak-point chips at
+     * barY+bh+7 - 144 and 143, the SAME pixel row - so on every sealed boss
+     * the two strings were stamped through each other. And the whole stack
+     * ran from y=108 to y=152 while bosses park at entryY 150 with hulls
+     * about 130 across, so all of it was drawn over a lit, moving machine.
+     *
+     * It cannot leave the hull - the boss is bigger than the gap between the
+     * HUD and the arena - so instead it goes tight under the HUD hairline
+     * (TOP_H is 84) where the hull is thinnest, in a fixed order with nothing
+     * sharing a row: ARMOURED, name, bar, systems. And it gets a real plate,
+     * because small struck-through type over a lit hull is exactly where
+     * legibility goes to die.
+     */
+    const w = VW - Math.round(VW*0.2), barY = 118, bh = 14, bx0 = (VW-w)/2;
+    const sealed = SF.bosses.isSealed(boss);
     const pct = clamp(boss.hp/boss.maxHp, 0, 1);
     ctx.save();
-    roundRect(ctx, bx0-2, barY-2, w+4, bh+4, 7);
-    ctx.fillStyle = "rgba(4,8,18,0.72)";
+    // One plate under the name and bar; the systems row keeps its own below.
+    const plateTop = barY - (sealed ? 40 : 26);
+    roundRect(ctx, bx0-2, plateTop, w+4, (barY + bh + 3) - plateTop, 9);
+    ctx.fillStyle = "rgba(4,8,18,0.82)";
     ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1;
     ctx.stroke();
@@ -3459,12 +3479,13 @@ function drawHud(ctx, game){
     ctx.fillText(boss.name, VW/2, barY-14);
     ctx.shadowBlur = 0;
     // Sealed bosses say so, and count down: the goal is never a mystery.
-    if(SF.bosses.isSealed(boss)){
+    // ABOVE the name, not below the bar - below the bar is the systems row.
+    if(sealed){
       const left = SF.bosses.partsLeft(boss);
       ctx.font = "bold 11px Rajdhani, Arial, sans-serif";
       ctx.fillStyle = "#ffd23f";
       ctx.fillText("ARMOURED — " + left + " PART" + (left === 1 ? "" : "S") + " LEFT",
-                   VW/2, barY + 22);
+                   VW/2, barY - 28);
     }
     ctx.textAlign = "left";
   }
