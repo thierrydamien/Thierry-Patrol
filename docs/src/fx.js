@@ -16,7 +16,8 @@ const { Pool, rand, randInt, clamp, TAU } = SF.core;
 const particles  = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,life:0,max:1,size:2,color:"#fff",
                                      kind:"spark", drag:0.94, gravity:0, spin:0, angle:0, delay:0 }), 900);
 const texts      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:-34,gravity:0,pop:0,
-                                     life:0,max:0.9,text:"",color:"#fff",size:14,bold:true }), 80);
+                                     life:0,max:0.9,text:"",color:"#fff",size:14,bold:true,
+                                     rise:false }), 80);
 const rings      = new Pool(() => ({ alive:false, x:0,y:0,life:0,max:0.45,r0:6,r1:60,color:"#fff",width:3,delay:0 }), 40);
 
 let shakeMag = 0, shakeDecay = 26;
@@ -256,11 +257,46 @@ function muzzle(x, y, color, scale){
   p.angle=rand(-0.4,0.4); p.spin=0;
 }
 
+/*
+ * ANNOUNCEMENTS STACK. THEY DO NOT SIT ON EACH OTHER.
+ *
+ * Thirteen different call sites in game.js throw a centred announcement at a
+ * hand-picked fraction of the screen height - VH*0.2, VH*0.42, VH*0.6 - and
+ * none of them knows what else is on screen. Caught in a real frame of The
+ * Searchlight: "PILOT ADRIFT - CATCH THEM!" landing under the combo counter's
+ * underline while the mission banner held below it and the objective chip
+ * overlapped from the left. Three things shouting in the same column.
+ *
+ * Rather than re-tune thirteen magic numbers - which only holds until the
+ * fourteenth - a rising text now looks for other rising texts near the same
+ * column and drops below the lowest of them. The call sites keep their
+ * intended position; they just stop colliding when two land together.
+ *
+ * Only `rise` texts take part: damage numbers are meant to overlap, there are
+ * dozens of them, and they are thrown deliberately at what they came off.
+ */
 function text(x, y, str, color, size, rise){
   const t = texts.spawn();
-  t.x=x; t.y=y; t.text=str; t.color=color||"#fff"; t.size=size||14;
+  const sz = size || 14;
+  if(rise){
+    const items = texts.items;
+    // A few passes, because pushing below one can put it under another.
+    for(let pass = 0; pass < 6; pass++){
+      let moved = false;
+      for(let i = 0; i < items.length; i++){
+        const o = items[i];
+        if(o === t || !o.alive || !o.rise) continue;
+        if(Math.abs(o.x - x) > 220) continue;            // a different column
+        const gap = (o.size + sz)*0.62 + 6;
+        if(Math.abs(o.y - y) < gap){ y = o.y + gap; moved = true; }
+      }
+      if(!moved) break;
+    }
+  }
+  t.x=x; t.y=y; t.text=str; t.color=color||"#fff"; t.size=sz;
   t.life=0; t.max= rise ? 1.3 : 0.9; t.vy = rise ? -46 : -34;
   t.vx=0; t.gravity=0; t.pop=0;         // banners rise straight and steady
+  t.rise = !!rise;
 }
 
 /**
@@ -276,6 +312,11 @@ function text(x, y, str, color, size, rise){
  */
 function damageNumber(x, y, amount, crit){
   const t = texts.spawn();
+  // Cleared explicitly: the slot may have just held an announcement, and a
+  // stale flag would put damage numbers into the announcement stack - where
+  // they would shove each other down the screen instead of overlapping, which
+  // is exactly what they are supposed to do.
+  t.rise = false;
   const heavy = Math.min(1, Math.max(0, (amount - 1) / 8));
   t.x=x+rand(-4,4); t.y=y; t.text=String(amount);
   t.color = crit ? "#ffd23f" : (heavy > 0.45 ? "#ffe9a8" : "rgba(255,255,255,0.92)");

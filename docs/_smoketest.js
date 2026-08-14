@@ -2604,6 +2604,31 @@ async function run(){
   /* ---------- pooling / performance ---------- */
   const pools = [SF.game.world.bullets, SF.game.world.enemies, SF.game.world.enemyBullets, SF.game.world.pickups];
   check("entity pools stay bounded", pools.every(p => p.items.length <= p.cap));
+  /*
+   * Announcements stack; they do not sit on each other. Thirteen call sites in
+   * game.js throw a centred shout at a hand-picked fraction of the screen and
+   * none of them knows what else is up - caught live on The Searchlight with
+   * "PILOT ADRIFT" landing under the combo counter's underline while the
+   * mission banner held below it.
+   */
+  check("three announcements aimed at one spot stack instead of overlapping", (() => {
+    SF.fx.reset();
+    const VW = SF.entityConst.VW, VH = SF.entityConst.VH;
+    SF.fx.text(VW/2, VH*0.42, "ONE", "#fff", 17, true);
+    SF.fx.text(VW/2, VH*0.42, "TWO", "#fff", 20, true);
+    SF.fx.text(VW/2, VH*0.43, "THREE", "#fff", 19, true);
+    const ys = SF.fx._pools.texts.items.filter(t => t.alive).map(t => t.y).sort((a,b) => a-b);
+    if(ys.length !== 3) return false;
+    return (ys[1] - ys[0]) > 14 && (ys[2] - ys[1]) > 14;
+  })());
+  check("damage numbers are still allowed to overlap", (() => {
+    SF.fx.reset();
+    for(let i = 0; i < 4; i++) SF.fx.damageNumber(200, 300, 6, false);
+    const ys = SF.fx._pools.texts.items.filter(t => t.alive).map(t => t.y);
+    // All four thrown at the same height - the stack must not have touched them.
+    return ys.length === 4 && Math.max.apply(null, ys) - Math.min.apply(null, ys) < 2;
+  })());
+  SF.fx.reset();
   check("particle pool stays bounded", SF.fx._pools.particles.items.length <= 900);
   console.log(`Pools -> bullets:${SF.game.world.bullets.items.length} enemies:${SF.game.world.enemies.items.length} ` +
               `enemyBullets:${SF.game.world.enemyBullets.items.length} particles:${SF.fx._pools.particles.items.length}`);
