@@ -403,8 +403,8 @@ async function run(){
       .every(k => !SF.haptics._patterns[k]));
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("29 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 29 &&
+  check("35 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 35 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
@@ -413,9 +413,9 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 84 && (() => {
+    SF.profile.maxStars() === 102 && (() => {
       const p = SF.profile.load("LEDGER");
-      p.missions[29] = { cleared:true, stars:{ pilot:3 } };
+      p.missions[35] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
     })());
   check("the workshop curtain doesn't wait for the gift", (() => {
@@ -530,7 +530,8 @@ async function run(){
   check("no early mission is just a different pile of the same enemies", (() => {
     const OWN = ["boss","storm","wells","beat","blackout","foundry","serpent","convoy",
                  "trench","coinRain","noGuns","rival","vault","backstage","sky29",
-                 "cover","bounty","nearMiss","lentDrones","starRain"];
+                 "cover","bounty","nearMiss","lentDrones","starRain",
+                 "ferry","wrap","limpets","flare","stampede","mirror"];
     // The Gauntlet's identity is the elites themselves, which live in its
     // waves rather than in a flag - that counts.
     return SF.missions.MISSIONS.slice(0, 12).every(m =>
@@ -659,7 +660,9 @@ async function run(){
       wells:"wellsStart", beat:"chorusStart", foundry:"foundryStart",
       serpent:"serpentStart", backstage:"backstageStart", sky29:"sky29Start",
       lentDrones:"dronesStart", bounty:"bountyStart", cover:"coverStart",
-      nearMiss:"nearMissStart" };
+      nearMiss:"nearMissStart", ferry:"ferryStart", wrap:"wrapStart",
+      limpets:"limpetStart", flare:"flareStart", stampede:"stampedeStart",
+      mirror:"mirrorStart" };
     return Object.keys(FLAGS).every(flag => {
       const key = FLAGS[flag];
       // the bucket exists and is wired into startMission's opener chain
@@ -1295,7 +1298,7 @@ async function run(){
     check("an old save without that detail still reports the gap, unnamed",
       SF.profile.missingObjectives(p, m3) === null);
     check("the header states the goal, not just the tally",
-      /more ★ to open SKY 29/.test(id("campaignGoal").textContent) &&
+      new RegExp("more ★ to open " + SF.missions.giftName()).test(id("campaignGoal").textContent) &&
       parseFloat(id("campaignBarFill").style.width) > 0);
     check("the star hunt offers itself only when stars are owed",
       !id("starHuntBtn").classList.contains("hidden") &&
@@ -1303,7 +1306,7 @@ async function run(){
     check("with the road finished, the button chases a star instead of a stop",
       /GRAB A STAR/.test(id("campaignNext").textContent));
     check("the rail lists every sector, newest stretch first",
-      qa("#sectorRail .rail-stop").length === 11 &&
+      qa("#sectorRail .rail-stop").length === 12 &&
       /THE EASEL/.test(qa("#sectorRail .rail-stop")[0].textContent));
     /*
      * A name on its own explained nothing: "DEEP RUN" beside a dot tells a
@@ -1321,10 +1324,10 @@ async function run(){
     check("the rail chip carries the number, the name and the score", (() => {
       const chips = qa("#sectorRail .rail-stop");
       const easel = chips[0];                       // the last stretch, at the top
-      return chips.length === 11 &&
+      return chips.length === 12 &&
              easel.querySelector("span b") && easel.querySelector("em") &&
              chips.every(c => !!c.style.getPropertyValue("--sec")) &&
-             /11/.test(easel.querySelector("span b").textContent);
+             /12/.test(easel.querySelector("span b").textContent);
     })());
     check("the map paints each sector as a band, not just a caption",
       (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
@@ -1338,7 +1341,7 @@ async function run(){
     SF.ui.renderMissions();
     check("all 84 home: the hunt puts itself away",
       id("starHuntBtn").classList.contains("hidden") &&
-      /SKY 29 is open/.test(id("campaignGoal").textContent) &&
+      new RegExp(SF.missions.giftName() + " is open").test(id("campaignGoal").textContent) &&
       /FLY MISSION/.test(id("campaignNext").textContent));
 
     p.missions = keep;
@@ -1437,7 +1440,7 @@ async function run(){
     check("the sectors tile the whole campaign, with no stop in two of them",
       (() => {
         let expect = 0;
-        for(let si = 0; si < 11; si++){
+        for(let si = 0; si < 12; si++){
           const s = SF.ui.sectorStats(si);
           if(s.from !== expect) return false;
           expect = s.to + 1;
@@ -1702,12 +1705,26 @@ async function run(){
    */
   {
     // The gift stop draws a painted disc, not an enemy - it sits out the face rule.
-    const faces = SF.missions.MISSIONS.filter(m => !m.boss && !m.gift).map(m => SF.ui.missionFace(m).enemy);
+    const ord = SF.missions.MISSIONS.filter(m => !m.boss && !m.gift).map(m => SF.ui.missionFace(m));
+    const faces = ord.map(f => f.enemy);
     check("every ordinary stop draws an enemy", faces.every(Boolean));
+    /*
+     * This pinned the BODY alone until the campaign outgrew it: twenty-six
+     * ordinary stops against twenty-three drawn ship shapes, so some body has
+     * to appear twice however carefully the faces are assigned. What a child
+     * actually tells apart is the whole node - the ship AND the kind, which
+     * picks the node's colour and its label - so that pair is what is pinned,
+     * and every collision left is a deliberate one where the kinds differ:
+     * the Convoy's interceptor is an escort and the Lifeline's is a fight,
+     * the Treasury's thief is a coin run and the Ring's is a fight, the
+     * Trench's turret sits in rocks and the Bright Side's does not, and the
+     * Storm's splitter is weather where the Glass Sea's is not.
+     */
+    const pairs = ord.map(f => f.enemy + "|" + f.kind);
     check("no two ordinary stops wear the same face",
-      new Set(faces).size === faces.length);
+      new Set(pairs).size === pairs.length);
     check("a named face is the one that gets drawn",
-      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 14)).enemy === "hive");
+      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 16)).enemy === "hive");
   }
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
@@ -2767,15 +2784,15 @@ async function run(){
       M.filter(m => m.storm).length === 2 && M.filter(m => m.convoy).length === 1 &&
       M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 2);
     check("the treasury remix keeps its coin identity on the map",
-      M.find(m => m.id === 16).storm === true &&
-      SF.ui.missionFace(M.find(m => m.id === 16)).kind === "coins");
+      M.find(m => m.id === 18).storm === true &&
+      SF.ui.missionFace(M.find(m => m.id === 18)).kind === "coins");
     check("the long dark's veil is the soft one",
-      M.find(m => m.id === 22).blackout === "soft" &&
-      M.find(m => m.id === 21).blackout === true &&
+      M.find(m => m.id === 26).blackout === "soft" &&
+      M.find(m => m.id === 25).blackout === true &&
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,10,15,17,20,23,28");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,11,17,20,24,27,34");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -2959,7 +2976,7 @@ async function run(){
 
       /* The rematch: once in the whole campaign, elite, sharper but valved. */
       check("vesper returns exactly once, elite, in All Hands",
-        M.find(m => m.id === 19).waves
+        M.find(m => m.id === 22).waves
           .filter(wv => wv.type === "rival" && wv.elite).length === 1 &&
         M.filter(m => m.waves.some(wv => wv.type === "rival")).length === 2);
       check("the rematch is sharper but still a valve, not a wall", (() => {
@@ -3002,25 +3019,27 @@ async function run(){
     window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
-    // Four inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
-    // v4's four-level map, then v5 (The Rival at 13). Old 8 rides to 10; old
-    // 9 rides to 12; old 14 rides every shift to 20. Old 3 never moves.
+    // Five inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+    // v4's four-level map, v5 (The Rival at 13), then v6's six-level map. Old
+    // 8 rides to 11; old 9 rides to 13; old 14 rides every shift to 24. Old 3
+    // never moves - nothing has ever been inserted below it.
     check("pre-insert records ride every shift",
-      shifted.missions["10"] && shifted.missions["10"].stars.pilot === 2 &&
-      shifted.missions["12"] && shifted.missions["12"].stars.pilot === 3 &&
-      shifted.missions["20"] && shifted.missions["20"].stars.pilot === 1 &&
+      shifted.missions["11"] && shifted.missions["11"].stars.pilot === 2 &&
+      shifted.missions["13"] && shifted.missions["13"].stars.pilot === 3 &&
+      shifted.missions["24"] && shifted.missions["24"].stars.pilot === 1 &&
       !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["14"] &&
-      shifted.lastMission === 12);
+      !shifted.missions["10"] && !shifted.missions["12"] && !shifted.missions["20"] &&
+      shifted.lastMission === 13);
     check("act-one records stay where they were",
       shifted.missions["3"] && shifted.missions["3"].stars.pilot === 2);
     check("the shifts run exactly once",
-      SF.profile.migrate(shifted).missions["12"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["20"].stars.pilot === 1);
-    // A v2-era save (Silent Running already counted) gets only v3 then v4.
+      SF.profile.migrate(shifted).missions["13"].stars.pilot === 3 &&
+      SF.profile.migrate(shifted).missions["24"].stars.pilot === 1);
+    // A v2-era save (Silent Running already counted) picks up v3 onward only.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
     check("a v2-era save shifts only the later inserts",
-      v2era.missions["17"] && !v2era.missions["13"] && v2era.lastMission === 17);
+      v2era.missions["20"] && !v2era.missions["13"] && v2era.lastMission === 20);
   }
 
   /* ---------- settings ---------- */
@@ -3768,7 +3787,7 @@ async function run(){
   {
     check("prison break and cold approach got their bosses",
       SF.missions.MISSIONS.find(m => m.id === 7).boss === "jailer" &&
-      SF.missions.MISSIONS.find(m => m.id === 17).boss === "phantom" &&
+      SF.missions.MISSIONS.find(m => m.id === 20).boss === "phantom" &&
       SF.missions.BOSSES.jailer.rescuePods === true &&
       SF.missions.BOSSES.phantom.cloak === true);
 
@@ -3814,10 +3833,10 @@ async function run(){
 
   /* ---------- their treasury (the heist between the bosses) ---------- */
   {
-    const t = SF.missions.MISSIONS.find(m => m.id === 16);
+    const t = SF.missions.MISSIONS.find(m => m.id === 18);
     check("the treasury sits between the wardens and never carries a boss",
       t && t.name === "Their Treasury" && !t.boss &&
-      SF.missions.MISSIONS.find(m => m.id === 15).boss === "warden");
+      SF.missions.MISSIONS.find(m => m.id === 17).boss === "warden");
     check("the heist stars greed and leans on thieves",
       t.objectives.includes("coinRush") &&
       t.waves.filter(wv => wv.type === "thief").reduce((n,wv) => n + wv.n, 0) >= 10);
@@ -4025,11 +4044,11 @@ async function run(){
     // Two finales now: the Devourer closes act 3 at 23, THE FORGERY closes
     // the whole campaign at 28.
     check("each finale closes its act",
-      SF.missions.MISSIONS.find(m => m.id === 23).boss === "devourer" &&
-      SF.missions.MISSIONS.find(m => m.id === 28).boss === "forgery" &&
-      SF.missions.MISSIONS.find(m => m.id === 22).boss === undefined);
+      SF.missions.MISSIONS.find(m => m.id === 27).boss === "devourer" &&
+      SF.missions.MISSIONS.find(m => m.id === 34).boss === "forgery" &&
+      SF.missions.MISSIONS.find(m => m.id === 26).boss === undefined);
     check("beating it awards the last tune and the last medal",
-      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 23) &&
+      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 27) &&
       SF.config.ACHIEVEMENTS.some(a => a.id === "devourer" && a.pay > 0));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
@@ -4355,7 +4374,7 @@ async function run(){
       Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
     check("locked tunes say which boss to beat, and refuse to fit", (() => {
       const viperCard = Array.from(qa(".tune-card")).find(c => /VIPER/.test(c.textContent));
-      if(!viperCard || !/beat Mission 10/.test(viperCard.textContent)) return false;
+      if(!viperCard || !/beat Mission 11/.test(viperCard.textContent)) return false;
       clickEl(viperCard);
       return SF.profile.load("Tuner").tune === "falcon";   // unchanged
     })());

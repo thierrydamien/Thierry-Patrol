@@ -255,6 +255,68 @@ const SHAPES = {
     ctx.stroke();
     ctx.lineCap = "butt";
   },
+  /*
+   * THE LIMPET. Vermin, not a fighter - so no cockpit, no guns and no
+   * thruster anywhere on it. A squat ribbed slug with a suction rim at the
+   * front and two hooks, and the rim faces the player because that is the end
+   * that is going to end up on your hull.
+   */
+  limpet(ctx, S, p){
+    hull(ctx, [0,S*0.30, S*0.26,S*0.14, S*0.22,-S*0.20, 0,-S*0.30,
+               -S*0.22,-S*0.20, -S*0.26,S*0.14], p, S);
+    // ribs across the back, so it reads as a shell rather than a plate
+    ctx.strokeStyle = p.deep; ctx.lineWidth = S*0.05;
+    for(let i = -1; i <= 1; i++){
+      ctx.beginPath();
+      ctx.moveTo(-S*0.20, i*S*0.13); ctx.lineTo(S*0.20, i*S*0.13);
+      ctx.stroke();
+    }
+    // the suction rim
+    ctx.strokeStyle = p.trim; ctx.lineWidth = S*0.06;
+    ctx.beginPath(); ctx.arc(0, S*0.18, S*0.15, 0.15, Math.PI - 0.15); ctx.stroke();
+    ctx.fillStyle = p.deep;
+    ctx.beginPath(); ctx.arc(0, S*0.19, S*0.08, 0, TAU); ctx.fill();
+    // two hooks
+    ctx.strokeStyle = p.metal; ctx.lineWidth = S*0.045; ctx.lineCap = "round";
+    [-1, 1].forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s*S*0.20, S*0.06);
+      ctx.quadraticCurveTo(s*S*0.34, S*0.16, s*S*0.26, S*0.30);
+      ctx.stroke();
+    });
+    ctx.lineCap = "butt";
+  },
+  /*
+   * THE SKY OX. Broad, bone-pale and unarmed - a heavy brow slab, a hide of
+   * overlapping plates and four short hoof-thrusters. It must read as an
+   * ANIMAL at a glance, because the whole level depends on a child not
+   * treating it as another thing to shoot: nothing on it points at you and
+   * nothing on it glows.
+   */
+  grazer(ctx, S, p){
+    // body: wide and low, wider at the shoulders than the rump
+    hull(ctx, [0,S*0.26, S*0.40,S*0.10, S*0.44,-S*0.10, S*0.30,-S*0.28,
+               -S*0.30,-S*0.28, -S*0.44,-S*0.10, -S*0.40,S*0.10], p, S);
+    // overlapping hide plates
+    ctx.strokeStyle = p.shade; ctx.lineWidth = S*0.035;
+    for(let i = 0; i < 3; i++){
+      const y = -S*0.16 + i*S*0.14;
+      ctx.beginPath();
+      ctx.moveTo(-S*0.34, y);
+      ctx.quadraticCurveTo(0, y + S*0.07, S*0.34, y);
+      ctx.stroke();
+    }
+    // the brow slab, the heaviest thing on it
+    ctx.fillStyle = p.metalD;
+    poly(ctx, [0,S*0.34, S*0.26,S*0.20, S*0.22,S*0.08, -S*0.22,S*0.08, -S*0.26,S*0.20]);
+    ctx.fill();
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.026; ctx.stroke();
+    // four short hoof-thrusters, no plume - it walks, it does not fly at you
+    ctx.fillStyle = p.metal;
+    [-0.28, -0.10, 0.10, 0.28].forEach(x => {
+      ctx.fillRect(x*S - S*0.04, -S*0.34, S*0.08, S*0.09);
+    });
+  },
   serpent(ctx, S, p){
     // skull: blunt diamond, nose toward the player (+y)
     hull(ctx, [0,S*0.42, S*0.30,S*0.10, S*0.24,-S*0.26, -S*0.24,-S*0.26,

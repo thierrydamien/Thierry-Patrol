@@ -417,6 +417,57 @@ const BEHAVIOURS = {
     e.y = (e.beltY || e.y) + Math.sin(e.phase*7) * 1.5;   // rattling along
   },
 
+  /*
+   * THE LIMPET. Homes in BOTH axes and never gives up - unlike the
+   * Interceptor it will climb after you - then latches onto the hull and just
+   * rides, creeping slowly around it.
+   *
+   * Four is the cap, and it is a mercy: four riders is already a barge, and
+   * an uncapped swarm would pin a child to a crawl with nothing they could do
+   * about it. `grazed` is set on attach so a limpet cannot ALSO claim the
+   * near-miss bonus for the contact it just made.
+   */
+  limpet(e, dt, c){
+    const p = c.player;
+    if(!p){ e.y += e.vy * dt; return; }
+    if(e.attached){
+      e.holdAngle += dt * 0.6;
+      e.x = p.x + Math.cos(e.holdAngle) * (p.r + 10);
+      e.y = p.y + Math.sin(e.holdAngle) * (p.r + 10);
+      return;
+    }
+    const dx = p.x - e.x, dy = p.y - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const sp = e.speed || 205;
+    e.x += (dx/d) * sp * dt;
+    e.y += (dy/d) * sp * dt;
+    if(d < p.r + e.r + 8){
+      let on = 0;
+      const list = c.world && c.world.enemies ? c.world.enemies.items : null;
+      if(list) for(let i = 0; i < list.length; i++) if(list[i].alive && list[i].attached) on++;
+      if(on < 4){
+        e.attached = true;
+        e.holdAngle = Math.atan2(e.y - p.y, e.x - p.x);
+        e.grazed = true;
+      }
+    }
+  },
+
+  /*
+   * THE SKY OX. Sinks, wanders, and bleeds off whatever you have shoved into
+   * it - so a push is a push, not permanent drift. It leaves through the
+   * bottom on its own in about twenty seconds, which is what makes it
+   * impossible for the herd to deadlock a mission.
+   */
+  graze(e, dt, c){
+    e.phase += dt;
+    e.y += e.vy * dt;
+    e.x += Math.sin(e.phase * 0.35) * 26 * dt;
+    e.x += (e.vx || 0) * dt;
+    e.vx = (e.vx || 0) * (1 - 2.2 * dt);
+    e.x = clamp(e.x, 40, c.VW - 40);
+  },
+
   /** A ring of the serpent: reads its place off the head's tape. */
   serpentSeg(e, dt, c){
     const head = e.headRef;
@@ -614,6 +665,39 @@ const ENEMY_TYPES = {
   part: {
     name:"Ship Part", behaviour:"beltPart", hp:3, r:15, size:42, speed:0,
     score:15, money:12, tint:"#fb923c", fire:null,
+  },
+  /*
+   * THE LIMPET. Carries no gun at all, which is the whole point: it never
+   * costs a life, it costs SPEED. It homes in both axes, latches onto the
+   * hull and rides there making the ship heavier, and comes off when you
+   * waggle hard enough - or when you shoot it, because a rule with only one
+   * escape hatch is a trap.
+   *
+   * noLeash matters and costs nothing. The 28-second safety leash swaps a
+   * stale enemy's behaviour for a dive, so a long-attached limpet would stop
+   * running its ride code and visibly slide off the hull on its own - which
+   * reads as the level breaking rather than as mercy.
+   */
+  limpet: {
+    name:"Limpet", behaviour:"limpet", hp:3, r:11, size:34, speed:205,
+    score:14, money:14, tint:"#a3e635", fire:null,
+    noLeash:true,
+  },
+  /*
+   * THE SKY OX. The only thing in the game you are not meant to kill. Nothing
+   * gets through the hide - but a round still SHOVES, so the biggest object
+   * on screen is a tool you aim rather than a target you clear.
+   *
+   * `hazard:true` is doing a great deal of quiet work here and needs no
+   * special cases: it keeps the ox out of the kill ledger (e.counted), out of
+   * Guardian bubbles (protectable), out of the hauler-ram loop, and it makes
+   * ramming one cost YOU a life while the ox strolls on. All four are exactly
+   * the rule this level wants.
+   */
+  grazer: {
+    name:"Sky Ox", behaviour:"graze", hp:999, r:34, size:104, speed:44,
+    score:0, money:0, tint:"#e7d8c9", fire:null,
+    hazard:true, armoured:true, pushable:true, noLeash:true,
   },
 };
 

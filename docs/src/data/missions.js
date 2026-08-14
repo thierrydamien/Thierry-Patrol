@@ -46,6 +46,24 @@ const OBJECTIVES = {
   convoy:    { label:"Bring the hauler home", icon:"🛡️",
                test: s => s.convoyTotal > 0 && s.convoyLost === 0,
                progress: s => s.convoyLost ? "lost" : "safe" },
+  delivered: { label:"Deliver all 4 crates", icon:"🧰",
+               test: s => (s.delivered || 0) >= 4,
+               progress: s => (s.delivered || 0) + "/4" },
+  roundTheBack: { label:"Go round the back 6 times", icon:"🔄",
+               test: s => (s.wraps || 0) >= 6,
+               progress: s => (s.wraps || 0) + "/6" },
+  shakenOff: { label:"Shake off 10 limpets", icon:"🫧",
+               test: s => (s.limpetsShaken || 0) >= 10,
+               progress: s => (s.limpetsShaken || 0) + "/10" },
+  unburned:  { label:"Never get caught by the flare", icon:"🔥",
+               test: s => (s.flareHits || 0) === 0,
+               progress: s => s.flareHits ? "burned" : "clean" },
+  roundUp:   { label:"Flatten 15 ships with the herd", icon:"🐂",
+               test: s => (s.crushed || 0) >= 15,
+               progress: s => (s.crushed || 0) + "/15" },
+  twin20:    { label:"Let your reflection get 20 kills", icon:"🪞",
+               test: s => (s.mirrorKills || 0) >= 20,
+               progress: s => (s.mirrorKills || 0) + "/20" },
   /* --- Act 4 --- */
   denyParts: { label:"Stop 10 parts on the belts", icon:"🛠",
                test: s => (s.partsDenied || 0) >= 10,
@@ -368,6 +386,7 @@ const MISSIONS = [
     // Cover turns "they shoot back" from a dodging drill into a reason to
     // read the field. The rocks were already here; now they mean something.
     cover:true,
+    face:"striker",                   // the level where they shoot back
     waves: [
       w(1,   "grunt",   7, "arc"),
       w(8,   "striker", 3, "line"),
@@ -566,7 +585,40 @@ const MISSIONS = [
     objectives: ["complete","convoy","kill80"],
   },
   {
-    id:10, name:"Sky Sentinel", subtitle:"Their flagship",
+    /*
+     * THE LIFELINE. Mission 9 you protect the ship that carries; here you ARE
+     * the ship that carries; mission 11 is their flagship. The roster is only
+     * things that REACH you - interceptors, swoopers, kamikaze, shard - so a
+     * hit on the delivery run is always something that touched you rather
+     * than something shelled from across the field. No boulders (they would
+     * park in front of the door) and no carriers (the crates are this level's
+     * cargo, and a level gets exactly one thing to carry).
+     */
+    id:10, name:"The Lifeline", subtitle:"you are the delivery",
+    brief:"The forward squadron is out of everything. There is no hauler left to send, so you are the hauler: grab each crate, fly it up to the green door, and let go. Take a hit and you will drop the load — it will hang there a moment before it starts to sink, so go back for it.",
+    goal:"CARRY 4 crates to the green door",
+    ferry:4,
+    face:"interceptor",
+    waves: [
+      w(2,   "interceptor", 4, "sides"),
+      w(10,  "swooper",     6, "arc"),
+      w(18,  "asteroid",    5, "scatter"),
+      w(24,  "sniper",      2, "sides"),
+      w(30,  "kamikaze",    5, "pincer"),
+      w(38,  "interceptor", 6, "line"),
+      w(46,  "grunt",      10, "wall"),
+      w(52,  "shard",       6, "scatter"),
+      w(58,  "sniper",      3, "arc"),
+      w(64,  "swooper",     8, "vee"),
+      w(72,  "kamikaze",    7, "scatter"),
+      w(80,  "interceptor", 8, "sides"),
+      w(88,  "striker",     7, "wall"),
+      w(96,  "swooper",     9, "pincer"),
+    ],
+    objectives: ["complete","delivered","kill80"],
+  },
+  {
+    id:11, name:"Sky Sentinel", subtitle:"Their flagship",
     brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
     goal:"BOSS! Knock its parts off",
     waves: [
@@ -630,7 +682,7 @@ const MISSIONS = [
    * objective even on the mission where you can't fire a shot.
    */
   {
-    id:11, name:"Silent Running", subtitle:"Guns down. Just fly.",
+    id:12, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
     goal:"Guns broken — just DODGE!",
     face:"swooper",                   // the thing you spend the level dodging
@@ -669,7 +721,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:12, name:"The Wreck Line", subtitle:"Through the debris",
+    id:13, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
     goal:"Fly the scrap — it stops their shots",
     cover:true,                       // the debris shelters as well as blocks
@@ -700,7 +752,42 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:13, name:"The Rival", subtitle:"One of them is good",
+    /*
+     * THE RING. A movement toy between the Wreck Line and the Vesper duel -
+     * no boss, no health bar, just a rule. The roster is everything whose
+     * whole trick is locking onto your lane, so that going round the back
+     * BREAKS the lock and the level pays you for using it: interceptors that
+     * keep correcting, kamikaze that commit to a point you then leave,
+     * turrets patrolling a line, thieves you can cut off the short way. All
+     * `sides` and `pincer`, so the fight lives at the edges.
+     */
+    id:14, name:"The Ring", subtitle:"this sky has no edges",
+    brief:"Nobody has ever found the edge of this place. Fly out one side and you come straight back in the other, same height, still going. They cannot do it — their ships are built to hold a lane. You are not.",
+    goal:"GO ROUND THE BACK — the sky joins up",
+    wrap:true,
+    face:"thief",                     // the runner you cut off the short way round
+    waves: [
+      w(1,   "grunt",      8, "sides"),
+      w(8,   "interceptor",5, "sides"),
+      w(16,  "weaver",     8, "pincer"),
+      w(24,  "turret",     3, "sides"),
+      w(31,  "kamikaze",   6, "pincer"),
+      w(38,  "carrier",    1, "column"),
+      w(44,  "thief",      2, "sides"),
+      w(50,  "interceptor",7, "pincer"),
+      w(58,  "striker",    7, "sides"),
+      w(66,  "swooper",    8, "pincer"),
+      w(74,  "turret",     4, "twinColumns"),
+      w(80,  "carrier",    1, "column"),
+      w(86,  "kamikaze",   8, "sides"),
+      w(94,  "weaver",    10, "pincer"),
+      w(102, "interceptor",9, "sides"),
+      w(110, "grunt",     12, "wall"),
+    ],
+    objectives: ["complete","rescueAll","roundTheBack"],
+  },
+  {
+    id:15, name:"The Rival", subtitle:"One of them is good",
     brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
     rival:true,
     face:"rival",
@@ -724,7 +811,7 @@ const MISSIONS = [
     goal:"VESPER copies you — trick her!",
   },
   {
-    id:14, name:"The Hatchery", subtitle:"It keeps growing",
+    id:16, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -754,7 +841,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:15, name:"The Warden", subtitle:"Their jailer",
+    id:17, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -788,7 +875,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:16, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:18, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
     // The weather remix: the Storm's gusts, six missions later, in a level
     // that's about CATCHING things - the wind blows the loot around, so the
@@ -822,7 +909,44 @@ const MISSIONS = [
     objectives: ["complete","kill80","coinRush"],
   },
   {
-    id:17, name:"Cold Approach", subtitle:"Line up the shot",
+    /*
+     * SHAKE THEM OFF. You robbed the Treasury last stop; something crawled
+     * aboard on the way out. Everything in this roster punishes being slow,
+     * which is exactly what the limpets make you: Marksmen drawing lines you
+     * can no longer outrun, mines that need speed to leave, mass to steer
+     * round with a sluggish rudder. Deliberately NO Guardians, hives or
+     * menders - nothing that asks you to prioritise a target, because the
+     * level's whole cognitive load is your own ship handling badly.
+     */
+    id:19, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
+    brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
+    goal:"WAGGLE hard to shake them off",
+    limpets:true,
+    face:"limpet",
+    waves: [
+      w(1,   "striker",     6, "vee"),
+      w(10,  "limpet",      4, "scatter"),
+      w(17,  "sniper",      3, "sides"),
+      w(24,  "asteroid",    6, "scatter"),
+      w(30,  "limpet",      5, "sides"),
+      w(37,  "bomber",      3, "twinColumns"),
+      w(44,  "carrier",     1, "column"),
+      w(50,  "interceptor", 7, "line"),
+      w(57,  "limpet",      6, "scatter"),
+      w(64,  "boulder",     2, "twinColumns"),
+      w(70,  "sniper",      4, "arc"),
+      w(77,  "mine",        6, "scatter"),
+      w(84,  "limpet",      6, "sides"),
+      w(91,  "striker",     8, "wall", { elite: 1 }),
+      w(98,  "carrier",     1, "column"),
+      w(104, "limpet",      6, "pincer"),
+      w(112, "bomber",      4, "sides"),
+      w(118, "grunt",      12, "wall"),
+    ],
+    objectives: ["complete","shakenOff","rescueAll"],
+  },
+  {
+    id:20, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -852,7 +976,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:18, name:"The Trench Run", subtitle:"Thread the walls",
+    id:21, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -879,7 +1003,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:19, name:"All Hands", subtitle:"Everyone who is left",
+    id:22, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -916,7 +1040,45 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:20, name:"The Leviathan", subtitle:"The last one",
+    /*
+     * THE BRIGHT SIDE. Their last big ship is refuelling at their sun, so the
+     * campaign's brightest sky sits immediately before its darkest stretch.
+     * The roster is everything that HOVERS - turret, sniper, shielder, hive,
+     * mender - so the fight naturally lives in the top half where the fire is
+     * pushing you, with swoopers and kamikaze diving down through it and
+     * burning if they dawdle. THREE carriers, deliberately: a carrier dives
+     * toward the BOTTOM of the screen, so the flare will take your rescues if
+     * you are slow. It is the most legible reason to hurry the game has.
+     */
+    id:23, name:"The Bright Side", subtitle:"standing on their sun",
+    brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
+    goal:"CLIMB when the star flares",
+    flare:true,
+    face:"turret",
+    waves: [
+      w(1,   "turret",   3, "sides"),
+      w(9,   "sniper",   4, "arc"),
+      w(17,  "swooper",  8, "vee"),
+      w(25,  "shielder", 2, "twinColumns"),
+      w(28,  "striker",  7, "wall"),
+      w(36,  "carrier",  1, "column"),
+      w(43,  "hive",     2, "sides"),
+      w(50,  "kamikaze", 9, "scatter"),
+      w(57,  "asteroid", 6, "scatter"),
+      w(63,  "mender",   2, "twinColumns"),
+      w(66,  "turret",   4, "tripleColumns", { elite: 1 }),
+      w(74,  "carrier",  1, "column"),
+      w(80,  "sniper",   5, "sides"),
+      w(87,  "swooper", 10, "pincer"),
+      w(94,  "shielder", 3, "sides"),
+      w(97,  "striker",  9, "wall", { elite: 1 }),
+      w(105, "carrier",  1, "column"),
+      w(111, "hive",     3, "twinColumns"),
+    ],
+    objectives: ["complete","rescueAll","unburned"],
+  },
+  {
+    id:24, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -955,7 +1117,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:21, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:25, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -980,7 +1142,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","kill80"],
   },
   {
-    id:22, name:"The Long Dark", subtitle:"Something is out there",
+    id:26, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -1011,7 +1173,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:23, name:"The Devourer", subtitle:"The last star",
+    id:27, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -1036,7 +1198,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:24, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:28, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1063,7 +1225,40 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:25, name:"The Chorus", subtitle:"They fire on the beat",
+    /*
+     * THE STAMPEDE. The cheapest, most tightly packed formations in the game,
+     * so there is always something worth flattening - and then the things you
+     * would RATHER solve with an ox than with your guns: brutes, gun
+     * platforms, an elite or two. Explicitly NO boulders and NO asteroids:
+     * the ox must be the only big pale mass in the sky, or the lesson ("the
+     * big thing is a tool, not an obstacle") gets muddled.
+     */
+    id:29, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
+    goal:"STEER the herd into their ships",
+    stampede:true,
+    face:"grazer",
+    waves: [
+      w(1,   "grunt",      11, "wall"),
+      w(9,   "weaver",     10, "tripleColumns"),
+      w(17,  "interceptor", 8, "scatter"),
+      w(25,  "swooper",     9, "pincer"),
+      w(33,  "carrier",     1, "column"),
+      w(39,  "brute",       4, "line"),
+      w(47,  "grunt",      13, "wall"),
+      w(54,  "turret",      4, "tripleColumns"),
+      w(61,  "weaver",     11, "scatter"),
+      w(69,  "interceptor", 9, "sides"),
+      w(76,  "carrier",     1, "column"),
+      w(82,  "brute",       5, "wall", { elite: 1 }),
+      w(90,  "swooper",    11, "vee"),
+      w(98,  "grunt",      14, "wall"),
+      w(106, "weaver",     12, "tripleColumns"),
+    ],
+    objectives: ["complete","roundUp","rescueAll"],
+  },
+  {
+    id:30, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1090,7 +1285,40 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:26, name:"The Foundry", subtitle:"Stop the production line",
+    /*
+     * THE GLASS SEA. Symmetric formations ONLY - twinColumns, sides, pincer,
+     * vee, arc. Never `column`, never `scatter`: a lone off-centre ship
+     * breaks the picture and gives the twin nothing to do. Every wave arrives
+     * as mirrored pairs that line up with your two guns, so "the one I can't
+     * reach" always has a partner the reflection can.
+     */
+    id:31, name:"The Glass Sea", subtitle:"two of you",
+    brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
+    goal:"USE your reflection — it shoots too",
+    mirror:true,
+    face:"splitter",                  // the one that becomes two, like you
+    waves: [
+      w(1,   "weaver",      8, "twinColumns"),
+      w(9,   "striker",     6, "sides"),
+      w(17,  "interceptor", 8, "pincer"),
+      w(25,  "sniper",      4, "sides"),
+      w(32,  "carrier",     2, "twinColumns"),
+      w(38,  "swooper",    10, "vee"),
+      w(46,  "shielder",    2, "sides"),
+      w(49,  "brute",       4, "twinColumns"),
+      w(57,  "splitter",    6, "arc"),
+      w(65,  "weaver",     12, "pincer"),
+      w(73,  "turret",      4, "sides"),
+      w(80,  "carrier",     2, "twinColumns"),
+      w(86,  "striker",     9, "vee", { elite: 1 }),
+      w(94,  "interceptor",10, "pincer"),
+      w(102, "sniper",      6, "sides"),
+      w(108, "swooper",    12, "arc", { elite: 1 }),
+    ],
+    objectives: ["complete","rescueAll","twin20"],
+  },
+  {
+    id:32, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1117,7 +1345,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:27, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:33, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1143,7 +1371,7 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:28, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:34, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
     goal:"The workshop is awake. Fly!",
     face:"rival",
@@ -1174,7 +1402,7 @@ const MISSIONS = [
      * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
      * owns the pencil veil, the last stroke and the squadron photo.
      */
-    id:29, name:"Sky 29", subtitle:"the one Papa never finished",
+    id:35, name:"Sky 35", subtitle:"the one Papa never finished",
     brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, coinRain:true,

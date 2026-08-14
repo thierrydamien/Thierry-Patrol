@@ -67,7 +67,7 @@ function freshDraft(){
   const call = (me && (me.callsign || me.name)) || "PILOT";
   return {
     name: call + "'S SKY",
-    sky: 9,                       // The Deep - a pretty default
+    sky: 10,                      // The Deep - a pretty default
     rule: "none",
     boss: "",
     waves: [

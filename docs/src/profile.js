@@ -248,6 +248,31 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 13) p.lastMission += 1;
     p.missionsVer = 5;
   }
+  /*
+   * v6: six new levels landed at once - The Lifeline (10), The Ring (14),
+   * Shake Them Off (19), The Bright Side (23), The Stampede (29) and The
+   * Glass Sea (31) - so this is a map like v4, not an offset. Highest old id
+   * first, and every new id is above its old one, so nothing is overwritten
+   * before it moves. Ids 1-9 do not move at all.
+   *
+   * The tune unlocks and the Devourer flag move with it in the same release
+   * (config.js TUNES, and devourerDown below): they name mission ids by hand,
+   * this loop cannot reach them, and getting either wrong silently un-earns
+   * something a child worked for.
+   */
+  if((p.missionsVer || 1) < 6){
+    const SHIFT = [[29,35],[28,34],[27,33],[26,32],[25,30],[24,28],[23,27],[22,26],
+                   [21,25],[20,24],[19,22],[18,21],[17,20],[16,18],[15,17],[14,16],
+                   [13,15],[12,13],[11,12],[10,11]];
+    SHIFT.forEach(([oldId, newId]) => {
+      if(p.missions[oldId]){ p.missions[newId] = p.missions[oldId]; delete p.missions[oldId]; }
+    });
+    if(typeof p.lastMission === "number"){
+      const hit = SHIFT.find(([oldId]) => oldId === p.lastMission);
+      if(hit) p.lastMission = hit[1];
+    }
+    p.missionsVer = 6;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -440,7 +465,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[23] && p.missions[23].cleared),
+    devourerDown: !!(p.missions[27] && p.missions[27].cleared),
   };
 }
 

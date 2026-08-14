@@ -257,6 +257,24 @@ const COMMS = {
   brushDown: { speaker:"control", cooldown:999, lines:[
     "You painted the sky, {you}. Every star out here is one of yours now.",
   ]},
+  ferryStart: { speaker:"control", cooldown:999, lines:[
+    "You're the truck today, {you}. Grab a crate, run it up to the green door - take a hit and you'll drop the lot, so go careful AND go fast.",
+  ]},
+  wrapStart: { speaker:"control", cooldown:999, lines:[
+    "There's no edge to this place, {you} - fly out one side and you'll come right back in the other. Use it.",
+  ]},
+  limpetStart: { speaker:"mate", cooldown:999, lines:[
+    "Those little green things don't shoot, {you} - they STICK. If one gets you, waggle her hard, left-right-left, and shake it loose.",
+  ]},
+  flareStart: { speaker:"control", cooldown:999, lines:[
+    "We're right over the star itself, {you}. When the surface flares, CLIMB - anything low burns, them and us both.",
+  ]},
+  stampedeStart: { speaker:"mate", cooldown:999, lines:[
+    "Don't waste rounds on the big ones, {you} - nothing gets through that hide. But they MOVE when you hit them. Steer them into the fleet.",
+  ]},
+  mirrorStart: { speaker:"control", cooldown:999, lines:[
+    "The sky's a mirror out here, {you} - and so are you. Whatever you fire, your reflection fires it back at them.",
+  ]},
   sky29Start: { speaker:"control", cooldown:999, lines:[
     "This is the one, {you}. Papa sketched it and never got to paint it. Every star you earned is a colour - fly, and use them all.",
   ]},

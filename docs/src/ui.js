@@ -1339,21 +1339,28 @@ const SECTORS = [
   { at:5,  name:"THE STORM",       hue:"#7cc4ff",
     sub:"wild wind, and friends to get out" },              // 6-7
   { at:7,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
-    sub:"guard the hauler, all the way to their flagship" },// 8-10
-  { at:10, name:"ENEMY SPACE",     hue:"#f472b6",
-    sub:"behind their lines, where nobody is friendly" },   // 11-13
-  { at:13, name:"WARDEN'S REACH",  hue:"#34d399",
-    sub:"his nest, his ring, and his money" },              // 14-16
-  { at:16, name:"THE TRENCHES",    hue:"#94a3b8",
-    sub:"straight down the middle of their fortress" },     // 17-19
-  { at:19, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"the dark at the end, and the thing living in it" },// 20-23
-  { at:23, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 24-26
-  { at:26, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 27-28
-  { at:28, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 29
+    sub:"guard the hauler, then carry the load yourself" }, // 8-11
+  { at:11, name:"ENEMY SPACE",     hue:"#f472b6",
+    sub:"behind their lines, where nobody is friendly" },   // 12-15
+  { at:15, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 16-19
+  { at:19, name:"THE TRENCHES",    hue:"#94a3b8",
+    sub:"straight down the middle of their fortress" },     // 20-22
+  /*
+   * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
+   * under one caption - "the dark at the end" was printed over the brightest
+   * three stops on the route. Split, so each half says what it is.
+   */
+  { at:22, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 23-24
+  { at:24, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 25-27
+  { at:27, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 28-31
+  { at:31, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 32-34
+  { at:34, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 35
 ];
 
 /*

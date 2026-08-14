@@ -61,7 +61,7 @@ const PAINTS = [
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
   // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
   // painting the sky is the only way to wear it.
-  { id:"sky29",    name:"SKY 29",     hex:"#ff9e7d", secret:true },
+  { id:"sky29",    name:"SKY 35",     hex:"#ff9e7d", secret:true },
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [
@@ -396,23 +396,23 @@ const TUNES = [
     blurb:"The Jailer's armour plates. A spare seat and slabs down the flanks.",
     pros:["+1 life"], cons:[],
     speed:1.00, fire:1.00, lives:1 },
-  { id:"viper",    name:"VIPER", unlockMission:10,
+  { id:"viper",    name:"VIPER", unlockMission:11,
     blurb:"The Sentinel's overclocked cannons on twin rails.",
     pros:["+12% fire rate"], cons:[],
     speed:1.00, fire:0.88, lives:0 },
-  { id:"scavenger",name:"SCAVENGER", unlockMission:15,
+  { id:"scavenger",name:"SCAVENGER", unlockMission:17,
     blurb:"The Warden's collector rig. A golden scoop under the nose.",
     pros:["coins fly to you","+15% pay"], cons:[],
     speed:1.00, fire:1.00, lives:0, magnet:1.7, money:1.15 },
-  { id:"ghost",    name:"GHOST", unlockMission:17,
+  { id:"ghost",    name:"GHOST", unlockMission:20,
     blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
     pros:["+8% speed","longer safety after a hit"], cons:[],
     speed:1.08, fire:1.00, lives:0, invuln:1.5 },
-  { id:"nova",     name:"NOVA", unlockMission:23, apex:true,
+  { id:"nova",     name:"NOVA", unlockMission:27, apex:true,
     blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
     pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
     speed:1.12, fire:0.90, lives:1, magnet:1.5 },
-  { id:"apex",     name:"APEX", unlockMission:20, apex:true,
+  { id:"apex",     name:"APEX", unlockMission:24, apex:true,
     blurb:"The Leviathan's core, fitted to your ship. Gold trim. You earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
     speed:1.08, fire:0.95, lives:1 },

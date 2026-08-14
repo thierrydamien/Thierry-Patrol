@@ -74,6 +74,15 @@ const SKIES = [
             {k:"planet", x:0.14, y:0.72, r:0.05, lit:"#f5deb0", dark:"#5c4318", craters:true},
             {k:"galaxy", x:0.24, y:0.14, r:0.18} ] },
 
+  /* Cold, clean and medical - the only pale ice-blue-over-near-white in the
+     table, dropped between the gold Trade Lane and the purple Deep so the
+     contrast lands. First sky to fly the aurora painter. */
+  { name:"The Relief Line", clouds:["#7dd3fc","#e0f2fe","#1e3a5f"], dust:"#040a12", star:"#f0f9ff",
+    density:0.7, stars:1.15, bright:4,
+    props:[ {k:"aurora", x:0.50, y:0.28, r:0.34},
+            {k:"planet", x:0.16, y:0.70, r:0.13, lit:"#bcd9f2", dark:"#0d1a2e", craters:true},
+            {k:"sun",    x:0.86, y:0.16, r:0.024, color:"#eaf6ff"} ] },
+
   { name:"The Deep",     clouds:["#6d28d9","#db2777","#1e1b4b"], dust:"#05030f", star:"#ede9fe",
     density:1.3, stars:1.0, bright:4,
     props:[ {k:"planet", x:0.66, y:0.52, r:0.322, lit:"#4b3a7a", dark:"#07040f", crescent:true},
@@ -93,6 +102,16 @@ const SKIES = [
     props:[ {k:"rocks",  x:0.50, y:0.42, r:0.30, n:34},
             {k:"planet", x:0.16, y:0.76, r:0.104, lit:"#6b7c94", dark:"#0d131f", craters:true},
             {k:"rocks",  x:0.80, y:0.14, r:0.14, n:14} ] },
+
+  /* Jade and brass, which the table does not own. The composition teaches the
+     level before the ship ever touches an edge: the SAME planet placed twice,
+     hard against both edges at the same height, so the backdrop is left-right
+     continuous and the eye reads "this place joins up". */
+  { name:"The Ring",     clouds:["#0f766e","#f59e0b","#04211f"], dust:"#020c0b", star:"#ccfbf1",
+    density:1.1, stars:0.8, bright:3,
+    props:[ {k:"planet", x:0.02, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
+            {k:"planet", x:0.98, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
+            {k:"galaxy", x:0.50, y:0.18, r:0.24} ] },
 
   { name:"Duelling Ground", clouds:["#9d174d","#f472b6","#4a044e"], dust:"#12030c", star:"#fce7f3",
     density:0.85, stars:1.1, bright:3,
@@ -118,6 +137,15 @@ const SKIES = [
             {k:"rocks",  x:0.24, y:0.60, r:0.17, n:18},
             {k:"sun",    x:0.14, y:0.16, r:0.03, color:"#ffe9a8"} ] },
 
+  /* A yard where they cut up captured hulls, and the barnacles that strip
+     them. The only deep-indigo-over-near-white in the table, and deliberately
+     NOT green: limpet lime has to pop off it. First sky to fly the wreck. */
+  { name:"The Breaker's Yard", clouds:["#1e1b4b","#e0e7ff","#050414"], dust:"#02020c", star:"#c7d2fe",
+    density:0.85, stars:0.7, bright:2,
+    props:[ {k:"wreck",  x:0.44, y:0.52, r:1.15, thick:0.26, tilt:0.08},
+            {k:"rocks",  x:0.78, y:0.24, r:0.18, n:22},
+            {k:"sun",    x:0.12, y:0.84, r:0.03, color:"#dbeafe"} ] },
+
   { name:"Cold Approach", clouds:["#1e3a8a","#3b82f6","#0c1836"], dust:"#020510", star:"#dbeafe",
     density:0.75, stars:1.15, bright:4,
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
@@ -133,6 +161,18 @@ const SKIES = [
     props:[ {k:"galaxy", x:0.30, y:0.30, r:0.28},
             {k:"planet", x:0.78, y:0.62, r:0.182, lit:"#a855c9", dark:"#2a0a3c", bands:true, rings:true},
             {k:"planet", x:0.14, y:0.84, r:0.042, lit:"#f0abfc", dark:"#3b1049"} ] },
+
+  /* The only WHITE sky in the campaign, and the photographic negative of The
+     Long Dark three stops later. stars 0.12 because you cannot see stars from
+     inside a star's glare, and bright 0 - the first sky with no spiked suns
+     at all. The pillars are rooted at the very bottom edge and rim-lit, so
+     they read as prominences arching off the surface. */
+  { name:"The Bright Side", clouds:["#f59e0b","#fde68a","#7c2d12"], dust:"#1a0600", star:"#fff7d6",
+    density:1.55, stars:0.12, bright:0,
+    props:[ {k:"sun",     x:0.50, y:0.94, r:0.55, color:"#ffd08a"},
+            {k:"pillars", x:0.32, y:1.00, h:0.52, n:2, w:0.30, hi:"#ffe1a0", lo:"#5c1a02"},
+            {k:"pillars", x:0.76, y:1.00, h:0.44, n:2, w:0.26, hi:"#ffe1a0", lo:"#4a1402"},
+            {k:"planet",  x:0.14, y:0.30, r:0.055, lit:"#7c3a1a", dark:"#160500", craters:true} ] },
 
   { name:"Their Star",   clouds:["#9a3412","#fb923c","#450a0a"], dust:"#100301", star:"#ffedd5",
     density:1.35, stars:0.7, bright:4,
@@ -169,11 +209,36 @@ const SKIES = [
             {k:"galaxy", x:0.20, y:0.62, r:0.24},
             {k:"planet", x:0.16, y:0.16, r:0.045, lit:"#7fd8d0", dark:"#0e3a3a", craters:true} ] },
 
+  /* The only brown-and-bone sky on the route, and the only one with no
+     coloured emission in it at all - so the herd's country reads as somewhere
+     organic and old the instant it loads, between the teal Undertow and the
+     magenta Chorus. */
+  { name:"Bonefields",   clouds:["#78350f","#e7d8c9","#0c0a09"], dust:"#080604", star:"#fef3c7",
+    density:0.7, stars:1.0, bright:2,
+    props:[ {k:"planet", x:0.22, y:0.36, r:0.28, lit:"#8c7a68", dark:"#0b0907", craters:true},
+            {k:"rocks",  x:0.76, y:0.66, r:0.22, n:26},
+            {k:"planet", x:0.86, y:0.16, r:0.04, lit:"#d6c3ad", dark:"#2a2018"} ] },
+
   { name:"The Chorus",    clouds:["#c026d3","#f59e0b","#4a0450"], dust:"#0e0312", star:"#fdf4ff",
     density:1.05, stars:0.9, bright:4,
     props:[ {k:"galaxy", x:0.72, y:0.20, r:0.26},
             {k:"planet", x:0.18, y:0.74, r:0.11, lit:"#d879e8", dark:"#3a0d44", rings:true},
             {k:"sun",    x:0.14, y:0.24, r:0.028, color:"#ffd9f4"} ] },
+
+  /* Perfectly left-right symmetric, which matters technically as well as
+     aesthetically: tiled() wraps on Y ONLY, so a vertical axis of symmetry
+     survives the scroll where a horizon mirror would break on the first wrap.
+     Every prop paired at x and 1-x. Free bonus - drawPlanet lights each
+     sphere from the NEARER nebula core, so the twins come out lit from
+     opposite sides, exactly as a reflection should be. */
+  { name:"The Glass Sea", clouds:["#0e7490","#e2e8f0","#1e1b4b"], dust:"#04060f", star:"#f0f9ff",
+    density:0.8, stars:1.1, bright:4,
+    props:[ {k:"comet",  x:0.16, y:0.30, r:0.018, len:0.66, angle:-0.5, color:"#e0f2fe"},
+            {k:"comet",  x:0.84, y:0.30, r:0.018, len:0.66, angle:Math.PI+0.5, color:"#e0f2fe"},
+            {k:"planet", x:0.22, y:0.70, r:0.16, lit:"#a9c8de", dark:"#0b1220", rings:true},
+            {k:"planet", x:0.78, y:0.70, r:0.16, lit:"#a9c8de", dark:"#0b1220", rings:true},
+            {k:"galaxy", x:0.30, y:0.14, r:0.20},
+            {k:"galaxy", x:0.70, y:0.14, r:0.20} ] },
 
   { name:"The Foundry",   clouds:["#7c2d12","#f97316","#1c0a04"], dust:"#0d0502", star:"#ffedd5",
     density:1.2, stars:0.6, bright:2,
@@ -201,7 +266,7 @@ const SKIES = [
      and the busiest, brightest sky in the game, because it took every star to
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
-  { name:"Sky 29", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+  { name:"Sky 35", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
     density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},

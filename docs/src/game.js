@@ -393,6 +393,9 @@ function startMission(missionIndex, difficultyId){
     damageTaken: 0, hitsTaken: 0, livesLost: 0, completed: false,
     convoyTotal: mission.convoy ? 1 : 0, convoyLost: 0,
     partsDenied: 0, serpentAte: 0, serpentSlain: false, painted: 0,
+    // The six newer stops each count their own thing.
+    delivered: 0, dropped: 0, wraps: 0, limpetsShaken: 0,
+    flareHits: 0, crushed: 0, mirrorKills: 0,
     stars: 0,
   };
 
@@ -546,6 +549,12 @@ function startMission(missionIndex, difficultyId){
              : mission.serpent ? "serpentStart"
              : mission.backstage ? "backstageStart"
              : mission.sky29 ? "sky29Start"
+             : mission.ferry ? "ferryStart"
+             : mission.wrap ? "wrapStart"
+             : mission.limpets ? "limpetStart"
+             : mission.flare ? "flareStart"
+             : mission.stampede ? "stampedeStart"
+             : mission.mirror ? "mirrorStart"
              // The early-mission rules sit below the set pieces, so a mission
              // carrying both announces the bigger thing.
              : mission.lentDrones ? "dronesStart"
