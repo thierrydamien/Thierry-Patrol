@@ -122,9 +122,22 @@ function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; 
  * money so a new pilot gets a win in their first mission or two; it is the
  * last level of each track that is meant to be a trophy you fly a campaign
  * for. Prices round to 10 so they stay readable to a child.
+ *
+ * THE NUMBER BELOW IS LOAD-BEARING. At 4.6 the whole shop came to £944,170 -
+ * thirteen and a half times the £70k this comment claims, and the number the
+ * per-kill payout in game.js also reasons against. Sixty-five per cent of it
+ * sat in five purchases nobody could ever reach: Salvage Rig L5 alone was
+ * £214,920 and could never repay itself. A trophy you cannot fly a campaign
+ * for is not a trophy, it is scenery, and the garage's pegboard now advertises
+ * those empty hooks permanently.
+ *
+ * At 2.2 the shop totals ~£71k, the first level of anything is still under
+ * £700, and the last level of a track is 20-30 missions of saving rather than
+ * a thousand. `TOTAL_UPGRADE_COST` below is pinned in _smoketest.js so this
+ * can never drift silently again.
  */
-const COST_GROWTH = 4.6;   // how much steeper each level is than the last
-const COST_BASE   = 1.6;   // flat multiplier on every price
+const COST_GROWTH = 2.2;   // how much steeper each level is than the last
+const COST_BASE   = 1.1;   // flat multiplier on every price
 function costCurve(first, levels){
   const out = [];
   for(let i=0;i<levels;i++){
@@ -151,7 +164,7 @@ const UPGRADES = [
     effect: lvl => "tracking " + lvl + "/3" },
 
   { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:costCurve(100,4),
-    desc:"A bubble that eats a hit for you. It refills when you clear a wave",
+    desc:"A bubble that eats a hit for you. It refills every time you clear a wave",
     effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
   { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:costCurve(80,5),
     desc:"Start every mission with extra lives",

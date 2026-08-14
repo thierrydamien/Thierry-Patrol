@@ -172,17 +172,46 @@ const BULLET_TIERS = [
 ];
 
 const REFERENCE_DPS = 45;
+/*
+ * How hard a tier's armour chases your firepower.
+ *
+ * This used to track LINEARLY and without a ceiling, which meant a hard tier
+ * cancelled an upgrade the moment you bought it: HP rose by exactly the share
+ * of the damage you had just added. Combined with the toughSeconds floor below
+ * it produced a game where a 100x spread in firepower bought a ~1x change in
+ * how long anything took to kill. Measured on PILOT before this change: a
+ * turret died in 0.51s with 750 pounds of guns and 0.50s with 441,000.
+ *
+ * Tracking is now capped at TRACK_CEIL. Past that point every further upgrade
+ * is felt in full - which is the entire promise of the shop.
+ */
+const TRACK_CEIL = 2.0;
 function hpPowerScale(diff, dps){
   const track = diff ? (diff.hpTrack || 0) : 0;
   if(track <= 0 || !dps) return 1;
-  return 1 + track * (Math.max(dps, REFERENCE_DPS)/REFERENCE_DPS - 1);
+  return Math.min(TRACK_CEIL, 1 + track * (Math.max(dps, REFERENCE_DPS)/REFERENCE_DPS - 1));
 }
 
 class World {
   constructor(){
     this.bullets      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:3,dmg:1,pierce:0,homing:0,tier:0,age:0,fromDrone:false }), 320);
     this.enemyBullets = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:4,kind:"bolt",age:0 }), 400);
-    this.enemies      = new Pool(() => ({ alive:false }), 140);
+    /*
+     * 320, not 140. At the ceiling Pool.spawn steals the oldest LIVE slot and
+     * overwrites it - no kill, no escape, no callback of any kind - so an
+     * enemy could be counted as spawned and then simply cease to exist, which
+     * is exactly the accounting hole that made "destroy 80%" unreachable.
+     * Counting the planned script inside any 28-second window (28s is the hard
+     * ceiling on an enemy's life, from the leash) the old cap was reachable:
+     * mission 10 plans 144 on VETERAN and 187 on NIGHTMARE, and the desktop
+     * width top-up adds a further 20% on top of that. An enemy record is a
+     * handful of fields; the cap was never sized against this data.
+     */
+    this.enemies      = new Pool(() => ({ alive:false }), 320);
+    // If the ceiling is ever hit anyway, the loser leaves through the same
+    // door everything else leaves by, so the books stay honest.
+    this.enemies.onSteal = (e) => { e.escaped = true; if(this.onEnemyStolen) this.onEnemyStolen(e); };
+    this.onEnemyStolen = null;
     this.pickups      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,kind:"coin",value:0,life:0,angle:0,data:null }), 160);
     this.grid         = new SpatialGrid(VW, VH, 60);
     this.gridWidth    = VW;   // so a field change can be noticed in reset()
@@ -479,7 +508,11 @@ class World {
         }
       }
       b.x += b.vx*dt; b.y += b.vy*dt;
-      if(b.y < -30 || b.x < -30 || b.x > VW+30) b.alive = false;
+      // All four sides, as enemy bullets already were. A player bullet only
+      // ever flies up, until a Seeker bends one hard or a gravity well takes
+      // hold of it - and then, with no bottom test, it occupied a pool slot
+      // for the rest of the mission.
+      if(b.y < -30 || b.y > VH+40 || b.x < -30 || b.x > VW+30) b.alive = false;
     }
 
     const ebs = this.enemyBullets.items;
@@ -566,15 +599,38 @@ class World {
      */
     const dps = this.player ? this.player.dps : 0;
     const scaled = Math.max(1, Math.round(type.hp * (diff ? diff.hpMult : 1) * hpPowerScale(diff, dps)));
-    // The floor scales across tiers like boss fights do (bossHp: 0.8-1.5),
-    // NOT with hpMult (0.8-7.5): hard tiers already track firepower through
-    // hpPowerScale, and stacking hpMult on top turned every Mender into a
-    // bullet sponge exactly where the game is already at its hardest.
+    /*
+     * The floor scales across tiers like boss fights do (bossHp: 0.8-1.5),
+     * NOT with hpMult (0.8-7.5): hard tiers already track firepower through
+     * hpPowerScale, and stacking hpMult on top turned every Mender into a
+     * bullet sponge exactly where the game is already at its hardest.
+     *
+     * It is DAMPED above the reference loadout. A floor that rises in step
+     * with your guns is a 100% tax on every gun you buy, and that is what it
+     * was: fifteen of the twenty-four archetypes carry a toughSeconds, and for
+     * all fifteen the time-to-kill was pinned flat from about 3,000 pounds of
+     * shopping onward. Plasma Rounds level 5 - 143,280 pounds - moved a turret
+     * from 0.50s to 0.50s.
+     *
+     * Below REFERENCE_DPS the old linear rule is kept exactly, so a new pilot's
+     * first missions are untouched; above it the floor grows with the square
+     * root, so a maxed ship kills a Mender about 2.7x faster than a reference
+     * one while the Mender still lives long enough to fire its beam. The role
+     * guarantee survives; the tax does not.
+     */
+    const k = dps / REFERENCE_DPS;
     const floor = type.toughSeconds && dps > 0
-      ? Math.round(type.toughSeconds * dps * 0.5 * (diff ? (diff.bossHp || 1) : 1)) : 0;
-    // Elites multiply the scaled path only. The floor is a role guarantee -
-    // "long enough to do its thing" - not a number an elite should 3.5x.
-    e.hp = Math.round(Math.max(scaled * (elite ? ELITE.hpMult : 1), floor, type.hp));
+      ? Math.round(type.toughSeconds * 0.5 * REFERENCE_DPS * Math.min(k, Math.sqrt(k))
+                   * (diff ? (diff.bossHp || 1) : 1)) : 0;
+    /*
+     * Elites multiply whatever the hull ends up being, floor included. They
+     * used to multiply the scaled path ONLY, so the moment the floor overtook
+     * `scaled * 3.5` - about 3,300 pounds of gear - an elite had exactly the
+     * same health as the ordinary ship beside it while still paying 4x money
+     * and 4x score. Fourteen of twenty-four archetypes were in that state by
+     * 18,000 pounds: the scary one in the wave was free money.
+     */
+    e.hp = Math.round(Math.max(scaled, floor, type.hp) * (elite ? ELITE.hpMult : 1));
     e.maxHp = e.hp;
     e.r = type.r * (elite ? ELITE.sizeMult : 1);
     e.size = type.size * (elite ? ELITE.sizeMult : 1);
@@ -630,6 +686,18 @@ class World {
     e.entered = y > -40;
     e.fromBoss = false;   // set by the boss for summoned adds
     e.hazard = !!type.hazard;
+    /*
+     * Scripted actors are exempt from the 28-second leash below. The leash
+     * exists so an ordinary ship cannot loiter forever and deadlock a mission
+     * that only ends when the field is clear - it was never meant for a set
+     * piece that has its own scripted exit. It was reaching them anyway: the
+     * Tithe Serpent arrives at t=14 and was therefore dragged out of its own
+     * mission by t=42 whatever the script said, which on the harder tiers made
+     * its star - a star on the road to the 84 that open Sky 29 - very likely
+     * unobtainable. Its designed departure (run.serpent.fleeAt, in game.js)
+     * never got the chance to fire.
+     */
+    e.noLeash = !!type.noLeash;
     // Whether this enemy is part of the mission's planned opposition. Rocks,
     // boss adds, laid mines and hive drones are all real threats but none of
     // them were "planned", so counting them would quietly break the kill
@@ -665,7 +733,7 @@ class World {
       // Safety leash: whatever an archetype's behaviour is, after 28 seconds
       // on the field it gives up and dives away. A mission only ends when the
       // field is clear, so nothing is allowed to linger indefinitely.
-      if(e.life > 28){
+      if(e.life > 28 && !e.noLeash){
         e.y += Math.max(e.speed, 130) * 1.4 * dt;
       } else {
         (BEHAVIOURS[e.behaviour] || BEHAVIOURS.dive)(e, dt, ctxObj);

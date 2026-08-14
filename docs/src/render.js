@@ -37,9 +37,19 @@ const ASSET_PATHS = {
   playfieldBg: "assets/BackNew.jpg",
   backAlt: "assets/BackBack.jpg",
 };
-// Everything that uses these has procedural art to fall back on, so a missing
-// file must not hold the readiness gate hostage (red.png is on its way out).
-const OPTIONAL_ASSETS = { enemy: true };
+/*
+ * Everything that uses these has procedural art to fall back on, so a missing
+ * file must not hold the readiness gate hostage.
+ *
+ * `ship` joined the list because it is not drawn ANYWHERE. Its only two uses
+ * are as the probe image in canReadPixels() and as a cache-key discriminator
+ * string in tinted(); `tinted(assets.ship, ...)` is never called - every ship
+ * in the game comes from shipart.js. So 187KB was being fetched at boot and,
+ * because it was mandatory, one 404 silently killed the briefing hero art for
+ * all 29 missions (isReady()'s only consumer). `enemy` is likewise a fallback
+ * for when enemyArt has no silhouette, which it currently always does.
+ */
+const OPTIONAL_ASSETS = { enemy: true, ship: true };
 const assets = {};
 let assetsReady = false;
 
@@ -132,7 +142,11 @@ function canReadPixels(){
     const probe = document.createElement("canvas");
     probe.width = probe.height = 2;
     const pctx = probe.getContext("2d");
-    pctx.drawImage(assets.ship, 0, 0, 2, 2);
+    // Any same-origin image will do; use whichever tintable art actually
+    // loaded rather than requiring one particular file to be present.
+    const probeImg = assets.enemy || assets.ship || assets.playfieldBg;
+    if(!probeImg) return (pixelsReadable = false);
+    pctx.drawImage(probeImg, 0, 0, 2, 2);
     pctx.getImageData(0, 0, 1, 1);
     pixelsReadable = true;
   } catch(e){ pixelsReadable = false; }
@@ -1318,11 +1332,14 @@ function drawAct4(ctx, run, world, timeMs){
  * allowed to do.
  */
 function drawDisco(ctx, timeMs){
-  const t = timeMs/1000;
+  // Calmer visuals: the hue still rolls (it is the joke), but a quarter as
+  // fast and without the pulse, so the sky washes rather than strobes.
+  const calm = SF.fx.calmEnabled();
+  const t = timeMs/1000 * (calm ? 0.25 : 1);
   const hue = (t*84) % 360;
   ctx.save();
   ctx.globalCompositeOperation = "overlay";
-  ctx.globalAlpha = 0.20 + Math.sin(t*3.2)*0.06;
+  ctx.globalAlpha = calm ? 0.14 : 0.20 + Math.sin(t*3.2)*0.06;
   ctx.fillStyle = "hsl(" + hue.toFixed(0) + ",90%,55%)";
   ctx.fillRect(0, 0, VW, VH);
   // Gel beams from above, each on its own hue and its own slow sweep.

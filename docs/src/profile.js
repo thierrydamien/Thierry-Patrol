@@ -51,12 +51,52 @@ function adoptOldSaves(){
 }
 adoptOldSaves();
 
+/*
+ * EVERY WRITE TO THE STORE GOES THROUGH HERE.
+ *
+ * Every read in this file was already wrapped; the writes were not, and the
+ * writes are the dangerous half. `save()` is called from inside endMission,
+ * before the results screen is built - so on a full store, in Safari private
+ * browsing, or with site data blocked, the throw took the rest of endMission
+ * with it: no payout, no results card, an apparently frozen game. On a shared
+ * family iPad with three pilots, saved workshop skies and a stack of cloud
+ * backups, a full store is not a hypothetical.
+ *
+ * On a quota error we shed what is sheddable - the cloud backup list first,
+ * then the oldest saved skies - and try once more. Whatever happens, a failed
+ * save reports false and never throws into the caller.
+ */
+function writeKey(key, value){
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch(e){
+    try {
+      localStorage.removeItem("patrol_backups");   // cloud.js's BACKUP_KEY
+      localStorage.setItem(key, value);
+      return true;
+    } catch(e2){
+      try {
+        listNames().forEach(n => {
+          const raw = JSON.parse(localStorage.getItem(PREFIX + n) || "null");
+          if(raw && raw.workshopSkies && raw.workshopSkies.length > 2){
+            raw.workshopSkies.length = 2;
+            localStorage.setItem(PREFIX + n, JSON.stringify(raw));
+          }
+        });
+        localStorage.setItem(key, value);
+        return true;
+      } catch(e3){ return false; }
+    }
+  }
+}
+
 function listNames(){
   let names = null;
   try { names = JSON.parse(localStorage.getItem(INDEX_KEY) || "null"); } catch(e){ names = null; }
   if(!names || !names.length){
     names = ["Marc", "Charles"];
-    localStorage.setItem(INDEX_KEY, JSON.stringify(names));
+    try { localStorage.setItem(INDEX_KEY, JSON.stringify(names)); } catch(e){}
   }
   return names;
 }
@@ -65,7 +105,7 @@ function addName(name){
   const names = listNames();
   if(!names.includes(name)){
     names.push(name);
-    localStorage.setItem(INDEX_KEY, JSON.stringify(names));
+    writeKey(INDEX_KEY, JSON.stringify(names));
   }
 }
 
@@ -117,8 +157,9 @@ function save(p){
 
 /** Writes a record exactly as given - used when applying a record from sync. */
 function saveRaw(p){
-  localStorage.setItem(PREFIX + p.name, JSON.stringify(p));
+  const ok = writeKey(PREFIX + p.name, JSON.stringify(p));
   addName(p.name);
+  return ok;
 }
 
 /** Every pilot on this device, as a plain { name: record } map. */
@@ -431,8 +472,20 @@ function recordMission(p, missionId, difficultyId, stars, score, cleared, metIds
     rec.met = rec.met || {};
     rec.met[difficultyId] = metIds.slice();
   }
-  if(score > (rec.best[difficultyId] || 0)){ rec.best[difficultyId] = score; improved = true; }
-  if(score > p.highscore) p.highscore = score;
+  /*
+   * A SCORE IS ONLY A RECORD IF YOU FINISHED THE MISSION.
+   *
+   * endMission calls in here on failed campaign runs too (it has to - the fail
+   * streak and the ledger both need to know), and score accrues all through a
+   * run regardless of how it ends. So dying on the last wave with a big number
+   * used to book a personal best, a family best and the highscore. The record
+   * chips are what Marc and Charles actually compete over; "best" has to mean
+   * a run somebody won, or losing on purpose is a strategy.
+   */
+  if(cleared){
+    if(score > (rec.best[difficultyId] || 0)){ rec.best[difficultyId] = score; improved = true; }
+    if(score > p.highscore) p.highscore = score;
+  }
   save(p);
   return improved;
 }

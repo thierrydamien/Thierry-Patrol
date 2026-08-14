@@ -601,6 +601,50 @@ async function run(){
     const s = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
     return /carriesRescue \? this\.waveSize\(w\) : 0/.test(s);
   })());
+  /* ---------- the kill books balance ----------
+   * "I killed nearly everything and it said 65%" has now had three separate
+   * causes: back ranks culled before they arrived, boss adds counted as kills
+   * they were never spawned for, and the enemy pool silently overwriting a
+   * live ship at its ceiling. Each of them removed or added an entity without
+   * telling the ledger, so each of them is pinned at the source.
+   */
+  check("the enemy pool is deep enough for the densest planned wave", (() => {
+    // Worst 28-second window of the planned script (28s is the leash ceiling),
+    // at NIGHTMARE density, plus the desktop width top-up.
+    let worst = 0;
+    SF.missions.MISSIONS.forEach(m => {
+      if(!m.waves || !m.waves.length) return;
+      const ev = m.waves.map(w => ({ t:w.t, n:Math.max(1, Math.round(w.n*3.6*1.2)) }));
+      ev.forEach(a => {
+        const s = ev.filter(b => b.t >= a.t && b.t < a.t + 28).reduce((x,b) => x + b.n, 0);
+        if(s > worst) worst = s;
+      });
+    });
+    return worst <= SF.game.world.enemies.cap;
+  })());
+  check("a pool eviction leaves through the books, not silently", (() => {
+    const c = fs.readFileSync(path.join(__dirname, "src/core.js"), "utf8");
+    const e = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+    return /if\(o\.alive && this\.onSteal\) this\.onSteal\(o\)/.test(c) &&
+           /this\.enemies\.onSteal = /.test(e);
+  })());
+  check("boss adds never count as kills they were not spawned for", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; \}/.test(g);
+  })());
+  check("a scripted set piece is not dragged off by the safety leash",
+    SF.enemyData.ENEMY_TYPES.serpent.noLeash === true &&
+    SF.enemyData.ENEMY_TYPES.serpentSeg.noLeash === true &&
+    SF.enemyData.ENEMY_TYPES.rival.noLeash === true &&
+    /e\.life > 28 && !e\.noLeash/.test(
+      fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
+  check("the backstage fight reads the damage field bullets actually carry", (() => {
+    const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+    // The read sites only - the comment above the first one names the old
+    // field on purpose, so match the expression rather than the string.
+    return !/[-+*(]\s*b\.damage/.test(b) && !/b\.damage\s*\|\|/.test(b) &&
+           (b.match(/b\.dmg\s*\|\|\s*1/g) || []).length >= 3;
+  })());
   check("every wave references a real formation",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",
@@ -834,12 +878,27 @@ async function run(){
   check("every upgrade can be maxed", /Gear 53\/53/.test(id("pcGear").textContent));
   const spent = 2000000 - JSON.parse(window.localStorage.getItem("patrol_profile_Marc")).money;
   check("buying every level costs exactly the catalogue total", spent === SF.config.TOTAL_UPGRADE_COST);
+  /*
+   * A BAND, not a floor. This pin used to read `> 600000` and passed happily
+   * while the shop drifted to £944,170 - thirteen and a half times the ~£70k
+   * the cost-curve comment claims and the per-kill payout in game.js is tuned
+   * against. Sixty-five per cent of that sat in five purchases nobody could
+   * reach. A one-sided assertion cannot catch a runaway, so this one has a
+   * ceiling as well as a floor.
+   */
   check("maxing the armory is a long-haul goal, not an afternoon",
-    SF.config.TOTAL_UPGRADE_COST > 600000);
+    SF.config.TOTAL_UPGRADE_COST > 40000);
+  check("the armory is reachable inside a childhood",
+    SF.config.TOTAL_UPGRADE_COST < 120000);
   check("the first level of anything is pocket money",
     SF.config.UPGRADES.every(u => u.costs[0] <= 2000));
   check("each level costs meaningfully more than the last",
-    SF.config.UPGRADES.every(u => u.costs.every((c,i) => i === 0 || c > u.costs[i-1]*3)));
+    SF.config.UPGRADES.every(u => u.costs.every((c,i) => i === 0 || c > u.costs[i-1]*1.8)));
+  // No single purchase may dominate the shop. Salvage Rig L5 alone used to be
+  // £214,920 against a £944,170 total - 23% of everything, in one item that
+  // could never repay itself (it needed £1.43M of earnings to break even).
+  check("no single upgrade level costs more than an eighth of the shop",
+    SF.config.UPGRADES.every(u => u.costs.every(c => c < SF.config.TOTAL_UPGRADE_COST/8)));
   check("passing 20 gear levels plays the ace story",
     !id("storyOverlay").classList.contains("hidden") &&
     /SQUADRON ACE/.test(id("storyTitle").textContent));
@@ -1651,14 +1710,67 @@ async function run(){
     };
     check("easy tiers do not scale enemies to your guns",
       hpFor(maxed, "pilot") === hpFor(stock, "pilot"));
+    /*
+     * Tracking is real but CAPPED (TRACK_CEIL in entities.js). Uncapped it was
+     * a 100% tax: a hard tier raised enemy health by exactly the share of the
+     * damage you had just bought, so the shop's whole gun shelf bought nothing
+     * at all above PILOT. The band below is the contract - armour still chases
+     * your guns, and it stops chasing before it catches them.
+     */
     check("hard tiers do scale enemies to your guns",
-      hpFor(maxed, "nightmare") > hpFor(stock, "nightmare") * 3);
+      hpFor(maxed, "nightmare") > hpFor(stock, "nightmare") * 1.5);
+    check("hard tiers stop chasing your guns before they catch them",
+      hpFor(maxed, "nightmare") <= hpFor(stock, "nightmare") * 2.2);
     check("each tier is meaningfully tougher than the last",
       hpFor(stock,"pilot") < hpFor(stock,"ace") &&
       hpFor(stock,"ace") < hpFor(stock,"veteran") &&
       hpFor(stock,"veteran") < hpFor(stock,"nightmare"));
     check("a maxed ship still meets a real wall on NIGHTMARE",
       hpFor(maxed, "nightmare") >= 8 * hpFor(maxed, "pilot"));
+
+    /*
+     * BUYING GUNS HAS TO CHANGE HOW LONG THINGS TAKE TO KILL.
+     *
+     * Fifteen of the twenty-four archetypes carry a `toughSeconds`, which used
+     * to floor their health at `yourDPS x toughSeconds x 0.5` - health sized
+     * from your guns, so time-to-kill was constant BY CONSTRUCTION. Measured on
+     * PILOT before the fix: a turret died in 0.51s with £750 of shopping and
+     * 0.50s with £441,000, and a carrier got slower (0.57s to 0.60s) from
+     * rounding. Plasma Rounds level 5 moved a turret from 0.50s to 0.50s.
+     *
+     * These pin the property the shop is actually selling, on the archetypes
+     * that carry the floor, so no future anti-trivialisation tweak can quietly
+     * cancel the gun shelf again.
+     */
+    const ttk = (prof, tierId, typeId) => {
+      const tier = SF.config.DIFFICULTY_BY_ID[tierId];
+      W.reset(); W.createPlayer(SF.game.buildLoadout(prof, tier));
+      return W.spawnEnemy(typeId, 100, 100, { difficulty: tier }).hp / W.player.dps;
+    };
+    const budget = SF.profile.blank("Budget");
+    budget.upgrades = { spread:2, rapid:1, damage:2 };
+    ["turret","carrier","boulder","hive","mender"].forEach(t => {
+      check("a maxed ship kills a " + t + " far faster than a budget one",
+        ttk(maxed, "pilot", t) < ttk(budget, "pilot", t) * 0.6);
+    });
+    check("upgrades still tell on NIGHTMARE, where armour chases hardest",
+      ttk(maxed, "nightmare", "turret") < ttk(budget, "nightmare", "turret") * 0.6);
+    /*
+     * ELITES multiply whatever the hull ends up being, floor included. They
+     * used to multiply the pre-floor number only, so the moment the floor
+     * overtook `scaled x 3.5` - about £3,300 of gear - an elite had exactly the
+     * same health as the ordinary ship beside it, while still paying 4x money
+     * and 4x score. Fourteen of twenty-four archetypes were in that state by
+     * £18,000: the scary one in the wave was free money.
+     */
+    {
+      const tier = SF.config.DIFFICULTY_BY_ID.pilot;
+      W.reset(); W.createPlayer(SF.game.buildLoadout(maxed, tier));
+      const norm = W.spawnEnemy("turret", 100, 100, { difficulty: tier }).hp;
+      const el = W.spawnEnemy("turret", 100, 100, { difficulty: tier, elite: true }).hp;
+      check("an elite is tougher than its ordinary twin at every gear level",
+        el > norm * 3);
+    }
   }
 
   /* ---------- the enemies that do something other than shoot ---------- */
@@ -4035,6 +4147,16 @@ async function run(){
       SF.game.world.player.y <= SF.entityConst.PLAY_BOTTOM &&
       SF.game.run.introFly <= 0 &&
       SF.game.world.bullets.items.some(b => b.alive));
+    /*
+     * The day is spent when a flight ENDS, not when one starts. Stamping it at
+     * launch meant a quit, a first-wave death or a closed tab burnt the bonus
+     * with nothing banked and no way back until tomorrow. So: still doubled on
+     * a relaunch that follows an abandoned run, and spent once one completes.
+     */
+    SF.game.startMission(0, "rookie");
+    check("an abandoned first flight does not burn the day's double pay",
+      SF.game.run.dailyDouble === true);
+    SF.game.endMission(true);
     SF.game.startMission(0, "rookie");
     check("the second flight of the day pays normally",
       !SF.game.run.dailyDouble);

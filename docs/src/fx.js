@@ -297,8 +297,40 @@ function setShakeEnabled(v){
   if(!shakeOn) shakeMag = 0;
 }
 
-function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag); }
-function flash(alpha, rgb){ flashAlpha = Math.max(flashAlpha, alpha); if(rgb) flashColor = rgb; }
+/*
+ * CALMER VISUALS.
+ *
+ * This game strobes: full-screen flashes on every heavy hit, a DISCO modifier
+ * that pulses the whole sky, a BLACKOUT mission, hit-stop, parallax and a
+ * constant particle storm. Exactly one rule in 82KB of CSS honoured
+ * prefers-reduced-motion, and it dimmed a single menu icon - which is no use
+ * at all, because everything that actually flashes is painted on the canvas
+ * where CSS cannot reach it.
+ *
+ * So the switch lives here, defaults to whatever the device asks for, and is
+ * overridable in Settings. It damps the full-screen flash hard (that is the
+ * photosensitivity risk, and it is the one thing a child cannot look away
+ * from) and thins the particle storm; the game stays entirely playable.
+ */
+const prefersCalm = (() => {
+  try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  catch(e){ return false; }
+})();
+let calmOn = localStorage.getItem("patrol_calm") !== null
+  ? localStorage.getItem("patrol_calm") === "1"
+  : prefersCalm;
+function calmEnabled(){ return calmOn; }
+function setCalmEnabled(v){
+  calmOn = !!v;
+  localStorage.setItem("patrol_calm", calmOn ? "1" : "0");
+  if(calmOn) flashAlpha = Math.min(flashAlpha, 0.12);
+}
+
+function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag * (calmOn ? 0.35 : 1)); }
+function flash(alpha, rgb){
+  flashAlpha = Math.max(flashAlpha, calmOn ? Math.min(alpha, 0.12) : alpha);
+  if(rgb) flashColor = rgb;
+}
 /** Freeze the world for a few ms so a heavy hit registers physically. */
 function hitStop(ms){ hitStopUntil = Math.max(hitStopUntil, nowMs + ms); }
 function isHitStopped(){ return nowMs < hitStopUntil; }
@@ -596,6 +628,7 @@ SF.fx = {
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
   firework, bloom,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
+  calmEnabled, setCalmEnabled,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },
 };

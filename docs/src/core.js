@@ -78,6 +78,7 @@ class Pool {
     this.cap = cap || 1024;
     this.items = [];
     this.cursor = 0; // round-robin start point, so we don't rescan from 0 each time
+    this.onSteal = null; // called with a live object about to be recycled at the cap
   }
   /** Returns a dead slot (or a fresh object), marked alive. Caller initialises it. */
   spawn(){
@@ -92,9 +93,16 @@ class Pool {
       }
     }
     if(n >= this.cap){
-      // At the ceiling: steal the oldest slot rather than growing without bound.
+      /*
+       * At the ceiling: steal the oldest slot rather than growing without
+       * bound. The victim is a LIVE object, so whoever owns the pool has to be
+       * told - silently overwriting a live enemy is how one gets counted as
+       * spawned and then never killed and never escaped, which puts the kill
+       * objectives permanently out of reach. `onSteal` is the one door out.
+       */
       const o = this.items[this.cursor];
       this.cursor = (this.cursor + 1) % n;
+      if(o.alive && this.onSteal) this.onSteal(o);
       o.alive = true;
       return o;
     }

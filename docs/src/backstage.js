@@ -294,7 +294,18 @@ function update(dt, run, world, simMs){
          * the thing the fight is teaching - wait, then hit.
          */
         const mult = m.mode === "open" ? 2 : 1;
-        const hit = (b.damage || 1) * mult;
+        /*
+         * `b.dmg`, NOT `b.damage`. Player bullets carry `dmg` (see the pool
+         * factory in entities.js); nothing anywhere sets `damage`. So this
+         * read was always undefined and the `|| 1` fallback fired on every
+         * single hit - the whole backstage fight ignored Plasma Rounds and
+         * took one point per bullet whether you flew in stock or maxed.
+         * Measured: at a maxed loadout the mirror needed ~137s instead of the
+         * ~19s its pool is sized for. The pool is derived from `dps`, which
+         * already includes the damage level, so reading the right field is
+         * the entire fix - no re-tune follows it.
+         */
+        const hit = (b.dmg || 1) * mult;
         m.hp -= hit;
         m.flash = 1;
         fx.spark(b.x, b.y, 0, -60, mult > 1 ? "#4ade80" : "#e8c14a", 0.3, 2);
@@ -423,6 +434,16 @@ function update(dt, run, world, simMs){
         B.nextAttack = 5.0;
       } else if(B.attack === "letters"){
         const word = "GAME OVER";
+        /*
+         * A letter is a TIMING obstacle - shoot the word down before it
+         * finishes the sentence - so it is sized in hits, not in health. At a
+         * flat 4 it took four bullets from a stock ship and, once the `b.dmg`
+         * read above was fixed, less than one from a maxed one: the whole
+         * attack evaporated before it could be read. Scaling at 0.6 of the
+         * damage level keeps it an obstacle at every loadout while still
+         * paying the upgrade - maxed guns roughly halve the work.
+         */
+        const letterHp = Math.round(4 * (1 + SF.profile.upgradeLevel(SF.game.profile, "damage") * 0.6));
         let k = 0;
         for(let i = 0; i < word.length; i++){
           if(word[i] === " ") continue;
@@ -430,7 +451,7 @@ function update(dt, run, world, simMs){
             ch: word[i],
             x: 50 + (W - 100) * (i + 0.5)/word.length,
             y: -40 - k*26, vy: 34,
-            hp: 4, r: 24, wob: rand(0, TAU),
+            hp: letterHp, r: 24, wob: rand(0, TAU),
           });
           k++;
         }
@@ -543,7 +564,7 @@ function update(dt, run, world, simMs){
         const dx = b.x - L.x, dy = b.y - L.y;
         if(dx*dx + dy*dy < (L.r + 4)*(L.r + 4)){
           b.alive = false;
-          L.hp -= b.damage || 1;
+          L.hp -= b.dmg || 1;
           fx.spark(b.x, b.y, 0, -40, "#e2e8f0", 0.3, 2);
         }
       }
@@ -585,7 +606,7 @@ function update(dt, run, world, simMs){
         const dx = b.x - B.x, dy = b.y - B.y;
         if(dx*dx + dy*dy < (B.r + 8)*(B.r + 8)){
           b.alive = false;
-          B.hp -= b.damage || 1;
+          B.hp -= b.dmg || 1;
           B.flash = 1;
           fx.spark(b.x, b.y, 0, -70, "#c9b458", 0.3, 3);
         }

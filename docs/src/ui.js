@@ -25,6 +25,16 @@ let selectedMissionIndex = 0;
 const screens = {};
 document.querySelectorAll(".screen").forEach(el => screens[el.id] = el);
 function show(id){
+  /*
+   * Leaving the garage ends whatever ceremony was mid-flight. The show queue
+   * used to survive the exit - buy something, walk away while the sparks are
+   * still going, and the fitting resumed from its frozen frame days later, on
+   * a ship that had long since been built.
+   */
+  if(id !== "screen-armory" && screens["screen-armory"] &&
+     screens["screen-armory"].classList.contains("active")){
+    hangar.show = null; hangar.shows.length = 0; hangar.celebrate = 0;
+  }
   Object.keys(screens).forEach(k => screens[k].classList.remove("active"));
   screens[id].classList.add("active");
   if(id === "screen-game") SF.game.resize();
@@ -262,10 +272,10 @@ function click(el, fn){
 
 /* ---------------------------------------------------------
    TITLE ART
-   The home screens used to sit on assets/Menu.jpg, which was
-   the real Sky Force game's promotional artwork - complete
-   with its logo. This paints our own instead: a generated
-   sky, a planet, and the pilot's ship coming at you.
+   The home screens used to sit on a borrowed promotional
+   image, complete with somebody else's logo. This paints our
+   own instead: a generated sky, a planet, and the pilot's ship
+   coming at you. (The file itself is gone from assets/.)
    --------------------------------------------------------- */
 /*
  * The home screens are alive, not a poster: the wing bobs, exhausts flicker
@@ -2897,11 +2907,21 @@ function startHangarLoop(){
   // Unlike the game loop, this one queues the *next* frame last and simply
   // stops when you leave the screen - an idle animation must not keep a
   // callback alive behind every other screen in the app.
-  const step = () => {
+  /*
+   * Real elapsed time, not a hard-coded 1/60. The ceremony ran off the frame
+   * COUNT, so it played at double speed on a 120Hz iPad and dragged on a tired
+   * one - the only animation in the game that didn't agree with the clock the
+   * game loop uses. Clamped the same way the game loop clamps, so a backgrounded
+   * tab doesn't return and fast-forward the whole show in one frame.
+   */
+  let last = 0;
+  const step = (now) => {
     hangar.raf = 0;
-    if(!screens["screen-armory"].classList.contains("active")) return;
-    hangar.t += 1/60;
-    drawHangar();
+    if(!screens["screen-armory"].classList.contains("active")){ last = 0; return; }
+    const dt = last ? Math.min(0.05, (now - last)/1000) : 1/60;
+    last = now;
+    hangar.t += dt;
+    drawHangar(dt);
     hangar.raf = requestAnimationFrame(step);
   };
   hangar.raf = requestAnimationFrame(step);
@@ -3405,7 +3425,7 @@ function drawShow(ctx, W, H, S){
   }
 }
 
-function drawHangar(){
+function drawHangar(dt){
   const ctx = hangar.ctx;
   if(!ctx || !profile) return;
   const A = SF.shipart;
@@ -3415,7 +3435,7 @@ function drawHangar(){
 
   const backdrop = garageBackdrop(W, H, hangar.compare);
   if(backdrop) ctx.drawImage(backdrop, 0, 0);
-  stepShow(1/60);
+  stepShow(dt || 1/60);
 
   const wallH = H*0.26;
   // The work light over the hero bay: a beam, its pool, and dust drifting in
@@ -3783,9 +3803,29 @@ function openBriefing(index){
     else if(c){ c.fillStyle = t.tint || "#c0392b"; c.beginPath(); c.arc(27,27,18,0,Math.PI*2); c.fill(); }
   });
 
-  // Default to the hardest tier they've unlocked - that's the one they want.
+  /*
+   * Default to a tier they have actually BEATEN, not the hardest one the star
+   * count has unlocked.
+   *
+   * The old rule took the last unlocked tier on the theory that "that's the one
+   * they want". NIGHTMARE unlocks at 24 stars - eight three-starred missions -
+   * so from about mission 9 onward every briefing a seven-year-old opened was
+   * pre-set to 3.6x the enemies and 7.5x the armour, and the only way out was
+   * noticing a row of cards and downgrading, every single time. They press the
+   * big glowing LAUNCH button and lose, with nothing telling them why. (The
+   * two-losses-and-we-offer-ROOKIE net further down was already treating this
+   * symptom.)
+   *
+   * So: the best tier they have cleared THIS mission on, else the tier they
+   * last flew, else PILOT. Never a tier they have not yet finished anything on.
+   */
   const unlocked = DIFFICULTIES.filter(d => stars >= d.unlockStars);
-  briefTier = (unlocked[unlocked.length-1] || DIFFICULTIES[1]).id;
+  const rec = profile.missions[m.id];
+  const clearedHere = rec && rec.stars
+    ? DIFFICULTIES.filter(d => (rec.stars[d.id] || 0) > 0 && stars >= d.unlockStars) : [];
+  const lastFlown = DIFFICULTIES.find(d => d.id === profile.lastDifficulty && stars >= d.unlockStars);
+  briefTier = (clearedHere[clearedHere.length-1] || lastFlown ||
+               unlocked[0] || DIFFICULTIES[1]).id;
   renderBriefTiers(index);
   drawBriefHero(index);
   show("screen-briefing");
@@ -3893,6 +3933,25 @@ function rushUnlocked(p){
 }
 
 function launch(index, difficultyId){
+  /*
+   * The unlock gate lives HERE, not only on the campaign map.
+   *
+   * `launch` used to call straight through to startMission, and the results
+   * screen's NEXT MISSION button calls it with `missionIndex + 1`. So clearing
+   * mission 28 and pressing NEXT walked a pilot into Sky 29 with any number of
+   * stars at all, straight past the 84-star gate that is the whole reason
+   * reaching it means anything. It would also have indexed off the end of
+   * MISSIONS if `hasNext` were ever computed wrongly upstream.
+   */
+  if(typeof index === "number"){
+    if(index < 0 || index >= MISSIONS.length || !isMissionUnlocked(profile, index)){
+      renderMissions();
+      show("screen-missions");
+      if(MISSIONS[index]) queueToast({ glyph:"lock", label:"LOCKED",
+        name: MISSIONS[index].name + " needs more stars — keep flying!" });
+      return;
+    }
+  }
   audio.init();
   show("screen-game");
   hideResults();
@@ -4654,6 +4713,7 @@ function renderSettings(){
   pill("setMusicRow", audio.musicEnabled());
   pill("setSfx", audio.sfxEnabled());
   pill("setShake", SF.fx.shakeEnabled());
+  pill("setCalm", SF.fx.calmEnabled());
   /*
    * The row stays visible on a device that cannot rumble, greyed out with a
    * note under it. Hiding it was the first instinct and it was wrong: every
@@ -4713,6 +4773,7 @@ click($("setSound"), () => { audio.setMuted(!audio.isMuted()); renderSettings();
 click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); renderSettings(); });
 click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
+click($("setCalm"), () => { SF.fx.setCalmEnabled(!SF.fx.calmEnabled()); renderSettings(); });
 click($("setRumble"), () => {
   if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());
@@ -4859,11 +4920,28 @@ click($("restartBtn"), () => {
   $("overlayPause").classList.add("hidden");
   launch(SF.game.run.missionIndex, SF.game.run.difficulty.id);
 });
+/*
+ * Quitting forfeits the run's takings - `endMission` is never reached, so the
+ * money collected is simply dropped. That is a fair rule and it was a SILENT
+ * one: ninety seconds of chasing coins, gone, with nothing on screen to say it
+ * would happen. It gets one confirmation, and the confirmation names the
+ * number, because "£820" means something to a seven-year-old and "your
+ * progress" does not.
+ */
 click($("quitBtn"), () => {
-  $("overlayPause").classList.add("hidden");
-  SF.game.state = "idle";
-  renderMissions();
-  show("screen-missions");
+  const leave = () => {
+    $("overlayPause").classList.add("hidden");
+    SF.game.state = "idle";
+    renderMissions();
+    show("screen-missions");
+  };
+  const run = SF.game.run;
+  const purse = run && !run.ended ? Math.round(run.money || 0) : 0;
+  if(purse <= 0) return leave();
+  confirmDlg("LEAVE THE MISSION?",
+             "You'll lose the £" + purse + " you've collected so far.",
+             { okLabel:"LEAVE", cancelLabel:"KEEP FLYING", danger:true })
+    .then(yes => { if(yes) leave(); });
 });
 click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));
 click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie"));

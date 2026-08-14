@@ -272,13 +272,13 @@
       <canvas id="game"></canvas>
 
       <button id="pauseBtn" class="icon-btn top-left" aria-label="Pause"><canvas class="btn-ico" data-glyph="pause" width="40" height="40"></canvas></button>
-      <button id="muteBtn" class="icon-btn top-right">♪</button>
+      <button id="muteBtn" class="icon-btn top-right" aria-label="Sound on or off">♪</button>
 
       <div class="ability-bar">
-        <button id="overdriveBtn" class="special-btn overdrive hidden">
+        <button id="overdriveBtn" class="special-btn overdrive hidden" aria-label="Overdrive">
           <canvas class="sb-icon" width="52" height="52" data-glyph="overdrive"></canvas><span class="sb-count" id="overdriveCount">0</span>
         </button>
-        <button id="bombBtn" class="special-btn hidden">
+        <button id="bombBtn" class="special-btn hidden" aria-label="Smart bomb">
           <canvas class="sb-icon" width="52" height="52" data-glyph="bomb"></canvas><span class="sb-count" id="bombCount">0</span>
         </button>
       </div>
@@ -329,7 +329,7 @@
     <div id="pePalette" class="pe-palette"></div>
     <div class="pe-buttons">
       <button id="peUndo" class="ghost-btn"><canvas class="btn-ico" data-glyph="undo" width="24" height="24"></canvas>UNDO</button>
-      <button id="peClear" class="ghost-btn">WIPE IT</button>
+      <button id="peClear" class="ghost-btn" aria-label="Wipe the drawing">WIPE IT</button>
       <button id="peCancel" class="ghost-btn">CANCEL</button>
       <button id="peDone" class="main-btn">PUT IT ON MY SHIP</button>
     </div>
@@ -365,6 +365,12 @@
         <span>Sound effects</span><span class="set-pill">ON</span></button>
       <button id="setShake" class="settings-row">
         <span>Screen shake</span><span class="set-pill">ON</span></button>
+      <!-- Damps the full-screen flashes, the strobing modifiers and the
+           particle storm. Defaults to the device's own reduced-motion
+           preference; everything that flashes is on the canvas, where a CSS
+           media query cannot reach it. -->
+      <button id="setCalm" class="settings-row">
+        <span>Calmer visuals</span><span class="set-pill">OFF</span></button>
       <!-- Always shown, even on the iPhones and iPads that cannot do it: a
            switch that quietly vanishes reads as a broken feature, and the note
            below turns "nothing happens" into an answer. -->

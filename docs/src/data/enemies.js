@@ -246,11 +246,37 @@ const BEHAVIOURS = {
     }
   },
 
-  /** A dropped mine: drifts, arms, then goes off on its own if you leave it. */
+  /**
+   * A dropped mine: drifts, arms, then goes off on its own if you leave it.
+   *
+   * It never did. Setting `hp = 0` and trusting "the next collision pass" was
+   * wrong - nothing anywhere reaps a zero-health enemy outside a hit, so an
+   * ignored mine simply drifted off the bottom of the screen with its fuse
+   * long expired. The documented mechanic, and the reason a Minelayer is
+   * frightening rather than decorative, had never once happened. So detonate
+   * it here, explicitly, through the same door a shot-down mine leaves by.
+   */
   mine(e, dt, c){
     e.y += e.vy * dt;
     e.fuse = (e.fuse || 0) + dt;
-    if(e.fuse > 9) e.hp = 0;      // resolved as a kill next collision pass
+    // A blink of warning first, so going off is something you SAW coming.
+    e.arming = e.fuse > 7.6;
+    if(e.fuse > 9 && e.alive){
+      e.hp = 0;
+      e.alive = false;
+      const R = 74;
+      SF.fx.explosion(e.x, e.y, R, "#a3e635", false);
+      SF.fx.ring(e.x, e.y, R, "#d9f99d", 3, 0.32);
+      SF.fx.shake(7);
+      // It only costs you something if you were standing in it. No score and
+      // no money either way - a mine that times out is a threat that got
+      // away with it, not a kill.
+      const p = c.player;
+      if(p && p.alive && c.onPlayerHit){
+        const dx = p.x - e.x, dy = p.y - e.y;
+        if(dx*dx + dy*dy < (R + p.r)*(R + p.r)) c.onPlayerHit("mine", e);
+      }
+    }
   },
 
   /**
@@ -522,6 +548,7 @@ const ENEMY_TYPES = {
     name:"Vesper", behaviour:"rival", hp:60, r:17, size:52, speed:190,
     score:900, money:420, tint:"#ff4fd8", named:"VESPER",
     toughSeconds:11,
+    noLeash:true,              // a duel ends when someone wins it, not on a timer
     fire:{ pattern:"aimed", every:[0.85,1.35], speed:300 },
   },
   bomber: {
@@ -565,12 +592,14 @@ const ENEMY_TYPES = {
     score:400, money:0, tint:"#2fbf9a", fire:null,
     armoured:true, tough:true,
     toughSeconds:6,
+    noLeash:true,              // it leaves when the script says so - see run.serpent
   },
   serpentSeg: {
     name:"Serpent Ring", behaviour:"serpentSeg", hp:60, r:14, size:44, speed:0,
     score:60, money:4, tint:"#2fbf9a", fire:null,
     armoured:true,
     toughSeconds:1.5,
+    noLeash:true,              // a ring goes where the head goes
   },
   /*
    * A ship part riding the Foundry's belts. Every one the player pops is a

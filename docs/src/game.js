@@ -414,6 +414,7 @@ function startMission(missionIndex, difficultyId){
   game.run = {
     mission, missionIndex, difficulty, director, stats, wavesEndT,
     halfwayShown: false, boulderShown: false, rivalShown: false,
+    skyWasBusy: false,       // wave-clear edge detector, for the shield refill
     /*
      * Per-kill payout, damped by the tier's density. A hard tier now sends
      * three times as many enemies, so paying `pay` per head would have made
@@ -482,11 +483,16 @@ function startMission(missionIndex, difficultyId){
    * one banner, one doubled payScale, and a date on the profile. Deliberately
    * per-pilot, so each brother gets his own morning bonus.
    */
+  /*
+   * The day is CLAIMED here but only STAMPED in endMission. Stamping it at
+   * launch meant quitting from the pause menu, dying on the first wave, or
+   * closing the tab burnt the bonus with nothing banked and nothing to show
+   * for it until tomorrow - which for a seven-year-old opening the wrong
+   * mission is a silent, unrecoverable loss of the best thing in their day.
+   */
   // The range must not burn the real first-flight-of-the-day bonus.
   const today = new Date().toDateString();
   if(!mission.testFlight && profile.lastFlightDay !== today){
-    profile.lastFlightDay = today;
-    P.save(profile);
     game.run.payScale *= 2;
     game.run.dailyDouble = true;
     // A money note must never take the instruction's place: the goal line is
@@ -583,6 +589,10 @@ function endMission(completed){
   // toast, because the map is the last place a player looks after a win.
   const starsBefore = P.totalStars(profile);
 
+  // The double-pay day is spent only once a flight has actually ENDED, so a
+  // quit or a first-wave death leaves tomorrow's bonus still on the table.
+  if(run.dailyDouble) profile.lastFlightDay = new Date().toDateString();
+
   profile.money += run.money;
   profile.lifetimeMoney += run.money;
   profile.totalKills += run.stats.kills;
@@ -673,7 +683,16 @@ const callbacks = {
   onEnemyKilled(e, bullet, byRamming){
     const run = game.run;
     e.alive = false;
-    if(e.counted){ run.stats.kills++; }
+    /*
+     * `!e.fromBoss` as well as `e.counted`. A boss add is spawned outside the
+     * WaveDirector, so it never increments `spawnedCount` - but it arrived here
+     * with `counted` already true (the flag is set on the returned object,
+     * after spawnEnemy has decided), so killing one incremented `kills` against
+     * a total it was never part of. onEnemyEscaped has always had this guard;
+     * the kill side did not, so the ratio could be inflated past 100% by
+     * farming adds - the mirror image of the bug that made it unreachable.
+     */
+    if(e.counted && !e.fromBoss){ run.stats.kills++; }
     if(run.mission.sky29) SF.sky29.splash(e.x, e.y);   // every kill, a drop of paint
 
     // Beating the rival is the level, so it gets a boss-sized send-off - it
@@ -888,6 +907,21 @@ const callbacks = {
     run.stats.escaped++;
     if(e.carriesRescue){
       fx.text(VW/2, VH*0.5, "HAULER ESCAPED", "#ff5d73", 19, true);
+    }
+    /*
+     * On a "destroy every enemy" mission a single escape ends the star, right
+     * there, and nothing said so - the pips just quietly never lit. A child
+     * cannot learn from a rule they never saw fire. Said once, on the first
+     * one, at the bottom of the screen where it left.
+     */
+    if(run.mission.objectives && run.mission.objectives.indexOf("killAll") >= 0 &&
+       run.stats.escaped === 1){
+      fx.text(VW/2, VH*0.62, "ONE GOT AWAY!", "#ff5d73", 20, true);
+      run.bannerText = "ONE GOT AWAY";
+      run.bannerSub = "clean sweep is off — but finish the job";
+      run.bannerColor = "#ff5d73";
+      run.bannerUntil = game.now() + 2400;
+      audio.play("alarm");
     }
   },
 
@@ -1249,6 +1283,14 @@ function update(dt, timeMs){
 
   run.time += dt;
 
+  /*
+   * VW/VH are refreshed HERE, every frame, and not merely captured in the
+   * object literal where behaviourCtx is declared. The literal copies the
+   * numbers, so the field size every behaviour reasoned about - the minelayer's
+   * drop band, the hover clamps - was the one measured at page load, and stayed
+   * that way through every rotation and resize for the rest of the session.
+   */
+  behaviourCtx.VW = VW; behaviourCtx.VH = VH;
   behaviourCtx.player = game.world.player;
   behaviourCtx.pickups = game.world.pickups;
   behaviourCtx.world = game.world;
@@ -1256,6 +1298,8 @@ function update(dt, timeMs){
   behaviourCtx.difficulty = run.difficulty;
   behaviourCtx.smart = run.difficulty.smart;
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
+  // A pool-cap eviction is an escape as far as the books are concerned.
+  game.world.onEnemyStolen = callbacks.onEnemyEscaped;
   behaviourCtx.onEnemyKilled = callbacks.onEnemyKilled;
   behaviourCtx.onBossHit = callbacks.onBossHit;
   behaviourCtx.onBossDead = finalBossBlast;
@@ -1436,6 +1480,36 @@ function update(dt, timeMs){
     const cleared = run.director.totalPlanned
       ? clamp(run.stats.kills / run.director.totalPlanned, 0, 1) : 0;
     run.progress = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
+  }
+
+  /*
+   * THE SKY GOES EMPTY: a wave is cleared, and the Energy Shield refills.
+   *
+   * The shop has promised this since the upgrade was written - "a bubble that
+   * eats a hit for you, it refills when you clear a wave" - and nothing in the
+   * game ever did it. Shields were topped up between boss-rush rounds, by the
+   * rare supply crate and by the pickup, and nowhere else, so £2,050 of armour
+   * shelf bought four charges for an entire mission. A child cannot read the
+   * source to find that out; they just learn that saving up doesn't work.
+   *
+   * "Cleared a wave" is defined the way a seven-year-old sees it: the sky was
+   * busy, and now it is empty, and there is more coming. Not while a boss is
+   * up (that is one long fight, and a free refill every time its adds die
+   * would trivialise it), and not on the last wave (that is the mission).
+   */
+  if(run.phase === "waves" && !run.bossActive){
+    const busy = game.world.countEnemies() > 0;
+    if(busy) run.skyWasBusy = true;
+    else if(run.skyWasBusy && !run.director.finishedSpawning){
+      run.skyWasBusy = false;
+      const pl = game.world.player;
+      if(pl && pl.shieldMax > 0 && pl.shield < pl.shieldMax){
+        pl.shield = pl.shieldMax;
+        fx.text(pl.x, pl.y - 46, "SHIELD UP", "#2ecc71", 17, true);
+        fx.ring(pl.x, pl.y, pl.r + 26, "#2ecc71", 3, 0.45);
+        audio.play("pickup");
+      }
+    }
   }
 
   // Long missions need a beat in the middle: a callout, and a bonus for
@@ -2020,7 +2094,10 @@ function update(dt, timeMs){
   SF.rewind.record(dt, game.world);
 
   const stats = run.stats;
-  stats.killRatio = stats.spawned ? stats.kills / Math.max(stats.spawned, run.director.totalPlanned) : 0;
+  // Clamped: a ratio is a share of the sky, and a share above 1 is a bug
+  // report, not a score. Belt and braces behind the accounting fixes above.
+  stats.killRatio = stats.spawned
+    ? clamp(stats.kills / Math.max(stats.spawned, run.director.totalPlanned), 0, 1) : 0;
 
   let met = 0;
   for(let i=0;i<run.objectiveDefs.length;i++) if(run.objectiveDefs[i].test(stats)) met++;
@@ -2258,6 +2335,20 @@ function frame(now){
     if(SF.ui) SF.ui.syncAbilityButtons();
   } else if(game.state === "paused"){
     // simMs deliberately does NOT advance here. This is the whole fix.
+    /*
+     * The input latches must still be DRAINED while paused, or they queue.
+     * They did: `pausePressed` was only ever consumed in the playing branch,
+     * so pressing P a second time did nothing at all (the keyboard could not
+     * un-pause), and the latched press was then spent on the very next frame
+     * after clicking RESUME - which paused the game again, instantly, and read
+     * as the game being broken. Anything pressed while paused - space, B, V -
+     * came out the same way: a bomb burnt the moment play resumed.
+     *
+     * So: P un-pauses, and the ability keys are swallowed rather than banked.
+     */
+    if(SF.input.consumePause() && SF.ui) SF.ui.togglePause();
+    SF.input.consumeBomb();
+    SF.input.consumeOverdrive();
     fx.update(0, simMs);
     draw(simMs);
   }
