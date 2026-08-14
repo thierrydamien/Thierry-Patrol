@@ -386,11 +386,42 @@ function update(dt, run, world, simMs){
       if(S.paintTrail[i].t <= 0) S.paintTrail.splice(i, 1);
     }
 
+    /*
+     * THE BRUSH FLICKS PAINT, CONSTANTLY.
+     *
+     * It had no gun at all. Its whole repertoire was sketches, an eraser and
+     * the GAME OVER letters, on gaps of five to thirteen seconds - so for
+     * most of the last fight in the campaign there was nothing on screen to
+     * dodge, and the finale played easier than the levels leading to it.
+     *
+     * Flicks are aimed but spread, and slow enough to read: this is a boss a
+     * seven-year-old has to be able to finish. The rhythm tightens with the
+     * tier, so ROOKIE gets a lick of paint and NIGHTMARE gets a hosing.
+     */
+    const smart = (run.difficulty && run.difficulty.smart) || 0;
+    B.spray = (B.spray || 0) - dt;
+    if(B.spray <= 0 && B.y >= B.holdY - 1 && p && p.alive){
+      B.spray = Math.max(0.55, 1.75 - smart*0.26);
+      const n = 3 + Math.min(2, Math.floor(smart/2));
+      const dx = p.x - B.x, dy = p.y - B.y;
+      const l = Math.max(1, Math.hypot(dx, dy));
+      const base = Math.atan2(dy, dx);
+      const sp = 210 + smart*22;
+      for(let i = 0; i < n; i++){
+        const a = base + (i - (n-1)/2) * 0.20;
+        world.spawnEnemyBullet(B.x, B.y + B.r*0.6,
+                               Math.cos(a)*sp, Math.sin(a)*sp, "paint", 6);
+      }
+      SF.fx.spark(B.x, B.y + B.r*0.6, Math.cos(base)*60, Math.sin(base)*60,
+                  pcolOf(), 0.3, 3);
+      SF.audio.play("enemyShoot");
+    }
+
     // Attack conductor.
     B.nextAttack -= dt;
     if(!B.attack && B.nextAttack <= 0 && B.y >= B.holdY - 1){
       B.cycle++;
-      B.attack = ["sketch", "eraser", "sketch", "letters"][B.cycle % 4];
+      B.attack = ["sketch", "splatter", "eraser", "sketch", "letters", "splatter"][B.cycle % 6];
       B.attackT = 0;
       if(B.attack === "sketch"){
         // It DRAWS a squadron: ghosts first, the real thing after.
@@ -439,14 +470,26 @@ function update(dt, run, world, simMs){
           run.bannerUntil = simMs + 4200;
           SF.comms.say("paintSketch");
         }
-        B.nextAttack = 6.5;
+        B.nextAttack = Math.max(3.2, 5.2 - smart*0.4);
+      } else if(B.attack === "splatter"){
+        const smart2 = (run.difficulty && run.difficulty.smart) || 0;
+        const n = 12 + smart2*2;
+        for(let i = 0; i < n; i++){
+          const a = Math.PI*0.18 + (i/(n-1)) * Math.PI*0.64;   // a downward fan
+          const sp = 170 + smart2*18;
+          world.spawnEnemyBullet(B.x, B.y + B.r*0.6,
+                                 Math.cos(a)*sp, Math.sin(a)*sp, "paint", 7);
+        }
+        SF.fx.ring(B.x, B.y + B.r*0.6, 54, pcolOf(), 4, 0.35);
+        SF.audio.play("gust");
+        B.nextAttack = Math.max(2.6, 4.4 - smart*0.35);
       } else if(B.attack === "eraser"){
         S.erasers.push({
           y: p ? clamp(p.y + rand(-40, 40), H*0.35, H*0.8) : H*0.6,
           x: -70, w: 74, h: 46, warn: 1.0, speed: 300,
         });
         audio.play("alarm");
-        B.nextAttack = 5.0;
+        B.nextAttack = Math.max(2.8, 4.2 - smart*0.35);
       } else if(B.attack === "letters"){
         const word = "GAME OVER";
         /*
@@ -475,7 +518,7 @@ function update(dt, run, world, simMs){
         run.bannerColor = "#e2e8f0";
         run.bannerUntil = simMs + 2400;
         audio.play("alarm");
-        B.nextAttack = 13;
+        B.nextAttack = Math.max(6.0, 9.5 - smart*0.8);
       }
       if(B.attack !== "letters") B.attack = null;   // instant setups
       else B.attack = null;
