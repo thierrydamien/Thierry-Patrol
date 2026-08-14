@@ -388,7 +388,9 @@ function startMission(missionIndex, difficultyId){
   const stats = {
     spawned: 0, kills: 0, escaped: 0, killRatio: 0, coins: 0,
     rescues: 0, rescuesTotal: director.rescuesPlanned + (mission.podDrops || 0),
-    damageTaken: 0, livesLost: 0, completed: false,
+    // damageTaken: hits that got PAST the shield. hitsTaken: every contact,
+    // absorbed or not - the coach wants the second, the flawless star the first.
+    damageTaken: 0, hitsTaken: 0, livesLost: 0, completed: false,
     convoyTotal: mission.convoy ? 1 : 0, convoyLost: 0,
     partsDenied: 0, serpentAte: 0, serpentSlain: false, painted: 0,
     stars: 0,
@@ -635,7 +637,7 @@ function endMission(completed){
     co.runs     = co.runs*decay + 1;
     co.livesLost= co.livesLost*decay + (run.stats.livesLost || 0);
     co.escaped  = co.escaped*decay + (run.stats.escaped || 0);
-    co.hits     = co.hits*decay + (run.stats.damageTaken || 0);
+    co.hits     = co.hits*decay + (run.stats.hitsTaken || 0);
   }
 
   profile.money += run.money;
@@ -665,6 +667,19 @@ function endMission(completed){
     const sec = Math.round(run.time);
     if(sec > (profile.endlessLongest || 0)) profile.endlessLongest = sec;
     P.save(profile);
+  } else if(run.mission.vault){
+    /*
+     * THE STAR VAULT KEEPS OUT OF THE CAMPAIGN LEDGER.
+     *
+     * It is a secret joke level that rains gold and barely shoots back, and it
+     * used to fall through to the campaign branch below - so it wrote
+     * `profile.missions.vault` into the ledger, set `lastMission` to an id that
+     * is not on the map (which is what the map's "next stop" hint reads), and
+     * handed its enormous star-rain score to `highscore`, where no real mission
+     * could ever beat it. Its own reward - the SOLAR GOLD paint - is booked
+     * further up and is untouched by this.
+     */
+    P.save(profile);
   } else if(run.mission.custom){
     // A Drawing Board sky keeps its own book: best score per sky, per pilot,
     // synced with the profile - so a brother's record chip is stealable. The
@@ -681,7 +696,9 @@ function endMission(completed){
     profile.lastDifficulty = run.difficulty.id;
     // Captured BEFORE the save: once recordMission runs, this run's score IS
     // the record and "did I beat anything?" can no longer be answered.
-    prevFamilyBest = P.familyBest(run.mission.id);
+    // Like for like: the record you are being told about is the one set on the
+    // tier you just flew, not somebody's NIGHTMARE number.
+    prevFamilyBest = P.familyBest(run.mission.id, run.difficulty.id);
     const prevRec = profile.missions[run.mission.id];
     firstClear = completed && !(prevRec && prevRec.cleared);
     prevSelfBest = prevRec && prevRec.best
@@ -806,10 +823,20 @@ const callbacks = {
       }
     }
 
-    // Splitters burst into shards that immediately come at you - the kill is
-    // the start of the problem, not the end of it.
+    /*
+     * Splitters burst into shards that immediately come at you - the kill is
+     * the start of the problem, not the end of it.
+     *
+     * `noSplit` is the exception, and Smart Bombs are why. The shop sells them
+     * as "BOOM - wipes out the whole screen", and the bomb killed splitters the
+     * ordinary way: the screen cleared and then refilled with a cloud of
+     * kamikaze shards, which is the opposite of what a panic button is for and
+     * exactly when a child presses one. (It was non-deterministic too: the bomb
+     * walks the pool while the shards are being spawned into it, so whether a
+     * new shard also died depended on which slot it landed in.)
+     */
     const split = e.type.splitsInto;
-    if(split && !byRamming){
+    if(split && !byRamming && !e.noSplit){
       for(let i=0;i<split.n;i++){
         const a = (i/split.n)*Math.PI - Math.PI/2;
         const shard = game.world.spawnEnemy(split.type, e.x, e.y, {
@@ -998,9 +1025,25 @@ const callbacks = {
     const run = game.run;
     const p = game.world.player;
     if(!p || !p.alive || p.invuln > 0) return;
-    run.stats.damageTaken++;
+    // Every contact, absorbed or not. The garage's coach reads this to notice
+    // "you're taking a lot of hits" - a shield eating them is still evidence.
+    run.stats.hitsTaken = (run.stats.hitsTaken || 0) + 1;
 
     if(p.shield > 0){
+      /*
+       * A HIT THE SHIELD ATE IS NOT DAMAGE TAKEN.
+       *
+       * `damageTaken` used to be incremented above this branch, so the bubble
+       * that "eats a hit for you" ate the hit and you were charged for it
+       * anyway. That killed "Take no damage at all" - a required star on Cold
+       * Approach, which is 136 seconds of waves followed by the Phantom, so
+       * roughly 190 seconds of never being touched - and it meant the armour
+       * shelf could not help with the one star it exists for. Owning a shield
+       * was strictly no better than not owning one.
+       *
+       * Which is the same fault the whole balance repair was about: a thing
+       * you saved up for, not changing the outcome.
+       */
       p.shield--;
       p.invuln = Math.max(0.9, p.invulnTime*0.5);
       fx.ring(p.x, p.y, 60, "#7cc4ff", 3, 0.35);
@@ -1011,6 +1054,8 @@ const callbacks = {
       return;
     }
 
+    // Past the shield: this one actually landed.
+    run.stats.damageTaken++;
     p.lives--;
     run.stats.livesLost++;
     run.combo = 0;
@@ -1278,11 +1323,20 @@ function useBomb(){
   fx.ring(p.x, p.y, VW*1.1, "#ffd23f", 6, 0.6);
   fx.hitStop(80);
 
+  /*
+   * Snapshot first, then kill. onEnemyKilled can spawn into this very array
+   * (splitters), so walking it live meant the outcome depended on which pool
+   * slot a new shard happened to take. Nothing born from the blast is caught
+   * by it either way - `noSplit` is what actually stops the cloud.
+   */
   const enemies = game.world.enemies.items;
-  for(let i=0;i<enemies.length;i++){
-    const e = enemies[i];
+  const caught = [];
+  for(let i=0;i<enemies.length;i++) if(enemies[i].alive) caught.push(enemies[i]);
+  for(let i=0;i<caught.length;i++){
+    const e = caught[i];
     if(!e.alive) continue;
     e.hp = 0;
+    e.noSplit = true;
     callbacks.onEnemyKilled(e, null, false);
   }
   game.world.enemyBullets.killAll();
@@ -1517,16 +1571,39 @@ function update(dt, timeMs){
    * true, which still wins the first branch and resumes the health-based
    * readout for the next fight.
    */
-  if(run.bossActive && game.world.boss){
-    run.progress = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
+  let progressNow;
+  if(run.mission.backstage && run.bossActive && SF.backstage.active()){
+    /*
+     * Behind the sky, boss health stops being the story: the Forgery dies,
+     * RE-FORGES to full, and then stands there invulnerable while the real
+     * fight moves into the three acts. Measured on a live run, the bar climbed
+     * to 97%, snapped back to 65% and froze there for the rest of the mission -
+     * so the longest and strangest fight in the game was the one place the
+     * player was told nothing at all about how it was going. The act's own
+     * progress drives it instead (see backstage.progress01()).
+     */
+    progressNow = 0.65 + 0.35*clamp(SF.backstage.progress01(), 0, 1);
+  } else if(run.bossActive && game.world.boss){
+    progressNow = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
   } else if(run.bossCleared){
-    run.progress = 1;
+    progressNow = 1;
   } else {
     const timeline = clamp(run.director.time / run.wavesEndT, 0, 1);
     const cleared = run.director.totalPlanned
       ? clamp(run.stats.kills / run.director.totalPlanned, 0, 1) : 0;
-    run.progress = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
+    progressNow = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
   }
+  /*
+   * A progress bar goes one way. Every backwards jump this game has had came
+   * from the readout faithfully following something that legitimately reset -
+   * a boss re-forging, a scripted stage handing over - and a bar that falls
+   * tells a seven-year-old their work was undone when it wasn't.
+   *
+   * Boss Rush is the one place a reset is honest: each round is its own fight,
+   * and the bar is meant to restart with the next boss.
+   */
+  run.progress = run.mission.bossRush ? progressNow
+                                      : Math.max(run.progress || 0, progressNow);
 
   /*
    * THE SKY GOES EMPTY: a wave is cleared, and the Energy Shield refills.
@@ -1676,7 +1753,15 @@ function update(dt, timeMs){
    * which is what wind should feel like. Enemies drift at half strength so
    * the whole sky agrees about the weather.
    */
-  if(run.storm && !run.ended && run.phase !== "intro"){
+  /*
+    * The weather stops when the fighting does. Both of these ran through the
+    * victory lap and the fly-off - so on The Undertow the wells kept hauling
+    * the ship around and clamping it to y=90 while the autopilot was trying to
+    * climb out of the sky, and the ship sat pinned at the top being tugged
+    * sideways until the 1.6s safety net ended the scene.
+    */
+  if(run.storm && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
     const st = run.storm;
     st.timer -= dt;
     if(st.mode === "calm"){
@@ -1694,9 +1779,29 @@ function update(dt, timeMs){
     } else if(st.mode === "blow"){
       const pl = game.world.player;
       if(pl && pl.alive) pl.x = clamp(pl.x + st.dir*st.str*dt, 24, VW - 24);
+      /*
+       * The wind may not blow an enemy somewhere you cannot follow it.
+       *
+       * The clamp used to be -60..VW+60, and the cull threshold is -80..VW+80 -
+       * so a gust could park a ship in the gap between them: fully off-screen,
+       * not far enough out to be culled, and unreachable. A hovering type
+       * (Turret, Hive, Mender) does not advance on its own, so it sat there
+       * holding the field open until the 28-second leash finally carried it
+       * off - up to half a minute of a mission you cannot finish or even see.
+       *
+       * Anything already ON the field is now kept on it. Anything still staging
+       * off-edge - a `sides` or `pincer` formation flies in from out there - is
+       * left alone, because yanking those inward would break their entrance.
+       */
       const es = game.world.enemies.items;
-      for(let i = 0; i < es.length; i++)
-        if(es[i].alive) es[i].x = clamp(es[i].x + st.dir*st.str*0.5*dt, -60, VW + 60);
+      for(let i = 0; i < es.length; i++){
+        const e = es[i];
+        if(!e.alive) continue;
+        const onField = e.x > -20 && e.x < VW + 20;
+        e.x = onField
+          ? clamp(e.x + st.dir*st.str*0.5*dt, 16, VW - 16)
+          : e.x + st.dir*st.str*0.5*dt;
+      }
       // Loose pickups ride the wind hardest of all - coins scatter and the
       // Treasury remix becomes "chase the money through the gale".
       const pk = game.world.pickups.items;
@@ -1716,7 +1821,8 @@ function update(dt, timeMs){
    * stops being a straight line and starts being a swing. Wells EAT what
    * falls all the way in, so an orbit is never forever.
    */
-  if(run.wells && !run.ended && run.phase !== "intro"){
+  if(run.wells && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
     const wl = run.wells;
     wl.next -= dt;
     if(wl.next <= 0 && wl.list.length < 3){

@@ -204,7 +204,16 @@ function resolve(world, ctxObj, dt){
   for(let i=0;i<bullets.length;i++){
     const b = bullets[i];
     if(!b.alive) continue;
-    let pierceLeft = b.pierce;
+    /*
+     * The pierce budget lives ON THE BULLET, not on this frame.
+     *
+     * It used to be a local reset every tick, so a round with "blasts through
+     * 1 enemy" spent one charge per FRAME and then got another - and since a
+     * bullet rarely meets more than one enemy in the 11px it covers in a tick,
+     * it effectively never ran out. Piercing Rounds level 1 was unlimited
+     * penetration all the way up the screen, which is not what the shelf sells
+     * and not what the price was set against.
+     */
     const px = b.x - b.vx*dt, py = b.y - b.vy*dt;   // where it was a frame ago
 
     grid.query(b.x, b.y, (e) => {
@@ -218,6 +227,31 @@ function resolve(world, ctxObj, dt){
       if(e.shielded){
         fx.sparks(hx, hy, 5, "#22d3ee", 150);
         fx.ring(hx, hy, 16, "#22d3ee", 2, 0.2);
+        audio.play("hitArmour");
+        b.x = hx; b.y = hy; b.alive = false;
+        return true;
+      }
+
+      /*
+       * ARMOUR PLATE - and until now, a promise the game did not keep.
+       *
+       * The Tithe Serpent marks its rings `armoured` except the glowing tail
+       * one, and marks the head armoured until every ring is gone. game.js
+       * recomputed those flags every frame, the renderer drew the lantern on
+       * the weak ring, the banner said "hit the glowing ring!" and then "the
+       * head is soft - finish it!" - and NOTHING read the flags. Bullets went
+       * straight through the armour into the head, so the entire mechanic the
+       * level teaches, and the level is named for, was decoration. You could
+       * shoot the head from the first second and skip the fight.
+       *
+       * Reads e.armoured, which game.js owns, rather than the static type flag:
+       * the whole point is that a ring's armour comes and goes with its place
+       * in the tail. (spawnEnemy clears it on reuse - without that, a recycled
+       * slot would be permanently bulletproof.)
+       */
+      if(e.armoured){
+        fx.sparks(hx, hy, 5, "#9ff0d8", 150);
+        fx.ring(hx, hy, 14, "#2fbf9a", 2, 0.18);
         audio.play("hitArmour");
         b.x = hx; b.y = hy; b.alive = false;
         return true;
@@ -255,7 +289,7 @@ function resolve(world, ctxObj, dt){
       }
 
       ctxObj.onEnemyKilled(e, b);
-      if(pierceLeft > 0){ pierceLeft--; return false; }
+      if(b.pierce > 0){ b.pierce--; return false; }
       b.x = hx; b.y = hy; b.alive = false;
       return true;
     });
@@ -294,7 +328,7 @@ function resolve(world, ctxObj, dt){
             const res = ctxObj.onBossHit(boss, b);
             // One rule for the whole game: through what you destroy, and
             // nothing else. Blow a part off and a piercing round carries on.
-            if(res && res.weakPointDestroyed && pierceLeft > 0) pierceLeft--;
+            if(res && res.weakPointDestroyed && b.pierce > 0) b.pierce--;
             else b.alive = false;
             break;
           }
@@ -435,11 +469,27 @@ function resolve(world, ctxObj, dt){
       }
     }
   }
+  /*
+   * SWEPT, like the player's own rounds are.
+   *
+   * This tested only where the bullet ENDED the frame - the exact mistake the
+   * comment on sweep() above was written about, fixed in the player-to-enemy
+   * direction and never applied coming back the other way. Their aimed shots
+   * fly at 300px/s, and difficulty.speed multiplies that: 540px/s on NIGHTMARE.
+   * The frame clamp floors dt at 20fps, so a step there is 27px against 18px of
+   * bullet-plus-ship overlap - the round teleports from in-front-of to behind
+   * the ship without ever registering.
+   *
+   * It fails in the player's FAVOUR, which is why nobody reported it, and that
+   * is precisely what makes it worth fixing: it means a tired iPad quietly
+   * plays an easier game than a fresh one, and "take no damage at all" is a
+   * star you are likelier to win on the slower device.
+   */
   for(let i=0;i<ebs.length;i++){
     const b = ebs[i];
     if(!b.alive) continue;
-    const rr = b.r + p.r;
-    if((b.x-p.x)*(b.x-p.x) + (b.y-p.y)*(b.y-p.y) < rr*rr){
+    const bpx = b.x - (b.vx || 0)*dt, bpy = b.y - (b.vy || 0)*dt;
+    if(sweep(b, bpx, bpy, p.x, p.y, b.r + p.r)){
       b.alive = false;
       if(!invulnerable) ctxObj.onPlayerHit("bullet", b);
       break;

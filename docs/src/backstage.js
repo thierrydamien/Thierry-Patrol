@@ -1109,7 +1109,33 @@ function drawOver(ctx, timeMs){
 
 /* _state is for the test harness only: the fights are timed and aimed, and a
  * headless run needs to read them to drive a competent player. */
+/*
+ * How far through the act we are, 0..1 - for the mission bar in the HUD.
+ *
+ * The bar reads boss health, and behind the sky that number stops meaning
+ * anything: the Forgery dies, re-forges to FULL, and then stands there
+ * invulnerable while the real fight moves in here. Measured on a live run, the
+ * readout climbed to 97%, snapped back to 65% and sat there, frozen, for the
+ * whole three-act finale - so the longest and strangest fight in the game was
+ * also the one place the player was told nothing about how it was going.
+ *
+ * Each stage owns a slice, and the two that are real fights fill their slice
+ * from the thing you are actually shooting.
+ */
+const PROGRESS_AT = { shed:0.00, fakeClear:0.10, titan:0.16,
+                      mirror:0.24, tear:0.55, brush:0.60, nova:0.96, done:1 };
+function progress01(){
+  if(!S) return 0;
+  const base = PROGRESS_AT[S.stage] != null ? PROGRESS_AT[S.stage] : 0;
+  if(S.stage === "mirror" && S.mirror && S.mirror.maxHp)
+    return base + (PROGRESS_AT.tear - base) * (1 - S.mirror.hp/S.mirror.maxHp);
+  if(S.stage === "brush" && S.brush && S.brush.maxHp)
+    return base + (PROGRESS_AT.nova - base) * (1 - S.brush.hp/S.brush.maxHp);
+  return base;
+}
+
 SF.backstage = { _state: () => S,
                  reset, begin, active, stage, readyForBoss, titanDown, update,
+                 progress01,
                  drawSky, drawActors, drawOver };
 })();

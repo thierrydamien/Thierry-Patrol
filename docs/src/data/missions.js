@@ -580,8 +580,17 @@ const MISSIONS = [
       w(57,  "turret",   3, "arc"),
       w(60,  "shielder", 2, "twinColumns"),
       w(62,  "splitter", 5, "wall"),
-      w(70,  "boulder",  3, "tripleColumns"),
+      /*
+       * The swoopers used to be listed AFTER the boulders despite arriving
+       * five seconds earlier. The director walks this array in order and
+       * queues everything whose time has come, so at t=70 it queued the
+       * boulders, then noticed the t=65 swoopers were overdue and queued them
+       * too, then the hives - three separate waves, fourteen ships, arriving
+       * in one instant on the mission that introduces the Sky Sentinel. Sorted
+       * by time now, and _smoketest.js pins that every mission's waves are.
+       */
       w(65,  "swooper",  9, "pincer", { elite: 2 }),
+      w(70,  "boulder",  3, "tripleColumns"),
       w(70,  "hive",     2, "twinColumns"),
       w(73,  "striker",  7, "sides"),
       w(81,  "brute",    5, "line", { elite: 2 }),

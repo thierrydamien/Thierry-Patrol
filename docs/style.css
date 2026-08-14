@@ -720,6 +720,10 @@ html, body {
 .rb-name { flex:1; min-width:0; color: rgba(255,255,255,0.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .rb-holder { font-weight:700; color:#fff; }
 .rb-score { color: var(--accent); font-weight:700; min-width:56px; text-align:right; }
+/* Which tier the record was set on - the difference between one unwinnable
+   race and several winnable ones. */
+.rb-tier { display:block; font-style:normal; font-size:8px; font-weight:700;
+           letter-spacing:0.6px; color: rgba(255,255,255,0.38); margin-top:1px; }
 .lb-sub { font-size:10px; font-weight:600; color: rgba(255,255,255,0.55); letter-spacing:1px; }
 
 /* ---------------- game ---------------- */

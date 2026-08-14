@@ -387,14 +387,36 @@ function squadmates(name){
 }
 
 /** Who in the household holds this mission, and with what. Null if nobody has flown it. */
-function familyBest(missionId){
+/*
+ * The family record for a mission - and WHICH TIER it was set on.
+ *
+ * This took the max across every difficulty, which sounds fair and is not: a
+ * NIGHTMARE run meets 3.6x the ships, so its score is several times a PILOT
+ * run's before anybody flies especially well. The chip Marc and Charles
+ * actually compete over was therefore "who picked the hardest tier", and the
+ * younger one cannot win it by flying better - only by flying something he
+ * should not be flying yet.
+ *
+ * So the record now carries its tier, and the caller can ask for one: the
+ * results screen compares like with like (did you beat the best ON THIS TIER),
+ * while the map still shows the household's headline number - now labelled, so
+ * a seven-year-old can see it is a NIGHTMARE score and that his own PILOT
+ * record is a different, winnable race.
+ */
+function familyBest(missionId, difficultyId){
   let best = null;
   listNames().map(load).forEach(p => {
     const rec = p.missions[missionId];
     if(!rec || !rec.best) return;
-    const score = Math.max.apply(null, [0].concat(Object.values(rec.best).map(Number)));
+    let score = 0, tier = null;
+    Object.keys(rec.best).forEach(t => {
+      if(difficultyId && t !== difficultyId) return;
+      const v = Number(rec.best[t]) || 0;
+      if(v > score){ score = v; tier = t; }
+    });
     if(score > 0 && (!best || score > best.score)){
-      best = { name: p.callsign || p.name, score, stars: starsForMission(p, missionId),
+      best = { name: p.callsign || p.name, score, tier,
+               stars: starsForMission(p, missionId),
                color: p.shipColor, owner: p.name };
     }
   });

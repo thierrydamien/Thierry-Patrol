@@ -311,7 +311,11 @@ const BEHAVIOURS = {
     let best = null, bestD = 200*200;
     for(let i=0;i<items.length;i++){
       const o = items[i];
+      // Fleet only: a Mender that heals rocks, mines and belt parts undoes the
+      // player's work on things that were never its squadron. See protectable()
+      // in entities.js - same rule the Guardian's bubble now follows.
       if(!o.alive || o === e || o.hp >= o.maxHp || o.type.heals) continue;
+      if(o.hazard || o.typeId === "part") continue;
       const d = (o.x-e.x)*(o.x-e.x) + (o.y-e.y)*(o.y-e.y);
       if(d < bestD){ bestD = d; best = o; }
     }

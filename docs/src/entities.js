@@ -186,6 +186,22 @@ const REFERENCE_DPS = 45;
  * is felt in full - which is the entire promise of the shop.
  */
 const TRACK_CEIL = 2.0;
+/*
+ * Is this something the enemy's OWN support mechanics should look after?
+ *
+ * Guardians shield and Menders heal. Both used to consider anything alive in
+ * range, and the field carries three things that are not fleet: rocks (terrain,
+ * `hazard`), laid mines (also `hazard`), and the Foundry's belt parts - which
+ * are the player's objective, not the enemy's ships. Healing a Boulder undid
+ * the work of breaking it; shielding a belt part made the Foundry unwinnable
+ * for as long as the Guardian lived.
+ *
+ * Exported on SF.entityConst so the smoke suite can pin it.
+ */
+function protectable(e){
+  return !!e && !e.hazard && e.typeId !== "part";
+}
+
 function hpPowerScale(diff, dps){
   const track = diff ? (diff.hpTrack || 0) : 0;
   if(track <= 0 || !dps) return 1;
@@ -501,7 +517,8 @@ class World {
       if(!b.alive) continue;
       b.age += dt;
       if(b.homing > 0){
-        const target = this.nearestTarget(b.x, b.y);
+        // Only what the round can still reach: it flies up, so "ahead" is above.
+        const target = this.nearestTarget(b.x, b.y, b.y + 12);
         if(target){
           const desired = clamp((target.x - b.x)*3, -90*b.homing, 90*b.homing);
           b.vx += clamp(desired - b.vx, -220*b.homing*dt, 220*b.homing*dt);
@@ -525,18 +542,32 @@ class World {
     }
   }
 
-  nearestTarget(x, y){
+  /*
+   * The nearest thing worth steering at - AHEAD of the round, not behind it.
+   *
+   * Seeker Rounds bend a bullet's `vx` toward this target, and a player round
+   * only ever flies up. Picking the nearest enemy by raw distance meant a ship
+   * the bullet had already passed could win, and then the round spent its whole
+   * tracking budget sliding sideways toward something it could never reach -
+   * missing the enemy in front of it that it would otherwise have hit. A
+   * £4,420 upgrade quietly made some shots worse.
+   *
+   * `aheadOfY`, when given, keeps the choice in front of the bullet.
+   */
+  nearestTarget(x, y, aheadOfY){
     let best = null, bestD = Infinity;
     const items = this.enemies.items;
+    const limit = aheadOfY == null ? Infinity : aheadOfY;
     for(let i=0;i<items.length;i++){
       const e = items[i];
       if(!e.alive) continue;
+      if(e.y > limit) continue;                 // already behind the round
       const d = (e.x-x)*(e.x-x) + (e.y-y)*(e.y-y);
       if(d < bestD){ bestD = d; best = e; }
     }
-    if(this.boss && this.boss.alive){
+    if(this.boss && this.boss.alive && this.boss.y <= limit){
       const d = (this.boss.x-x)*(this.boss.x-x) + (this.boss.y-y)*(this.boss.y-y);
-      if(d < bestD){ best = this.boss; }
+      if(d < bestD){ bestD = d; best = this.boss; }
     }
     return best;
   }
@@ -705,6 +736,29 @@ class World {
     e.counted = !type.hazard && !o.uncounted;
     e.shielded = false;   // recomputed every frame from live Guardians
     e.loot = 0; e.stolen = 0; e.fleeing = false; e.patience = 0;
+    /*
+     * EVERY FIELD A BEHAVIOUR OR A MISSION WRITES, CLEARED ON REUSE.
+     *
+     * These slots are pooled, so an object handed out here carries whatever the
+     * last occupant left on it. Eighteen fields were written elsewhere and reset
+     * nowhere, and each one is a bug waiting for the right recycle: a slot that
+     * died at `chainDepth` 3 could never chain again, so CHAIN REACTION quietly
+     * decayed over a long Wacky Sky; a slot left `armoured` would be bulletproof
+     * for the rest of the mission; a recycled serpent ring kept `headRef`
+     * pointing at a corpse and `trailPts` holding 720 stale points.
+     *
+     * Listed explicitly rather than rebuilt from scratch, because the pool
+     * exists precisely to avoid reallocating - and grouped here so the next
+     * person to author a behaviour field has an obvious place to add it.
+     */
+    e.chainDepth = 0;
+    e.armoured = false; e.weak = false;
+    e.headRef = null; e.segIndex = 0; e.trailPts = null;
+    e.hungry = false; e.huntX = null; e.huntY = null;
+    e.beltDir = 0; e.beltSpeed = 0; e.beltY = 0;
+    e.lockX = 0; e.lockY = 0;
+    e.dodgeCool = 0; e.dodgeDir = 0; e.dodgeTimer = 0; e.tell = 0;
+    e.arming = false; e.noSplit = false;
     e.spin = 0; e.spinRate = rand(-1.6, 1.6);
     e.charge = 0; e.chargeTime = type.chargeTime || 2;
     e.dropTimer = 0; e.fuse = 0; e.healTarget = null;
@@ -797,7 +851,16 @@ class World {
       const gd = guards[g], rad = gd.type.shieldRadius, rr = rad*rad;
       for(let i=0;i<items.length;i++){
         const e = items[i];
+        /*
+         * A Guardian shields its FLEET. It used to shield anything alive
+         * nearby, which meant rocks, laid mines and the Foundry's belt parts
+         * came up bubbled: player rounds splashed off a boulder while the
+         * radio shouted "kill the Guardian first!", and on the Foundry a
+         * shielded part rode the belt to the assembler untouchable - the
+         * mission's own objective, blocked by a mechanic aimed at ships.
+         */
         if(!e.alive || e === gd || e.type.shieldRadius) continue;
+        if(!protectable(e)) continue;
         const dx = e.x-gd.x, dy = e.y-gd.y;
         if(dx*dx + dy*dy < rr) e.shielded = true;
       }
@@ -917,6 +980,6 @@ class World {
 }
 
 SF.World = World;
-SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS };
+SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();

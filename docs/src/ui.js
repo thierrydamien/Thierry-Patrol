@@ -4311,7 +4311,11 @@ function renderLeaderboard(){
       <span class="rb-num">${m.id}</span>
       <span class="rb-name">${esc(m.name)}</span>
       <span class="rb-holder">${esc(best.name)}</span>
-      <span class="rb-score">${best.score.toLocaleString()}</span>
+      <!-- The tier it was set on. Without it the board reads as one race that
+           the youngest can never win; with it, "9,400 on NIGHTMARE" is visibly
+           a different race from the PILOT one he can go and take. -->
+      <span class="rb-score">${best.score.toLocaleString()}${
+        best.tier ? `<i class="rb-tier">${esc((SF.config.DIFFICULTY_BY_ID[best.tier] || {}).name || best.tier)}</i>` : ""}</span>
     </div>`;
   }).join("") + (unflown > 0
     ? `<div class="rb-row rb-rest">${unflown} more stop${unflown === 1 ? "" : "s"} nobody has flown yet</div>`

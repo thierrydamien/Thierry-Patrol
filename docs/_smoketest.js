@@ -681,6 +681,104 @@ async function run(){
     return lines.length > 0 && !lines.some(l => /\$\{n\}/.test(l));
   })());
 
+  /* ---------- the salvaged leads, once each was proved ---------- */
+  check("every mission's waves are listed in the order they arrive", (() => {
+    // The director walks this array and queues everything overdue, so one line
+    // out of sequence collapses several waves into a single instant. Mission 10
+    // listed a t=65 wave after a t=70 one: fourteen ships in one breath.
+    return SF.missions.MISSIONS.every(m => !m.waves ||
+      m.waves.every((wv, i) => i === 0 || wv.t >= m.waves[i-1].t));
+  })());
+  check("a Guardian's bubble covers ships, not rocks and belt parts", (() => {
+    const pr = SF.entityConst.protectable;
+    return pr({ hazard:false, typeId:"grunt" }) === true &&
+           pr({ hazard:true,  typeId:"asteroid" }) === false &&
+           pr({ hazard:true,  typeId:"mine" }) === false &&
+           pr({ hazard:false, typeId:"part" }) === false;
+  })());
+  check("a Mender heals its own fleet only", (() => {
+    const e = fs.readFileSync(path.join(__dirname, "src/data/enemies.js"), "utf8");
+    return /o\.hazard \|\| o\.typeId === "part"/.test(e);
+  })());
+  check("the pierce budget belongs to the bullet, not to the frame", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+    return !/let pierceLeft/.test(s) && /b\.pierce > 0\)\{ b\.pierce--/.test(s);
+  })());
+  check("their bullets are swept against the ship, like ours are against them", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+    return /sweep\(b, bpx, bpy, p\.x, p\.y, b\.r \+ p\.r\)/.test(s);
+  })());
+  check("armour plate actually stops a bullet", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+    return /if\(e\.armoured\)\{/.test(s);
+  })());
+  check("a recycled enemy slot carries nothing from its last life", (() => {
+    const W = SF.game.world;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("R"), SF.config.DIFFICULTY_BY_ID.pilot));
+    const first = W.spawnEnemy("grunt", 100, 100, { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+    first.chainDepth = 3; first.armoured = true; first.weak = true;
+    first.headRef = {}; first.trailPts = [1,2,3]; first.noSplit = true;
+    first.hungry = true; first.lockX = 99; first.dodgeCool = 5; first.arming = true;
+    first.alive = false;
+    // Same slot, handed back out
+    const again = W.spawnEnemy("grunt", 100, 100, { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+    return again === first && again.chainDepth === 0 && again.armoured === false &&
+           again.weak === false && again.headRef === null && again.trailPts === null &&
+           again.noSplit === false && again.hungry === false && again.lockX === 0 &&
+           again.dodgeCool === 0 && again.arming === false;
+  })());
+  check("a hit the shield ate is not damage taken", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    // damageTaken must be incremented BELOW the shield branch, not above it
+    const hit = g.indexOf("onPlayerHit(source, ent)");
+    const shield = g.indexOf("if(p.shield > 0){", hit);
+    const dmg = g.indexOf("run.stats.damageTaken++", hit);
+    return hit > 0 && shield > 0 && dmg > shield;
+  })());
+  check("a Smart Bomb does not refill the screen it just cleared", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return /e\.noSplit = true;/.test(g) && /!byRamming && !e\.noSplit/.test(g);
+  })());
+  check("the Star Vault stays out of the campaign ledger", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return /\} else if\(run\.mission\.vault\)\{/.test(g);
+  })());
+  check("the weather stops when the fighting does", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return (g.match(/run\.phase !== "lap" && run\.phase !== "outro"/g) || []).length >= 2;
+  })());
+  check("a family record says which tier it was set on", (() => {
+    const P = SF.profile;
+    P.saveRaw({ name:"TierA", callsign:"TierA", savedAt: 1,
+      missions:{ m1:{ cleared:true, stars:{pilot:3}, best:{ pilot: 500, nightmare: 9000 } } } });
+    const overall = P.familyBest("m1");
+    const onPilot = P.familyBest("m1", "pilot");
+    return overall && overall.score === 9000 && overall.tier === "nightmare" &&
+           onPilot && onPilot.score === 500 && onPilot.tier === "pilot";
+  })());
+  check("a Seeker ignores what it has already flown past", (() => {
+    const W = SF.game.world;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("S"), SF.config.DIFFICULTY_BY_ID.pilot));
+    const d = SF.config.DIFFICULTY_BY_ID.pilot;
+    const behind = W.spawnEnemy("grunt", 300, 500, { difficulty: d });   // below
+    const ahead  = W.spawnEnemy("grunt", 320, 100, { difficulty: d });   // above
+    // A bullet at y=400 flying up: `behind` is nearer, `ahead` is the answer.
+    const t = W.nearestTarget(300, 400, 412);
+    return t === ahead && W.nearestTarget(300, 400) === behind;
+  })());
+
+  check("the mission bar only ever goes forwards", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return /Math\.max\(run\.progress \|\| 0, progressNow\)/.test(g) &&
+           /run\.mission\.bossRush \? progressNow/.test(g);
+  })());
+  check("behind the sky, the bar follows the act and not the boss's health",
+    typeof SF.backstage.progress01 === "function" &&
+    /SF\.backstage\.progress01\(\)/.test(
+      fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")));
+
   check("every wave references a real formation",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => typeof SF.enemyData.FORMATIONS[wv.form] === "function")));
   check("every boss weak point disables a real attack",
