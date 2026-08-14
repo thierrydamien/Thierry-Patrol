@@ -4462,6 +4462,39 @@ async function run(){
     SF.profile.save(p2);
     check("every medal names a positive bounty",
       SF.config.ACHIEVEMENTS.every(a => a.pay > 0));
+
+    /*
+     * Medals are struck in four metals so the shelf is not a grid of identical
+     * objects. Three things have to stay true or the tiering is decorative:
+     * every medal is placed on purpose, all four metals are actually in use,
+     * and no single metal swallows the set (which is how it looked before -
+     * twenty-seven identical gold discs).
+     */
+    {
+      const tiers = SF.config.ACHIEVEMENTS.map(a => SF.icons.medalTierOf(a.id));
+      const known = ["bronze","silver","gold","platinum"];
+      const count = t => tiers.filter(x => x === t).length;
+      check("every medal is struck in a known metal", tiers.every(t => known.includes(t)));
+      check("all four medal metals are in use", known.every(t => count(t) > 0));
+      check("no single metal swallows the medal shelf",
+        known.every(t => count(t) <= SF.config.ACHIEVEMENTS.length / 2));
+      /*
+       * Where the payout says something, the metal must agree with it. It is
+       * silent across the middle - thirteen medals pay the same flat £500, and
+       * placing those is the whole reason the tier is a table - so only the
+       * ends are pinned: under the default is a starter, £1,200-and-up is a
+       * real campaign, £5,000-and-up goes on the mantelpiece.
+       */
+      const payOf = id => (SF.config.ACHIEVEMENTS.find(a => a.id === id) || {}).pay || 0;
+      check("the metal never contradicts the payout",
+        SF.config.ACHIEVEMENTS.every(a => {
+          const rank = known.indexOf(SF.icons.medalTierOf(a.id)), pay = payOf(a.id);
+          if(pay < 500  && rank !== 0) return false;
+          if(pay >= 1200 && rank < 2)  return false;
+          if(pay >= 5000 && rank < 3)  return false;
+          return true;
+        }));
+    }
     const before = p2.money;
     const paid = SF.profile.claimMedal(p2, "first_blood");
     check("collecting a medal pays its bounty", paid > 0 && p2.money === before + paid);

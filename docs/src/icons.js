@@ -433,6 +433,53 @@ const MEDAL_GLYPH = {
  * into the face. Locked medals keep the shape in gunmetal so the shelf shows
  * what is missing, not blank slots.
  */
+/*
+ * MEDALS COME IN FOUR METALS.
+ *
+ * Twenty-seven of them, and every one was the same gold disc with the same red
+ * ribbon and a small dark motif - so the Medals screen was a grid of identical
+ * objects, which is a strange thing for the screen whose whole job is to make
+ * you want them. Worse, it was a lie by omission: "Destroy your first enemy"
+ * (£200) and "Destroy the Devourer" (£10,000) looked exactly alike, so nothing
+ * on that page told a child which ones were the hard ones.
+ *
+ * They are struck in four metals by how hard they are to win. The ribbon
+ * follows the metal, so the tier reads from across a room even before the
+ * motif resolves.
+ *
+ * The tier is a table rather than a sum over the payout, and it has to be:
+ * thirteen medals pay the same flat £500, so the money cannot tell the easy
+ * ones from the long grinds. Where the payout DOES say something the two
+ * agree - nothing under £800 is above bronze, nothing at £5,000 or more is
+ * below platinum - and the table only decides inside the flat block.
+ */
+const MEDAL_TIERS = {
+  bronze:   { ribbon:["#8a5a3c","#6d4530"], face:["#f0c9a0","#c98a52","#8a5525"], rim:"#5e3818", ink:"#4d2a06", mill:false },
+  silver:   { ribbon:["#7b8496","#5c6473"], face:["#f4f7fb","#c3ccd9","#7f8899"], rim:"#5b626f", ink:"#39424f", mill:false },
+  gold:     { ribbon:["#c2123a","#9b0e2e"], face:["#ffe9ae","#f5b93c","#c07a12"], rim:"#8a5406", ink:"#6b3d08", mill:true  },
+  platinum: { ribbon:["#4b3f8f","#362c6b"], face:["#e6f6ff","#9fd8f0","#4f9ec4"], rim:"#2f6a8a", ink:"#0d2f42", mill:true  },
+};
+const MEDAL_TIER_OF = {
+  // First steps. A child earns most of these in their opening half hour.
+  first_blood:"bronze",  sharpshooter:"bronze", first_win:"bronze",
+  three_star:"bronze",   first_upgrade:"bronze",century:"bronze",
+  high_roller:"bronze",  boss_slayer:"bronze",
+  // Solid progress: things that take a few sessions of actually playing well.
+  combo_master:"silver", star_hoard:"silver",   rescuer:"silver",
+  boss_hunter:"silver",  untouchable:"silver",  warchest:"silver",
+  thousand:"silver",     daily_ace:"silver",    daily_iron:"silver",
+  gauntlet:"silver",
+  // Earned. Each one is a deliberate campaign, not a by-product of playing.
+  maxed_one:"gold",      quartermaster:"gold",  ace_pilot:"gold",
+  veteran_wings:"gold",  rush_master:"gold",
+  // The four you put on the mantelpiece.
+  big_spender:"platinum",nightmare:"platinum",  campaign:"platinum",
+  devourer:"platinum",
+};
+function medalTier(id){
+  return MEDAL_TIERS[MEDAL_TIER_OF[id] || "bronze"];
+}
+
 function medal(id, px, locked){
   const cv = document.createElement("canvas");
   cv.width = px * 2; cv.height = px * 2;
@@ -442,36 +489,52 @@ function medal(id, px, locked){
   if(!c) return cv;
   c.scale(px / 20, px / 20);          // same 40x40 box the painters use
 
-  // Ribbon straps, meeting behind the top of the disc.
-  c.fillStyle = locked ? "#2b3044" : "#c2123a";
+  const tier = medalTier(id);
+
+  // Ribbon straps, meeting behind the top of the disc - in the metal's colour.
+  c.fillStyle = locked ? "#2b3044" : tier.ribbon[0];
   c.beginPath(); c.moveTo(11, 2); c.lineTo(19, 2); c.lineTo(17, 15); c.lineTo(9, 12);
   c.closePath(); c.fill();
-  c.fillStyle = locked ? "#232738" : "#9b0e2e";
+  c.fillStyle = locked ? "#232738" : tier.ribbon[1];
   c.beginPath(); c.moveTo(21, 2); c.lineTo(29, 2); c.lineTo(31, 12); c.lineTo(23, 15);
   c.closePath(); c.fill();
 
-  // The disc. Gold face lit from the upper left; a darker rolled rim.
+  // The disc, lit from the upper left; a darker rolled rim.
   const cx = 20, cy = 24, r = 13.5;
   const face = c.createRadialGradient(cx - r*0.4, cy - r*0.45, r*0.15, cx, cy, r);
   if(locked){
     face.addColorStop(0, "#4a5068"); face.addColorStop(0.7, "#31374c"); face.addColorStop(1, "#232838");
   } else {
-    face.addColorStop(0, "#ffe9ae"); face.addColorStop(0.55, "#f5b93c"); face.addColorStop(1, "#c07a12");
+    face.addColorStop(0, tier.face[0]); face.addColorStop(0.55, tier.face[1]); face.addColorStop(1, tier.face[2]);
   }
   c.save();
-  if(!locked){ c.shadowColor = "rgba(245,166,35,0.55)"; c.shadowBlur = 6; }
+  if(!locked){ c.shadowColor = tier.face[1]; c.shadowBlur = 6; }
   c.fillStyle = face;
   c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fill();
   c.restore();
   c.lineWidth = 1.6;
-  c.strokeStyle = locked ? "rgba(255,255,255,0.18)" : "#8a5406";
+  c.strokeStyle = locked ? "rgba(255,255,255,0.18)" : tier.rim;
   c.beginPath(); c.arc(cx, cy, r - 0.8, 0, TAU); c.stroke();
+  /*
+   * A milled edge on the two dearest metals. It is four short strokes and it
+   * is the difference between "a coloured circle" and "a struck thing".
+   */
+  if(!locked && tier.mill){
+    c.strokeStyle = tier.rim; c.lineWidth = 0.9;
+    for(let i = 0; i < 28; i++){
+      const a = (i/28)*TAU;
+      c.beginPath();
+      c.moveTo(cx + Math.cos(a)*(r - 0.4), cy + Math.sin(a)*(r - 0.4));
+      c.lineTo(cx + Math.cos(a)*(r - 2.1), cy + Math.sin(a)*(r - 2.1));
+      c.stroke();
+    }
+  }
 
   // The motif, struck into the face - dark on gold, like a coin.
   const fn = P[MEDAL_GLYPH[id]] || P.star;
   c.save();
   c.translate(cx, cy); c.scale(0.5, 0.5); c.translate(-20, -20);
-  const ink = locked ? "rgba(200,210,235,0.5)" : "#6b3d08";
+  const ink = locked ? "rgba(200,210,235,0.5)" : tier.ink;
   c.strokeStyle = ink; c.fillStyle = ink;
   c.lineWidth = 3.4; c.lineCap = "round"; c.lineJoin = "round";
   try { fn(c); } catch(e){ /* a glyph must never break a screen */ }
@@ -479,5 +542,9 @@ function medal(id, px, locked){
   return cv;
 }
 
-SF.icons = { paint, el, medal, names: Object.keys(P) };
+/* medalTierOf is exported for the smoke suite: the whole point of the four
+   metals is the spread, and a spread is exactly the kind of thing that decays
+   quietly when medals get added. */
+function medalTierOf(id){ return MEDAL_TIER_OF[id] || "bronze"; }
+SF.icons = { paint, el, medal, medalTierOf, names: Object.keys(P) };
 })();
