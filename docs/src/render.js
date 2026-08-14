@@ -1172,13 +1172,13 @@ function drawAct4(ctx, run, world, timeMs){
     const p = world.player;
     const near = p ? Math.min(p.x, VW - p.x) : 999;
     const heat = near < 70 ? 1 - near/70 : 0;
-    const puls = 0.16 + Math.sin(timeMs/420) * 0.05 + heat * 0.45;
+    const puls = 0.34 + Math.sin(timeMs/420) * 0.08 + heat * 0.42;
     [0, VW].forEach(x => {
-      const g = ctx.createLinearGradient(x === 0 ? 0 : VW, 0, x === 0 ? 22 : VW - 22, 0);
+      const g = ctx.createLinearGradient(x === 0 ? 0 : VW, 0, x === 0 ? 30 : VW - 30, 0);
       g.addColorStop(0, "rgba(127,233,208," + puls.toFixed(3) + ")");
       g.addColorStop(1, "rgba(127,233,208,0)");
       ctx.fillStyle = g;
-      ctx.fillRect(x === 0 ? 0 : VW - 22, 0, 22, VH);
+      ctx.fillRect(x === 0 ? 0 : VW - 30, 0, 30, VH);
     });
   }
 
@@ -1190,18 +1190,18 @@ function drawAct4(ctx, run, world, timeMs){
   if(run.ferry){
     const fr = run.ferry;
     const TOP = SF.entityConst.PLAY_TOP;
-    const open = fr.carried;              // lit green only when you have a load
+    const open = fr.carried;              // green always; BRIGHT when loaded
     const puls = 0.55 + Math.sin(timeMs/240)*0.35;
     ctx.save();
     // the mouth
     const g = ctx.createLinearGradient(0, TOP - 26, 0, TOP + 22);
-    g.addColorStop(0, open ? "rgba(74,222,128,0.55)" : "rgba(125,211,252,0.22)");
+    g.addColorStop(0, open ? "rgba(74,222,128,0.60)" : "rgba(74,222,128,0.26)");
     g.addColorStop(1, "rgba(74,222,128,0)");
     ctx.fillStyle = g;
     ctx.fillRect(fr.doorX - 62, TOP - 26, 124, 48);
     ctx.strokeStyle = open
-      ? "rgba(74,222,128," + (0.6 + puls*0.4).toFixed(2) + ")"
-      : "rgba(125,211,252,0.45)";
+      ? "rgba(74,222,128," + (0.65 + puls*0.35).toFixed(2) + ")"
+      : "rgba(74,222,128,0.52)";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(fr.doorX - 62, TOP + 8); ctx.lineTo(fr.doorX - 62, TOP - 18);
@@ -1209,7 +1209,7 @@ function drawAct4(ctx, run, world, timeMs){
     ctx.stroke();
     // landing lights along the sill
     for(let i = -2; i <= 2; i++){
-      ctx.fillStyle = open ? "#4ade80" : "#7dd3fc";
+      ctx.fillStyle = "#4ade80";
       ctx.globalAlpha = 0.35 + (open ? puls*0.6 : 0.2);
       ctx.beginPath(); ctx.arc(fr.doorX + i*26, TOP + 8, 3, 0, TAU); ctx.fill();
     }

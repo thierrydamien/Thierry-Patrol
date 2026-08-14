@@ -679,7 +679,7 @@ const ENEMY_TYPES = {
    * reads as the level breaking rather than as mercy.
    */
   limpet: {
-    name:"Limpet", behaviour:"limpet", hp:3, r:11, size:34, speed:205,
+    name:"Limpet", behaviour:"limpet", hp:5, r:11, size:34, speed:205,
     score:14, money:14, tint:"#a3e635", fire:null,
     noLeash:true,
   },

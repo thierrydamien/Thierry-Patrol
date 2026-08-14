@@ -167,11 +167,11 @@ const SKIES = [
      inside a star's glare, and bright 0 - the first sky with no spiked suns
      at all. The pillars are rooted at the very bottom edge and rim-lit, so
      they read as prominences arching off the surface. */
-  { name:"The Bright Side", clouds:["#f59e0b","#fde68a","#7c2d12"], dust:"#1a0600", star:"#fff7d6",
-    density:1.55, stars:0.12, bright:0,
-    props:[ {k:"sun",     x:0.50, y:0.94, r:0.55, color:"#ffd08a"},
-            {k:"pillars", x:0.32, y:1.00, h:0.52, n:2, w:0.30, hi:"#ffe1a0", lo:"#5c1a02"},
-            {k:"pillars", x:0.76, y:1.00, h:0.44, n:2, w:0.26, hi:"#ffe1a0", lo:"#4a1402"},
+  { name:"The Bright Side", clouds:["#fde68a","#fff6df","#c2410c"], dust:"#2a0d00", star:"#fff7d6",
+    density:1.05, stars:0.12, bright:0,
+    props:[ {k:"sun",     x:0.50, y:0.94, r:0.55, color:"#ffe6b8"},
+            {k:"pillars", x:0.32, y:1.00, h:0.52, n:2, w:0.30, hi:"#fff8e6", lo:"#ff9a3c"},
+            {k:"pillars", x:0.76, y:1.00, h:0.44, n:2, w:0.26, hi:"#fff8e6", lo:"#ffb257"},
             {k:"planet",  x:0.14, y:0.30, r:0.055, lit:"#7c3a1a", dark:"#160500", craters:true} ] },
 
   { name:"Their Star",   clouds:["#9a3412","#fb923c","#450a0a"], dust:"#100301", star:"#ffedd5",

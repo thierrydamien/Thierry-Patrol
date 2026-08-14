@@ -294,27 +294,59 @@ const SHAPES = {
    * nothing on it glows.
    */
   grazer(ctx, S, p){
-    // body: wide and low, wider at the shoulders than the rump
-    hull(ctx, [0,S*0.26, S*0.40,S*0.10, S*0.44,-S*0.10, S*0.30,-S*0.28,
-               -S*0.30,-S*0.28, -S*0.44,-S*0.10, -S*0.40,S*0.10], p, S);
-    // overlapping hide plates
-    ctx.strokeStyle = p.shade; ctx.lineWidth = S*0.035;
-    for(let i = 0; i < 3; i++){
-      const y = -S*0.16 + i*S*0.14;
+    /*
+     * Two goes at this before it read as an animal, and both failures were the
+     * same mistake: these sprites are drawn NOSE-DOWN, so anything placed at
+     * -y lands along the TOP edge. Version one put the hooves there and got
+     * four grey tabs over a pale block - a fortress turret. Version two swept
+     * a pair of horns across the body and got what looked like a bag strap.
+     *
+     * So: symmetric about the vertical, seen from above. A broad humped back,
+     * a blunt head at the FRONT (which is +y, the way it is walking), and four
+     * short legs poking out at the sides where legs can actually be seen. No
+     * horns, nothing pointing at the player, nothing that glows. It has to
+     * read as livestock at a glance, because the whole level depends on a
+     * child not treating it as another thing to shoot.
+     */
+    // four short legs out the sides, drawn under the body
+    ctx.fillStyle = p.deep;
+    [[-1, 0.12], [-1, -0.14], [1, 0.12], [1, -0.14]].forEach(([sd, y]) => {
       ctx.beginPath();
-      ctx.moveTo(-S*0.34, y);
-      ctx.quadraticCurveTo(0, y + S*0.07, S*0.34, y);
+      ctx.moveTo(sd*S*0.28, y*S - S*0.05);
+      ctx.lineTo(sd*S*0.42, y*S - S*0.03);
+      ctx.lineTo(sd*S*0.42, y*S + S*0.04);
+      ctx.lineTo(sd*S*0.28, y*S + S*0.06);
+      ctx.closePath(); ctx.fill();
+    });
+    // the body: widest at the shoulders, tapering to the rump behind
+    hull(ctx, [ 0,S*0.30,  S*0.30,S*0.16,  S*0.34,-S*0.06,
+                S*0.22,-S*0.28,  0,-S*0.34,
+               -S*0.22,-S*0.28, -S*0.34,-S*0.06, -S*0.30,S*0.16], p, S);
+    // hide plates, following the curve of the back
+    ctx.strokeStyle = p.shade; ctx.lineWidth = S*0.032;
+    for(let i = 0; i < 3; i++){
+      const y = -S*0.18 + i*S*0.13;
+      ctx.beginPath();
+      ctx.moveTo(-S*0.26, y);
+      ctx.quadraticCurveTo(0, y + S*0.07, S*0.26, y);
       ctx.stroke();
     }
-    // the brow slab, the heaviest thing on it
-    ctx.fillStyle = p.metalD;
-    poly(ctx, [0,S*0.34, S*0.26,S*0.20, S*0.22,S*0.08, -S*0.22,S*0.08, -S*0.26,S*0.20]);
-    ctx.fill();
-    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.026; ctx.stroke();
-    // four short hoof-thrusters, no plume - it walks, it does not fly at you
-    ctx.fillStyle = p.metal;
-    [-0.28, -0.10, 0.10, 0.28].forEach(x => {
-      ctx.fillRect(x*S - S*0.04, -S*0.34, S*0.08, S*0.09);
+    // the head: a blunt wedge at the front, lower than the back
+    ctx.fillStyle = p.shade;
+    ctx.beginPath();
+    ctx.moveTo(0, S*0.48);
+    ctx.lineTo(S*0.15, S*0.36);
+    ctx.lineTo(S*0.13, S*0.22);
+    ctx.lineTo(-S*0.13, S*0.22);
+    ctx.lineTo(-S*0.15, S*0.36);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.024; ctx.stroke();
+    // muzzle and two small dark eyes
+    ctx.fillStyle = p.deep;
+    ctx.beginPath(); ctx.ellipse(0, S*0.42, S*0.07, S*0.045, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(12,10,9,0.85)";
+    [-1, 1].forEach(sd => {
+      ctx.beginPath(); ctx.arc(sd*S*0.085, S*0.28, S*0.028, 0, TAU); ctx.fill();
     });
   },
   serpent(ctx, S, p){
