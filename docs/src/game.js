@@ -1298,6 +1298,18 @@ function onBossPhase(boss){
  * you, which is the whole point of them turning up.
  */
 function squadronDue(boss){
+  /*
+   * Behind the Sky is three bosses in one mission, and this fired on the
+   * first of them: the Welded Titan drops below 40% and the whole family
+   * arrives, two acts early, with the real finale still to come. Boss Rush
+   * already had an exception for exactly this reason - seven arrivals turn
+   * the moment into wallpaper - and the finale needs the same one. They come
+   * for the Royal Brush, which is the last thing the campaign has to say.
+   */
+  if(SF.backstage && SF.backstage.active()){
+    const st = SF.backstage.stage();
+    if(st !== "brush" && st !== "nova") return false;
+  }
   const phases = boss.def.phases;
   if(phases.some(ph => ph.lastLight)) return !!boss.phase.lastLight;
   return boss.phaseIndex === phases.length - 1 || boss.hp <= boss.maxHp*0.40;
@@ -1787,6 +1799,26 @@ function update(dt, timeMs){
    *
    * No fanfare on a device with a single pilot - nobody invented shows up.
    */
+  /*
+   * THE FINALE SUMMONS ON ITS OWN ACT, because it has no boss to summon on.
+   *
+   * Behind the Sky's only world boss is the act-one Titan; the Mirror Pilot
+   * and the Royal Brush are backstage actors, so once the Titan dies there is
+   * no bossNow for the test below to fire against. Gating squadronDue to the
+   * last act therefore fixed the "they came two acts early" bug and quietly
+   * removed the squadron from the finale altogether - which is the one moment
+   * in the whole campaign the arrival exists for. It comes from the stage.
+   */
+  if(SF.backstage && SF.backstage.active() && SF.backstage.stage() === "brush" &&
+     !SF.finale.fleetSize()){
+    if(SF.finale.summonFleet(game.world, game.profile).length){
+      run.bannerText = "THE SQUADRON IS WITH YOU";
+      run.bannerSub = "the whole family came";
+      run.bannerColor = "#7cc4ff";
+      run.bannerUntil = timeMs + 3000;
+      SF.comms.say("fleetArrives");
+    }
+  }
   if(bossNow && bossNow.alive && !bossNow.entering && !bossNow.dying &&
      bossNow.def && !SF.finale.fleetSize() && squadronDue(bossNow) &&
      (!run.mission.bossRush || run.rushIndex >= run.rushList.length)){

@@ -399,7 +399,21 @@ function update(dt, run, world, simMs){
         for(let i = 0; i < n; i++){
           S.sketches.push({
             x: 60 + (W - 120) * (i + 0.5)/n + rand(-16, 16),
-            y: rand(150, 330),
+            /*
+             * INSIDE THE BAND THE SHIP CAN ACTUALLY FLY IN.
+             *
+             * These used to spawn at rand(150, 330). PLAY_TOP is 250 - the
+             * ship's hard ceiling - and the paint radius is 46, so anything
+             * above y=204 was physically impossible to touch. About a third
+             * of every batch could not be painted no matter how well you
+             * flew, which is most of why the star reads as broken: you chase
+             * a ghost, you fly straight at it, and nothing happens.
+             *
+             * Kept off the ceiling too: at exactly 250 you have to pin the
+             * ship against the roof, which is the worst place to be during a
+             * boss fight.
+             */
+            y: rand(300, 470),
             type: pick(types),
             /*
              * INK is the window you have to fly through a ghost before it
@@ -416,7 +430,8 @@ function update(dt, run, world, simMs){
         audio.play("telegraph");
         // The first squadron it draws is the lesson. Said once, plainly, with
         // the ghosts on screen in front of you.
-        if(!S.taughtPaint){
+        if(!S.taughtPaint || (run.stats.painted === 0 && !S.taughtTwice)){
+          if(S.taughtPaint) S.taughtTwice = true;
           S.taughtPaint = true;
           run.bannerText = "FLY THROUGH THE SKETCHES";
           run.bannerSub = "your paint turns them onto OUR side";
