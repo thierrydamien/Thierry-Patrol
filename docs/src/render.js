@@ -1164,6 +1164,24 @@ let darkCv = null, darkCtx = null;
 function drawAct4(ctx, run, world, timeMs){
   if(!run || run.ended) return;
 
+  /* --- THE RING: the two seams -------------------------------------------
+     A pair of shimmering vertical edges, so the place looks like it has a
+     join rather than looking like the walls stopped working. They breathe on
+     a slow sine and brighten when the ship is near one. */
+  if(world && world.wrap){
+    const p = world.player;
+    const near = p ? Math.min(p.x, VW - p.x) : 999;
+    const heat = near < 70 ? 1 - near/70 : 0;
+    const puls = 0.16 + Math.sin(timeMs/420) * 0.05 + heat * 0.45;
+    [0, VW].forEach(x => {
+      const g = ctx.createLinearGradient(x === 0 ? 0 : VW, 0, x === 0 ? 22 : VW - 22, 0);
+      g.addColorStop(0, "rgba(127,233,208," + puls.toFixed(3) + ")");
+      g.addColorStop(1, "rgba(127,233,208,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x === 0 ? 0 : VW - 22, 0, 22, VH);
+    });
+  }
+
   // --- THE UNDERTOW: the wells -------------------------------------------
   if(run.wells){
     const list = run.wells.list;

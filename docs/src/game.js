@@ -337,6 +337,9 @@ function startMission(missionIndex, difficultyId){
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
   game.world.mods = mission.mods || {};   // the Wacky Sky's roll; {} elsewhere
   game.world.cover = !!mission.cover;     // rocks stop their bullets on this one
+  game.world.mirror = !!mission.mirror;   // the Glass Sea: a second gun, far side
+  game.world.wrap = !!mission.wrap;       // the Ring: the sky joins up at the edges
+  game.world.wrapped = 0;
   SF.render.initBackground(custom ? (mission.skyIndex || 0)
                           : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
@@ -764,6 +767,8 @@ const callbacks = {
      * farming adds - the mirror image of the bug that made it unreachable.
      */
     if(e.counted && !e.fromBoss){ run.stats.kills++; }
+    // The Glass Sea: the twin earns its own tally, which is a whole star.
+    if(bullet && bullet.fromMirror) run.stats.mirrorKills++;
     if(run.mission.sky29) SF.sky29.splash(e.x, e.y);   // every kill, a drop of paint
 
     // Beating the rival is the level, so it gets a boss-sized send-off - it
@@ -1404,6 +1409,9 @@ function update(dt, timeMs){
   behaviourCtx.pickups = game.world.pickups;
   behaviourCtx.world = game.world;
   behaviourCtx.escort = game.world.escortTarget();   // what the hunters aim at
+  // The Ring counts on the world (that is where the crossing happens); the
+  // star reads it off the run, so the two are reconciled once a frame.
+  if(game.world.wrap) run.stats.wraps = game.world.wrapped;
   behaviourCtx.difficulty = run.difficulty;
   behaviourCtx.smart = run.difficulty.smart;
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
@@ -2445,6 +2453,34 @@ function draw(timeMs){
   SF.render.drawArena(ctx, world.boss, timeMs);      // the Devourer's screen-wide attacks
   SF.render.drawFleet(ctx, timeMs);                  // the rescued pilots, phase five
   SF.render.drawBullets(ctx, world);
+  /*
+   * THE GLASS SEA: your reflection, drawn UNDER you so it never competes with
+   * the ship a child is actually steering. It is a picture of a gun and
+   * nothing else - no collision, no health, no hitbox - so it costs one extra
+   * drawPlayer call with a mirrored transform and not one line anywhere else.
+   *
+   * THE RING: the same trick for a different reason. Within 70px of a seam a
+   * half-alpha copy pokes in from the far side, so a child SEES himself
+   * already arriving over there before he commits to flying off the edge.
+   */
+  if(world.mirror && world.player.alive){
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.translate(VW, 0); ctx.scale(-1, 1);
+    SF.render.drawPlayer(ctx, world.player, timeMs);
+    ctx.restore();
+  }
+  if(world.wrap && world.player.alive){
+    const p = world.player;
+    const near = p.x < 70 ? VW : (p.x > VW - 70 ? -VW : 0);
+    if(near){
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.translate(near, 0);
+      SF.render.drawPlayer(ctx, p, timeMs);
+      ctx.restore();
+    }
+  }
   SF.render.drawPlayer(ctx, world.player, timeMs);
   fx.drawParticles(ctx);
   SF.render.drawForeground(ctx);

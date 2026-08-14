@@ -421,7 +421,23 @@ class World {
     if(input.dragging){
       // Pointer (finger or hovering cursor): steer toward it with a spring,
       // capped at the same top speed.
-      const dx = input.dragX - p.x, dy = input.dragY - p.y;
+      let dx = input.dragX - p.x;
+      const dy = input.dragY - p.y;
+      /*
+       * THE RING, and this is the line the level lives or dies on.
+       *
+       * input.dragX is recomputed from the RAW pointer position on every move
+       * event, so translating it from outside does not survive the next touch.
+       * The instant the ship crosses the seam, dx becomes nearly -VW and this
+       * spring hauls it straight back across the whole screen at top speed -
+       * the wrap undone in one frame, on the control these children actually
+       * use. The fix is to say what is true on this level: the finger names a
+       * point on a CYLINDER, so the spring takes the short way round.
+       */
+      if(this.wrap){
+        if(dx >  VW/2) dx -= VW;
+        else if(dx < -VW/2) dx += VW;
+      }
       p.vx = damp(p.vx, clamp(dx * 12, -p.maxSpeed, p.maxSpeed), 26, dt);
       p.vy = damp(p.vy, clamp(dy * 12, -p.maxSpeed, p.maxSpeed), 26, dt);
     } else if(!ax && !ay){
@@ -432,8 +448,26 @@ class World {
     if(sp > p.maxSpeed){ p.vx = p.vx/sp*p.maxSpeed; p.vy = p.vy/sp*p.maxSpeed; }
 
     p.x += p.vx*dt; p.y += p.vy*dt;
-    if(p.x < 24){ p.x = 24; p.vx = 0; }
-    if(p.x > VW-24){ p.x = VW-24; p.vx = 0; }
+    /*
+     * The Ring REPLACES the side walls rather than testing against them. The
+     * clamp sets vx = 0 at the wall, so any "touching the edge and still
+     * moving outward?" guard reduces to "touching the edge" and would wrap on
+     * the lightest brush. Here there is no wall to brush.
+     */
+    if(this.wrap){
+      if(p.x < 0 || p.x > VW){
+        const out = p.x < 0 ? 0 : VW;
+        p.x = p.x < 0 ? p.x + VW : p.x - VW;
+        this.wrapped++;
+        // Both ends flash, so the crossing reads as one continuous move
+        // rather than the ship blinking out and a new one blinking in.
+        fx.ring(out, p.y, 26, "#7fe9d0", 3, 0.22);
+        fx.ring(p.x, p.y, 26, "#7fe9d0", 3, 0.22);
+      }
+    } else {
+      if(p.x < 24){ p.x = 24; p.vx = 0; }
+      if(p.x > VW-24){ p.x = VW-24; p.vx = 0; }
+    }
     if(p.y < PLAY_TOP){ p.y = PLAY_TOP; p.vy = 0; }
     if(p.y > PLAY_BOTTOM){ p.y = PLAY_BOTTOM; p.vy = 0; }
 
@@ -487,6 +521,9 @@ class World {
     const dmg = Math.round(p.damage * (overdrive ? 1.5 : 1));
     const tier = clamp(Math.min(5, p.damage - 1 + (overdrive ? 1 : 0)), 0, 5);
     const pattern = spreadPattern(spreadLvl);
+    // Every round born in this call, so the Glass Sea reflects the exact
+    // volley rather than guessing at it from the pool.
+    const volley = this.mirror ? [] : null;
 
     for(let i=0;i<pattern.length;i++){
       const vx = pattern[i];
@@ -494,6 +531,8 @@ class World {
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
+      b.fromMirror = false;
+      if(volley) volley.push(b);
     }
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
@@ -504,7 +543,37 @@ class World {
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
+      b.fromMirror = false;
+      if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
+    }
+    /*
+     * THE GLASS SEA. A second ship on the far side of the sky fires whatever
+     * you fire. This is the only place a player round is born - the drone loop
+     * above is inside this same function - so reflecting here catches
+     * everything, drone bolts included, which simply looks better than a
+     * reflection that copies half of you.
+     *
+     * The twin is a GUN, not a ship: nothing can hit it and it can hit
+     * nothing back, so it needs no collision work at all, and a seven-year-old
+     * who ignores it entirely still finishes the level. Its rounds are weaker
+     * than yours, so it assists rather than replaces.
+     *
+     * b.fromMirror must be cleared on the normal path above too: the pool
+     * hands back recycled objects, and a slot that stayed flagged would credit
+     * phantom kills to the level, s own star.
+     */
+    if(volley){
+      for(let i = 0; i < volley.length; i++){
+        const s = volley[i];
+        const b = this.bullets.spawn();
+        b.x = VW - s.x; b.y = s.y; b.vx = -s.vx; b.vy = s.vy;
+        b.r = s.r; b.dmg = Math.max(1, Math.round(s.dmg*0.6)); b.pierce = s.pierce;
+        b.homing = s.homing; b.tier = s.tier; b.age = 0;
+        b.fromDrone = s.fromDrone; b.hitBoss = false; b.hitWeak = false;
+        b.fromMirror = true;
+      }
+      fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }
     audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));
   }
@@ -529,7 +598,11 @@ class World {
       // ever flies up, until a Seeker bends one hard or a gravity well takes
       // hold of it - and then, with no bottom test, it occupied a pool slot
       // for the rest of the mission.
-      if(b.y < -30 || b.y > VH+40 || b.x < -30 || b.x > VW+30) b.alive = false;
+      if(this.wrap){
+        if(b.x < -8) b.x += VW + 16; else if(b.x > VW + 8) b.x -= VW + 16;
+      }
+      if(b.y < -30 || b.y > VH+40 ||
+         (!this.wrap && (b.x < -30 || b.x > VW+30))) b.alive = false;
     }
 
     const ebs = this.enemyBullets.items;
