@@ -4005,6 +4005,11 @@ function openBriefing(index){
   const m = MISSIONS[index];
   const stars = P.totalStars(profile);
 
+  // The fight's music starts downloading NOW, while somebody reads the brief,
+  // instead of in the first second of the mission. Measured: about 300ms from
+  // creating the element to sound, and this screen is up for several seconds.
+  if(SF.audio.warm) SF.audio.warm(m.boss ? "boss" : "combat");
+
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");

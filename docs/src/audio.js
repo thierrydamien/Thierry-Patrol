@@ -24,6 +24,25 @@ const { clamp, rand } = SF.core;
 
 let ctx = null;
 let master = null;
+/*
+ * WHERE A SOUND IS.
+ *
+ * Every effect used to arrive dead centre. Half the formations in the campaign
+ * are called `sides` and `pincer` - ships coming in hard left and hard right -
+ * and they sounded identical, so the sky had no width at all.
+ *
+ * `tone` and `noise` connect to `bus` rather than to `master`, and `play()`
+ * swaps the bus for a panner when the caller knows where the thing happened.
+ * That is the whole change: no sound in the table had to learn about position.
+ *
+ * Panning stops at 0.8 rather than 1.0 on purpose. A fully panned sound is
+ * silent in the other ear, which is unpleasant on headphones and invisible to
+ * anyone playing on one speaker - and the family plays on iPad speakers held
+ * in landscape, where a hard pan is a sound the other child cannot hear.
+ */
+let bus = null;
+let panSupported = false;
+const PAN_LIMIT = 0.8;
 // The old key is still read once so the game doesn't come back unmuted for
 // anyone who silenced it before the rename.
 let muted = (localStorage.getItem("patrol_muted") ||
@@ -43,6 +62,11 @@ function init(){
       master = ctx.createGain();
       master.gain.value = 0.9;
       master.connect(ctx.destination);
+      bus = master;
+      // Safari only grew createStereoPanner in 14.1, and the family's older
+      // iPad is exactly the device that would fall off the end of that. No
+      // panner means everything simply stays centred, which is where it was.
+      panSupported = typeof ctx.createStereoPanner === "function";
     } catch(e){ ctx = null; }
   }
   if(ctx && ctx.state === "suspended" && ctx.resume) ctx.resume();
@@ -79,7 +103,7 @@ function tone(freq, dur, type, gain, glide, delay){
   if(glide) osc.frequency.exponentialRampToValueAtTime(Math.max(glide, 1), t0 + dur);
   g.gain.setValueAtTime(gain, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g); g.connect(master);
+  osc.connect(g); g.connect(bus || master);
   osc.start(t0); osc.stop(t0 + dur + 0.02);
 }
 
@@ -100,7 +124,7 @@ function noise(dur, gain, filterFrom, filterTo, delay){
   const g = ctx.createGain();
   g.gain.setValueAtTime(gain, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(filter); filter.connect(g); g.connect(master);
+  src.connect(filter); filter.connect(g); g.connect(bus || master);
   src.start(t0);
 }
 
@@ -401,18 +425,46 @@ SOUNDS.flyoff = { minGap: 2000, fn: () => {
   noise(0.8, 0.16, 600, 5200);
 } };
 
-function play(name, arg){
+function play(name, arg, x){
   // The same event drives the vibration motor. Deliberately above the guards
   // below: rumble is its own setting, so a game played with the sound off - as
   // most of them are - is still felt.
   if(SF.haptics) SF.haptics.play(name, arg);
+  // Above the effects guard: the music reacts even for a family playing with
+  // the blips switched off, because the soundtrack is a separate setting.
+  const d = DUCKS[name];
+  if(d) duck(d[0], d[1]);
   if(!ctx || muted || !sfxOn) return;
   const s = SOUNDS[name];
   if(!s) return;
   const now = ctx.currentTime * 1000;
   if(now - (lastPlayed[name] || -9999) < s.minGap) return;
   lastPlayed[name] = now;
+  /*
+   * The panner is built per sound and left to be collected once its source
+   * has finished - the same lifetime the oscillator and the noise buffer
+   * already have. Building one only when a position was supplied keeps every
+   * menu tap on exactly the graph it had before.
+   */
+  let panner = null;
+  if(panSupported && x != null && isFinite(x)){
+    const VW = (SF.entityConst && SF.entityConst.VW) || 390;
+    const pan = clamp((x / VW) * 2 - 1, -1, 1) * PAN_LIMIT;
+    try {
+      panner = ctx.createStereoPanner();
+      panner.pan.value = pan;
+      panner.connect(master);
+      bus = panner;
+    } catch(e){ panner = null; bus = master; }
+  }
   try { s.fn(arg); } catch(e){ /* never let audio break a frame */ }
+  bus = master;
+}
+
+/** Exposed so the smoke test can read the pan a given x would produce. */
+function panFor(x){
+  const VW = (SF.entityConst && SF.entityConst.VW) || 390;
+  return clamp((x / VW) * 2 - 1, -1, 1) * PAN_LIMIT;
 }
 
 // Any first interaction anywhere counts as the gesture that unlocks audio.
@@ -439,6 +491,84 @@ const MUSIC = {
   boss:   { files: ["boss"],   vol: 0.68 },
   defeat: { files: ["defeat"], vol: 0.60, once: true, then: "menu" },
 };
+/*
+ * DUCKING.
+ *
+ * The soundtrack used to be a thing that happened NEAR the game rather than
+ * with it: seven real recordings crossfading cleanly, and never once reacting.
+ * A boss could arrive, a pilot could be pulled aboard, a life could be lost,
+ * and the music carried on at exactly the volume it was already at.
+ *
+ * The fix is deliberately not wired into gameplay. `DUCKS` keys off the same
+ * named hooks every system already fires, so the music subscribes to moments
+ * that were being announced anyway - nothing in game.js had to learn that a
+ * soundtrack exists. [depth, hold-ms]: dip to `depth` of normal, hold, ease
+ * back. Re-firing while ducked just refreshes the hold.
+ */
+const DUCKS = {
+  bossWake:    [0.24, 1200],
+  bossAlarm:   [0.30,  800],
+  bossPhase:   [0.34,  700],
+  bossExplode: [0.24, 1300],
+  playerHit:   [0.30,  700],
+  shieldBreak: [0.55,  400],
+  rescue:      [0.55,  450],
+  waveClear:   [0.50,  520],
+  bomb:        [0.32,  700],
+  megaBoom:    [0.28,  850],
+  overdrive:   [0.50,  520],
+  victory:     [0.35,  900],
+  missionWin:  [0.35,  900],
+};
+let duckLevel = 1;            // where the dip actually is, smoothed
+let duckTarget = 1;           // where it is heading
+let duckHold = 0;             // ms left pinned at the floor
+let duckTimer = null;
+
+/** The volume the current track should be at right now, dip included. */
+function targetVol(){ return musicVol * duckLevel; }
+
+function duck(depth, holdMs){
+  if(muted || !musicOn || !musicEl) return;
+  duckTarget = Math.min(duckTarget, depth);
+  duckLevel = Math.min(duckLevel, depth);
+  duckHold = Math.max(duckHold, holdMs);
+  if(musicEl) musicEl.volume = Math.max(0, Math.min(1, targetVol()));
+  if(duckTimer) return;
+  duckTimer = setInterval(() => {
+    duckHold -= 60;
+    if(duckHold <= 0){
+      duckTarget = 1;
+      // Back up gently. A dip that snaps back is a pump, not a duck.
+      duckLevel = Math.min(1, duckLevel + 0.045);
+    }
+    // While a crossfade is running it owns the volume and reads targetVol()
+    // for its ceiling, so writing here as well would fight it.
+    if(musicEl && !fadeTimer && !muted && musicOn){
+      musicEl.volume = Math.max(0, Math.min(1, targetVol()));
+    }
+    if(duckLevel >= 1 && duckHold <= 0){
+      duckLevel = 1; duckTarget = 1;
+      clearInterval(duckTimer); duckTimer = null;
+    }
+  }, 60);
+}
+
+/**
+ * Start fetching a track before anything asks to hear it. Measured: an <audio>
+ * element takes about 300ms from creation to sound, even on a throttled
+ * connection - MP3 streams, so it never waited for the whole file. But that
+ * 300ms was being spent at the top of the mission, and the briefing screen is
+ * sitting there doing nothing for several seconds beforehand. Spend it there.
+ */
+function warm(name){
+  const def = name && MUSIC[name];
+  if(!def) return;
+  const ix = (rotation[name] || 0) % def.files.length;
+  const el = elFor(def.files[ix]);
+  if(el){ try { el.load(); } catch(e){} }
+}
+
 let musicTrack = null;        // logical name currently asked for
 let musicEl = null;           // the <audio> actually sounding
 let musicVol = 0;             // its target volume
@@ -504,7 +634,7 @@ function applyMusicState(){
   if(muted || !musicOn || document.hidden){
     try { musicEl.pause(); } catch(e){}
   } else {
-    musicEl.volume = musicVol;
+    musicEl.volume = Math.max(0, Math.min(1, targetVol()));
     tryPlay();
   }
 }
@@ -543,8 +673,11 @@ function setMusic(name){
       if(e.volume > 0) busy = true;
       else try { e.pause(); } catch(err){}
     });
-    if(musicEl && !muted && musicOn && musicEl.volume < musicVol){
-      musicEl.volume = Math.min(musicVol, musicEl.volume + 0.07);
+    // Math.min pulls DOWN as well as up, so a duck that lands mid-crossfade
+    // lowers the ceiling and the fade follows it instead of overshooting.
+    const cap = Math.max(0, Math.min(1, targetVol()));
+    if(musicEl && !muted && musicOn && Math.abs(musicEl.volume - cap) > 0.005){
+      musicEl.volume = Math.min(cap, musicEl.volume + 0.07);
       busy = true;
     }
     if(!busy){ clearInterval(fadeTimer); fadeTimer = null; }
@@ -557,5 +690,6 @@ SF.audio = { init, play, isMuted, setMuted, setMusic,
              // Both tables are exported for the smoke test: MUSIC so it can
              // verify every file exists, SOUNDS so it can check no rumble is
              // keyed to an event that doesn't exist.
-             MUSIC, _sounds: SOUNDS };
+             MUSIC, _sounds: SOUNDS, panFor, warm, DUCKS,
+             _duckLevel: () => duckLevel };
 })();

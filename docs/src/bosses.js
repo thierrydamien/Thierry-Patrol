@@ -422,7 +422,7 @@ function update(boss, dt, world, ctxObj, timeMs){
                    24 + f*34, f > 0.6 ? "#ffffff" : "#ff8a3d", f > 0.5);
       fx.shake(4 + f*9);
       boss.flash = 1;
-      audio.play("enemyExplode", f > 0.5);
+      audio.play("enemyExplode", f > 0.5, boss.x);
       boss.deathFx = 0.24 - f*0.17;                   // the accelerating drumroll
     }
     if(boss.deathT >= boss.deathDur && ctxObj && ctxObj.onBossDead){
@@ -580,7 +580,7 @@ function damage(boss, amount, x, y){
       fx.explosion(boss.x + onWeak.ox, boss.y + onWeak.oy, 52, "#ffb03d", true);
       fx.shake(12);
       fx.hitStop(70);
-      audio.play("enemyExplode", true);
+      audio.play("enemyExplode", true, boss.x + (onWeak ? onWeak.ox : 0));
       /*
        * SAY WHAT YOU JUST SWITCHED OFF.
        *

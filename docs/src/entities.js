@@ -578,7 +578,7 @@ class World {
       }
       fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }
-    audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5));
+    audio.play(overdrive ? "shootHeavy" : "shoot", Math.min(1, tier/5), p.x);
   }
 
   /* ---------------- BULLETS ---------------- */
@@ -973,7 +973,9 @@ class World {
     } else {
       this.spawnEnemyBullet(e.x, e.y + e.r, 0, speed, "bolt", 4);
     }
-    audio.play("hitArmour");
+    // The shot comes from where the shooter is. This is the one that makes a
+    // pincer readable with your eyes shut.
+    audio.play("hitArmour", null, e.x);
   }
 
   /* ---------------- PICKUPS ---------------- */

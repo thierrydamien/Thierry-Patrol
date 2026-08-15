@@ -955,7 +955,7 @@ const callbacks = {
       run.stats.bounties = (run.stats.bounties || 0) + 1;
       fx.ring(e.x, e.y, 46, "#ffd23f", 4, 0.4);
       fx.text(e.x, e.y - 30, "WANTED! +£" + coin, "#ffd23f", 19, true);
-      audio.play("coin", true);
+      audio.play("coin", true, e.x);
     }
     game.world.dropCoins(e.x, e.y, coin);
     }
@@ -968,14 +968,18 @@ const callbacks = {
       fx.firework(e.x, e.y, ["#ff5d73","#ffd23f","#4ade80","#3fc9ff","#c084fc"]
         [Math.floor(Math.random()*5)]);
     }
-    fx.explosion(e.x, e.y, e.size, e.elite ? "#ffd23f" : "#ffb03d", e.elite || e.maxHp >= 5);
+    // `e.type.death` names how THIS archetype comes apart - plate armour
+    // panels off a Brute, a Hive evacuating, rock going to gravel. Purely
+    // additive, so the standard explosion still lands underneath it.
+    fx.explosion(e.x, e.y, e.size, e.elite ? "#ffd23f" : "#ffb03d",
+                 e.elite || e.maxHp >= 5, e.type && e.type.death);
     fx.shake(e.elite ? 9 : (e.maxHp >= 5 ? 6 : 3));
     if(e.elite || e.maxHp >= 6) fx.hitStop(55);
-    audio.play("enemyExplode", e.elite || e.maxHp >= 5);
+    audio.play("enemyExplode", e.elite || e.maxHp >= 5, e.x);
 
     if(!noPay && run.combo > 0 && run.combo % 5 === 0){
       fx.text(e.x, e.y - 20, "x" + run.combo + "!", "#ffd23f", 19);
-      audio.play("combo", run.combo);
+      audio.play("combo", run.combo, e.x);
       if(run.combo >= 10) SF.comms.say("bigCombo", { n: run.combo });
     }
     if(noPay){
@@ -1060,7 +1064,7 @@ const callbacks = {
     game.world.dropCoins(e.x, e.y, coin);
     fx.ring(e.x, e.y, 26, "#7cc4ff", 2.5, 0.22);
     fx.text(e.x, e.y - 22, "CLOSE!", "#7cc4ff", 16, true);
-    audio.play("coin");
+    audio.play("coin", false, e.x);
   },
 
   onEnemyEscaped(e){
@@ -1098,6 +1102,9 @@ const callbacks = {
     const res = SF.bosses.damage(boss, bullet.dmg, bullet.x, bullet.y);
     if(res.weakPointDestroyed){
       run.stats.partsOff++;
+      fx.push(1.07, 0.35,
+              (boss.x + res.weakPointDestroyed.ox) / VW,
+              (boss.y + res.weakPointDestroyed.oy) / VH);
       run.score += Math.round(250 * run.difficulty.pay);
       fx.text(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy,
               "WEAK POINT DOWN", "#ffd23f", 14, true);
@@ -1165,7 +1172,7 @@ const callbacks = {
       fx.sparks(p.x, p.y, 14, "#7cc4ff", 180);
       fx.shake(7);
       fx.flash(0.5, "80,180,255");
-      audio.play("shieldBreak");
+      audio.play("shieldBreak", null, p.x);
       return;
     }
 
@@ -1179,7 +1186,8 @@ const callbacks = {
     fx.shake(16);
     fx.flash(1, "255,40,60");
     fx.hitStop(90);
-    audio.play("playerHit");
+    fx.push(1.08, 0.9, p.x / VW, p.y / VH);
+    audio.play("playerHit", null, p.x);
 
     if(p.lives <= 0){
       p.alive = false;
@@ -1262,7 +1270,7 @@ function spawnSupply(x, y){
   const s = game.world.spawnPickup("supply", x, y === undefined ? -26 : y, { supply: def });
   s.vx = 0;
   fx.text(VW/2, VH*0.22, "SUPPLY DROP!", def.color, 18, true);
-  audio.play("supplyDrop");
+  audio.play("supplyDrop", null, x);
   return s;
 }
 
@@ -1603,6 +1611,9 @@ function update(dt, timeMs){
         // How many parts this fight HAS, so a "shoot them all off" star knows
         // what "all" means without the objective naming a boss.
         run.stats.partsTotal = game.world.boss.weakPoints.length;
+        // It arrives, and the frame leans toward it. The release afterwards is
+        // the pull-back - the camera only ever goes in (see fx.push).
+        fx.push(1.10, 1.6, 0.5, 0.28);
         if(BOSSES[run.mission.boss].finale){
           // The Devourer gets an arrival instead of a banner: the sky goes
           // out, it comes down, it is named. finale.js owns the timeline.
@@ -2555,7 +2566,7 @@ function update(dt, timeMs){
     // visibly under pressure without ever dying to one bad moment.
     game.world.spawnHauler(VW*0.5, Math.round(260 * run.difficulty.hpMult));
     fx.text(VW/2, VH*0.46, "GUARD THE HAULER!", "#7cc4ff", 22, true);
-    audio.play("supplyDrop");
+    audio.play("supplyDrop", null, VW*0.5);
   }
   // The sky is clear: it runs for home, and arriving is the win.
   if(run.convoy && !run.convoy.released && run.phase !== "intro" &&
@@ -2570,7 +2581,7 @@ function update(dt, timeMs){
       fx.explosion(h.x, h.y, 120, "#ff8a3d", true);
       fx.shake(24);
       fx.text(VW/2, VH*0.42, "HAULER LOST", "#ff5d73", 24, true);
-      audio.play("enemyExplode", true);
+      audio.play("enemyExplode", true, h.x);
       SF.comms.say("haulerDown");
     },
     onHaulerHurt: () => {
@@ -2866,6 +2877,10 @@ function draw(timeMs){
   fx.shakeOffset(shakeVec);
   ctx.translate(shakeVec.x, shakeVec.y);
   ctx.clearRect(-30, -30, VW+60, VH+60);
+  // The lens. After the clear, so a push can never leave last frame's pixels
+  // in the margin, and before anything is drawn, so the sky moves with the
+  // fight rather than sitting still behind it.
+  fx.cameraApply(ctx, VW, VH);
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted

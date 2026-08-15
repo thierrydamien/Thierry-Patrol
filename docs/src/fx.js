@@ -188,6 +188,99 @@ function bloom(x, y, size, life){
   p.kind="bloom"; p.color="#fff"; p.vx=0; p.vy=0; p.drag=1; p.gravity=0; p.spin=0; p.angle=0;
 }
 
+/*
+ * HOW A PARTICULAR THING COMES APART.
+ *
+ * One staged explosion used to serve all twenty-six archetypes, so the last
+ * frame a player ever saw of an enemy was the one frame where every enemy in
+ * the game looked identical - a Brute in plate armour went out exactly like a
+ * Grunt. These are the differences, and they are strictly ADDITIVE: the five
+ * base emitters below still run, in their order, drawing their count of
+ * simulation randoms. Everything here takes `mrand` (Math.random) so it stays
+ * off the seeded stream entirely and a death can never move a wave script.
+ *
+ * Keyed off what a thing IS rather than which type it is, so a new archetype
+ * inherits the right one by describing itself (see the `death` field in
+ * enemies.js).
+ */
+const DEATHS = {
+  /* Armour comes off in panels. Big, slow, heavy, and they fall. */
+  plate(x, y, size, color){
+    const n = 5 + Math.floor(mrand(0, 3));
+    for(let i=0;i<n;i++){
+      const a = mrand(0, TAU), sp = mrand(60, 165);
+      const p = pspawn();
+      p.x = x + Math.cos(a)*size*0.2; p.y = y + Math.sin(a)*size*0.2;
+      p.vx = Math.cos(a)*sp; p.vy = Math.sin(a)*sp - 55;
+      p.color = "#b9c2d4";                       // bare metal, not the ship's tint
+      p.life = 0; p.max = mrand(0.85, 1.5); p.size = size*mrand(0.17, 0.30);
+      p.kind = "debris"; p.drag = 0.992; p.gravity = 340;
+      p.angle = mrand(0, TAU); p.spin = mrand(-3.5, 3.5);
+    }
+    at(0.05, () => ring(x, y, size*0.9, "#dfe6f5", 2, 0.26));
+  },
+  /* A hive does not explode so much as evacuate. */
+  burst(x, y, size, color){
+    for(let i=0;i<16;i++){
+      const a = (i/16)*TAU + mrand(-0.12, 0.12), sp = mrand(150, 290);
+      const p = pspawn();
+      p.x = x; p.y = y; p.vx = Math.cos(a)*sp; p.vy = Math.sin(a)*sp;
+      p.color = i % 4 === 0 ? "#ffffff" : color;
+      p.life = 0; p.max = mrand(0.4, 0.8); p.size = mrand(1.6, 3.0);
+      p.kind = "ember"; p.drag = 0.93; p.gravity = 30; p.spin = 0; p.angle = 0;
+    }
+    at(0.10, () => ring(x, y, size*1.6, color, 2.5, 0.42));
+  },
+  /* The one that was already two things: it goes out as two things. */
+  split(x, y, size, color){
+    [-1, 1].forEach(side => {
+      const p = pspawn();
+      p.x = x + side*size*0.16; p.y = y;
+      p.vx = side*mrand(120, 210); p.vy = mrand(-70, 10);
+      p.color = color;
+      p.life = 0; p.max = mrand(0.5, 0.8); p.size = size*mrand(0.32, 0.42);
+      p.kind = "debris"; p.drag = 0.99; p.gravity = 300;
+      p.angle = mrand(0, TAU); p.spin = side*mrand(4, 9);
+      at(0.08, () => fireball(x + side*size*0.4, y + 6, 2, size*0.45, mrand));
+    });
+  },
+  /* Rock does not burn. It goes to gravel. */
+  shatter(x, y, size, color){
+    const n = 8 + Math.floor(mrand(0, 4));
+    for(let i=0;i<n;i++){
+      const a = mrand(0, TAU), sp = mrand(70, 230);
+      const p = pspawn();
+      p.x = x; p.y = y; p.vx = Math.cos(a)*sp; p.vy = Math.sin(a)*sp - 20;
+      p.color = mrand(0,1) < 0.35 ? "#e8eef8" : "#8b8f9c";
+      p.life = 0; p.max = mrand(0.6, 1.1); p.size = mrand(2, 5.5);
+      p.kind = "debris"; p.drag = 0.988; p.gravity = 260;
+      p.angle = mrand(0, TAU); p.spin = mrand(-11, 11);
+    }
+  },
+  /* Something electrical letting go: a hard white arc, then it dies dark. */
+  fizz(x, y, size, color){
+    at(0.02, () => ring(x, y, size*0.7, "#cfe9ff", 3, 0.16));
+    at(0.12, () => ring(x, y, size*1.25, "#7cc4ff", 1.5, 0.3));
+    for(let i=0;i<7;i++){
+      at(mrand(0.02, 0.3), () => {
+        const a = mrand(0, TAU), d = size*mrand(0.15, 0.55);
+        sparksAt(x + Math.cos(a)*d, y + Math.sin(a)*d, 3, "#bfe4ff", 200);
+      });
+    }
+  },
+};
+
+/* The spark emitter, off the seeded stream - the flourishes need one. */
+function sparksAt(x, y, n, color, speed){
+  for(let i=0;i<n;i++){
+    const a = mrand(0, TAU), sp = mrand(speed*0.35, speed);
+    const p = pspawn();
+    p.x=x; p.y=y; p.vx=Math.cos(a)*sp; p.vy=Math.sin(a)*sp;
+    p.color=color; p.life=0; p.max=mrand(0.16,0.34); p.size=mrand(1.2,2.4);
+    p.kind="ember"; p.drag=0.9; p.gravity=0; p.spin=0; p.angle=0;
+  }
+}
+
 /**
  * The standard enemy death, staged across about a quarter of a second: white
  * pop and thrown wreckage on the frame itself, the fireball a beat later,
@@ -197,8 +290,10 @@ function bloom(x, y, size, life){
  * the same count of simulation randoms - reordering them would reorder every
  * seeded draw downstream of this death. Only the delays are new; the extra
  * flourishes below take `mrand` so they stay off that stream entirely.
+ *
+ * `style` names one of DEATHS and is layered on top, never in place of.
  */
-function explosion(x, y, size, color, big){
+function explosion(x, y, size, color, big, style){
   at(0.035, () => fireball(x, y, big ? 7 : 4, size));
   sparks(x, y, big ? 18 : 10, color, big ? 240 : 160);
   at(0.14, () => embers(x, y, big ? 10 : 5));
@@ -226,6 +321,9 @@ function explosion(x, y, size, color, big){
       });
     }
   }
+  // Last, and only ever in addition: what THIS thing does when it dies.
+  const d = style && DEATHS[style];
+  if(d) try { d(x, y, size, color); } catch(e){ /* a flourish never breaks a frame */ }
 }
 
 /**
@@ -368,6 +466,68 @@ function setCalmEnabled(v){
 }
 
 function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag * (calmOn ? 0.35 : 1)); }
+
+/* ---------------------------------------------------------
+   THE CAMERA
+   ---------------------------------------------------------
+ * For thirty-five missions and nine bosses the frame never moved. Individual
+ * things scaled and wobbled - the ship, a boss's swell, a pickup's pop - but
+ * the framing was a fixed rectangle from the first patrol to the last, so the
+ * game had no way of saying "look at THIS".
+ *
+ * One rule, and it is a hard one: the camera only ever pushes IN. Going below
+ * 1.0 would pull the edges of the playfield inside the canvas and show bare
+ * ground around a sky that is exactly VW x VH, on devices nobody here can
+ * test. A "pull back" is therefore always the RELEASE of a push, which reads
+ * as the same beat and cannot expose anything.
+ *
+ * It rides the same two switches shake does. Somebody who turned shake off did
+ * it because moving frames make them ill, and a lens that creeps is the same
+ * complaint; CALM keeps the push but takes most of the travel out of it.
+ */
+const CAM_MAX = 1.14;
+let camZoom = 1;                 // where the lens is now
+let camTarget = 1;               // where it is heading
+let camHold = 0;                 // seconds left pinned at the target
+let camFx = 0.5, camFy = 0.42;   // focus, in 0..1 of the playfield
+
+/**
+ * Push in on something. Clamped to 14%: past that the enemies a player needs
+ * to see start leaving the screen, which is a worse problem than a flat frame.
+ */
+function push(zoom, holdSec, fx01, fy01){
+  if(!shakeOn) return;
+  const want = 1 + (Math.min(CAM_MAX, zoom || 1) - 1) * (calmOn ? 0.35 : 1);
+  camTarget = Math.max(camTarget, want);
+  camHold = Math.max(camHold, holdSec || 0.5);
+  if(fx01 != null) camFx = clamp(fx01, 0.12, 0.88);
+  if(fy01 != null) camFy = clamp(fy01, 0.12, 0.88);
+}
+
+function cameraUpdate(dt){
+  if(camHold > 0){
+    camHold -= dt;
+    // Rise fast: the moment being marked has already happened.
+    camZoom += (camTarget - camZoom) * Math.min(1, dt*7.5);
+  } else {
+    camTarget = 1;
+    // Fall slow. The release IS the pull-back, and a snap would read as a jolt.
+    camZoom += (1 - camZoom) * Math.min(1, dt*2.1);
+    if(camZoom < 1.0009){ camZoom = 1; camFx = 0.5; camFy = 0.42; }
+  }
+}
+
+/** Applies the lens. Called once, inside the frame's own save/restore. */
+function cameraApply(ctx, VW, VH){
+  if(camZoom <= 1.0001) return;
+  const cx = VW*camFx, cy = VH*camFy;
+  ctx.translate(cx, cy);
+  ctx.scale(camZoom, camZoom);
+  ctx.translate(-cx, -cy);
+}
+
+function cameraZoom(){ return camZoom; }
+function cameraReset(){ camZoom = 1; camTarget = 1; camHold = 0; camFx = 0.5; camFy = 0.42; }
 function flash(alpha, rgb){
   flashAlpha = Math.max(flashAlpha, calmOn ? Math.min(alpha, 0.12) : alpha);
   if(rgb) flashColor = rgb;
@@ -379,6 +539,7 @@ function isHitStopped(){ return nowMs < hitStopUntil; }
 function reset(){
   particles.killAll(); texts.killAll(); rings.killAll();
   shakeMag = 0; flashAlpha = 0; hitStopUntil = 0;
+  cameraReset();
 }
 
 /* ---------------------------------------------------------
@@ -386,6 +547,7 @@ function reset(){
    --------------------------------------------------------- */
 function update(dt, timeMs){
   nowMs = timeMs;
+  cameraUpdate(dt);
   const items = particles.items;
   for(let i=0;i<items.length;i++){
     const p = items[i];
@@ -674,6 +836,7 @@ SF.fx = {
   sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
   firework, bloom,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
+  DEATHS, push, cameraApply, cameraZoom, cameraReset,
   calmEnabled, setCalmEnabled,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },

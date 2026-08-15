@@ -3262,6 +3262,96 @@ async function run(){
       SF.fx.shakeEnabled() && on.x !== 0 && on.y !== 0 &&
       Math.abs(on.x) <= 25 && Math.abs(on.y) <= 25);
 
+    /* ---------- a death that belongs to the thing that died ---------- */
+    check("every death style actually puts something on screen", (() => {
+      const pool = SF.fx._pools.particles;
+      const counts = Object.keys(SF.fx.DEATHS).map(style => {
+        SF.fx.reset();
+        SF.fx.explosion(100, 100, 60, "#fff", false, style);
+        const withStyle = pool.items.filter(p => p.alive).length;
+        SF.fx.reset();
+        SF.fx.explosion(100, 100, 60, "#fff", false);
+        return withStyle - pool.items.filter(p => p.alive).length;
+      });
+      SF.fx.reset();
+      return counts.length >= 5 && counts.every(c => c > 0);
+    })());
+    check("the things that wear armour are the things that shed it", (() => {
+      const T = SF.enemyData.ENEMY_TYPES;
+      const styled = Object.keys(T).filter(k => T[k].death);
+      return styled.length >= 10 &&
+             styled.every(k => !!SF.fx.DEATHS[T[k].death]) &&
+             T.brute.death === "plate" && T.hive.death === "burst" &&
+             T.splitter.death === "split" && T.boulder.death === "shatter" &&
+             // A Grunt is the plain one on purpose: it is the baseline every
+             // other death is a departure from.
+             !T.grunt.death;
+    })());
+
+    /* ---------- the lens ---------- */
+    /*
+     * The camera may only ever push IN. Below 1.0 it would pull the edges of a
+     * VW x VH sky inside the canvas and show bare ground around it, on a device
+     * nobody here can test - so a "pull back" is always the release of a push.
+     */
+    check("the camera pushes in, holds, and lets go", (() => {
+      SF.fx.cameraReset();
+      const flat = SF.fx.cameraZoom();
+      SF.fx.push(1.10, 0.5, 0.5, 0.3);
+      for(let i=0;i<20;i++) SF.fx.update(1/60, fakeNow);
+      const pushed = SF.fx.cameraZoom();
+      for(let i=0;i<240;i++) SF.fx.update(1/60, fakeNow);
+      const released = SF.fx.cameraZoom();
+      SF.fx.cameraReset();
+      return flat === 1 && pushed > 1.04 && pushed <= 1.14 && released === 1;
+    })());
+    check("the camera never pulls back past the edge of the sky", (() => {
+      SF.fx.cameraReset();
+      // Everything the game asks for, at once and out of range.
+      SF.fx.push(0.4, 1); SF.fx.push(-3, 1); SF.fx.push(99, 1);
+      for(let i=0;i<40;i++) SF.fx.update(1/60, fakeNow);
+      const z = SF.fx.cameraZoom();
+      SF.fx.cameraReset();
+      return z >= 1 && z <= 1.14;
+    })());
+    check("turning shake off turns the lens off with it", (() => {
+      const was = SF.fx.shakeEnabled();
+      SF.fx.setShakeEnabled(false);
+      SF.fx.cameraReset();
+      SF.fx.push(1.12, 1);
+      for(let i=0;i<30;i++) SF.fx.update(1/60, fakeNow);
+      const z = SF.fx.cameraZoom();
+      SF.fx.setShakeEnabled(was);
+      SF.fx.cameraReset();
+      return z === 1;
+    })());
+
+    /* ---------- where a sound is ---------- */
+    /*
+     * jsdom has no AudioContext, so play() cannot build a panner here - the
+     * real graph is checked in Chromium. What IS checkable is the maths and,
+     * more usefully, that a sound never pans past 0.8: a hard-panned effect is
+     * silent in one ear, and two children share one iPad speaker.
+     */
+    check("a sound is placed where it happened, and never hard against an ear", (() => {
+      const VW = SF.entityConst.VW;
+      const l = SF.audio.panFor(0), c = SF.audio.panFor(VW/2), r = SF.audio.panFor(VW);
+      const off = SF.audio.panFor(VW*8);          // something that flew away
+      return l === -0.8 && Math.abs(c) < 1e-9 && r === 0.8 && off === 0.8 &&
+             SF.audio.panFor(VW*0.25) < 0 && SF.audio.panFor(VW*0.75) > 0;
+    })());
+    check("the music subscribes to hooks the game already fires", (() => {
+      const D = SF.audio.DUCKS, S = SF.audio._sounds;
+      const names = Object.keys(D);
+      return names.length >= 8 &&
+             // Every duck names a real sound, so a renamed hook cannot leave a
+             // dip wired to nothing.
+             names.every(n => !!S[n]) &&
+             // A boss arriving pushes the music further down than a rescue.
+             D.bossWake[0] < D.rescue[0] &&
+             names.every(n => D[n][0] > 0 && D[n][0] < 1 && D[n][1] > 0);
+    })());
+
     /*
      * Rumble: the third output channel, and the one that survives a muted game.
      *
@@ -5872,6 +5962,35 @@ async function run(){
     delete doc.pointerLockElement;
     SF.input.clearMovement();
   }
+
+  /* ---------- last, because it reseeds the world ---------- */
+  /*
+   * THE ONE THAT COULD RUIN A MISSION.
+   *
+   * fx.js draws from the SEEDED simulation stream, and every explosion in a
+   * flight draws from it in a fixed order. A death flourish that took one
+   * number from that stream would shift every seeded draw after it - spawn
+   * points, elite rolls, drop chances - so an enemy blowing up prettier would
+   * silently rewrite the rest of the mission. The whole feature is therefore
+   * additive AND drawn from Math.random, and this proves it: the same
+   * explosion with and without a style, from one seed, has to leave the next
+   * simulation number identical.
+   *
+   * Deliberately the final check in the file, because seedSim moves that
+   * stream for everything after it. Run earlier, it made a powerup-expiry test
+   * two thousand lines away flaky - which is precisely the class of damage it
+   * exists to rule out.
+   */
+  check("a death style cannot move the simulation", (() => {
+    const C = SF.core;
+    C.seedSim(12345); SF.fx.explosion(100, 100, 60, "#fff", true);
+    const plain = C.rand(0, 1);
+    const after = Object.keys(SF.fx.DEATHS).map(style => {
+      C.seedSim(12345); SF.fx.explosion(100, 100, 60, "#fff", true, style);
+      return C.rand(0, 1);
+    });
+    return after.length >= 5 && after.every(v => v === plain);
+  })());
 
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");

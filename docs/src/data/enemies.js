@@ -525,19 +525,19 @@ const ENEMY_TYPES = {
     score:14, money:13, tint:"#ff2d55", fire:null,
   },
   turret: {
-    name:"Gun Platform", behaviour:"turret", hp:5, r:20, size:62, speed:88,
+    name:"Gun Platform", behaviour:"turret", death:"fizz", hp:5, r:20, size:62, speed:88,
     score:24, money:24, tint:"#60a5fa",
     fire:{ pattern:"spread3", every:[1.5,2.2], speed:245 },
     toughSeconds:1.0,          // an emplacement should have to be *reduced*
   },
   brute: {
-    name:"Brute", behaviour:"brute", hp:6, r:21, size:64, speed:88,
+    name:"Brute", behaviour:"brute", death:"plate", hp:6, r:21, size:64, speed:88,
     score:26, money:26, tint:"#f43f5e",
     fire:{ pattern:"spread3", every:[1.9,2.9], speed:232 },
     toughSeconds:1.2,          // armour that armour-piercing rounds matter for
   },
   carrier: {
-    name:"Prison Hauler", behaviour:"carrier", hp:8, r:23, size:72, speed:76,
+    name:"Prison Hauler", behaviour:"carrier", death:"plate", hp:8, r:23, size:72, speed:76,
     score:40, money:42, tint:"#facc15", carriesRescue:true,
     toughSeconds:1.2,          // a hauler should cross real sky before it pops
     // Unarmed, on purpose: the customer's point exactly - "it doesn't make
@@ -549,20 +549,20 @@ const ENEMY_TYPES = {
   /* --- the ones that change how you play, not just what you shoot --- */
 
   shielder: {
-    name:"Guardian", behaviour:"shielder", hp:7, r:20, size:60, speed:120,
+    name:"Guardian", behaviour:"shielder", death:"fizz", hp:7, r:20, size:60, speed:120,
     score:34, money:34, tint:"#22d3ee", fire:null,
     toughSeconds:1.1,          // the bubble has to exist before it can be popped
     shieldRadius:135,          // everything inside this is untouchable
   },
   splitter: {
-    name:"Splitter", behaviour:"dive", hp:4, r:19, size:58, speed:118,
+    name:"Splitter", behaviour:"dive", death:"split", hp:4, r:19, size:58, speed:118,
     score:20, money:18, tint:"#4ade80",
     toughSeconds:0.6,
     splitsInto:{ type:"shard", n:3 },
     fire:{ pattern:"straight", every:[2.0,3.2], speed:240 },
   },
   shard: {
-    name:"Shard", behaviour:"kamikaze", hp:1, r:10, size:30, speed:230,
+    name:"Shard", behaviour:"kamikaze", death:"shatter", hp:1, r:10, size:30, speed:230,
     score:6, money:5, tint:"#86efac", fire:null,
   },
   thief: {
@@ -571,7 +571,7 @@ const ENEMY_TYPES = {
     toughSeconds:0.7,          // stealing takes time; catching him must too
   },
   asteroid: {
-    name:"Asteroid", behaviour:"tumble", hp:9, r:26, size:74, speed:104,
+    name:"Asteroid", behaviour:"tumble", death:"shatter", hp:9, r:26, size:74, speed:104,
     score:8, money:14, tint:"#94a3b8", fire:null,
     hazard:true,               // scenery, not opposition: never counted as a kill
     toughSeconds:1.1,          // sized from your guns, so it stays an obstacle
@@ -582,7 +582,7 @@ const ENEMY_TYPES = {
    * and you have to fly around a rock the size of your ship for ten seconds.
    */
   sniper: {
-    name:"Marksman", behaviour:"sniper", hp:3, r:16, size:50, speed:130,
+    name:"Marksman", behaviour:"sniper", death:"fizz", hp:3, r:16, size:50, speed:130,
     score:22, money:20, tint:"#f472b6", fire:null,
     toughSeconds:0.7,
     chargeTime:1.7,            // long enough to see the line and move
@@ -600,7 +600,7 @@ const ENEMY_TYPES = {
    * chore.
    */
   rival: {
-    name:"Vesper", behaviour:"rival", hp:60, r:17, size:52, speed:190,
+    name:"Vesper", behaviour:"rival", death:"plate", hp:60, r:17, size:52, speed:190,
     score:900, money:420, tint:"#ff4fd8", named:"VESPER",
     toughSeconds:11,
     noLeash:true,              // a duel ends when someone wins it, not on a timer
@@ -616,18 +616,18 @@ const ENEMY_TYPES = {
     score:3, money:3, tint:"#ef4444", fire:null,
   },
   hive: {
-    name:"Hive", behaviour:"hive", hp:11, r:24, size:76, speed:104,
+    name:"Hive", behaviour:"hive", death:"burst", hp:11, r:24, size:76, speed:104,
     score:44, money:44, tint:"#c084fc", fire:null,
     toughSeconds:1.1,          // a hive that never hatches is just a target
   },
   mender: {
-    name:"Mender", behaviour:"mender", hp:6, r:19, size:56, speed:110,
+    name:"Mender", behaviour:"mender", death:"fizz", hp:6, r:19, size:56, speed:110,
     score:30, money:30, tint:"#34d399", fire:null,
     toughSeconds:1.0,          // the heal beam is the whole point
     heals:true,
   },
   boulder: {
-    name:"Boulder", behaviour:"tumble", hp:52, r:50, size:142, speed:62,
+    name:"Boulder", behaviour:"tumble", death:"shatter", hp:52, r:50, size:142, speed:62,
     score:60, money:95, tint:"#94a3b8", fire:null,
     hazard:true, tough:true,
     toughSeconds:5,            // five seconds of concentrated fire, at any gear level
