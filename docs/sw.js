@@ -13,7 +13,7 @@
  * a deploy MUST be picked up - it is the blunt instrument that guarantees a
  * clean slate.
  */
-const CACHE = "patrol-v32";
+const CACHE = "patrol-v33";
 
 /*
  * The shell, cached at install time.
@@ -32,20 +32,12 @@ const CACHE = "patrol-v32";
  */
 const SHELL = [
   "./", "./index.html", "./style.css", "./manifest.webmanifest",
-  "./src/core.js", "./src/data/config.js", "./src/data/enemies.js",
-  "./src/data/missions.js", "./src/data/comms.js", "./src/data/story.js",
-  "./src/profile.js", "./src/cloud.js", "./src/audio.js", "./src/haptics.js",
-  "./src/fx.js", "./src/skygen.js", "./src/icons.js", "./src/insignia.js",
-  "./src/pilotart.js", "./src/shipart.js", "./src/paintjob.js",
-  "./src/enemyart.js", "./src/bossart.js", "./src/entities.js",
-  "./src/systems.js", "./src/bosses.js", "./src/bossintro.js",
-  "./src/render.js", "./src/rewind.js", "./src/input.js", "./src/comms.js",
-  "./src/backstage.js", "./src/finale.js", "./src/papadeath.js",
-  "./src/sky29.js", "./src/wacky.js", "./src/workshop.js",
-  "./src/game.js", "./src/ui.js",
+  // One file now (see tools/build.js). The sources are still deployed and
+  // still readable; they are simply not what the browser fetches to boot.
+  "./app.js",
   "./assets/fonts/rajdhani-latin-700-normal.woff2",
-  // Running text now has its own face; a first flight in the car should have
-  // the story cards and the shop's descriptions already readable.
+  // Running text has its own face; a first flight in the car should have the
+  // story cards and the shop's descriptions already readable.
   "./assets/fonts/nunito-latin-400-normal.woff2",
 ];
 

@@ -143,12 +143,13 @@ function vibeCount(fn){ const n = vibrations.length; fn(); return vibrations.len
  *  consecutive probes can't starve each other. Returns buzzes triggered. */
 function probe(name, arg){ fakeNow += 1000; return vibeCount(() => window.SF.audio.play(name, arg)); }
 
-const SRC = [
-  "src/core.js","src/icons.js","src/haptics.js","src/audio.js","src/data/config.js","src/data/enemies.js","src/data/missions.js","src/wacky.js",
-  "src/data/comms.js","src/data/story.js",
-  "src/profile.js","src/cloud.js","src/fx.js","src/input.js","src/entities.js","src/bosses.js","src/bossart.js","src/bossintro.js","src/rewind.js","src/finale.js","src/papadeath.js","src/backstage.js","src/sky29.js","src/systems.js",
-  "src/render.js","src/enemyart.js","src/insignia.js","src/skygen.js","src/shipart.js","src/paintjob.js","src/pilotart.js","src/comms.js","src/game.js","src/workshop.js","src/ui.js",
-];
+/*
+ * ONE LIST. The manifest is the load order, and everything reads it: the page
+ * loads app.js built from it, tools/build.js concatenates from it, and this
+ * file loads the individual sources from it - so the suite always tests the
+ * real modules while the site ships the joined one.
+ */
+const SRC = JSON.parse(fs.readFileSync(path.join(__dirname, "src/manifest.json"), "utf8")).files;
 
 const results = [];
 function check(label, cond){ results.push([label, !!cond]); }
@@ -691,6 +692,39 @@ async function run(){
            /run\.director\.finishedSpawning/.test(block) &&
            /spawnEnemy\("grazer"/.test(block);
   })());
+  /* ---------- the page is the sources, joined ---------- */
+  /*
+   * app.js is what the browser actually runs, and it is generated. The failure
+   * mode this rules out is the quiet one: edit a source, forget to rebuild,
+   * push, and the site keeps running last week's code while every test here
+   * passes against this week's. So the bundle is rebuilt in memory and
+   * compared byte for byte.
+   */
+  check("the shipped bundle is exactly the sources, in order", (() => {
+    const built = require("child_process")
+      .spawnSync(process.execPath, [path.join(__dirname, "tools/build.js"), "--check"],
+                 { encoding: "utf8" });
+    return built.status === 0;
+  })());
+  check("the page fetches one script, not thirty-five", (() => {
+    const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    const tags = html.match(/<script src="[^"]+"><\/script>/g) || [];
+    return tags.length === 1 && /src="app\.js"/.test(tags[0]);
+  })());
+  check("the offline shell caches the bundle, not the modules", (() => {
+    const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
+    const shell = sw.slice(sw.indexOf("const SHELL = ["), sw.indexOf("];", sw.indexOf("const SHELL = [")));
+    return /\.\/app\.js/.test(shell) && !/\.\/src\//.test(shell);
+  })());
+  /*
+   * The join is `cat`, so a source that ever loses its trailing semicolon
+   * could glue itself onto the next file's opening paren and turn two modules
+   * into a function call. build.js writes a leading `;` between files, and
+   * this is the belt to that braces.
+   */
+  check("every module ends where the next one can safely begin", () =>
+    SRC.every(f => /\}\)\(\);\s*$/.test(fs.readFileSync(path.join(__dirname, f), "utf8"))));
+
   check("no mission flag in the data is missing an opener", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
     const TEACHABLE = ["cover","bounty","nearMiss","lentDrones","wells","beat",

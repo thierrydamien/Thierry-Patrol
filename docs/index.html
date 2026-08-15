@@ -480,40 +480,13 @@
   </div>
 </div>
 
-<script src="src/core.js"></script>
-<script src="src/icons.js"></script>
-<script src="src/haptics.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/data/config.js"></script>
-<script src="src/data/enemies.js"></script>
-<script src="src/data/missions.js"></script>
-<script src="src/wacky.js"></script>
-<script src="src/data/comms.js"></script>
-<script src="src/data/story.js"></script>
-<script src="src/profile.js"></script>
-<script src="src/cloud.js"></script>
-<script src="src/fx.js"></script>
-<script src="src/input.js"></script>
-<script src="src/entities.js"></script>
-<script src="src/bossart.js"></script>
-<script src="src/bosses.js"></script>
-<script src="src/bossintro.js"></script>
-<script src="src/rewind.js"></script>
-<script src="src/finale.js"></script>
-<script src="src/papadeath.js"></script>
-<script src="src/backstage.js"></script>
-<script src="src/sky29.js"></script>
-<script src="src/systems.js"></script>
-<script src="src/render.js"></script>
-<script src="src/enemyart.js"></script>
-<script src="src/insignia.js"></script>
-<script src="src/skygen.js"></script>
-<script src="src/shipart.js"></script>
-<script src="src/paintjob.js"></script>
-<script src="src/pilotart.js"></script>
-<script src="src/comms.js"></script>
-<script src="src/game.js"></script>
-<script src="src/workshop.js"></script>
-<script src="src/ui.js"></script>
+<!-- ONE REQUEST, NOT THIRTY-FIVE.
+     app.js is those thirty-five modules concatenated in the order
+     src/manifest.json declares - byte for byte, no bundler, no transpile, no
+     minifier. The sources are still deployed next to it and still readable;
+     the header of app.js maps any line number in a stack trace back to the
+     file it came from. Edit src/*.js and run `node tools/build.js`; the smoke
+     test refuses to pass if you forget. -->
+<script src="app.js"></script>
 </body>
 </html>
