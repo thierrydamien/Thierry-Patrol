@@ -32,13 +32,13 @@
  *    17601  src/enemyart.js
  *    18347  src/insignia.js
  *    18592  src/skygen.js
- *    19953  src/shipart.js
- *    21031  src/paintjob.js
- *    21189  src/pilotart.js
- *    21284  src/comms.js
- *    21405  src/game.js
- *    24511  src/workshop.js
- *    25208  src/ui.js
+ *    20269  src/shipart.js
+ *    21347  src/paintjob.js
+ *    21505  src/pilotart.js
+ *    21600  src/comms.js
+ *    21721  src/game.js
+ *    24827  src/workshop.js
+ *    25524  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -18696,8 +18696,21 @@ const SKIES = [
             {k:"rocks",  x:0.22, y:0.62, r:0.156, n:16},
             {k:"planet", x:0.14, y:0.14, r:0.036, lit:"#9ad9c4", dark:"#1d3a32", craters:true} ] },
 
-  { name:"Rust Belt",    clouds:["#c2410c","#f59e0b","#7c2d12"], dust:"#140803", star:"#ffedd5",
-    lum:1.1, density:1.15, stars:0.8, bright:3,
+  /*
+   * FOUR ORANGES, AND THEY WERE ALL THE SAME ORANGE.
+   *
+   * Rust Belt, The Treasury, Their Star and The Foundry sat inside a hue of
+   * each other, so a quarter of the campaign opened on the same picture. They
+   * are separated now by what each PLACE is rather than by nudging hues apart:
+   * rust is brown and dusty, a treasury is gold and not orange at all, a star
+   * is red and white-hot, and a foundry is black iron with the fire showing
+   * through the cracks. Different colour, different value, different density.
+   *
+   * This one is the archetype and stays closest to where it was - dull, dusty,
+   * brown-orange, the colour of something that has been left outside.
+   */
+  { name:"Rust Belt",    clouds:["#b45309","#d9a63f","#241003"], dust:"#160a02", star:"#ffe9cc",
+    lum:0.95, density:1.3, stars:0.8, bright:3,
     props:[ {k:"planet", x:0.74, y:0.62, r:0.239, lit:"#d2703a", dark:"#2f1105", bands:true, crescent:true},
             {k:"rocks",  x:0.25, y:0.30, r:0.177, n:22},
             {k:"sun",    x:0.10, y:0.82, r:0.026, color:"#ffd9a0"} ] },
@@ -18805,28 +18818,53 @@ const SKIES = [
     lum:1, density:1.1, stars:0.8, bright:3,
     props:[ {k:"planet", x:0.02, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
             {k:"planet", x:0.98, y:0.44, r:0.17, lit:"#3fbf95", dark:"#07302a", bands:true},
-            {k:"galaxy", x:0.50, y:0.18, r:0.24} ] },
+            // The composition already said "this place joins up"; this is what
+            // joins it. Set below the twin worlds so it passes in FRONT of the
+            // lower half of both, which is the only cue that says you are
+            // inside it rather than looking at a picture of it.
+            {k:"ring",   x:0.50, y:0.60, r:0.95, thick:0.055, tilt:0.12, n:44,
+             lit:"#9beacd", glow:"#ffe0a0"},
+            {k:"galaxy", x:0.50, y:0.16, r:0.20} ] },
 
   { name:"Duelling Ground", clouds:["#9d174d","#f472b6","#4a044e"], dust:"#12030c", star:"#fce7f3",
     lum:1.1, density:0.85, stars:1.1, bright:3,
-    props:[ {k:"planet", x:0.18, y:0.24, r:0.12, lit:"#e879b0", dark:"#4a0d33", crescent:true},
-            {k:"galaxy", x:0.80, y:0.66, r:0.20},
-            {k:"planet", x:0.88, y:0.18, r:0.045, lit:"#f9c9e4", dark:"#54173c", craters:true} ] },
+    /*
+     * Two dead hulls, small and far apart, tilted against each other. This is
+     * where the Rival meets you, and a duelling ground with nothing on it is
+     * just a field: the ones who lost are the reason the place has a name.
+     * Deliberately at a third the Breaker's Yard scale, so the same painter
+     * reads as wreckage adrift here and as a shipbreaker's prize there.
+     */
+    props:[ {k:"wreck",  x:0.24, y:0.30, r:0.42, thick:0.30, tilt:-0.42},
+            {k:"planet", x:0.82, y:0.20, r:0.10, lit:"#e879b0", dark:"#4a0d33", crescent:true},
+            {k:"wreck",  x:0.74, y:0.72, r:0.34, thick:0.26, tilt:0.55},
+            {k:"planet", x:0.14, y:0.80, r:0.042, lit:"#f9c9e4", dark:"#54173c", craters:true} ] },
 
   { name:"Hatchery",     clouds:["#4d7c0f","#84cc16","#1a2e05"], dust:"#050b02", star:"#ecfccb",
     lum:0.95, density:1.2, stars:0.75, bright:2,
-    props:[ {k:"planet", x:0.78, y:0.34, r:0.208, lit:"#7fa83c", dark:"#16250a", bands:true},
-            {k:"planet", x:0.20, y:0.72, r:0.073, lit:"#b6dd6e", dark:"#2b3d13", craters:true},
-            {k:"galaxy", x:0.28, y:0.18, r:0.19} ] },
+    props:[ {k:"planet", x:0.80, y:0.30, r:0.185, lit:"#7fa83c", dark:"#16250a", bands:true},
+            // The clutch, big and low and slightly off centre so the ship
+            // flies through it rather than past it. This level is about things
+            // that make more things; now the sky says so before wave one.
+            {k:"eggs",   x:0.36, y:0.62, r:0.26, n:17, lit:"#c6f75a", dark:"#122605"},
+            {k:"eggs",   x:0.80, y:0.86, r:0.11, n:7,  lit:"#a8e04a", dark:"#0f2004"},
+            {k:"planet", x:0.14, y:0.16, r:0.055, lit:"#b6dd6e", dark:"#2b3d13", craters:true} ] },
 
   { name:"Warden's Watch", clouds:["#0e7490","#22d3ee","#083344"], dust:"#020a0e", star:"#cffafe",
     lum:0.85, density:1.0, stars:0.9, bright:3,
-    props:[ {k:"planet", x:0.24, y:0.28, r:0.234, lit:"#2f8ba3", dark:"#04202b", rings:true},
-            {k:"sun",    x:0.84, y:0.78, r:0.031, color:"#a5f3fc"},
-            {k:"rocks",  x:0.72, y:0.44, r:0.13, n:12} ] },
+    props:[ {k:"planet", x:0.22, y:0.26, r:0.215, lit:"#2f8ba3", dark:"#04202b", rings:true},
+            // The watch itself: one lit hull with a mast and a beacon, hung in
+            // clear sky on the far side from his world. A silhouette is
+            // scenery; a silhouette with windows in it is somebody's post.
+            {k:"station",x:0.74, y:0.62, r:0.165, n:1,
+             lit:"#cffafe", dark:"#04141c", beacon:"#ff8a6b"},
+            {k:"rocks",  x:0.68, y:0.24, r:0.13, n:12},
+            {k:"sun",    x:0.14, y:0.84, r:0.031, color:"#a5f3fc"} ] },
 
-  { name:"The Treasury", clouds:["#92400e","#eab308","#451a03"], dust:"#0f0902", star:"#fde68a",
-    lum:1.2, density:1.1, stars:0.85, bright:3,
+  /* Gold, not orange. It is the coin level, and its sky should be the colour
+     of the thing you are there to take. */
+  { name:"The Treasury", clouds:["#d97706","#fbd24a","#573a0c"], dust:"#140c02", star:"#fffbe0",
+    lum:1.3, density:1.0, stars:0.9, bright:4,
     props:[ {k:"planet", x:0.76, y:0.30, r:0.21, lit:"#d9a441", dark:"#33200a", rings:true},
             {k:"rocks",  x:0.24, y:0.60, r:0.17, n:18},
             {k:"sun",    x:0.14, y:0.16, r:0.03, color:"#ffe9a8"} ] },
@@ -18852,24 +18890,60 @@ const SKIES = [
 
   { name:"Last Harbour", clouds:["#7e22ce","#e879f9","#2e1065"], dust:"#0a0316", star:"#fae8ff",
     lum:1, density:1.15, stars:0.95, bright:3,
-    props:[ {k:"galaxy", x:0.30, y:0.30, r:0.28},
-            {k:"planet", x:0.78, y:0.62, r:0.182, lit:"#a855c9", dark:"#2a0a3c", bands:true, rings:true},
-            {k:"planet", x:0.14, y:0.84, r:0.042, lit:"#f0abfc", dark:"#3b1049"} ] },
+    props:[ {k:"galaxy", x:0.28, y:0.22, r:0.24},
+            {k:"planet", x:0.80, y:0.66, r:0.165, lit:"#a855c9", dark:"#2a0a3c", bands:true, rings:true},
+            // A harbour: the same painter as the Warden's watchtower, told to
+            // draw five instead of one. It is the last place in the campaign
+            // where anybody is pleased to see you, and every lit window in it
+            // is doing that job.
+            {k:"station",x:0.32, y:0.56, r:0.115, n:5,
+             lit:"#ffe9a8", dark:"#150726", beacon:"#f0abfc"},
+            {k:"planet", x:0.12, y:0.88, r:0.042, lit:"#f0abfc", dark:"#3b1049"} ] },
 
   /* The only WHITE sky in the campaign, and the photographic negative of The
      Long Dark three stops later. stars 0.12 because you cannot see stars from
      inside a star's glare, and bright 0 - the first sky with no spiked suns
      at all. The pillars are rooted at the very bottom edge and rim-lit, so
      they read as prominences arching off the surface. */
-  { name:"The Bright Side", clouds:["#fde68a","#fff6df","#c2410c"], dust:"#2a0d00", star:"#fff7d6",
-    lum:1, density:1.05, stars:0.12, bright:0,
-    props:[ {k:"sun",     x:0.50, y:0.94, r:0.55, color:"#ffe6b8"},
-            {k:"pillars", x:0.32, y:1.00, h:0.52, n:2, w:0.30, hi:"#fff8e6", lo:"#ff9a3c"},
-            {k:"pillars", x:0.76, y:1.00, h:0.44, n:2, w:0.26, hi:"#fff8e6", lo:"#ffb257"},
-            {k:"planet",  x:0.14, y:0.30, r:0.055, lit:"#7c3a1a", dark:"#160500", craters:true} ] },
+  /*
+   * It never blazed. It was written as "the only WHITE sky in the campaign" and
+   * it rendered BEIGE - a tan haze with orange columns standing in it at almost
+   * no contrast, which read less like a star and more like a dust storm.
+   *
+   * Two things were wrong, and they were fighting each other. The dark third
+   * colour and the dark dust lanes are what give every other sky its depth, and
+   * on a white ground they are simply mud - so here the lanes are WARM AND
+   * LIGHT, and the depth comes from the star's own limb instead. And the
+   * prominences were filled with orange at nearly full alpha, so the brightest
+   * thing on screen had lumpy tangerine columns standing in front of it. They
+   * are dark now, which is both what a filament actually looks like against the
+   * disc and the only way anything reads against a white sky at all.
+   *
+   * The star fills the bottom edge and floods upward. stars 0.06 because you
+   * cannot see stars from inside a star's glare, and bright 0 - still the one
+   * sky in the game with no spiked suns hanging in it.
+   */
+  { name:"The Bright Side", clouds:["#ffd98a","#fff2d0","#ffa63c"], dust:"#f0c076", star:"#fffdf6",
+    lum:1.45, density:0.5, stars:0.06, bright:0,
+    /*
+     * The star sits WHOLLY inside the frame, low. Every element of a sky is
+     * drawn three times so the backdrop can scroll forever, and the first cut
+     * put a 0.70-wide star on the bottom edge - which hung a second copy of it
+     * across the top and turned the composition into a fog bank with no
+     * direction in it. Small enough to fit is what makes the light come from
+     * somewhere.
+     */
+    props:[ {k:"sun",     x:0.50, y:0.80, r:0.30, color:"#ffffff"},
+            {k:"pillars", x:0.33, y:1.00, h:0.62, n:3, w:0.46,
+             hi:"#ffe3ae", lo:"#5c2205", knots:false},
+            {k:"pillars", x:0.80, y:1.00, h:0.48, n:2, w:0.28,
+             hi:"#ffe3ae", lo:"#6d2b07", knots:false},
+            {k:"planet",  x:0.15, y:0.26, r:0.058, lit:"#8a4318", dark:"#200800", craters:true} ] },
 
-  { name:"Their Star",   clouds:["#9a3412","#fb923c","#450a0a"], dust:"#100301", star:"#ffedd5",
-    lum:1.25, density:1.35, stars:0.7, bright:4,
+  /* Red and white-hot, because you are over their sun. The hottest sky in the
+     campaign, and the only one that is properly RED rather than orange. */
+  { name:"Their Star",   clouds:["#991b1b","#ff4d3a","#230303"], dust:"#0d0101", star:"#ffdcd2",
+    lum:1.45, density:1.45, stars:0.55, bright:4,
     props:[ {k:"sun",    x:0.70, y:0.26, r:0.125, color:"#ffb46b"},
             {k:"planet", x:0.26, y:0.68, r:0.244, lit:"#b8501f", dark:"#280702", bands:true, crescent:true},
             {k:"rocks",  x:0.68, y:0.82, r:0.14, n:16} ] },
@@ -18899,8 +18973,11 @@ const SKIES = [
 
   { name:"The Undertow",  clouds:["#155e75","#2dd4bf","#0b1c3c"], dust:"#020810", star:"#ccfbf1",
     lum:0.85, density:0.95, stars:0.85, bright:2,
-    props:[ {k:"planet", x:0.78, y:0.28, r:0.17, lit:"#2a9db0", dark:"#062030", crescent:true},
-            {k:"galaxy", x:0.20, y:0.62, r:0.24},
+    props:[ {k:"planet", x:0.80, y:0.24, r:0.15, lit:"#2a9db0", dark:"#062030", crescent:true},
+            // The level's rule, made visible: a hole with everything behind it
+            // wound into it. Low and left of centre, so the pull has a
+            // direction and the ship is never sitting in the middle of it.
+            {k:"vortex", x:0.36, y:0.66, r:0.15, lit:"#8fe6dc"},
             {k:"planet", x:0.16, y:0.16, r:0.045, lit:"#7fd8d0", dark:"#0e3a3a", craters:true} ] },
 
   /* The only brown-and-bone sky on the route, and the only one with no
@@ -18915,9 +18992,17 @@ const SKIES = [
 
   { name:"The Chorus",    clouds:["#c026d3","#f59e0b","#4a0450"], dust:"#0e0312", star:"#fdf4ff",
     lum:1.15, density:1.05, stars:0.9, bright:4,
-    props:[ {k:"galaxy", x:0.72, y:0.20, r:0.26},
-            {k:"planet", x:0.18, y:0.74, r:0.11, lit:"#d879e8", dark:"#3a0d44", rings:true},
-            {k:"sun",    x:0.14, y:0.24, r:0.028, color:"#ffd9f4"} ] },
+    /*
+     * Pipes. The same painter The Bright Side flies as solar prominences, on a
+     * magenta sky at a bigger spread and a colder rim - and it reads as an
+     * organ, which is exactly what a level built on a beat wants behind it.
+     * The oldest trick in this file: a new place out of a word it already had.
+     */
+    props:[ {k:"galaxy",  x:0.74, y:0.18, r:0.24},
+            {k:"pillars", x:0.44, y:1.00, h:0.46, n:5, w:0.86,
+             hi:"#fbe6ff", lo:"#2a0630"},
+            {k:"planet",  x:0.16, y:0.70, r:0.10, lit:"#d879e8", dark:"#3a0d44", rings:true},
+            {k:"sun",     x:0.86, y:0.60, r:0.028, color:"#ffd9f4"} ] },
 
   /* Perfectly left-right symmetric, which matters technically as well as
      aesthetically: tiled() wraps on Y ONLY, so a vertical axis of symmetry
@@ -18934,8 +19019,11 @@ const SKIES = [
             {k:"galaxy", x:0.30, y:0.14, r:0.20},
             {k:"galaxy", x:0.70, y:0.14, r:0.20} ] },
 
-  { name:"The Foundry",   clouds:["#7c2d12","#f97316","#1c0a04"], dust:"#0d0502", star:"#ffedd5",
-    lum:1.1, density:1.2, stars:0.6, bright:2,
+  /* Black iron with the fire showing through it. The inversion of the other
+     three: a dark, heavy ground where the orange only appears in the seams,
+     which is also the only one of the four you could pick out in a thumbnail. */
+  { name:"The Foundry",   clouds:["#2f1408","#ff7a18","#080301"], dust:"#050201", star:"#ffcf9e",
+    lum:0.70, density:1.4, stars:0.4, bright:2,
     props:[ {k:"planet", x:0.80, y:0.66, r:0.21, lit:"#c96a2a", dark:"#2a1004", bands:true},
             {k:"rocks",  x:0.24, y:0.28, r:0.19, n:20},
             {k:"sun",    x:0.68, y:0.16, r:0.04, color:"#ffb46b"} ] },
@@ -19416,8 +19504,10 @@ function drawPillars(ctx, W, H, p, rand){
       ctx.beginPath();
       right.forEach((pt, k) => k ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
       ctx.stroke();
-      // Knots: darker lumps clinging to the column.
-      for(let k = 0; k < 4; k++){
+      // Knots: darker lumps clinging to the column. They read as the bolts on
+      // an organ pipe and as fruit on a solar prominence, so the sky that flies
+      // these as filaments turns them off.
+      for(let k = 0; p.knots !== false && k < 4; k++){
         const u = 0.15 + rand()*0.7, idx = Math.round(u*STEPS);
         const pt = (rand() < 0.5 ? left : right)[idx];
         ctx.fillStyle = rgba(p.lo || "#080410", 0.92);
@@ -19426,6 +19516,228 @@ function drawPillars(ctx, W, H, p, rand){
         ctx.fill();
       }
     }
+    ctx.restore();
+  });
+}
+
+/*
+ * FOUR MORE PLACES.
+ *
+ * Seven skies were still "a coloured haze with a planet in it" - the campaign
+ * changed hue as it went, but seven stops in a row did not change PLACE. The
+ * fix is not more planets; it is that each of those levels is ABOUT something,
+ * and the backdrop should be able to say what. Three of the seven could be
+ * answered by re-dealing the existing vocabulary (a duelling ground is
+ * littered with the losers, so it gets wrecks; a chorus gets pillars, which
+ * read as organ pipes on a purple sky). The other four needed words the
+ * painter did not have.
+ *
+ * Each follows the same contract as everything above: draw around p.y*H, wrap
+ * through `tiled`, take the shared seeded `rand` so a sky is identical on
+ * every visit, and cost nothing at runtime because the whole thing is baked
+ * once at mission start.
+ */
+
+/*
+ * THE RING: the only piece of ENGINEERING in any sky.
+ *
+ * A band of structure crossing the entire frame, near enough edge-on to read
+ * as something enormous seen from inside its own orbit. It goes on the level
+ * whose composition already says "this place joins up" - the same planet
+ * against both edges at the same height - and finishes the sentence: the thing
+ * that joins up is a ring, and you are flying through it.
+ *
+ * Dark body, lit top edge, and lights along it at a spacing that stays even as
+ * the ellipse foreshortens toward the sides. The lights are what make it read
+ * as built rather than as a geological band.
+ */
+function drawRing(ctx, W, H, p, rand){
+  const cy = p.y*H, rx = (p.r || 0.95)*W, ry = rx*(p.tilt == null ? 0.13 : p.tilt);
+  const band = rx*(p.thick || 0.055);
+  tiled(ctx, H, cy, yy => {
+    ctx.save();
+    ctx.translate(p.x*W, yy);
+    ctx.rotate(p.roll || -0.06);
+    // The body: an ellipse stroked wide, so both the near and the far side of
+    // the ring are there and the far one passes behind the world.
+    ctx.strokeStyle = "rgba(7,10,16,0.94)";
+    ctx.lineWidth = band;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.stroke();
+    // The lit edge, on the near (lower) half only: a uniform outline round the
+    // whole ellipse reads as a drawn oval, and a lit underside reads as metal.
+    ctx.strokeStyle = rgba(p.lit || "#8fe3d0", 0.34);
+    ctx.lineWidth = Math.max(1.2, band*0.16);
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry + band*0.42, 0, 0, Math.PI); ctx.stroke();
+    ctx.strokeStyle = rgba(p.lit || "#8fe3d0", 0.10);
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry - band*0.42, 0, Math.PI, TAU); ctx.stroke();
+    // Windows. Spaced by ANGLE, so they crowd toward the sides exactly the way
+    // an evenly built ring does when you see it foreshortened.
+    const n = p.n || 42;
+    for(let i = 0; i < n; i++){
+      const a = (i/n)*TAU;
+      const x = Math.cos(a)*rx, y = Math.sin(a)*ry;
+      const near = (Math.sin(a) + 1)/2;                 // 1 on the near side
+      ctx.fillStyle = rgba(p.glow || "#ffe9a8", 0.10 + near*0.5);
+      const s = band*(0.10 + near*0.09);
+      ctx.fillRect(x - s/2, y - s/2, s, s*1.7);
+    }
+    ctx.restore();
+  });
+}
+
+/*
+ * THE NEST: egg sacs, for the Hatchery.
+ *
+ * The level is about things that make more things, and it was flying a green
+ * haze with two planets in it. A clutch reads instantly at any size and needs
+ * no explanation to a seven-year-old.
+ *
+ * The trick that makes them look alive rather than like bubbles is that the
+ * light is INSIDE: each sac is a dark shell with a bright core off-centre, so
+ * it looks full rather than blown. They cluster and overlap, biggest in the
+ * middle, and a few small ones drift off the edge of the clutch.
+ */
+function drawEggs(ctx, W, H, p, rand){
+  const cx = p.x*W, r = (p.r || 0.16)*W, n = p.n || 14;
+  const shell = p.dark || "#132a06";
+  const core = p.lit || "#b6f04a";
+  tiled(ctx, H, p.y*H, yy => {
+    for(let i = 0; i < n; i++){
+      const a = rand()*TAU, d = Math.pow(rand(), 0.7)*r;
+      const x = cx + Math.cos(a)*d, y = yy + Math.sin(a)*d*0.8;
+      // Big in the middle, small at the fringe: a clutch has a heart.
+      const near = 1 - d/(r || 1);
+      const rr = r*(0.07 + near*0.16 + rand()*0.05);
+      const tall = rr*(1.12 + rand()*0.22);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rand() - 0.5)*0.5);
+      ctx.scale(1, tall/rr);
+      // The shell.
+      const g = ctx.createRadialGradient(-rr*0.28, -rr*0.3, rr*0.05, 0, 0, rr);
+      g.addColorStop(0,    rgba(core, 0.55));
+      g.addColorStop(0.42, mixA(core, shell, 0.72, 0.9));
+      g.addColorStop(1,    rgba(shell, 0.96));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.fill();
+      // The thing inside, lighting its own wall.
+      ctx.globalCompositeOperation = "lighter";
+      const k = ctx.createRadialGradient(-rr*0.22, -rr*0.24, 0, -rr*0.22, -rr*0.24, rr*0.62);
+      k.addColorStop(0, rgba(core, 0.42));
+      k.addColorStop(1, rgba(core, 0));
+      ctx.fillStyle = k;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = rgba(core, 0.16);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x, y, rr, tall, 0, 0, TAU); ctx.stroke();
+    }
+  });
+}
+
+/*
+ * SOMEBODY LIVES HERE: a station, or a whole harbour of them.
+ *
+ * One painter, two readings, which is why it is worth having: `n:1` is a
+ * watchtower - a single lit hull with a mast, for the Warden's nest - and
+ * `n:5` is a harbour, a huddle of them at different sizes and heights, for the
+ * last friendly port before the dark.
+ *
+ * Lit WINDOWS are the whole effect. A silhouette is scenery; a silhouette with
+ * windows in it is somewhere people are, and the campaign has never had one.
+ */
+function drawStation(ctx, W, H, p, rand){
+  const cx = p.x*W, R = (p.r || 0.09)*W, n = p.n || 1;
+  const hull = p.dark || "#0a0e18";
+  const lamp = p.lit || "#ffe9a8";
+  tiled(ctx, H, p.y*H, yy => {
+    for(let i = 0; i < n; i++){
+      // The first is the one the prop is placed at; the rest scatter around it,
+      // smaller, so a harbour has a biggest ship rather than a row of clones.
+      const off = i === 0 ? 0 : (rand() - 0.5)*R*7.2;
+      const offY = i === 0 ? 0 : (rand() - 0.5)*R*4.0;
+      const s = i === 0 ? R : R*(0.32 + rand()*0.42);
+      const x = cx + off, y = yy + offY;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rand() - 0.5)*0.22);
+      ctx.fillStyle = rgba(hull, 0.96);
+      // A drum with a spine through it - enough silhouette to read as built,
+      // few enough points to stay a shape at 40px.
+      ctx.beginPath();
+      ctx.moveTo(-s*0.9,  s*0.16); ctx.lineTo(-s*0.66, -s*0.30);
+      ctx.lineTo( s*0.66, -s*0.30); ctx.lineTo( s*0.9,   s*0.16);
+      ctx.lineTo( s*0.5,   s*0.40); ctx.lineTo(-s*0.5,   s*0.40);
+      ctx.closePath(); ctx.fill();
+      ctx.fillRect(-s*0.10, -s*0.72, s*0.20, s*0.46);     // the mast
+      ctx.fillRect(-s*0.34, -s*0.78, s*0.68, s*0.11);     // and its yard
+      // Windows: two rows, unevenly lit, because a station where every light
+      // is on reads as a texture rather than as a place with people in it.
+      const cols = Math.max(3, Math.round(s/6));
+      for(let c = 0; c < cols; c++){
+        for(let rw = 0; rw < 2; rw++){
+          if(rand() < 0.32) continue;
+          const wx = -s*0.62 + (c + 0.5)*(s*1.24/cols);
+          const wy = -s*0.16 + rw*s*0.26;
+          ctx.fillStyle = rgba(lamp, 0.35 + rand()*0.5);
+          ctx.fillRect(wx - s*0.045, wy - s*0.05, s*0.09, s*0.1);
+        }
+      }
+      // One beacon on the mast, and its halo.
+      ctx.globalCompositeOperation = "lighter";
+      const bg = ctx.createRadialGradient(0, -s*0.80, 0, 0, -s*0.80, s*0.42);
+      bg.addColorStop(0, rgba(p.beacon || "#ff8a6b", 0.7));
+      bg.addColorStop(1, rgba(p.beacon || "#ff8a6b", 0));
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(0, -s*0.80, s*0.42, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  });
+}
+
+/*
+ * THE UNDERTOW: a gravity well you can see.
+ *
+ * The level's rule is that the sky pulls you, and its backdrop said nothing
+ * about that at all. This is the one prop in the game that is mostly NOT
+ * there: a disc of pure dark, and around it the light of everything behind it
+ * dragged into arcs. Nothing is drawn inside the hole, which is what makes the
+ * hole read as a hole.
+ */
+function drawVortex(ctx, W, H, p, rand){
+  const cx = p.x*W, r = (p.r || 0.14)*W;
+  const tint = p.lit || "#7fd8d0";
+  tiled(ctx, H, p.y*H, yy => {
+    ctx.save();
+    ctx.translate(cx, yy);
+    // The drag: arcs that tighten and brighten as they wind in.
+    ctx.globalCompositeOperation = "lighter";
+    for(let i = 0; i < 26; i++){
+      const a0 = rand()*TAU;
+      const rad = r*(1.15 + Math.pow(rand(), 0.6)*2.5);
+      const span = 0.5 + rand()*1.5;
+      const close = 1 - (rad/(r*3.65));            // 1 at the lip, 0 far out
+      ctx.strokeStyle = rgba(tint, 0.035 + close*0.16);
+      ctx.lineWidth = 1 + close*2.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rad, rad*0.72, 0.35, a0, a0 + span);
+      ctx.stroke();
+    }
+    // The rim: where the light piles up before it goes over.
+    const lip = ctx.createRadialGradient(0, 0, r*0.86, 0, 0, r*1.5);
+    lip.addColorStop(0, rgba(tint, 0));
+    lip.addColorStop(0.30, rgba(tint, 0.30));
+    lip.addColorStop(1, rgba(tint, 0));
+    ctx.fillStyle = lip;
+    ctx.beginPath(); ctx.arc(0, 0, r*1.5, 0, TAU); ctx.fill();
+    // ...and the hole itself, last and opaque, over everything it swallowed.
+    ctx.globalCompositeOperation = "source-over";
+    const hole = ctx.createRadialGradient(0, 0, r*0.6, 0, 0, r);
+    hole.addColorStop(0, "rgba(0,0,0,1)");
+    hole.addColorStop(0.82, "rgba(0,0,0,0.98)");
+    hole.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = hole;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
     ctx.restore();
   });
 }
@@ -19875,6 +20187,10 @@ function paint(sky, seed, W, H, dpr, wrap){
         else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
         else if(pr.k === "comet") drawComet(px, W, H, pr);
         else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
+        else if(pr.k === "ring") drawRing(px, W, H, pr, rand);
+        else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
+        else if(pr.k === "station") drawStation(px, W, H, pr, rand);
+        else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
       });
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";

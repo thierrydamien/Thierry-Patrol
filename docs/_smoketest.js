@@ -1097,6 +1097,89 @@ async function run(){
         const ry = (pr.r * W) / H;               // radius is a fraction of WIDTH
         return pr.y - ry >= -0.02 && pr.y + ry <= 1.02;
       })));
+  /*
+   * A SKY SHOULD BE A PLACE, NOT A HAZE.
+   *
+   * Planets, suns and galaxies are furniture: every sky can have them, and a
+   * sky built only from them changes HUE as the campaign goes without ever
+   * changing PLACE. Sixteen of thirty-six were furniture-only; the seven worst
+   * offenders got something to be about - a ring you fly through, a clutch of
+   * eggs, a watchtower, a harbour, a gravity well, the wrecks of everyone who
+   * lost here, a rank of pipes. Nine are left, and two of those are meant to
+   * be empty rooms.
+   *
+   * This is a ratchet, like the star-trio count above it: the number may fall,
+   * never rise. A new sky that is another haze with a planet in it fails here.
+   */
+  check("most skies are somewhere rather than some colour", (() => {
+    const FURNITURE = { planet:1, galaxy:1, sun:1 };
+    const bare = SF.skygen.SKIES.filter(k => (k.props || []).every(p => FURNITURE[p.k]));
+    return bare.length <= 9;
+  })());
+  /*
+   * ...and every word the painter knows is a word some sky actually says. A
+   * painter with no caller is dead code that still has to be maintained, and a
+   * prop kind with no painter draws nothing at all and says nothing about it.
+   */
+  check("the sky vocabulary has no dead words and no silent ones", (() => {
+    const src = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const dispatched = new Set();
+    src.replace(/pr\.k === "(\w+)"/g, (_, k) => { dispatched.add(k); return _; });
+    const used = new Set();
+    SF.skygen.SKIES.forEach(k => (k.props || []).forEach(p => used.add(p.k)));
+    return dispatched.size >= 12 &&
+           Array.from(used).every(k => dispatched.has(k)) &&
+           Array.from(dispatched).every(k => used.has(k));
+  })());
+  /*
+   * THE ONE WHITE SKY. It was written as "you cannot see stars from inside a
+   * star's glare" and it rendered beige, because a white ground with dark dust
+   * lanes over it is mud. It has to stay the brightest thing in the campaign
+   * by a clear margin, and its filaments have to stay DARKER than it - they
+   * were orange at nearly full alpha, standing in front of the brightest sky
+   * in the game at almost no contrast.
+   */
+  check("the bright side is the brightest sky, and its pillars are silhouettes", (() => {
+    const M = SF.skygen.SKIES, b = M.find(k => k.name === "The Bright Side");
+    if(!b) return false;
+    const lums = M.filter(k => k.clouds).map(k => k.lum || 1);
+    const pil = (b.props || []).filter(p => p.k === "pillars");
+    const dark = h => { const v = parseInt(h.slice(1), 16);
+      return (((v>>16)&255) + ((v>>8)&255) + (v&255))/3; };
+    return (b.lum || 1) >= Math.max.apply(null, lums) &&
+           b.stars <= 0.1 && b.bright === 0 &&
+           pil.length >= 2 && pil.every(p => dark(p.lo) < 60 && dark(p.hi) > 180);
+  })());
+  /*
+   * FOUR ORANGES THAT WERE THE SAME ORANGE. Rust, gold, a red star and a
+   * foundry sat within a hue of each other, so a quarter of the campaign
+   * opened on the same picture. Pinned on the palette rather than on a
+   * rendered average: this is about the DECISION, and it is the decision that
+   * would drift back.
+   */
+  check("the four fire skies are four different fires", (() => {
+    const names = ["Rust Belt","The Treasury","Their Star","The Foundry"];
+    const fam = names.map(n => SF.skygen.SKIES.find(k => k.name === n));
+    if(fam.some(k => !k)) return false;
+    const rgb = h => { const v = parseInt(h.slice(1), 16);
+      return [(v>>16)&255, (v>>8)&255, v&255]; };
+    // The bright emission colour is what a sky reads as from the doorway.
+    const key = k => rgb(k.clouds[1]);
+    /*
+     * Hue OR value, not hue alone - the same rule The Wreck Line already lives
+     * by next to The Blockade. A foundry is black iron with the fire showing
+     * through, so its emission colour is legitimately close to a red star's;
+     * what separates them is that one is a bonfire and the other is a cellar.
+     */
+    const lum = k => k.lum || 1;
+    for(let i=0;i<fam.length;i++) for(let j=i+1;j<fam.length;j++){
+      const a = key(fam[i]), b = key(fam[j]);
+      const hue = Math.hypot(a[0]-b[0], a[1]-b[1], a[2]-b[2]);
+      if(hue < 60 && Math.abs(lum(fam[i]) - lum(fam[j])) < 0.3) return false;
+    }
+    // ...and one of them has to be the dark one, or they are four bright fires.
+    return Math.min.apply(null, fam.map(lum)) <= 0.75;
+  })());
   check("every generated sky has something with an edge in it",
     SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
   /*
