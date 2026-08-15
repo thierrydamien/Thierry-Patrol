@@ -213,9 +213,39 @@ function keyUp(e){
   if(k === "ArrowDown" || k === "s" || k === "S") state.down = false;
 }
 
+/*
+ * THE SKY RIVER'S GRIP ON THE STICK.
+ *
+ * The ship follows the pointer with a spring strong enough to hold station
+ * against ~any push (gain 12: a 150px/s stream reaches equilibrium with the
+ * ship sitting twelve pixels off the finger - invisible). So a current that
+ * merely shoves the hull is a current the controls silently delete, which is
+ * exactly the bug the level shipped with.
+ *
+ * What a river actually does to a steered boat is move the WATER the stick
+ * steers relative to. `flowX` is that: an offset on the point the pointer
+ * names. It is applied in two places because pointers have two behaviours -
+ * at event time here, so a finger actively steering carries the drift with
+ * it, and per-frame via flowNudge, so a motionless mouse drifts too (a still
+ * mouse fires no events, and the first cut only worked while wiggling).
+ * The game relaxes it whenever the ship is out of the stream.
+ */
+let flowX = 0;
+function flowNudge(dx){
+  flowX = clamp(flowX + dx, -VW*0.55, VW*0.55);
+  if(state.dragging || hoverSteer) state.dragX = clamp(state.dragX + dx, 0, VW);
+}
+function flowRelax(dt){
+  if(!flowX) return;
+  const d = -flowX * Math.min(1, dt*1.8);
+  flowX += d;
+  if(Math.abs(flowX) < 0.5) flowX = 0;
+  if(state.dragging || hoverSteer) state.dragX = clamp(state.dragX + d, 0, VW);
+}
+
 function pointerToVirtual(clientX, clientY, lift){
   const rect = canvas.getBoundingClientRect();
-  state.dragX = clamp((clientX - rect.left) / rect.width * VW, 0, VW);
+  state.dragX = clamp((clientX - rect.left) / rect.width * VW + flowX, 0, VW);
   state.dragY = clamp((clientY - rect.top) / rect.height * VH - lift, 0, VH);
 }
 
@@ -368,9 +398,11 @@ function clearMovement(){
   // Leaving the yield point standing here made an untouched cursor unable to
   // take the ship back after a pause, which is not what "clear" means.
   keysHaveIt = false;
+  flowX = 0;      // the river does not follow you out of its own mission
 }
 
 SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+             flowNudge, flowRelax,
              _hoverSteering: () => hoverSteer,
              lockPointer, unlockPointer, isPointerLocked, lockSupported };
 })();

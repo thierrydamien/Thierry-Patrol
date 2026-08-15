@@ -210,8 +210,8 @@ const COMMS = {
   /* --- the four new levels. One opening line each, and one for the moment
      the searchlight actually finds you, which needs saying every time. --- */
   currentStart: { speaker:"control", cooldown:999, lines:[
-    "There's a RIVER through the middle, {you}. Ride it to move, leave it to aim.",
-    "Feel that drift? The whole middle of the sky is flowing. Use it.",
+    "That band is the sky DRAINING through the Devourer's crack, {you}. Ride it to move, leave it to aim.",
+    "Feel the pull? Everything in that band is pouring toward the crack - you included.",
   ]},
   spotStart: { speaker:"control", cooldown:999, lines:[
     "That searchlight is all the light we've got, {you}. What it sweeps, you see.",
@@ -223,8 +223,8 @@ const COMMS = {
     "Out of the light, {you}, out of the light!",
   ]},
   narrowsStart: { speaker:"control", cooldown:999, lines:[
-    "We're in the canyon, {you}. Those walls come IN - don't be there when they do.",
-    "Rock either side and it breathes. Fly the middle when it squeezes.",
+    "Under their guns now, {you} - nothing up there can see us down here. Mind the WALLS.",
+    "Their radar can't look into a canyon. The canyon, though - it BREATHES. Fly the middle.",
   ]},
   nightfallStart: { speaker:"control", cooldown:999, lines:[
     "Light's going, {you}. It'll be pitch black by the last wave - learn them NOW.",

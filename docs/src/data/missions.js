@@ -1164,9 +1164,12 @@ const MISSIONS = [
    * "The walls close in" is a good idea with a bad excuse: there is nothing in
    * open space for a wall to BE. So this one goes down to their world and flies
    * a canyon, where a wall is just rock and the sky narrowing is the gorge
-   * doing what gorges do. It is also the campaign's one change of venue -
-   * thirty-nine missions above the clouds and one below them - which is worth
-   * having on its own.
+   * doing what gorges do. And the STORY says why you went down: this stop sits
+   * in THE TRENCHES, the sector flown straight down the middle of their
+   * fortress - their guns watch every road in the sky, so the one road they
+   * do not watch is under it. The brief, the subtitle and the opening comms
+   * all carry that line, because a level that changes the rules owes the
+   * player one sentence about why.
    *
    * The rock breathes on a slow cycle with a faster one laid over it, so the
    * squeeze never lands on a count you can tune out. Touching it costs a life
@@ -1177,8 +1180,8 @@ const MISSIONS = [
    * rather than from the crowd. Nothing here dives at you; the walls do that.
    */
   {
-    id:23, name:"The Narrows", subtitle:"Down where the rock is",
-    brief:"Below the clouds now, {you} - straight down their canyon. The walls come IN and go out again, and rock does not care how good your guns are. Fly the middle when it squeezes.",
+    id:23, name:"The Narrows", subtitle:"Under their guns",
+    brief:"Their fortress guns watch every road in the sky, {you} - so we go UNDER the sky. Down their own canyon, below the radar. The walls breathe in and out; fly the middle when they squeeze.",
     goal:"The canyon SQUEEZES — fly the middle",
     narrows:true,
     face:"brute",
@@ -1458,26 +1461,30 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","keepLives"],
   },
   /*
-   * THE CURRENT: a river through the middle of the sky, and the exact opposite
-   * of the Storm.
+   * THE SKY RIVER, and why there is a river in space: there isn't one. The
+   * Devourer's fall - one mission ago - cracked the sky, and this sector is
+   * DRAINING through the hole. The bright band is stardust pouring sideways
+   * toward the crack; the next stop, The Undertow, is the same tear making
+   * whirlpools. Three missions, one wound, and the name on the map now says
+   * what a seven-year-old will actually see.
    *
-   * A gust is a surprise you react to. A current is always there, always the
-   * same way, and every second of the level is a decision: drop into it to
-   * cross the field in a heartbeat, or stay above it to be able to aim. It
-   * carries everything loose - you, their shots, the coins, the pods - so a
-   * shot fired at you from below the band arrives somewhere else entirely, and
+   * It is the exact opposite of the Storm. A gust is a surprise you react to;
+   * the river is always there, always the same way, and every second is a
+   * decision: drop in to cross the field in a heartbeat, or stay out to aim.
+   * It carries everything loose - you, their shots, the coins, the pods - so
+   * a shot fired from below the band arrives somewhere else entirely, and
    * after a minute a child stops aiming at ships and starts aiming at where
    * the river will have put them.
    *
-   * It sits next to The Undertow on purpose. A well BENDS what crosses it and
-   * a current TRANSLATES it; flying them back to back is the clearest possible
-   * statement of what act four is - the same sky, disobeying a different rule
-   * each time.
+   * "Carries YOU" has to mean the stick, not the hull: the ship holds station
+   * against any bare push (see the current block in game.js), so the river
+   * displaces the point the finger names. Hold your thumb still inside the
+   * band and watch yourself drift downstream - that moment is the level.
    */
   {
-    id:32, name:"The Current", subtitle:"Ride it or leave it",
-    brief:"There's a river running through the middle of this sky, {you} - it carries you, their shots, the money, everything. Drop in to travel fast. Climb out to shoot straight.",
-    goal:"A RIVER through the middle",
+    id:32, name:"The Sky River", subtitle:"The sky is draining",
+    brief:"See that bright band, {you}? That's the sky itself, pouring toward the crack the Devourer left. Drop in and it carries you - and their shots, and the money. Ride it to travel. Climb out to aim.",
+    goal:"The sky is DRAINING — ride it!",
     current:true,
     face:"thief",
     waves: [

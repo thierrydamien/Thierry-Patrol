@@ -11,34 +11,34 @@
  *     1655  src/data/config.js
  *     2117  src/data/enemies.js
  *     2951  src/data/missions.js
- *     4775  src/wacky.js
- *     4991  src/data/comms.js
- *     5355  src/data/story.js
- *     5452  src/profile.js
- *     6073  src/cloud.js
- *     6678  src/fx.js
- *     7622  src/input.js
- *     8001  src/entities.js
- *     9202  src/bossart.js
- *     9961  src/bosses.js
- *    10711  src/bossintro.js
- *    10834  src/rewind.js
- *    11356  src/finale.js
- *    11677  src/papadeath.js
- *    11999  src/backstage.js
- *    13202  src/sky29.js
- *    13443  src/systems.js
- *    14062  src/render.js
- *    18112  src/enemyart.js
- *    18858  src/insignia.js
- *    19103  src/skygen.js
- *    20968  src/shipart.js
- *    22046  src/paintjob.js
- *    22204  src/pilotart.js
- *    22299  src/comms.js
- *    22420  src/game.js
- *    25787  src/workshop.js
- *    26484  src/ui.js
+ *     4782  src/wacky.js
+ *     4998  src/data/comms.js
+ *     5362  src/data/story.js
+ *     5459  src/profile.js
+ *     6080  src/cloud.js
+ *     6685  src/fx.js
+ *     7629  src/input.js
+ *     8040  src/entities.js
+ *     9241  src/bossart.js
+ *    10000  src/bosses.js
+ *    10750  src/bossintro.js
+ *    10873  src/rewind.js
+ *    11395  src/finale.js
+ *    11716  src/papadeath.js
+ *    12038  src/backstage.js
+ *    13241  src/sky29.js
+ *    13482  src/systems.js
+ *    14101  src/render.js
+ *    18188  src/enemyart.js
+ *    18934  src/insignia.js
+ *    19179  src/skygen.js
+ *    21076  src/shipart.js
+ *    22154  src/paintjob.js
+ *    22312  src/pilotart.js
+ *    22407  src/comms.js
+ *    22528  src/game.js
+ *    25922  src/workshop.js
+ *    26619  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -4114,9 +4114,12 @@ const MISSIONS = [
    * "The walls close in" is a good idea with a bad excuse: there is nothing in
    * open space for a wall to BE. So this one goes down to their world and flies
    * a canyon, where a wall is just rock and the sky narrowing is the gorge
-   * doing what gorges do. It is also the campaign's one change of venue -
-   * thirty-nine missions above the clouds and one below them - which is worth
-   * having on its own.
+   * doing what gorges do. And the STORY says why you went down: this stop sits
+   * in THE TRENCHES, the sector flown straight down the middle of their
+   * fortress - their guns watch every road in the sky, so the one road they
+   * do not watch is under it. The brief, the subtitle and the opening comms
+   * all carry that line, because a level that changes the rules owes the
+   * player one sentence about why.
    *
    * The rock breathes on a slow cycle with a faster one laid over it, so the
    * squeeze never lands on a count you can tune out. Touching it costs a life
@@ -4127,8 +4130,8 @@ const MISSIONS = [
    * rather than from the crowd. Nothing here dives at you; the walls do that.
    */
   {
-    id:23, name:"The Narrows", subtitle:"Down where the rock is",
-    brief:"Below the clouds now, {you} - straight down their canyon. The walls come IN and go out again, and rock does not care how good your guns are. Fly the middle when it squeezes.",
+    id:23, name:"The Narrows", subtitle:"Under their guns",
+    brief:"Their fortress guns watch every road in the sky, {you} - so we go UNDER the sky. Down their own canyon, below the radar. The walls breathe in and out; fly the middle when they squeeze.",
     goal:"The canyon SQUEEZES — fly the middle",
     narrows:true,
     face:"brute",
@@ -4408,26 +4411,30 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","keepLives"],
   },
   /*
-   * THE CURRENT: a river through the middle of the sky, and the exact opposite
-   * of the Storm.
+   * THE SKY RIVER, and why there is a river in space: there isn't one. The
+   * Devourer's fall - one mission ago - cracked the sky, and this sector is
+   * DRAINING through the hole. The bright band is stardust pouring sideways
+   * toward the crack; the next stop, The Undertow, is the same tear making
+   * whirlpools. Three missions, one wound, and the name on the map now says
+   * what a seven-year-old will actually see.
    *
-   * A gust is a surprise you react to. A current is always there, always the
-   * same way, and every second of the level is a decision: drop into it to
-   * cross the field in a heartbeat, or stay above it to be able to aim. It
-   * carries everything loose - you, their shots, the coins, the pods - so a
-   * shot fired at you from below the band arrives somewhere else entirely, and
+   * It is the exact opposite of the Storm. A gust is a surprise you react to;
+   * the river is always there, always the same way, and every second is a
+   * decision: drop in to cross the field in a heartbeat, or stay out to aim.
+   * It carries everything loose - you, their shots, the coins, the pods - so
+   * a shot fired from below the band arrives somewhere else entirely, and
    * after a minute a child stops aiming at ships and starts aiming at where
    * the river will have put them.
    *
-   * It sits next to The Undertow on purpose. A well BENDS what crosses it and
-   * a current TRANSLATES it; flying them back to back is the clearest possible
-   * statement of what act four is - the same sky, disobeying a different rule
-   * each time.
+   * "Carries YOU" has to mean the stick, not the hull: the ship holds station
+   * against any bare push (see the current block in game.js), so the river
+   * displaces the point the finger names. Hold your thumb still inside the
+   * band and watch yourself drift downstream - that moment is the level.
    */
   {
-    id:32, name:"The Current", subtitle:"Ride it or leave it",
-    brief:"There's a river running through the middle of this sky, {you} - it carries you, their shots, the money, everything. Drop in to travel fast. Climb out to shoot straight.",
-    goal:"A RIVER through the middle",
+    id:32, name:"The Sky River", subtitle:"The sky is draining",
+    brief:"See that bright band, {you}? That's the sky itself, pouring toward the crack the Devourer left. Drop in and it carries you - and their shots, and the money. Ride it to travel. Climb out to aim.",
+    goal:"The sky is DRAINING — ride it!",
     current:true,
     face:"thief",
     waves: [
@@ -5200,8 +5207,8 @@ const COMMS = {
   /* --- the four new levels. One opening line each, and one for the moment
      the searchlight actually finds you, which needs saying every time. --- */
   currentStart: { speaker:"control", cooldown:999, lines:[
-    "There's a RIVER through the middle, {you}. Ride it to move, leave it to aim.",
-    "Feel that drift? The whole middle of the sky is flowing. Use it.",
+    "That band is the sky DRAINING through the Devourer's crack, {you}. Ride it to move, leave it to aim.",
+    "Feel the pull? Everything in that band is pouring toward the crack - you included.",
   ]},
   spotStart: { speaker:"control", cooldown:999, lines:[
     "That searchlight is all the light we've got, {you}. What it sweeps, you see.",
@@ -5213,8 +5220,8 @@ const COMMS = {
     "Out of the light, {you}, out of the light!",
   ]},
   narrowsStart: { speaker:"control", cooldown:999, lines:[
-    "We're in the canyon, {you}. Those walls come IN - don't be there when they do.",
-    "Rock either side and it breathes. Fly the middle when it squeezes.",
+    "Under their guns now, {you} - nothing up there can see us down here. Mind the WALLS.",
+    "Their radar can't look into a canyon. The canyon, though - it BREATHES. Fly the middle.",
   ]},
   nightfallStart: { speaker:"control", cooldown:999, lines:[
     "Light's going, {you}. It'll be pitch black by the last wave - learn them NOW.",
@@ -7834,9 +7841,39 @@ function keyUp(e){
   if(k === "ArrowDown" || k === "s" || k === "S") state.down = false;
 }
 
+/*
+ * THE SKY RIVER'S GRIP ON THE STICK.
+ *
+ * The ship follows the pointer with a spring strong enough to hold station
+ * against ~any push (gain 12: a 150px/s stream reaches equilibrium with the
+ * ship sitting twelve pixels off the finger - invisible). So a current that
+ * merely shoves the hull is a current the controls silently delete, which is
+ * exactly the bug the level shipped with.
+ *
+ * What a river actually does to a steered boat is move the WATER the stick
+ * steers relative to. `flowX` is that: an offset on the point the pointer
+ * names. It is applied in two places because pointers have two behaviours -
+ * at event time here, so a finger actively steering carries the drift with
+ * it, and per-frame via flowNudge, so a motionless mouse drifts too (a still
+ * mouse fires no events, and the first cut only worked while wiggling).
+ * The game relaxes it whenever the ship is out of the stream.
+ */
+let flowX = 0;
+function flowNudge(dx){
+  flowX = clamp(flowX + dx, -VW*0.55, VW*0.55);
+  if(state.dragging || hoverSteer) state.dragX = clamp(state.dragX + dx, 0, VW);
+}
+function flowRelax(dt){
+  if(!flowX) return;
+  const d = -flowX * Math.min(1, dt*1.8);
+  flowX += d;
+  if(Math.abs(flowX) < 0.5) flowX = 0;
+  if(state.dragging || hoverSteer) state.dragX = clamp(state.dragX + d, 0, VW);
+}
+
 function pointerToVirtual(clientX, clientY, lift){
   const rect = canvas.getBoundingClientRect();
-  state.dragX = clamp((clientX - rect.left) / rect.width * VW, 0, VW);
+  state.dragX = clamp((clientX - rect.left) / rect.width * VW + flowX, 0, VW);
   state.dragY = clamp((clientY - rect.top) / rect.height * VH - lift, 0, VH);
 }
 
@@ -7989,9 +8026,11 @@ function clearMovement(){
   // Leaving the yield point standing here made an untouched cursor unable to
   // take the ship back after a pause, which is not what "clear" means.
   keysHaveIt = false;
+  flowX = 0;      // the river does not follow you out of its own mission
 }
 
 SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+             flowNudge, flowRelax,
              _hoverSteering: () => hoverSteer,
              lockPointer, unlockPointer, isPointerLocked, lockSupported };
 })();
@@ -15428,33 +15467,70 @@ function drawAct4(ctx, run, world, timeMs){
      rather than a straight one: a canyon with a ruler-straight side is a
      corridor, and this has to read as somewhere the water cut. */
   if(run.narrows){
+    /*
+     * SECOND PASS ON THE LOOKS. The first cut filled the rock outer-dark to
+     * inner-TAN and stroked the whole polygon in glowing cream, which made
+     * both walls read as backlit paper - "extremely ugly", correctly. Three
+     * changes, all of them about being rock:
+     *  - the fill runs to near-black at the face, not toward a highlight; a
+     *    canyon wall with the sun overhead is a silhouette, not a lampshade;
+     *  - the glow stroke is gone; in its place ONE thin warm line traces the
+     *    inner lip only, where the rim would actually catch the light;
+     *  - the wall casts a CONTACT SHADOW onto the floor, drawn as a wide dark
+     *    stroke along the same jag before the wall covers its inner half -
+     *    which is the single cue that says the rock stands ABOVE the ground
+     *    the ship is flying over.
+     */
     const na = run.narrows;
-    const lit = "#c9ad86", dark = "#120c07";
     ctx.save();
     const STEP = 26;
+    const jag = (y, side) => Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
     [-1, 1].forEach(side => {
       const inner = side < 0 ? na.w : VW - na.w;
       const outer = side < 0 ? -2 : VW + 2;
+      const lip = () => {
+        ctx.beginPath();
+        for(let y = -2; y <= VH + STEP; y += STEP){
+          const x = inner + side*jag(y, side);
+          if(y <= -2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+      };
+      // The shadow the wall throws on the floor: a wide soft-dark stroke on
+      // the lip line. Half of it will be buried under the wall fill, and the
+      // half that survives lies on the floor, following every bay exactly.
+      lip();
+      ctx.strokeStyle = "rgba(0,0,0,0.30)";
+      ctx.lineWidth = 46;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      // The rock itself.
       ctx.beginPath();
       ctx.moveTo(outer, -2);
-      for(let y = -2; y <= VH + STEP; y += STEP){
-        // Off y alone, so the face is a fixed shape that MOVES rather than a
-        // boiling edge. Two frequencies: big bays, and a rough surface on them.
-        const j = Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
-        ctx.lineTo(inner + side*j, y);
-      }
+      for(let y = -2; y <= VH + STEP; y += STEP) ctx.lineTo(inner + side*jag(y, side), y);
       ctx.lineTo(outer, VH + 2);
       ctx.closePath();
       const g = ctx.createLinearGradient(outer, 0, inner, 0);
-      g.addColorStop(0, dark);
-      g.addColorStop(0.62, "#2b1d11");
-      g.addColorStop(1, lit);
+      g.addColorStop(0, "#030201");
+      g.addColorStop(0.7, "#150b06");
+      g.addColorStop(1, "#241108");
       ctx.fillStyle = g;
       ctx.fill();
-      // The lip catches the sun, which is the only thing stopping the rock
-      // from reading as a black bar down the side of the screen.
-      ctx.strokeStyle = "rgba(255,226,180,0.5)";
-      ctx.lineWidth = 2;
+      // Strata: faint darker beds running into the face, so the wall has
+      // geology rather than being a gradient. Static on purpose - the walls
+      // are the rim you are flying past, not the floor sliding under you.
+      ctx.strokeStyle = "rgba(0,0,0,0.22)";
+      ctx.lineWidth = 3;
+      for(let y = 16; y < VH; y += 44){
+        const x = inner + side*jag(y, side);
+        ctx.beginPath();
+        ctx.moveTo(outer, y + (side < 0 ? 6 : -4));
+        ctx.lineTo(x - side*3, y);
+        ctx.stroke();
+      }
+      // The one lit line: the inner lip catching the sun.
+      lip();
+      ctx.strokeStyle = "rgba(255,200,140,0.28)";
+      ctx.lineWidth = 1.6;
       ctx.stroke();
     });
     ctx.restore();
@@ -19426,7 +19502,9 @@ const SKIES = [
   { name:"Red Canyon", surface:true,
     clouds:["#7c2d12","#c2703a","#1a0a04"], dust:"#160802", star:"#ffe0c0",
     lum:1.0, density:0.9, stars:0, bright:0,
-    props:[ {k:"ground", x:0.50, y:0.50, n:52, lit:"#c08a52", dark:"#40200f"} ] },
+    /* Darker than the first cut by a full stop: the floor is the QUIET under
+       a fight, and the old mid-brown fought every bullet on it. */
+    props:[ {k:"ground", x:0.50, y:0.50, n:40, lit:"#a97a48", dark:"#20100a"} ] },
 
 
   { name:"The Fortress Wall", clouds:["#7f1d1d","#57534e","#1c1917"], dust:"#0a0505", star:"#e7e5e4",
@@ -19530,15 +19608,15 @@ const SKIES = [
             {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
 
   /*
-   * THE CURRENT's sky. Indigo and cornflower, which nothing else in act four
+   * THE SKY RIVER's sky. Indigo and cornflower, which nothing else in act four
    * owns - The Undertow next door is teal and The Devourer before it is red,
    * so the three stops in a row are three colours.
    *
    * It flies the aurora, and that is the whole reason it exists: curtains are
    * the only thing in the vocabulary that read as FLOW, and this is the level
-   * where the sky is going somewhere.
+   * where the sky is visibly going somewhere - draining toward the crack.
    */
-  { name:"The Race", clouds:["#312e81","#818cf8","#080620"], dust:"#040318", star:"#e0e7ff",
+  { name:"The Sky River", clouds:["#312e81","#818cf8","#080620"], dust:"#040318", star:"#e0e7ff",
     lum:1.05, density:0.95, stars:1.0, bright:3,
     props:[ {k:"aurora", x:0.50, y:0.44, r:0.30, w:1.0, n:6,
              hi:"#a5b4fc", lo:"#4338ca"},
@@ -20339,8 +20417,8 @@ function drawVortex(ctx, W, H, p, rand){
  * put the whole thing back in space.
  */
 function drawGround(ctx, W, H, p, rand){
-  const base = p.dark || "#3a1f10";
-  const pale = p.lit || "#a8794a";
+  const base = p.dark || "#1c0d05";
+  const pale = p.lit || "#a97a48";
   /*
    * NOT drawn through `tiled`, and that is the whole trick.
    *
@@ -20352,9 +20430,16 @@ function drawGround(ctx, W, H, p, rand){
    * join between them.
    *
    * So this one is drawn once, and made periodic in H by construction: the
-   * channels use frequencies that complete a whole number of cycles over the
+   * channel uses frequencies that complete a whole number of cycles over the
    * height, and every blotch and boulder near an edge is drawn again at the
    * far one. Scroll it forever and the seam never arrives.
+   *
+   * SECOND PASS ON THE LOOKS. The first cut braided three PALE riverbeds
+   * across a mid-brown floor and the customer's verdict was "extremely ugly" -
+   * fair, because pale-on-brown reads as worms, not water. A dry channel is a
+   * SHADOW: it sits lower than the floor, so it is darker than the floor, with
+   * one thin lit line where the sun catches its far bank. One channel, dark,
+   * on a darker floor, and the floor's job is to stay quiet under a fight.
    */
   const wrapY = (y, r, draw) => {
     draw(y);
@@ -20365,10 +20450,10 @@ function drawGround(ctx, W, H, p, rand){
   // The bedrock, and a slow shading across it so the floor is not a flat wash.
   ctx.fillStyle = base;
   ctx.fillRect(-2, -2, W + 4, H + 4);
-  for(let i = 0; i < 26; i++){
-    const bx = rand()*W, by = rand()*H, br = W*(0.12 + rand()*0.3);
-    const up = rand() < 0.5;
-    const c0 = mixA(pale, base, up ? 0.45 : 0.9, up ? 0.30 : 0.55);
+  for(let i = 0; i < 22; i++){
+    const bx = rand()*W, by = rand()*H, br = W*(0.14 + rand()*0.3);
+    const up = rand() < 0.45;
+    const c0 = mixA(pale, base, up ? 0.55 : 0.92, up ? 0.20 : 0.45);
     const c1 = mixA(pale, base, 1, 0);
     wrapY(by, br, y => {
       const g = ctx.createRadialGradient(bx, y, 0, bx, y, br);
@@ -20378,40 +20463,67 @@ function drawGround(ctx, W, H, p, rand){
     });
   }
   /*
-   * The channel: a braid of dry beds wandering down the frame, and the one
-   * thing that makes this read as a PLANET rather than as an asteroid seen
-   * close up. A field of stones is a belt; a field of stones with a
-   * watercourse through it is somewhere with weather.
+   * The channel: ONE dry watercourse wandering down the frame - the thing
+   * that makes this read as a planet with weather rather than an asteroid
+   * seen close up. Whole cycles over H (TAU/H), so its top meets its own
+   * bottom exactly and the scroll never shows a seam.
    */
-  for(let b = 0; b < 3; b++){
-    const wide = W*(0.05 + rand()*0.10);
-    const phase = rand()*TAU, wob = W*(0.10 + rand()*0.16);
-    const mid = W*(0.3 + rand()*0.4);
-    // Whole cycles over H, so the top of the bed meets its own bottom exactly.
-    const k1 = (TAU/H) * (1 + Math.floor(rand()*2));
-    const k2 = (TAU/H) * (3 + Math.floor(rand()*3));
-    ctx.beginPath();
-    for(let y = -20; y <= H + 20; y += 14){
-      const x = mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.3;
-      if(y <= -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = mixA(pale, base, 0.25, 0.5);
+  {
+    const wide = W*0.13;
+    const phase = rand()*TAU, wob = W*(0.11 + rand()*0.08);
+    const mid = W*(0.36 + rand()*0.28);
+    const k1 = (TAU/H) * 1;
+    const k2 = (TAU/H) * (3 + Math.floor(rand()*2));
+    const xAt = y => mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.28;
+    const path = off => {
+      ctx.beginPath();
+      for(let y = -20; y <= H + 20; y += 12){
+        const x = xAt(y) + off;
+        if(y <= -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    };
+    // The bed, sunken: darker than the floor it is cut into.
+    ctx.strokeStyle = mixA(base, "#000000", 0.45, 0.62);
     ctx.lineWidth = wide;
     ctx.lineCap = "round";
-    ctx.stroke();
-    // A pale thread down the middle of the bed - the last of the water.
-    ctx.strokeStyle = mixA(pale, "#ffffff", 0.5, 0.22);
-    ctx.lineWidth = Math.max(1.5, wide*0.16);
-    ctx.stroke();
+    path(0); ctx.stroke();
+    // Its own deeper heart.
+    ctx.strokeStyle = mixA(base, "#000000", 0.7, 0.5);
+    ctx.lineWidth = wide*0.42;
+    path(wide*0.06); ctx.stroke();
+    // And the one lit line: the sun catching the far bank.
+    ctx.strokeStyle = mixA(pale, "#ffffff", 0.18, 0.30);
+    ctx.lineWidth = 1.6;
+    path(-wide*0.52); ctx.stroke();
+  }
+  // Cracks: a few thin dark lines, because rock that has been in the sun for
+  // a million years is not smooth. Short, sparse, and quiet.
+  for(let i = 0; i < 7; i++){
+    const cx0 = rand()*W, cy0 = rand()*H, len = H*(0.04 + rand()*0.07);
+    const ang = rand()*TAU, bend = (rand() - 0.5)*0.8;
+    wrapY(cy0, len, y0 => {
+      ctx.strokeStyle = mixA(base, "#000000", 0.55, 0.4);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx0, y0);
+      ctx.quadraticCurveTo(cx0 + Math.cos(ang + bend)*len*0.5, y0 + Math.sin(ang + bend)*len*0.5,
+                           cx0 + Math.cos(ang)*len, y0 + Math.sin(ang)*len);
+      ctx.stroke();
+    });
   }
   // Boulders lying on it, lit from the same corner as everything else, each
   // with the shadow that puts it ON the ground rather than above it.
-  for(let i = 0; i < (p.n || 44); i++){
-    const bx = rand()*W, by = rand()*H, r = W*(0.006 + rand()*0.022);
+  for(let i = 0; i < (p.n || 40); i++){
+    const bx = rand()*W, by = rand()*H, r = W*(0.008 + rand()*0.022);
     const N = 6 + Math.floor(rand()*3);
     const va = [], vr = [];
     for(let k = 0; k < N; k++){ va.push(k/N*TAU + rand()*0.3); vr.push(r*(0.7 + rand()*0.5)); }
     wrapY(by, r*2, y => {
+      // Shadow first, so the rock sits on top of its own darkness.
+      ctx.fillStyle = "rgba(0,0,0,0.32)";
+      ctx.beginPath();
+      ctx.ellipse(bx + r*0.55, y + r*0.6, r*1.0, r*0.55, 0, 0, TAU);
+      ctx.fill();
       ctx.beginPath();
       for(let k = 0; k < N; k++){
         const px = bx + Math.cos(va[k])*vr[k], py = y + Math.sin(va[k])*vr[k]*0.8;
@@ -20419,13 +20531,9 @@ function drawGround(ctx, W, H, p, rand){
       }
       ctx.closePath();
       const g = ctx.createLinearGradient(bx - r, y - r, bx + r, y + r);
-      g.addColorStop(0, mixA(pale, base, 0.15, 0.92));
+      g.addColorStop(0, mixA(pale, base, 0.28, 0.95));
       g.addColorStop(1, mixA(pale, base, 1, 0.95));
       ctx.fillStyle = g;
-      ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,0.30)";
-      ctx.beginPath();
-      ctx.ellipse(bx + r*0.5, y + r*0.55, r*0.9, r*0.5, 0, 0, TAU);
       ctx.fill();
     });
   }
@@ -22956,7 +23064,7 @@ function startMission(missionIndex, difficultyId){
      * travel, climb out to aim" a real choice rather than a slogan.
      */
     current: mission.current ? { y: VH*0.42, h: VH*0.30, dir: 1,
-      speed: mission.current === "fast" ? 210 : 150, motes: [] } : null,
+      speed: mission.current === "fast" ? 240 : 175, motes: [] } : null,
     /*
      * SPOTLIGHT: a beam swinging from off the top of the screen. Standing in
      * it does not hurt - being SEEN does. Every gun on the field fires at you
@@ -24777,10 +24885,28 @@ function update(dt, timeMs){
       const into = Math.min(y - (top - 26), (bot + 26) - y);
       return Math.min(1, into / 46);
     };
+    /*
+     * THE SHIP IS STEERED, SO THE RIVER MUST CARRY THE STEERING.
+     *
+     * The first build pushed p.x and it read as nothing, for a measurable
+     * reason: the ship follows the pointer with a spring at gain 12, so a
+     * 150px/s stream reached equilibrium with the ship parked twelve pixels
+     * downstream of the finger - and that was the whole effect. The current
+     * has to move the point the finger NAMES (input.flowNudge), which is what
+     * water does to a steered boat: hold your thumb still and you drift.
+     * Keyboard flight integrates velocity, so for keys the direct push is
+     * real and stays.
+     */
     const p = game.world.player;
     if(p && p.alive){
       const k = pull(p.y);
-      if(k > 0) p.x = clamp(p.x + cu.dir*cu.speed*k*dt, 20, VW - 20);
+      const push = cu.dir*cu.speed*k*dt;
+      if(k > 0){
+        if(SF.input.state.dragging) SF.input.flowNudge(push);
+        else p.x = clamp(p.x + push, 20, VW - 20);
+      } else {
+        SF.input.flowRelax(dt);      // out of the stream: the stick comes home
+      }
     }
     const es = game.world.enemies.items;
     for(let i = 0; i < es.length; i++){
@@ -24790,8 +24916,17 @@ function update(dt, timeMs){
       // Kept on the field for the same reason the Storm keeps them: a ship
       // shoved into the gap between the clamp and the cull sits there
       // unreachable, holding a mission open that cannot be finished.
-      if(k > 0 && e.x > -20 && e.x < VW + 20)
-        e.x = clamp(e.x + cu.dir*cu.speed*0.45*k*dt, 16, VW - 16);
+      if(k > 0 && e.x > -20 && e.x < VW + 20){
+        const push = cu.dir*cu.speed*0.6*k*dt;
+        e.x = clamp(e.x + push, 16, VW - 16);
+        /*
+         * The anchor too, or the push is a no-op for half the roster: weave
+         * and hover behaviours ASSIGN x from anchorX every frame, so a nudge
+         * to x alone is erased before it is ever drawn. Moving the anchor is
+         * moving the water they swim in.
+         */
+        e.anchorX = clamp(e.anchorX + push, 16, VW - 16);
+      }
     }
     const ebs = game.world.enemyBullets.items;
     for(let i = 0; i < ebs.length; i++){

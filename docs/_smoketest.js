@@ -3593,7 +3593,7 @@ async function run(){
       by("Spotlight").objectives.indexOf("unseen") >= 0 && by("Spotlight").spot === true &&
       by("The Narrows").objectives.indexOf("squeeze") >= 0 && by("The Narrows").narrows === true &&
       by("Nightfall").objectives.indexOf("afterDark") >= 0 && by("Nightfall").nightfall === true &&
-      by("The Current").current === true);
+      by("The Sky River").current === true);
     /*
      * SPOTLIGHT'S ONE UNBREAKABLE RULE: nothing may kill you that you had no
      * way to see.
@@ -3675,6 +3675,54 @@ async function run(){
              /const wrapY = /.test(fn) &&                 // edges drawn twice
              /TAU\/H/.test(fn);                          // whole cycles per height
     })());
+  }
+
+  /* ---------- the sky river actually carries things ---------- */
+  {
+    /*
+     * The level shipped "working" and doing nothing, for a measurable reason:
+     * the ship follows the pointer with a spring at gain 12, so a 150px/s
+     * stream reached equilibrium with the ship twelve pixels off the finger -
+     * and the weave behaviour ASSIGNS x from anchorX every frame, erasing any
+     * push to x. So this is pinned FUNCTIONALLY, not by regex: a held finger
+     * inside the band must actually be carried, and a weaver's water must
+     * actually move. If either controller learns to cancel the river again,
+     * these fail.
+     */
+    SF.game.profile = SF.profile.blank("Raft");
+    SF.ui.show("screen-game");
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.current), "pilot");
+    SF.game.run.introFly = 0;
+    const w = SF.game.world, cu = SF.game.run.current, I = SF.input;
+    const midY = cu.y + cu.h*0.5;
+    I.state.dragging = true; I.state.dragX = 200; I.state.dragY = midY;
+    w.player.x = 200; w.player.y = midY; w.player.invuln = 99999;
+    await runFrames(150);
+    check("a finger held still in the river is carried downstream",
+      w.player.x - 200 > 60);
+    /*
+     * Phase two: the finger climbs out (which must hand the stick back, via
+     * the game's own relax path) and a weaver rides the band with the player
+     * safely out of the fight - measured over one second, because holding a
+     * pooled reference through a long live fight is how a check gets flaky.
+     */
+    const drifted = I.state.dragX;
+    I.state.dragY = cu.y - 150;
+    w.enemies.killAll();
+    const weaver = w.spawnEnemy("weaver", 60, cu.y + 30, { difficulty: SF.game.run.difficulty });
+    const a0 = weaver.anchorX;
+    await runFrames(60);
+    check("the river moves the water a weaver swims in",
+      weaver.alive && weaver.anchorX - a0 > 20);
+    await runFrames(90);
+    check("climbing out of the river gives the stick back",
+      drifted - 200 > 60 && Math.abs(I.state.dragX - 200) < 40);
+    check("leaving the mission leaves no drift behind", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/input.js"), "utf8");
+      return /clearMovement\(\)\{[\s\S]*?flowX = 0;/.test(src);
+    })());
+    I.state.dragging = false; SF.input.clearMovement();
+    SF.game.run.ended = true; SF.game.state = "idle";   // leave no live run behind
   }
 
   /* ---------- THE ANCHOR: the cable, and what it is tied to ---------- */
@@ -4745,7 +4793,19 @@ async function run(){
       bb.hp = 1;
     };
     strip();
-    await runFrames(320);
+    /*
+     * Wait for the STATE, not for a frame count. These used to be fixed
+     * budgets tuned to one particular Math.random sequence - the moment an
+     * earlier test consumed a different number of draws (the Sky River's
+     * cosmetic motes, correctly off the seeded stream, did exactly that),
+     * the sentinel's arrival slid past the budget and everything downstream
+     * read a boss mid-intro. The condition is what the check means anyway.
+     */
+    const untilRush = async (cond, cap) => {
+      for(let n = 0; n < cap && !cond(); n += 10) await runFrames(10);
+    };
+    await untilRush(() => SF.game.world.boss &&
+                          SF.game.world.boss.name === "SKY SENTINEL", 900);
     check("the next boss follows the blast",
       SF.game.world.boss && SF.game.world.boss.name === "SKY SENTINEL");
     check("later rush stages come harder",
@@ -4754,17 +4814,20 @@ async function run(){
     // the 100% the previous kill left behind.
     check("the readout tracks the NEW boss, not the last one's victory",
       SF.game.run.bossActive && SF.game.run.progress < 1);
+    // Let the intro finish before wounding it: the finale gate reads a boss
+    // that is actually fighting, not one still flying in.
+    await untilRush(() => SF.game.run.bossActive, 600);
     SF.game.world.boss.hp = SF.game.world.boss.maxHp * 0.08;
-    await runFrames(6);
+    await untilRush(() => SF.finale.fleetSize() > 0, 300);
     check("the last boss of a rush still brings the whole family out",
       SF.game.run.rushIndex === SF.game.run.rushList.length &&
       SF.finale.fleetSize() > 0);
     SF.profile.listNames = origList; SF.profile.load = origLoad;
     strip();
-    await runFrames(560);
+    await untilRush(() => SF.game.run.lapStarted === true || SF.game.run.ended, 1200);
     check("an emptied queue ends in the victory lap",
       SF.game.run.lapStarted === true || SF.game.run.ended);
-    await runFrames(260);
+    await untilRush(() => SF.game.run.ended, 600);
     check("the rush books its best without touching the campaign",
       SF.game.run.ended && SF.game.run.stats.completed &&
       prof.bossRushBest === 2 && !prof.missions.rush && prof.lastMission !== "rush");

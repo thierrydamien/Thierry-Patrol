@@ -537,7 +537,7 @@ function startMission(missionIndex, difficultyId){
      * travel, climb out to aim" a real choice rather than a slogan.
      */
     current: mission.current ? { y: VH*0.42, h: VH*0.30, dir: 1,
-      speed: mission.current === "fast" ? 210 : 150, motes: [] } : null,
+      speed: mission.current === "fast" ? 240 : 175, motes: [] } : null,
     /*
      * SPOTLIGHT: a beam swinging from off the top of the screen. Standing in
      * it does not hurt - being SEEN does. Every gun on the field fires at you
@@ -2358,10 +2358,28 @@ function update(dt, timeMs){
       const into = Math.min(y - (top - 26), (bot + 26) - y);
       return Math.min(1, into / 46);
     };
+    /*
+     * THE SHIP IS STEERED, SO THE RIVER MUST CARRY THE STEERING.
+     *
+     * The first build pushed p.x and it read as nothing, for a measurable
+     * reason: the ship follows the pointer with a spring at gain 12, so a
+     * 150px/s stream reached equilibrium with the ship parked twelve pixels
+     * downstream of the finger - and that was the whole effect. The current
+     * has to move the point the finger NAMES (input.flowNudge), which is what
+     * water does to a steered boat: hold your thumb still and you drift.
+     * Keyboard flight integrates velocity, so for keys the direct push is
+     * real and stays.
+     */
     const p = game.world.player;
     if(p && p.alive){
       const k = pull(p.y);
-      if(k > 0) p.x = clamp(p.x + cu.dir*cu.speed*k*dt, 20, VW - 20);
+      const push = cu.dir*cu.speed*k*dt;
+      if(k > 0){
+        if(SF.input.state.dragging) SF.input.flowNudge(push);
+        else p.x = clamp(p.x + push, 20, VW - 20);
+      } else {
+        SF.input.flowRelax(dt);      // out of the stream: the stick comes home
+      }
     }
     const es = game.world.enemies.items;
     for(let i = 0; i < es.length; i++){
@@ -2371,8 +2389,17 @@ function update(dt, timeMs){
       // Kept on the field for the same reason the Storm keeps them: a ship
       // shoved into the gap between the clamp and the cull sits there
       // unreachable, holding a mission open that cannot be finished.
-      if(k > 0 && e.x > -20 && e.x < VW + 20)
-        e.x = clamp(e.x + cu.dir*cu.speed*0.45*k*dt, 16, VW - 16);
+      if(k > 0 && e.x > -20 && e.x < VW + 20){
+        const push = cu.dir*cu.speed*0.6*k*dt;
+        e.x = clamp(e.x + push, 16, VW - 16);
+        /*
+         * The anchor too, or the push is a no-op for half the roster: weave
+         * and hover behaviours ASSIGN x from anchorX every frame, so a nudge
+         * to x alone is erased before it is ever drawn. Moving the anchor is
+         * moving the water they swim in.
+         */
+        e.anchorX = clamp(e.anchorX + push, 16, VW - 16);
+      }
     }
     const ebs = game.world.enemyBullets.items;
     for(let i = 0; i < ebs.length; i++){

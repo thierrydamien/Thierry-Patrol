@@ -1367,33 +1367,70 @@ function drawAct4(ctx, run, world, timeMs){
      rather than a straight one: a canyon with a ruler-straight side is a
      corridor, and this has to read as somewhere the water cut. */
   if(run.narrows){
+    /*
+     * SECOND PASS ON THE LOOKS. The first cut filled the rock outer-dark to
+     * inner-TAN and stroked the whole polygon in glowing cream, which made
+     * both walls read as backlit paper - "extremely ugly", correctly. Three
+     * changes, all of them about being rock:
+     *  - the fill runs to near-black at the face, not toward a highlight; a
+     *    canyon wall with the sun overhead is a silhouette, not a lampshade;
+     *  - the glow stroke is gone; in its place ONE thin warm line traces the
+     *    inner lip only, where the rim would actually catch the light;
+     *  - the wall casts a CONTACT SHADOW onto the floor, drawn as a wide dark
+     *    stroke along the same jag before the wall covers its inner half -
+     *    which is the single cue that says the rock stands ABOVE the ground
+     *    the ship is flying over.
+     */
     const na = run.narrows;
-    const lit = "#c9ad86", dark = "#120c07";
     ctx.save();
     const STEP = 26;
+    const jag = (y, side) => Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
     [-1, 1].forEach(side => {
       const inner = side < 0 ? na.w : VW - na.w;
       const outer = side < 0 ? -2 : VW + 2;
+      const lip = () => {
+        ctx.beginPath();
+        for(let y = -2; y <= VH + STEP; y += STEP){
+          const x = inner + side*jag(y, side);
+          if(y <= -2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+      };
+      // The shadow the wall throws on the floor: a wide soft-dark stroke on
+      // the lip line. Half of it will be buried under the wall fill, and the
+      // half that survives lies on the floor, following every bay exactly.
+      lip();
+      ctx.strokeStyle = "rgba(0,0,0,0.30)";
+      ctx.lineWidth = 46;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      // The rock itself.
       ctx.beginPath();
       ctx.moveTo(outer, -2);
-      for(let y = -2; y <= VH + STEP; y += STEP){
-        // Off y alone, so the face is a fixed shape that MOVES rather than a
-        // boiling edge. Two frequencies: big bays, and a rough surface on them.
-        const j = Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
-        ctx.lineTo(inner + side*j, y);
-      }
+      for(let y = -2; y <= VH + STEP; y += STEP) ctx.lineTo(inner + side*jag(y, side), y);
       ctx.lineTo(outer, VH + 2);
       ctx.closePath();
       const g = ctx.createLinearGradient(outer, 0, inner, 0);
-      g.addColorStop(0, dark);
-      g.addColorStop(0.62, "#2b1d11");
-      g.addColorStop(1, lit);
+      g.addColorStop(0, "#030201");
+      g.addColorStop(0.7, "#150b06");
+      g.addColorStop(1, "#241108");
       ctx.fillStyle = g;
       ctx.fill();
-      // The lip catches the sun, which is the only thing stopping the rock
-      // from reading as a black bar down the side of the screen.
-      ctx.strokeStyle = "rgba(255,226,180,0.5)";
-      ctx.lineWidth = 2;
+      // Strata: faint darker beds running into the face, so the wall has
+      // geology rather than being a gradient. Static on purpose - the walls
+      // are the rim you are flying past, not the floor sliding under you.
+      ctx.strokeStyle = "rgba(0,0,0,0.22)";
+      ctx.lineWidth = 3;
+      for(let y = 16; y < VH; y += 44){
+        const x = inner + side*jag(y, side);
+        ctx.beginPath();
+        ctx.moveTo(outer, y + (side < 0 ? 6 : -4));
+        ctx.lineTo(x - side*3, y);
+        ctx.stroke();
+      }
+      // The one lit line: the inner lip catching the sun.
+      lip();
+      ctx.strokeStyle = "rgba(255,200,140,0.28)";
+      ctx.lineWidth = 1.6;
       ctx.stroke();
     });
     ctx.restore();
