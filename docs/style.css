@@ -6,6 +6,30 @@
  * /assets/ cache-first path as the music, and font-display: swap keeps first
  * paint instant on a cold load.
  */
+/*
+ * TWO FACES, ONE JOB EACH.
+ *
+ * Rajdhani was doing display, body, labels, numbers, buttons and every
+ * sentence in the game. It is a good face and it was doing too many jobs: a
+ * condensed technical sans is exactly right on a HUD and exactly wrong for
+ * three lines of story a seven-year-old is trying to read.
+ *
+ * So Rajdhani keeps everything structural - headings, chips, counters, prices,
+ * every label - and Nunito takes running text. Rounded, humanist, a tall
+ * x-height, and it reads at eleven pixels, which is where most of this game's
+ * prose actually lives. (SIL Open Font Licence, same as Rajdhani.)
+ *
+ * The rule for anything added later: if it is a SENTENCE, it is --prose. If it
+ * is a label, a number or a button, it is not.
+ */
+@font-face {
+  font-family: "Nunito"; font-style: normal; font-weight: 400;
+  font-display: swap; src: url("assets/fonts/nunito-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Nunito"; font-style: normal; font-weight: 600;
+  font-display: swap; src: url("assets/fonts/nunito-latin-600-normal.woff2") format("woff2");
+}
 @font-face {
   font-family: "Rajdhani"; font-style: normal; font-weight: 500;
   font-display: swap; src: url("assets/fonts/rajdhani-latin-500-normal.woff2") format("woff2");
@@ -74,6 +98,8 @@ html, body {
   /* Rajdhani carries the sci-fi identity; the stack behind it keeps the game
      working offline and before the font arrives. */
   font-family: "Rajdhani", -apple-system, "Segoe UI", Verdana, Arial, sans-serif;
+  /* Running text. Every sentence in the game; nothing else. */
+  --prose: "Nunito", -apple-system, "Segoe UI", Verdana, Arial, sans-serif;
   font-weight: 500;
   overflow:hidden;
   /* iPad: no rubber-band scroll behind the game, no double-tap zoom, no
@@ -1752,6 +1778,25 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
   margin:6px 2px 0; font-size:12px; line-height:1.45; min-height:17px;
   color: rgba(255,255,255,0.55);
 }
+
+
+/* ---------------- running text ----------------------------------------
+   Every sentence in the game, and nothing else. See the note at the top of
+   this file: labels, numbers and buttons stay on Rajdhani. */
+.story-panel p, .si-desc, .shop-item .si-desc, .tune-card span, .tune-how,
+.medal-desc, .diff-detail span, .paint-desc, .ws-empty, .ws-modhint,
+.brief-hint, .coach-tip .ct-text, .kit-card .kc-desc {
+  font-family: var(--prose);
+  font-weight: 400;
+  /* No font-size here on purpose. Every one of these surfaces already sets its
+     own, and an `em` in a shared rule resolves against the PARENT rather than
+     against the value being replaced - which silently blew an 11px shop
+     description up to 15px. Nunito simply reads bigger than Rajdhani at the
+     same size, and at eleven pixels that is the improvement, not a problem. */
+  letter-spacing: 0;          /* the HUD face wants tracking, a text face does not */
+  line-height: 1.45;
+}
+.tune-how b, .si-desc b, .story-panel p b { font-weight: 600; }
 
 /* ---------------- CAMPAIGN: goal header, star hunt, sector rail ------------
    The map answers "what do I fly next, and why?" now, and these are the three

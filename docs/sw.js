@@ -13,7 +13,7 @@
  * a deploy MUST be picked up - it is the blunt instrument that guarantees a
  * clean slate.
  */
-const CACHE = "patrol-v31";
+const CACHE = "patrol-v32";
 
 /*
  * The shell, cached at install time.
@@ -44,6 +44,9 @@ const SHELL = [
   "./src/sky29.js", "./src/wacky.js", "./src/workshop.js",
   "./src/game.js", "./src/ui.js",
   "./assets/fonts/rajdhani-latin-700-normal.woff2",
+  // Running text now has its own face; a first flight in the car should have
+  // the story cards and the shop's descriptions already readable.
+  "./assets/fonts/nunito-latin-400-normal.woff2",
 ];
 
 self.addEventListener("install", e => {

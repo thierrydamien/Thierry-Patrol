@@ -11,6 +11,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<!-- The two faces the game is set in, fetched alongside the stylesheet rather
+     than when something first happens to need them. Without this the prose
+     face is only requested the first time a shop description or a story card
+     is drawn, so every one of those surfaces flashed the fallback on its first
+     view. Two files, 31KB together. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="assets/fonts/rajdhani-latin-500-normal.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="assets/fonts/nunito-latin-400-normal.woff2">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
