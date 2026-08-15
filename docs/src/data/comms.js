@@ -214,8 +214,8 @@ const COMMS = {
     "Feel that drift? The whole middle of the sky is flowing. Use it.",
   ]},
   spotStart: { speaker:"control", cooldown:999, lines:[
-    "Searchlight, {you}. In the beam they can all SEE you - stay in the dark.",
-    "That light is hunting you. Watch it swing, then move behind it.",
+    "That searchlight is all the light we've got, {you}. What it sweeps, you see.",
+    "Fly BEHIND the beam - you'll still see what it just lit, and they won't see you.",
   ]},
   spotted: { speaker:"control", cooldown:6, lines:[
     "You're LIT UP, {you} - move!",

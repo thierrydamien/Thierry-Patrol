@@ -11,34 +11,34 @@
  *     1655  src/data/config.js
  *     2117  src/data/enemies.js
  *     2951  src/data/missions.js
- *     4764  src/wacky.js
- *     4980  src/data/comms.js
- *     5344  src/data/story.js
- *     5441  src/profile.js
- *     6062  src/cloud.js
- *     6667  src/fx.js
- *     7611  src/input.js
- *     7990  src/entities.js
- *     9191  src/bossart.js
- *     9950  src/bosses.js
- *    10700  src/bossintro.js
- *    10823  src/rewind.js
- *    11345  src/finale.js
- *    11666  src/papadeath.js
- *    11988  src/backstage.js
- *    13191  src/sky29.js
- *    13432  src/systems.js
- *    14051  src/render.js
- *    18014  src/enemyart.js
- *    18760  src/insignia.js
- *    19005  src/skygen.js
- *    20870  src/shipart.js
- *    21948  src/paintjob.js
- *    22106  src/pilotart.js
- *    22201  src/comms.js
- *    22322  src/game.js
- *    25653  src/workshop.js
- *    26350  src/ui.js
+ *     4775  src/wacky.js
+ *     4991  src/data/comms.js
+ *     5355  src/data/story.js
+ *     5452  src/profile.js
+ *     6073  src/cloud.js
+ *     6678  src/fx.js
+ *     7622  src/input.js
+ *     8001  src/entities.js
+ *     9202  src/bossart.js
+ *     9961  src/bosses.js
+ *    10711  src/bossintro.js
+ *    10834  src/rewind.js
+ *    11356  src/finale.js
+ *    11677  src/papadeath.js
+ *    11999  src/backstage.js
+ *    13202  src/sky29.js
+ *    13443  src/systems.js
+ *    14062  src/render.js
+ *    18112  src/enemyart.js
+ *    18858  src/insignia.js
+ *    19103  src/skygen.js
+ *    20968  src/shipart.js
+ *    22046  src/paintjob.js
+ *    22204  src/pilotart.js
+ *    22299  src/comms.js
+ *    22420  src/game.js
+ *    25787  src/workshop.js
+ *    26484  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -3788,27 +3788,38 @@ const MISSIONS = [
     objectives: ["complete","coinRush","rescueAll"],
   },
   /*
-   * SPOTLIGHT. Silent Running taught hiding; this is hiding under a light that
-   * is looking for you.
+   * SPOTLIGHT, and the beam is the only light in the sky.
    *
-   * The beam does not hurt. Standing in it makes every gun on the field pick
-   * you at once, which is a far better threat than damage: you can be lit over
-   * an empty sky and get away with it, and you can be caught in the open with
-   * six ships looking up. So the level is not a dodging drill - it is dodging
-   * you PLAN, a second ahead, by watching the swing and being somewhere else
-   * when it arrives.
+   * The first build had this the other way round: the sky was lit and the beam
+   * was a place not to be. It worked, and it was the wrong level - it made the
+   * one interesting object on screen a thing you avoid. Inverted, the light is
+   * something you WANT, and that is a much better thing to put in a child's
+   * way. Outside it you cannot see the sky at all; the sweep is what paints it.
    *
-   * It swings between the two lower corners and turns round rather than
-   * spinning, because a beam that comes back the way it went has a rhythm a
-   * seven-year-old can learn, and learning the rhythm is the whole level.
+   * The dark fades back in BEHIND the beam over about two seconds, which is
+   * where the skill lives. A hard trailing edge would give you only what is
+   * lit right now - a reflex test. A tail gives you a memory to fly on, and
+   * "read what the light just showed you, then act before it goes" is worth
+   * being good at.
    *
-   * Shooters throughout, deliberately: a wave of things that cannot shoot back
-   * would make the light meaningless, and the light is the point.
+   * Both halves at once are the dilemma: the light is the only way to see, AND
+   * standing in it makes every gun on the field pick you. So the answer a
+   * child finds is to fly just behind the sweep - in what it has lit, out of
+   * what it is lighting - which is exactly the line you would want them to
+   * find.
+   *
+   * NOTHING may kill you that you had no way to see: every bullet in the air
+   * stays visible through the dark, and your own hull carries a small lamp.
+   * What is hidden is the SHIPS. Being frightened of a gun you cannot see is
+   * the level; being killed by one is just unfair.
+   *
+   * No divers in the roster for the same reason - a kamikaze arriving out of
+   * black at three hundred pixels a second is not a thing anybody can read.
    */
   {
     id:14, name:"Spotlight", subtitle:"Don't be seen",
-    brief:"They've got a searchlight sweeping the whole sector. Standing in the beam doesn't hurt - but everything out there can SEE you, and they all shoot at once. Watch the swing. Be somewhere else.",
-    goal:"Stay OUT of the light!",
+    brief:"Their searchlight is the only light out here, {you} - what it sweeps, you see, and everything else is black. But standing in it means they can see YOU, and they all shoot at once. Read the sky it just lit, then get out of the way.",
+    goal:"Only the beam shows the sky",
     spot:true,
     face:"sniper",
     waves: [
@@ -5193,8 +5204,8 @@ const COMMS = {
     "Feel that drift? The whole middle of the sky is flowing. Use it.",
   ]},
   spotStart: { speaker:"control", cooldown:999, lines:[
-    "Searchlight, {you}. In the beam they can all SEE you - stay in the dark.",
-    "That light is hunting you. Watch it swing, then move behind it.",
+    "That searchlight is all the light we've got, {you}. What it sweeps, you see.",
+    "Fly BEHIND the beam - you'll still see what it just lit, and they won't see you.",
   ]},
   spotted: { speaker:"control", cooldown:6, lines:[
     "You're LIT UP, {you} - move!",
@@ -15467,11 +15478,17 @@ function drawAct4(ctx, run, world, timeMs){
      * whose entire rule is "do not be in this" is the worst possible outcome.
      * A seven-year-old has to see the edge of it from across the room.
      */
-    const hot = sp.lit ? 1 : 0.72;
+    /*
+     * Lighter than it was. This used to be the whole effect - a bright wedge
+     * over a lit sky - and it is now the shaft of a lamp whose real job is
+     * done by the veil that cuts the dark away underneath it. Too much here
+     * and the one part of the sky you can actually see is washed out.
+     */
+    const hot = sp.lit ? 1 : 0.8;
     const g = ctx.createLinearGradient(0, 0, L, 0);
-    g.addColorStop(0,    "rgba(255,247,214," + (0.55*hot).toFixed(3) + ")");
-    g.addColorStop(0.35, "rgba(255,240,180," + (0.30*hot).toFixed(3) + ")");
-    g.addColorStop(0.75, "rgba(255,228,150," + (0.12*hot).toFixed(3) + ")");
+    g.addColorStop(0,    "rgba(255,247,214," + (0.26*hot).toFixed(3) + ")");
+    g.addColorStop(0.35, "rgba(255,240,180," + (0.13*hot).toFixed(3) + ")");
+    g.addColorStop(0.75, "rgba(255,228,150," + (0.05*hot).toFixed(3) + ")");
     g.addColorStop(1,    "rgba(255,220,140,0)");
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -15482,7 +15499,7 @@ function drawAct4(ctx, run, world, timeMs){
     ctx.fill();
     // Both edges drawn as lines. A cone with a soft edge reads as a glow; the
     // hard rim is what tells you exactly where "in it" stops.
-    ctx.strokeStyle = "rgba(255,250,224," + (0.34*hot).toFixed(3) + ")";
+    ctx.strokeStyle = "rgba(255,250,224," + (0.30*hot).toFixed(3) + ")";
     ctx.lineWidth = 2;
     [-sp.half, sp.half].forEach(h => {
       ctx.beginPath();
@@ -15854,6 +15871,87 @@ function drawNightfall(ctx, k){
   ctx.fillStyle = gd;
   ctx.fillRect(0, 0, VW, VH);
   ctx.restore();
+}
+
+/*
+ * SPOTLIGHT'S DARK.
+ *
+ * The sky is black and the beam is the only thing that shows it to you. This
+ * is the veil that makes that true: one dark sheet with the beam's fan cut out
+ * of it, and the cut FADES BACK IN behind the sweep rather than snapping shut.
+ *
+ * That fade is the level. A beam with a hard trailing edge gives you only what
+ * is lit right now, which is a reflex test; a beam that leaves the sky glowing
+ * for two seconds behind it gives you a memory to fly on, and reading the sky
+ * in the moment after the light passes is a far better thing for a child to
+ * get good at.
+ *
+ * THE RULE THIS MUST NEVER BREAK: nothing may kill you that you had no way to
+ * see. So the same holes the blackout punches are punched here - every enemy
+ * bullet, both sides' shots, the pickups, and a lamp on your own hull. What is
+ * hidden is the SHIPS. What is coming at you is always visible, and being
+ * frightened of a gun you cannot see is the point, while being killed by one
+ * is just unfair.
+ */
+function drawSpotDark(ctx, world, spot, timeMs){
+  if(!darkCv){
+    darkCv = document.createElement("canvas");
+    darkCv.width = VW; darkCv.height = VH;
+    darkCtx = darkCv.getContext("2d");
+  }
+  const c = darkCtx;
+  if(!c) return;
+  c.globalCompositeOperation = "source-over";
+  c.clearRect(0, 0, VW, VH);
+  c.fillStyle = "rgba(2,4,13,0.90)";
+  c.fillRect(0, 0, VW, VH);
+  c.globalCompositeOperation = "destination-out";
+
+  /* The fan. One wedge per angular bucket, its opacity set by how long ago the
+     beam was there. Slices overlap by a whisker so no hairline shows between
+     two neighbours at slightly different ages. */
+  const n = spot.seen.length, span = spot.hi - spot.lo, step = span/n;
+  const REACH = VH*2;
+  for(let i = 0; i < n; i++){
+    const age = spot.t - spot.seen[i];
+    if(spot.seen[i] === 0 || age > spot.fade) continue;
+    // Full for the first fifth of the fade, then off - a long tail, so the
+    // sky dims rather than switching off.
+    const k = age < spot.fade*0.2 ? 1
+            : Math.pow(1 - (age - spot.fade*0.2)/(spot.fade*0.8), 1.6);
+    const a0 = spot.lo + i*step - step*0.6, a1 = spot.lo + (i+1)*step + step*0.6;
+    c.fillStyle = "rgba(0,0,0," + (k*0.96).toFixed(3) + ")";
+    c.beginPath();
+    c.moveTo(spot.pivotX, spot.pivotY);
+    c.lineTo(spot.pivotX + Math.cos(a0)*REACH, spot.pivotY + Math.sin(a0)*REACH);
+    c.lineTo(spot.pivotX + Math.cos(a1)*REACH, spot.pivotY + Math.sin(a1)*REACH);
+    c.closePath();
+    c.fill();
+  }
+
+  const hole = (x, y, r, a) => {
+    const g = c.createRadialGradient(x, y, r*0.3, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0," + a + ")");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, r*2, r*2);
+  };
+  const p = world.player;
+  // Your own lamp, deliberately small: enough that flying into something is
+  // always your own fault, nowhere near enough to fly the level by.
+  if(p && p.alive) hole(p.x, p.y, 118 + Math.sin(timeMs/160)*6, 1);
+  const pk = world.pickups.items;
+  for(let i = 0; i < pk.length; i++)
+    if(pk[i].alive) hole(pk[i].x, pk[i].y, pk[i].kind === "rescue" ? 80 : 52, 0.9);
+  let lit = 0;
+  const ebs = world.enemyBullets.items;
+  for(let i = 0; i < ebs.length && lit < 44; i++)
+    if(ebs[i].alive){ hole(ebs[i].x, ebs[i].y, 36, 0.9); lit++; }
+  lit = 0;
+  const pbs = world.bullets.items;
+  for(let i = 0; i < pbs.length && lit < 44; i++)
+    if(pbs[i].alive){ hole(pbs[i].x, pbs[i].y, 24, 0.55); lit++; }
+  ctx.drawImage(darkCv, 0, 0);
 }
 
 function drawBlackout(ctx, world, timeMs, soft){
@@ -18000,7 +18098,7 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
-  drawNightfall,
+  drawNightfall, drawSpotDark,
   drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
@@ -22865,8 +22963,27 @@ function startMission(missionIndex, difficultyId){
      * while you are lit, so the level is dodging you plan a second ahead
      * instead of a reflex, and the dark between sweeps is somewhere to be.
      */
-    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.42, lit: false,
-      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -70, half: 0.21 } : null,
+    /*
+     * SPOTLIGHT: the beam is the only light in the sky.
+     *
+     * The first build of this level had it the other way round - the beam was
+     * a place not to be, and everything else was lit - which made the one
+     * interesting object on screen a thing you avoid. Inverted, it is a thing
+     * you WANT: outside the light you cannot see the sky at all, and the sweep
+     * is what paints it for you.
+     *
+     * `seen` is the whole trick, and it is one dimension rather than two. The
+     * beam is a wedge from a fixed pivot, so "when was this part of the sky
+     * last lit" is a function of ANGLE alone - 128 buckets, each holding the
+     * time it was last swept. The dark is then drawn as a fan of slices that
+     * fade back in behind the beam, which costs nothing and gives the level
+     * its whole skill: read what the light just showed you, and act on it in
+     * the second before it goes.
+     */
+    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.62, lit: false,
+      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -90, half: 0.20,
+      lo: Math.PI*0.17, hi: Math.PI*0.83,
+      seen: new Float32Array(128), fade: 2.0, t: 0 } : null,
     /*
      * THE NARROWS: the walls of a canyon, and the only level in the game that
      * is not flown in space. `w` is how far in each wall stands, breathing on
@@ -24719,13 +24836,26 @@ function update(dt, timeMs){
   if(run.spot && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const sp = run.spot;
+    sp.t += dt;
     sp.a += sp.dir*sp.sweep*dt;
     // Swings between the two lower corners and turns round, rather than
     // spinning: a beam that comes back the way it went is one a child can
     // learn the rhythm of, and learning the rhythm is the whole level.
-    const lo = Math.PI*0.22, hi = Math.PI*0.78;
-    if(sp.a > hi){ sp.a = hi; sp.dir = -1; }
-    if(sp.a < lo){ sp.a = lo; sp.dir = 1; }
+    if(sp.a > sp.hi){ sp.a = sp.hi; sp.dir = -1; }
+    if(sp.a < sp.lo){ sp.a = sp.lo; sp.dir = 1; }
+    /*
+     * Stamp every angular bucket the beam currently covers. The sweep can
+     * cross several buckets in one frame on a slow device, so this walks the
+     * whole covered ARC rather than the beam's centre - otherwise a dropped
+     * frame would leave an unlit stripe across the sky that nothing ever
+     * came back to fill.
+     */
+    {
+      const n = sp.seen.length, span = sp.hi - sp.lo;
+      const from = Math.floor(((sp.a - sp.half) - sp.lo) / span * n);
+      const to   = Math.ceil( ((sp.a + sp.half) - sp.lo) / span * n);
+      for(let i = Math.max(0, from); i < Math.min(n, to); i++) sp.seen[i] = sp.t;
+    }
     const p = game.world.player;
     let lit = false;
     if(p && p.alive){
@@ -25555,6 +25685,10 @@ function draw(timeMs){
   // and texts draw after, so the instruments never go out with the sun.
   if(game.run && game.run.nightfall && !game.run.ended)
     SF.render.drawNightfall(ctx, game.run.nightfall.k);
+  // SPOTLIGHT: the dark the beam paints away. Same slot as the blackout - the
+  // world above is finished, and this is the light it is being seen by.
+  if(game.run && game.run.spot && !game.run.ended)
+    SF.render.drawSpotDark(ctx, world, game.run.spot, timeMs);
   // DISCO SKY: over the world, under the HUD - it recolours the sky and never
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)

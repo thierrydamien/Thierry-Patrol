@@ -544,8 +544,27 @@ function startMission(missionIndex, difficultyId){
      * while you are lit, so the level is dodging you plan a second ahead
      * instead of a reflex, and the dark between sweeps is somewhere to be.
      */
-    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.42, lit: false,
-      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -70, half: 0.21 } : null,
+    /*
+     * SPOTLIGHT: the beam is the only light in the sky.
+     *
+     * The first build of this level had it the other way round - the beam was
+     * a place not to be, and everything else was lit - which made the one
+     * interesting object on screen a thing you avoid. Inverted, it is a thing
+     * you WANT: outside the light you cannot see the sky at all, and the sweep
+     * is what paints it for you.
+     *
+     * `seen` is the whole trick, and it is one dimension rather than two. The
+     * beam is a wedge from a fixed pivot, so "when was this part of the sky
+     * last lit" is a function of ANGLE alone - 128 buckets, each holding the
+     * time it was last swept. The dark is then drawn as a fan of slices that
+     * fade back in behind the beam, which costs nothing and gives the level
+     * its whole skill: read what the light just showed you, and act on it in
+     * the second before it goes.
+     */
+    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.62, lit: false,
+      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -90, half: 0.20,
+      lo: Math.PI*0.17, hi: Math.PI*0.83,
+      seen: new Float32Array(128), fade: 2.0, t: 0 } : null,
     /*
      * THE NARROWS: the walls of a canyon, and the only level in the game that
      * is not flown in space. `w` is how far in each wall stands, breathing on
@@ -2398,13 +2417,26 @@ function update(dt, timeMs){
   if(run.spot && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const sp = run.spot;
+    sp.t += dt;
     sp.a += sp.dir*sp.sweep*dt;
     // Swings between the two lower corners and turns round, rather than
     // spinning: a beam that comes back the way it went is one a child can
     // learn the rhythm of, and learning the rhythm is the whole level.
-    const lo = Math.PI*0.22, hi = Math.PI*0.78;
-    if(sp.a > hi){ sp.a = hi; sp.dir = -1; }
-    if(sp.a < lo){ sp.a = lo; sp.dir = 1; }
+    if(sp.a > sp.hi){ sp.a = sp.hi; sp.dir = -1; }
+    if(sp.a < sp.lo){ sp.a = sp.lo; sp.dir = 1; }
+    /*
+     * Stamp every angular bucket the beam currently covers. The sweep can
+     * cross several buckets in one frame on a slow device, so this walks the
+     * whole covered ARC rather than the beam's centre - otherwise a dropped
+     * frame would leave an unlit stripe across the sky that nothing ever
+     * came back to fill.
+     */
+    {
+      const n = sp.seen.length, span = sp.hi - sp.lo;
+      const from = Math.floor(((sp.a - sp.half) - sp.lo) / span * n);
+      const to   = Math.ceil( ((sp.a + sp.half) - sp.lo) / span * n);
+      for(let i = Math.max(0, from); i < Math.min(n, to); i++) sp.seen[i] = sp.t;
+    }
     const p = game.world.player;
     let lit = false;
     if(p && p.alive){
@@ -3234,6 +3266,10 @@ function draw(timeMs){
   // and texts draw after, so the instruments never go out with the sun.
   if(game.run && game.run.nightfall && !game.run.ended)
     SF.render.drawNightfall(ctx, game.run.nightfall.k);
+  // SPOTLIGHT: the dark the beam paints away. Same slot as the blackout - the
+  // world above is finished, and this is the light it is being seen by.
+  if(game.run && game.run.spot && !game.run.ended)
+    SF.render.drawSpotDark(ctx, world, game.run.spot, timeMs);
   // DISCO SKY: over the world, under the HUD - it recolours the sky and never
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)

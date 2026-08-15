@@ -1417,11 +1417,17 @@ function drawAct4(ctx, run, world, timeMs){
      * whose entire rule is "do not be in this" is the worst possible outcome.
      * A seven-year-old has to see the edge of it from across the room.
      */
-    const hot = sp.lit ? 1 : 0.72;
+    /*
+     * Lighter than it was. This used to be the whole effect - a bright wedge
+     * over a lit sky - and it is now the shaft of a lamp whose real job is
+     * done by the veil that cuts the dark away underneath it. Too much here
+     * and the one part of the sky you can actually see is washed out.
+     */
+    const hot = sp.lit ? 1 : 0.8;
     const g = ctx.createLinearGradient(0, 0, L, 0);
-    g.addColorStop(0,    "rgba(255,247,214," + (0.55*hot).toFixed(3) + ")");
-    g.addColorStop(0.35, "rgba(255,240,180," + (0.30*hot).toFixed(3) + ")");
-    g.addColorStop(0.75, "rgba(255,228,150," + (0.12*hot).toFixed(3) + ")");
+    g.addColorStop(0,    "rgba(255,247,214," + (0.26*hot).toFixed(3) + ")");
+    g.addColorStop(0.35, "rgba(255,240,180," + (0.13*hot).toFixed(3) + ")");
+    g.addColorStop(0.75, "rgba(255,228,150," + (0.05*hot).toFixed(3) + ")");
     g.addColorStop(1,    "rgba(255,220,140,0)");
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -1432,7 +1438,7 @@ function drawAct4(ctx, run, world, timeMs){
     ctx.fill();
     // Both edges drawn as lines. A cone with a soft edge reads as a glow; the
     // hard rim is what tells you exactly where "in it" stops.
-    ctx.strokeStyle = "rgba(255,250,224," + (0.34*hot).toFixed(3) + ")";
+    ctx.strokeStyle = "rgba(255,250,224," + (0.30*hot).toFixed(3) + ")";
     ctx.lineWidth = 2;
     [-sp.half, sp.half].forEach(h => {
       ctx.beginPath();
@@ -1804,6 +1810,87 @@ function drawNightfall(ctx, k){
   ctx.fillStyle = gd;
   ctx.fillRect(0, 0, VW, VH);
   ctx.restore();
+}
+
+/*
+ * SPOTLIGHT'S DARK.
+ *
+ * The sky is black and the beam is the only thing that shows it to you. This
+ * is the veil that makes that true: one dark sheet with the beam's fan cut out
+ * of it, and the cut FADES BACK IN behind the sweep rather than snapping shut.
+ *
+ * That fade is the level. A beam with a hard trailing edge gives you only what
+ * is lit right now, which is a reflex test; a beam that leaves the sky glowing
+ * for two seconds behind it gives you a memory to fly on, and reading the sky
+ * in the moment after the light passes is a far better thing for a child to
+ * get good at.
+ *
+ * THE RULE THIS MUST NEVER BREAK: nothing may kill you that you had no way to
+ * see. So the same holes the blackout punches are punched here - every enemy
+ * bullet, both sides' shots, the pickups, and a lamp on your own hull. What is
+ * hidden is the SHIPS. What is coming at you is always visible, and being
+ * frightened of a gun you cannot see is the point, while being killed by one
+ * is just unfair.
+ */
+function drawSpotDark(ctx, world, spot, timeMs){
+  if(!darkCv){
+    darkCv = document.createElement("canvas");
+    darkCv.width = VW; darkCv.height = VH;
+    darkCtx = darkCv.getContext("2d");
+  }
+  const c = darkCtx;
+  if(!c) return;
+  c.globalCompositeOperation = "source-over";
+  c.clearRect(0, 0, VW, VH);
+  c.fillStyle = "rgba(2,4,13,0.90)";
+  c.fillRect(0, 0, VW, VH);
+  c.globalCompositeOperation = "destination-out";
+
+  /* The fan. One wedge per angular bucket, its opacity set by how long ago the
+     beam was there. Slices overlap by a whisker so no hairline shows between
+     two neighbours at slightly different ages. */
+  const n = spot.seen.length, span = spot.hi - spot.lo, step = span/n;
+  const REACH = VH*2;
+  for(let i = 0; i < n; i++){
+    const age = spot.t - spot.seen[i];
+    if(spot.seen[i] === 0 || age > spot.fade) continue;
+    // Full for the first fifth of the fade, then off - a long tail, so the
+    // sky dims rather than switching off.
+    const k = age < spot.fade*0.2 ? 1
+            : Math.pow(1 - (age - spot.fade*0.2)/(spot.fade*0.8), 1.6);
+    const a0 = spot.lo + i*step - step*0.6, a1 = spot.lo + (i+1)*step + step*0.6;
+    c.fillStyle = "rgba(0,0,0," + (k*0.96).toFixed(3) + ")";
+    c.beginPath();
+    c.moveTo(spot.pivotX, spot.pivotY);
+    c.lineTo(spot.pivotX + Math.cos(a0)*REACH, spot.pivotY + Math.sin(a0)*REACH);
+    c.lineTo(spot.pivotX + Math.cos(a1)*REACH, spot.pivotY + Math.sin(a1)*REACH);
+    c.closePath();
+    c.fill();
+  }
+
+  const hole = (x, y, r, a) => {
+    const g = c.createRadialGradient(x, y, r*0.3, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0," + a + ")");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, r*2, r*2);
+  };
+  const p = world.player;
+  // Your own lamp, deliberately small: enough that flying into something is
+  // always your own fault, nowhere near enough to fly the level by.
+  if(p && p.alive) hole(p.x, p.y, 118 + Math.sin(timeMs/160)*6, 1);
+  const pk = world.pickups.items;
+  for(let i = 0; i < pk.length; i++)
+    if(pk[i].alive) hole(pk[i].x, pk[i].y, pk[i].kind === "rescue" ? 80 : 52, 0.9);
+  let lit = 0;
+  const ebs = world.enemyBullets.items;
+  for(let i = 0; i < ebs.length && lit < 44; i++)
+    if(ebs[i].alive){ hole(ebs[i].x, ebs[i].y, 36, 0.9); lit++; }
+  lit = 0;
+  const pbs = world.bullets.items;
+  for(let i = 0; i < pbs.length && lit < 44; i++)
+    if(pbs[i].alive){ hole(pbs[i].x, pbs[i].y, 24, 0.55); lit++; }
+  ctx.drawImage(darkCv, 0, 0);
 }
 
 function drawBlackout(ctx, world, timeMs, soft){
@@ -3950,7 +4037,7 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
-  drawNightfall,
+  drawNightfall, drawSpotDark,
   drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.

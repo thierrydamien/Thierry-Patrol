@@ -3595,6 +3595,52 @@ async function run(){
       by("Nightfall").objectives.indexOf("afterDark") >= 0 && by("Nightfall").nightfall === true &&
       by("The Current").current === true);
     /*
+     * SPOTLIGHT'S ONE UNBREAKABLE RULE: nothing may kill you that you had no
+     * way to see.
+     *
+     * The beam is the only light in the sky, so the SHIPS are hidden - and if
+     * their shots were hidden with them the level would be a coin flip rather
+     * than a level. Every bullet in the air, both sides', is punched back
+     * through the dark, along with the pickups and a lamp on your own hull.
+     */
+    check("the dark hides the ships and never the bullets", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = r.slice(r.indexOf("function drawSpotDark"), r.indexOf("function drawBlackout"));
+      return /world\.enemyBullets\.items/.test(fn) &&   // their shots, always lit
+             /world\.bullets\.items/.test(fn) &&        // and yours
+             /world\.pickups\.items/.test(fn) &&
+             /p\.alive\) hole\(p\.x, p\.y/.test(fn) &&  // your own lamp
+             /destination-out/.test(fn);
+    })());
+    /*
+     * ...and nothing may ARRIVE unseen either. A kamikaze coming out of black
+     * at three hundred pixels a second is not something anybody can read, so
+     * the roster carries no divers at all.
+     */
+    check("nothing dives at you out of the dark", () => {
+      const T = SF.enemyData.ENEMY_TYPES;
+      return by("Spotlight").waves.every(wv => {
+        const bh = T[wv.type].behaviour;
+        return bh !== "kamikaze" && bh !== "swoop" && bh !== "intercept";
+      });
+    });
+    /*
+     * The tail is the level. A beam with a hard trailing edge gives you only
+     * what is lit right now, which is a reflex test; one that leaves the sky
+     * glowing behind it gives you a memory to fly on. It is stored per ANGLE,
+     * because a wedge from a fixed pivot makes "when was this last lit" a
+     * one-dimensional question.
+     */
+    check("the light leaves the sky glowing behind it", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const spot = SF.missions.MISSIONS.find(m => m.spot);
+      return /seen: new Float32Array\(/.test(g) && /fade: [0-9.]+/.test(g) &&
+             // the sweep must stamp the whole covered ARC, not just its centre,
+             // or a dropped frame leaves an unlit stripe nothing comes back to
+             /for\(let i = Math\.max\(0, from\); i < Math\.min\(n, to\); i\+\+\) sp\.seen\[i\] = sp\.t;/.test(g) &&
+             !!spot;
+    })());
+    /*
      * A CANYON, NOT WALLS IN SPACE. The whole reason this level is flown over
      * ground is that there is nothing in open space for a wall to be, so the
      * two halves have to stay together: the sky it flies must be the surface

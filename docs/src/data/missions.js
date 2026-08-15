@@ -838,27 +838,38 @@ const MISSIONS = [
     objectives: ["complete","coinRush","rescueAll"],
   },
   /*
-   * SPOTLIGHT. Silent Running taught hiding; this is hiding under a light that
-   * is looking for you.
+   * SPOTLIGHT, and the beam is the only light in the sky.
    *
-   * The beam does not hurt. Standing in it makes every gun on the field pick
-   * you at once, which is a far better threat than damage: you can be lit over
-   * an empty sky and get away with it, and you can be caught in the open with
-   * six ships looking up. So the level is not a dodging drill - it is dodging
-   * you PLAN, a second ahead, by watching the swing and being somewhere else
-   * when it arrives.
+   * The first build had this the other way round: the sky was lit and the beam
+   * was a place not to be. It worked, and it was the wrong level - it made the
+   * one interesting object on screen a thing you avoid. Inverted, the light is
+   * something you WANT, and that is a much better thing to put in a child's
+   * way. Outside it you cannot see the sky at all; the sweep is what paints it.
    *
-   * It swings between the two lower corners and turns round rather than
-   * spinning, because a beam that comes back the way it went has a rhythm a
-   * seven-year-old can learn, and learning the rhythm is the whole level.
+   * The dark fades back in BEHIND the beam over about two seconds, which is
+   * where the skill lives. A hard trailing edge would give you only what is
+   * lit right now - a reflex test. A tail gives you a memory to fly on, and
+   * "read what the light just showed you, then act before it goes" is worth
+   * being good at.
    *
-   * Shooters throughout, deliberately: a wave of things that cannot shoot back
-   * would make the light meaningless, and the light is the point.
+   * Both halves at once are the dilemma: the light is the only way to see, AND
+   * standing in it makes every gun on the field pick you. So the answer a
+   * child finds is to fly just behind the sweep - in what it has lit, out of
+   * what it is lighting - which is exactly the line you would want them to
+   * find.
+   *
+   * NOTHING may kill you that you had no way to see: every bullet in the air
+   * stays visible through the dark, and your own hull carries a small lamp.
+   * What is hidden is the SHIPS. Being frightened of a gun you cannot see is
+   * the level; being killed by one is just unfair.
+   *
+   * No divers in the roster for the same reason - a kamikaze arriving out of
+   * black at three hundred pixels a second is not a thing anybody can read.
    */
   {
     id:14, name:"Spotlight", subtitle:"Don't be seen",
-    brief:"They've got a searchlight sweeping the whole sector. Standing in the beam doesn't hurt - but everything out there can SEE you, and they all shoot at once. Watch the swing. Be somewhere else.",
-    goal:"Stay OUT of the light!",
+    brief:"Their searchlight is the only light out here, {you} - what it sweeps, you see, and everything else is black. But standing in it means they can see YOU, and they all shoot at once. Read the sky it just lit, then get out of the way.",
+    goal:"Only the beam shows the sky",
     spot:true,
     face:"sniper",
     waves: [
