@@ -27,9 +27,43 @@ const TAU = Math.PI*2;
    that give a nebula its structure, `star` tints the suns.
    --------------------------------------------------------- */
 const SKIES = [
-  // Mission 1 and 5 keep the original artwork - it is the look the game grew
-  // up with, and a painted planet still beats anything generated.
-  { name:"Home Reach",   photo:"playfieldBg" },
+  /*
+   * HOME.
+   *
+   * This was the one photograph left at the front of the campaign, and it
+   * showed: thirty-four generated skies and then a JPG, on the very first
+   * screen anybody sees. It is generated now, out of the same painter as
+   * everything after it - but it is deliberately the one sky in the game that
+   * looks like somewhere you would want to come back to.
+   *
+   * The picture is the family's own world, close and low, so the first flight
+   * reads as a patrol just above home rather than a drift through empty space.
+   * It carries the biggest planet in the campaign (The Deep's was 0.322) with
+   * a weather-banded surface, an aurora over the pole, and dawn coming up
+   * behind it - the only warm-over-cool sky in the table. Everything after
+   * this gets stranger, emptier and colder, which is the whole arc; you have
+   * to have seen home for that to mean anything.
+   *
+   * Deliberately quiet on density: this is the tutorial, and the backdrop must
+   * never compete with the first enemy a seven-year-old ever sees.
+   */
+  { name:"Home Reach",   clouds:["#2563eb","#7dd3fc","#061027"], dust:"#02050e", star:"#eaf4ff",
+    lum:1.0, density:0.9, stars:1.2, bright:4,
+    /*
+     * The planet sits where its whole disc fits on one screen. Every element
+     * in a sky is drawn three times so the backdrop can scroll forever
+     * (see build), and a world this size parked at the bottom edge put a
+     * second copy of itself across the TOP of the frame - two home planets at
+     * once, which reads as a mistake rather than as scrolling.
+     */
+    props:[ {k:"planet", x:0.50, y:0.78, r:0.34, lit:"#8cc7f2", dark:"#04101f", bands:true},
+            // Tucked down onto the world's shoulder rather than hung in open
+            // sky: at full size the curtains read as grey bars floating in the
+            // middle of the frame, and what sells them is being ATTACHED to
+            // something with an atmosphere.
+            {k:"aurora", x:0.50, y:0.56, r:0.15},
+            {k:"planet", x:0.78, y:0.22, r:0.050, lit:"#dbeafe", dark:"#1b2740", craters:true},
+            {k:"sun",    x:0.17, y:0.15, r:0.030, color:"#ffe9a8"} ] },
 
   { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
     lum:1.15, density:1.0, stars:1.0, bright:3,

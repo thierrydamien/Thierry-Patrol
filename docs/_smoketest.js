@@ -1025,12 +1025,42 @@ async function run(){
   check("every mission has its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
   check("no two missions look alike",
     new Set(SF.skygen.SKIES.map(k => k.photo || k.clouds.join(""))).size === SF.skygen.SKIES.length);
-  check("the original artwork is still in use",
-    SF.skygen.SKIES.some(k => k.photo === "playfieldBg") &&
+  /*
+   * THE FIRST SCREEN ANYBODY SEES CANNOT BE THE ODD ONE OUT.
+   *
+   * Mission 1 used to be a photograph - thirty-four generated skies and then a
+   * JPG, on the opening flight, and it showed. It is painted by the same
+   * generator as everything after it now. One photograph is left in the
+   * campaign (Ice Fields), which is a look worth keeping; it just cannot be
+   * the one that sets the expectation.
+   */
+  check("the campaign opens on a generated sky, like the rest of it",
+    !SF.skygen.SKIES[0].photo && (SF.skygen.SKIES[0].props || []).length >= 3);
+  check("the original artwork is still in use somewhere",
     SF.skygen.SKIES.some(k => k.photo === "backAlt"));
+  /*
+   * Every element of a sky is drawn three times so the backdrop can scroll
+   * forever. A body that does not FIT inside one screen therefore has two of
+   * itself on screen permanently, at every scroll position - which is what a
+   * home planet parked on the bottom edge did, and it read as two planets
+   * rather than as one you are flying past. (A world that fits still passes
+   * out of the bottom while the next copy enters at the top; that is the loop
+   * working, and it is what every sky in the game does.)
+   */
+  check("no world is too big to fit the screen it is drawn on", () =>
+    SF.skygen.SKIES.filter(k => !k.photo).every(k =>
+      (k.props || []).filter(pr => pr.k === "planet").every(pr => {
+        const W = 390, H = 800;                  // the narrowest real playfield
+        const ry = (pr.r * W) / H;               // radius is a fraction of WIDTH
+        return pr.y - ry >= -0.02 && pr.y + ry <= 1.02;
+      })));
   check("every generated sky has something with an edge in it",
     SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
-  check("a photo mission generates no canvas", SF.skygen.build(0, 100, 100) === null);
+  check("a photo mission generates no canvas", (() => {
+    const ix = SF.skygen.SKIES.findIndex(k => k.photo);
+    return ix >= 0 && SF.skygen.build(ix, 100, 100) === null &&
+           SF.skygen.build(0, 100, 100) !== null;   // ...and mission 1 is not one
+  })());
   check("planets are lit, not drawn: mottling, weather and a terminator", (() => {
     const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
     return /Surface mottling/.test(s) &&                   // material, not vinyl
