@@ -68,6 +68,21 @@ const OBJECTIVES = {
    * quarter of the ropes the level flies at its thinnest tier, so it is a
    * nudge toward trying the second answer rather than a demand for it.
    */
+  /*
+   * One star each for the three newest rules, and each pays for the thing the
+   * level is actually teaching rather than for clearing the sky. A generic
+   * trio on a level with a rule of its own is a wasted third star - see the
+   * ratchet in the smoke test, which is what caught these.
+   */
+  unseen:    { label:"Destroy 15 unseen", icon:"🫥",
+               test: s => (s.darkKills || 0) >= 15,
+               progress: s => (s.darkKills || 0) + "/15" },
+  squeeze:   { label:"Destroy 10 in the squeeze", icon:"🪨",
+               test: s => (s.tightKills || 0) >= 10,
+               progress: s => (s.tightKills || 0) + "/10" },
+  afterDark: { label:"Destroy 20 after dark", icon:"🌑",
+               test: s => (s.lateKills || 0) >= 20,
+               progress: s => (s.lateKills || 0) + "/20" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -822,6 +837,52 @@ const MISSIONS = [
     ],
     objectives: ["complete","coinRush","rescueAll"],
   },
+  /*
+   * SPOTLIGHT. Silent Running taught hiding; this is hiding under a light that
+   * is looking for you.
+   *
+   * The beam does not hurt. Standing in it makes every gun on the field pick
+   * you at once, which is a far better threat than damage: you can be lit over
+   * an empty sky and get away with it, and you can be caught in the open with
+   * six ships looking up. So the level is not a dodging drill - it is dodging
+   * you PLAN, a second ahead, by watching the swing and being somewhere else
+   * when it arrives.
+   *
+   * It swings between the two lower corners and turns round rather than
+   * spinning, because a beam that comes back the way it went has a rhythm a
+   * seven-year-old can learn, and learning the rhythm is the whole level.
+   *
+   * Shooters throughout, deliberately: a wave of things that cannot shoot back
+   * would make the light meaningless, and the light is the point.
+   */
+  {
+    id:14, name:"Spotlight", subtitle:"Don't be seen",
+    brief:"They've got a searchlight sweeping the whole sector. Standing in the beam doesn't hurt - but everything out there can SEE you, and they all shoot at once. Watch the swing. Be somewhere else.",
+    goal:"Stay OUT of the light!",
+    spot:true,
+    face:"sniper",
+    waves: [
+      // The first half-minute is deliberately almost harmless: the lesson is
+      // the SWING, and a child cannot learn a rhythm while being shot at from
+      // six directions. The guns arrive once the beam is understood.
+      w(1,   "grunt",   6, "line"),
+      w(9,   "grunt",   7, "arc"),
+      w(17,  "grunt",   7, "twinColumns"),
+      w(25,  "carrier", 1, "column"),
+      w(31,  "striker", 5, "sides"),
+      w(38,  "striker", 6, "vee"),
+      w(46,  "grunt",   8, "scatter"),
+      w(54,  "sniper",  3, "line"),
+      w(62,  "carrier", 1, "column"),
+      w(67,  "striker", 7, "pincer"),
+      w(75,  "sniper",  4, "twinColumns"),
+      w(84,  "grunt",  10, "wall"),
+      w(92,  "striker", 8, "arc"),
+      w(101, "turret",  4, "tripleColumns"),
+      w(110, "grunt",  11, "scatter"),
+    ],
+    objectives: ["complete","unseen","rescueAll"],
+  },
 
   /* =========================================================
      ACT TWO
@@ -832,7 +893,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:14, name:"The Wreck Line", subtitle:"Through the debris",
+    id:15, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
     goal:"Fly the scrap — it stops their shots",
     cover:true,                       // the debris shelters as well as blocks
@@ -872,7 +933,7 @@ const MISSIONS = [
      * turrets patrolling a line, thieves you can cut off the short way. All
      * `sides` and `pincer`, so the fight lives at the edges.
      */
-    id:15, name:"The Ring", subtitle:"this sky has no edges",
+    id:16, name:"The Ring", subtitle:"this sky has no edges",
     brief:"Nobody has ever found the edge of this place. Fly out one side and you come straight back in the other, same height, still going. They cannot do it — their ships are built to hold a lane. You are not.",
     goal:"GO ROUND THE BACK — the sky joins up",
     wrap:true,
@@ -898,7 +959,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","roundTheBack"],
   },
   {
-    id:16, name:"The Rival", subtitle:"One of them is good",
+    id:17, name:"The Rival", subtitle:"One of them is good",
     brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
     rival:true,
     face:"rival",
@@ -922,7 +983,7 @@ const MISSIONS = [
     goal:"VESPER copies you — trick her!",
   },
   {
-    id:17, name:"The Hatchery", subtitle:"It keeps growing",
+    id:18, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -952,7 +1013,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:18, name:"The Warden", subtitle:"Their jailer",
+    id:19, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -986,7 +1047,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:19, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:20, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
     // The weather remix: the Storm's gusts, six missions later, in a level
     // that's about CATCHING things - the wind blows the loot around, so the
@@ -1029,7 +1090,7 @@ const MISSIONS = [
      * menders - nothing that asks you to prioritise a target, because the
      * level's whole cognitive load is your own ship handling badly.
      */
-    id:20, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
+    id:21, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
     brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
@@ -1057,7 +1118,7 @@ const MISSIONS = [
     objectives: ["complete","shakenOff","rescueAll"],
   },
   {
-    id:21, name:"Cold Approach", subtitle:"Line up the shot",
+    id:22, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -1086,8 +1147,50 @@ const MISSIONS = [
     // makes freeing them one of its stars.
     objectives: ["complete","rescueAll","noDamage"],
   },
+  /*
+   * THE NARROWS, and the only level in the game not flown in space.
+   *
+   * "The walls close in" is a good idea with a bad excuse: there is nothing in
+   * open space for a wall to BE. So this one goes down to their world and flies
+   * a canyon, where a wall is just rock and the sky narrowing is the gorge
+   * doing what gorges do. It is also the campaign's one change of venue -
+   * thirty-nine missions above the clouds and one below them - which is worth
+   * having on its own.
+   *
+   * The rock breathes on a slow cycle with a faster one laid over it, so the
+   * squeeze never lands on a count you can tune out. Touching it costs a life
+   * and the rock is still there afterwards: the boulder rule, for the boulder
+   * reason. A wall you can trade a life for is not a wall.
+   *
+   * Heavy, slow enemies, because the level's pressure comes from the PLACE
+   * rather than from the crowd. Nothing here dives at you; the walls do that.
+   */
   {
-    id:22, name:"The Trench Run", subtitle:"Thread the walls",
+    id:23, name:"The Narrows", subtitle:"Down where the rock is",
+    brief:"Below the clouds now, {you} - straight down their canyon. The walls come IN and go out again, and rock does not care how good your guns are. Fly the middle when it squeezes.",
+    goal:"The canyon SQUEEZES — fly the middle",
+    narrows:true,
+    face:"brute",
+    waves: [
+      w(1,   "grunt",   6, "line"),
+      w(10,  "brute",   2, "twinColumns"),
+      w(18,  "weaver",  7, "arc"),
+      w(26,  "carrier", 1, "column"),
+      w(32,  "grunt",   8, "wall"),
+      w(41,  "brute",   3, "sides"),
+      w(50,  "striker", 6, "vee"),
+      w(58,  "weaver",  8, "tripleColumns"),
+      w(66,  "carrier", 1, "column"),
+      w(72,  "brute",   3, "line"),
+      w(81,  "grunt",  10, "scatter"),
+      w(90,  "striker", 7, "pincer"),
+      w(99,  "brute",   4, "twinColumns"),
+      w(108, "grunt",  11, "wall"),
+    ],
+    objectives: ["complete","squeeze","rescueAll"],
+  },
+  {
+    id:24, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -1114,7 +1217,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:23, name:"All Hands", subtitle:"Everyone who is left",
+    id:25, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -1161,7 +1264,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:24, name:"The Bright Side", subtitle:"standing on their sun",
+    id:26, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -1189,7 +1292,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:25, name:"The Leviathan", subtitle:"The last one",
+    id:27, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -1228,7 +1331,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:26, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:28, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -1252,8 +1355,51 @@ const MISSIONS = [
     ],
     objectives: ["complete","rescueAll","kill80"],
   },
+  /*
+   * NIGHTFALL: the bridge between the Searchlight and the Long Dark, made
+   * playable instead of narrated.
+   *
+   * Act three's story is a star going out. Until now that happened BETWEEN two
+   * missions - one level is lit, the next one is not - which is a fact you are
+   * told rather than a thing that happens to you. Here the light drains over
+   * the length of the flight, keyed to the wave script rather than to a clock,
+   * so the dark arrives because you are getting through it. The last wave is
+   * always the darkest one, whoever is flying and however long they take.
+   *
+   * It stops short of black. The Long Dark is the level that is actually pitch
+   * black, and a child has to be able to finish this one - a wave you genuinely
+   * cannot see is not tense, it is unfair.
+   *
+   * The roster is deliberately ordinary. The whole difficulty curve here is the
+   * light: the same ships you have been reading all campaign, getting harder to
+   * read, which is a kind of pressure the game has never applied.
+   */
   {
-    id:27, name:"The Long Dark", subtitle:"Something is out there",
+    id:29, name:"Nightfall", subtitle:"While the light lasts",
+    brief:"Their sun is going out, {you}, and it's going out WHILE we're in here. Everything you can see now, you'll be flying blind against by the end. Learn them early.",
+    goal:"It gets DARKER. Learn them early",
+    nightfall:true,
+    face:"swooper",
+    waves: [
+      w(1,   "grunt",   7, "line"),
+      w(9,   "weaver",  6, "arc"),
+      w(17,  "swooper", 5, "vee"),
+      w(25,  "carrier", 1, "column"),
+      w(31,  "grunt",   9, "twinColumns"),
+      w(40,  "swooper", 7, "sides"),
+      w(48,  "striker", 6, "scatter"),
+      w(57,  "weaver",  8, "tripleColumns"),
+      w(65,  "carrier", 1, "column"),
+      w(71,  "swooper", 8, "pincer"),
+      w(80,  "grunt",  10, "wall"),
+      w(89,  "striker", 8, "arc"),
+      w(98,  "swooper", 9, "scatter"),
+      w(108, "grunt",  12, "wall"),
+    ],
+    objectives: ["complete","afterDark","rescueAll"],
+  },
+  {
+    id:30, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -1284,7 +1430,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:28, name:"The Devourer", subtitle:"The last star",
+    id:31, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -1300,6 +1446,49 @@ const MISSIONS = [
     boss: "devourer",
     objectives: ["complete","rescueAll","keepLives"],
   },
+  /*
+   * THE CURRENT: a river through the middle of the sky, and the exact opposite
+   * of the Storm.
+   *
+   * A gust is a surprise you react to. A current is always there, always the
+   * same way, and every second of the level is a decision: drop into it to
+   * cross the field in a heartbeat, or stay above it to be able to aim. It
+   * carries everything loose - you, their shots, the coins, the pods - so a
+   * shot fired at you from below the band arrives somewhere else entirely, and
+   * after a minute a child stops aiming at ships and starts aiming at where
+   * the river will have put them.
+   *
+   * It sits next to The Undertow on purpose. A well BENDS what crosses it and
+   * a current TRANSLATES it; flying them back to back is the clearest possible
+   * statement of what act four is - the same sky, disobeying a different rule
+   * each time.
+   */
+  {
+    id:32, name:"The Current", subtitle:"Ride it or leave it",
+    brief:"There's a river running through the middle of this sky, {you} - it carries you, their shots, the money, everything. Drop in to travel fast. Climb out to shoot straight.",
+    goal:"A RIVER through the middle",
+    current:true,
+    face:"thief",
+    waves: [
+      w(1,   "grunt",   7, "line"),
+      w(9,   "striker", 6, "arc"),
+      w(18,  "thief",   1, "column"),
+      w(20,  "grunt",   8, "twinColumns"),
+      w(28,  "carrier", 1, "column"),
+      w(34,  "weaver",  7, "sides"),
+      w(43,  "striker", 7, "vee"),
+      w(52,  "thief",   2, "column"),
+      w(55,  "grunt",   9, "scatter"),
+      w(64,  "carrier", 1, "column"),
+      w(70,  "weaver",  9, "pincer"),
+      w(79,  "striker", 8, "tripleColumns"),
+      w(88,  "grunt",  11, "wall"),
+      w(97,  "thief",   2, "sides"),
+      w(100, "weaver", 10, "arc"),
+      w(109, "grunt",  12, "scatter"),
+    ],
+    objectives: ["complete","coinRush","rescueAll"],
+  },
 
   /* =========================================================
      ACT 4 - BEHIND THE SKY
@@ -1309,7 +1498,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:29, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:33, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1352,7 +1541,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:30, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:34, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1384,7 +1573,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:31, name:"The Chorus", subtitle:"They fire on the beat",
+    id:35, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1426,7 +1615,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:32, name:"The Glass Sea", subtitle:"two of you",
+    id:36, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1457,7 +1646,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:33, name:"The Foundry", subtitle:"Stop the production line",
+    id:37, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1489,7 +1678,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:34, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:38, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1520,7 +1709,7 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:35, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
     goal:"The workshop is awake. Fly!",
     face:"rival",
@@ -1551,7 +1740,7 @@ const MISSIONS = [
      * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
      * owns the pencil veil, the last stroke and the squadron photo.
      */
-    id:36, name:"Sky 36", subtitle:"the one Papa never finished",
+    id:40, name:"Sky 40", subtitle:"the one Papa never finished",
     brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, coinRain:true,

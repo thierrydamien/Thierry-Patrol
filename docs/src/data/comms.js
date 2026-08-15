@@ -207,6 +207,29 @@ const COMMS = {
   ]},
 
   /* --- Act 4 openers and beats --- */
+  /* --- the four new levels. One opening line each, and one for the moment
+     the searchlight actually finds you, which needs saying every time. --- */
+  currentStart: { speaker:"control", cooldown:999, lines:[
+    "There's a RIVER through the middle, {you}. Ride it to move, leave it to aim.",
+    "Feel that drift? The whole middle of the sky is flowing. Use it.",
+  ]},
+  spotStart: { speaker:"control", cooldown:999, lines:[
+    "Searchlight, {you}. In the beam they can all SEE you - stay in the dark.",
+    "That light is hunting you. Watch it swing, then move behind it.",
+  ]},
+  spotted: { speaker:"control", cooldown:6, lines:[
+    "You're LIT UP, {you} - move!",
+    "They've got you in the beam!",
+    "Out of the light, {you}, out of the light!",
+  ]},
+  narrowsStart: { speaker:"control", cooldown:999, lines:[
+    "We're in the canyon, {you}. Those walls come IN - don't be there when they do.",
+    "Rock either side and it breathes. Fly the middle when it squeezes.",
+  ]},
+  nightfallStart: { speaker:"control", cooldown:999, lines:[
+    "Light's going, {you}. It'll be pitch black by the last wave - learn them NOW.",
+    "The sun's dying out here. Every minute you get less to see by.",
+  ]},
   wellsStart: { speaker:"control", cooldown:999, lines:[
     "Gravity's broken out here, {you}. Your shots will CURVE - swing them.",
     "See the whirlpools? They pull in everything loose - including YOU.",

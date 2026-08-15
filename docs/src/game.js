@@ -419,7 +419,7 @@ function startMission(missionIndex, difficultyId){
     // so a mission can make its own lesson its third star instead of asking
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
-    ropesCut: 0,
+    ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
     stars: 0,
   };
 
@@ -528,6 +528,38 @@ function startMission(missionIndex, difficultyId){
     // The Tithe Serpent: spawns once, eats coins, grows, and must be slain.
     serpent: mission.serpent ? { at: 14, head: null, eaten: 0, eatenValue: 0,
       grown: 0, tailGoneSaid: false, fleeAt: 0 } : null,
+    /*
+     * THE CURRENT: a river across a band of the sky, and the opposite of the
+     * Storm in every way that matters. A gust is a surprise you react to; a
+     * current is always there, always the same way, and the whole level is
+     * deciding whether to get into it. It carries EVERYTHING loose - you,
+     * their shots, the coins, the pods - which is what makes "drop in to
+     * travel, climb out to aim" a real choice rather than a slogan.
+     */
+    current: mission.current ? { y: VH*0.42, h: VH*0.30, dir: 1,
+      speed: mission.current === "fast" ? 210 : 150, motes: [] } : null,
+    /*
+     * SPOTLIGHT: a beam swinging from off the top of the screen. Standing in
+     * it does not hurt - being SEEN does. Every gun on the field fires at you
+     * while you are lit, so the level is dodging you plan a second ahead
+     * instead of a reflex, and the dark between sweeps is somewhere to be.
+     */
+    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.42, lit: false,
+      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -70, half: 0.21 } : null,
+    /*
+     * THE NARROWS: the walls of a canyon, and the only level in the game that
+     * is not flown in space. `w` is how far in each wall stands, breathing on
+     * a slow cycle. Nothing here is a "playfield resize" - the field is the
+     * same size it always is, and the rock is simply in the way.
+     */
+    narrows: mission.narrows ? { t: 0, w: 0, lastHit: -99 } : null,
+    /*
+     * NIGHTFALL: the light going out, over the length of the mission rather
+     * than between two of them. `k` runs 0 to 1 with the wave script, so the
+     * dark arrives because you are getting through the level, not because a
+     * timer somewhere decided it was time.
+     */
+    nightfall: mission.nightfall ? { k: 0 } : null,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -620,6 +652,10 @@ function startMission(missionIndex, difficultyId){
              : mission.convoy ? "convoyStart"
              : mission.trench ? "trenchStart"
              : mission.blackout ? "blackoutStart"
+             : mission.narrows ? "narrowsStart"
+             : mission.spot ? "spotStart"
+             : mission.nightfall ? "nightfallStart"
+             : mission.current ? "currentStart"
              : mission.wells ? "wellsStart"
              : mission.beat ? "chorusStart"
              : mission.foundry ? "foundryStart"
@@ -860,6 +896,17 @@ const callbacks = {
      * and drifting away from a cable is not cutting it.
      */
     if(SF.tether.live(e)) run.stats.ropesCut++;
+    /*
+     * The three newest levels each pay for a kill made under their own rule -
+     * out of the searchlight, inside the squeeze, after the light has gone.
+     * Behind the same guard as `kills` above, so a boss add can no more inflate
+     * one of these than it can the kill ratio.
+     */
+    if(e.counted && !e.fromBoss){
+      if(run.spot && !run.spot.lit) run.stats.darkKills++;
+      if(run.narrows && run.narrows.w > VW*0.115) run.stats.tightKills++;
+      if(run.nightfall && run.nightfall.k > 0.5) run.stats.lateKills++;
+    }
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
     // The Glass Sea: the twin earns its own tally, which is a whole star.
@@ -2270,6 +2317,179 @@ function update(dt, timeMs){
     }
   }
 
+  /*
+   * THE CURRENT. One band, one direction, always on.
+   *
+   * Everything loose inside the band is translated - the player hardest,
+   * because the choice has to be felt in the thumb. Enemies ride it at a
+   * fraction: a wave that gets swept off the field is a wave you cannot
+   * shoot, and a kill objective you cannot reach. Their bullets ride it in
+   * full, which is the interesting part - a shot fired at you from below the
+   * band arrives somewhere else entirely, and after a minute a child starts
+   * aiming for where the river will put things.
+   */
+  if(run.current && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const cu = run.current;
+    const top = cu.y, bot = cu.y + cu.h;
+    // Soft edges: a hard boundary makes the band a trap you fall into, and a
+    // ramp makes it a thing you lean into. `pull` is 0 outside, 1 in the middle.
+    const pull = y => {
+      if(y < top - 26 || y > bot + 26) return 0;
+      const into = Math.min(y - (top - 26), (bot + 26) - y);
+      return Math.min(1, into / 46);
+    };
+    const p = game.world.player;
+    if(p && p.alive){
+      const k = pull(p.y);
+      if(k > 0) p.x = clamp(p.x + cu.dir*cu.speed*k*dt, 20, VW - 20);
+    }
+    const es = game.world.enemies.items;
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive) continue;
+      const k = pull(e.y);
+      // Kept on the field for the same reason the Storm keeps them: a ship
+      // shoved into the gap between the clamp and the cull sits there
+      // unreachable, holding a mission open that cannot be finished.
+      if(k > 0 && e.x > -20 && e.x < VW + 20)
+        e.x = clamp(e.x + cu.dir*cu.speed*0.45*k*dt, 16, VW - 16);
+    }
+    const ebs = game.world.enemyBullets.items;
+    for(let i = 0; i < ebs.length; i++){
+      const b = ebs[i];
+      if(!b.alive) continue;
+      const k = pull(b.y);
+      if(k > 0) b.x += cu.dir*cu.speed*k*dt;
+    }
+    const pk = game.world.pickups.items;
+    for(let i = 0; i < pk.length; i++){
+      const it = pk[i];
+      if(!it.alive) continue;
+      const k = pull(it.y);
+      if(k > 0) it.x = clamp(it.x + cu.dir*cu.speed*0.9*k*dt, 12, VW - 12);
+    }
+    // The river has to be SEEN, and it is seen by what it carries. Motes are
+    // cosmetic and drawn from Math.random, so they can never move a spawn.
+    for(let i = cu.motes.length - 1; i >= 0; i--){
+      const m = cu.motes[i];
+      m.x += cu.dir*cu.speed*m.k*dt;
+      m.life -= dt;
+      if(m.life <= 0 || m.x < -40 || m.x > VW + 40) cu.motes.splice(i, 1);
+    }
+    if(cu.motes.length < 62 && Math.random() < 0.95){
+      cu.motes.push({ x: cu.dir > 0 ? -20 : VW + 20,
+                      y: top + Math.random()*cu.h,
+                      k: 0.5 + Math.random()*0.7,
+                      len: 14 + Math.random()*30,
+                      a: 0.14 + Math.random()*0.26,
+                      life: 3 + Math.random()*3 });
+    }
+  }
+
+  /*
+   * SPOTLIGHT. The beam swings; being inside it is what costs.
+   *
+   * It does not damage. It makes every gun on the field pick you, which is a
+   * far better threat than a hurting beam: you can be in the light and get
+   * away with it if the sky happens to be empty, and you can be caught in the
+   * open with six ships looking at you. `lit` is read by the shooting code.
+   */
+  if(run.spot && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const sp = run.spot;
+    sp.a += sp.dir*sp.sweep*dt;
+    // Swings between the two lower corners and turns round, rather than
+    // spinning: a beam that comes back the way it went is one a child can
+    // learn the rhythm of, and learning the rhythm is the whole level.
+    const lo = Math.PI*0.22, hi = Math.PI*0.78;
+    if(sp.a > hi){ sp.a = hi; sp.dir = -1; }
+    if(sp.a < lo){ sp.a = lo; sp.dir = 1; }
+    const p = game.world.player;
+    let lit = false;
+    if(p && p.alive){
+      const ang = Math.atan2(p.y - sp.pivotY, p.x - sp.pivotX);
+      let d = ang - sp.a;
+      while(d > Math.PI) d -= Math.PI*2;
+      while(d < -Math.PI) d += Math.PI*2;
+      lit = Math.abs(d) < sp.half;
+    }
+    // A hair of hysteresis, so clipping the edge of the beam does not strobe
+    // the whole sky's aggression on and off several times a second.
+    if(lit) sp.litFor = 0.35;
+    else sp.litFor = Math.max(0, sp.litFor - dt);
+    const was = sp.lit;
+    sp.lit = sp.litFor > 0;
+    if(sp.lit && !was){ audio.play("telegraph"); SF.comms.say("spotted"); }
+    /*
+     * The volley. Caught in the light, every gun on the field looks at you -
+     * done by bringing each armed ship's own trigger forward rather than by
+     * teaching entities.js a new rule, so nothing about how an enemy shoots
+     * changes and the level cannot leak into any other. Staggered across a
+     * third of a second, because thirty simultaneous shots is a wall and a
+     * ragged burst is a fright.
+     */
+    sp.volley = Math.max(0, (sp.volley || 0) - dt);
+    if(sp.lit && sp.volley <= 0){
+      sp.volley = 2.2;
+      const es = game.world.enemies.items;
+      for(let i = 0; i < es.length; i++){
+        const e = es[i];
+        if(!e.alive || !e.type.fire || e.y < 10 || e.y > VH - 60) continue;
+        e.fireTimer = Math.min(e.fireTimer, 0.05 + Math.random()*0.32);
+      }
+    }
+  }
+
+  /*
+   * THE NARROWS. The canyon breathes.
+   *
+   * `w` is how far the rock stands in from each edge, on a slow cycle with a
+   * second, faster one laid over it so the squeeze never arrives on a count a
+   * child can tune out. Touching the rock costs a life and the rock is still
+   * there afterwards - the boulder rule, for the same reason: a wall you can
+   * trade a life for is a wall that isn't one.
+   */
+  if(run.narrows && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const na = run.narrows;
+    na.t += dt;
+    const squeeze = 0.5 - Math.cos(na.t*0.42)*0.5;        // 0 open, 1 shut
+    const ripple = Math.sin(na.t*0.9)*0.5 + 0.5;
+    na.w = VW*(0.02 + (0.155 + ripple*0.03)*squeeze);
+    const p = game.world.player;
+    if(p && p.alive && p.invuln <= 0 && !callbacks.godMode){
+      const into = Math.min(p.x - (na.w + p.r), (VW - na.w - p.r) - p.x);
+      if(into < 0 && simMs - na.lastHit > 400){
+        na.lastHit = simMs;
+        fx.sparks(p.x, p.y, 14, "#d9c2a4", 210);
+        fx.shake(11);
+        callbacks.onPlayerHit("rock", null);
+        // Pushed clear, so a hit cannot repeat every frame while a child is
+        // still holding the stick into the wall.
+        p.x = p.x < VW*0.5 ? na.w + p.r + 3 : VW - na.w - p.r - 3;
+      }
+    }
+    // Anything that flies into the rock is stopped by it too, or a wave could
+    // park itself inside a cliff where no bullet reaches.
+    const es = game.world.enemies.items;
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive || e.y < 0) continue;
+      e.x = clamp(e.x, na.w + e.r*0.5, VW - na.w - e.r*0.5);
+    }
+  }
+
+  /*
+   * NIGHTFALL. The light goes out as you get through the level, not as a clock
+   * runs down - so the dark is something the mission does TO you in answer to
+   * how far you have come, and the last wave is always the darkest one.
+   */
+  if(run.nightfall && !run.ended){
+    const done = run.director ? Math.min(1, run.director.time / Math.max(1, run.wavesEndT)) : 0;
+    run.nightfall.k = Math.max(run.nightfall.k, done);   // it never gets lighter
+  }
+
   if(run.storm && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const st = run.storm;
@@ -3009,6 +3229,11 @@ function draw(timeMs){
   // except what glows. HUD and texts draw after - instruments still work.
   if(game.run && game.run.mission.blackout && !game.run.ended)
     SF.render.drawBlackout(ctx, world, timeMs, game.run.mission.blackout === "soft");
+  // NIGHTFALL: the same slot as the blackout, and for the same reason - the
+  // world above is finished, and this is the light it is being seen by. HUD
+  // and texts draw after, so the instruments never go out with the sun.
+  if(game.run && game.run.nightfall && !game.run.ended)
+    SF.render.drawNightfall(ctx, game.run.nightfall.k);
   // DISCO SKY: over the world, under the HUD - it recolours the sky and never
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)

@@ -11,34 +11,34 @@
  *     1655  src/data/config.js
  *     2117  src/data/enemies.js
  *     2951  src/data/missions.js
- *     4575  src/wacky.js
- *     4791  src/data/comms.js
- *     5132  src/data/story.js
- *     5229  src/profile.js
- *     5825  src/cloud.js
- *     6430  src/fx.js
- *     7374  src/input.js
- *     7753  src/entities.js
- *     8954  src/bossart.js
- *     9713  src/bosses.js
- *    10463  src/bossintro.js
- *    10586  src/rewind.js
- *    11108  src/finale.js
- *    11429  src/papadeath.js
- *    11751  src/backstage.js
- *    12954  src/sky29.js
- *    13195  src/systems.js
- *    13814  src/render.js
- *    17601  src/enemyart.js
- *    18347  src/insignia.js
- *    18592  src/skygen.js
- *    20269  src/shipart.js
- *    21347  src/paintjob.js
- *    21505  src/pilotart.js
- *    21600  src/comms.js
- *    21721  src/game.js
- *    24827  src/workshop.js
- *    25524  src/ui.js
+ *     4764  src/wacky.js
+ *     4980  src/data/comms.js
+ *     5344  src/data/story.js
+ *     5441  src/profile.js
+ *     6062  src/cloud.js
+ *     6667  src/fx.js
+ *     7611  src/input.js
+ *     7990  src/entities.js
+ *     9191  src/bossart.js
+ *     9950  src/bosses.js
+ *    10700  src/bossintro.js
+ *    10823  src/rewind.js
+ *    11345  src/finale.js
+ *    11666  src/papadeath.js
+ *    11988  src/backstage.js
+ *    13191  src/sky29.js
+ *    13432  src/systems.js
+ *    14051  src/render.js
+ *    18014  src/enemyart.js
+ *    18760  src/insignia.js
+ *    19005  src/skygen.js
+ *    20870  src/shipart.js
+ *    21948  src/paintjob.js
+ *    22106  src/pilotart.js
+ *    22201  src/comms.js
+ *    22322  src/game.js
+ *    25653  src/workshop.js
+ *    26350  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1715,7 +1715,7 @@ const PAINTS = [
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
   // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
   // painting the sky is the only way to wear it.
-  { id:"sky29",    name:"SKY 36",     hex:"#ff9e7d", secret:true },
+  { id:"sky29",    name:"SKY 40",     hex:"#ff9e7d", secret:true },
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [
@@ -2082,19 +2082,19 @@ const TUNES = [
     blurb:"The Sentinel's overclocked cannons on twin rails.",
     pros:["+12% fire rate"], cons:[],
     speed:1.00, fire:0.88, lives:0 },
-  { id:"scavenger",name:"SCAVENGER", unlockMission:18,
+  { id:"scavenger",name:"SCAVENGER", unlockMission:19,
     blurb:"The Warden's collector rig. A golden scoop under the nose.",
     pros:["coins fly to you","+15% pay"], cons:[],
     speed:1.00, fire:1.00, lives:0, magnet:1.7, money:1.15 },
-  { id:"ghost",    name:"GHOST", unlockMission:21,
+  { id:"ghost",    name:"GHOST", unlockMission:22,
     blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
     pros:["+8% speed","longer safety after a hit"], cons:[],
     speed:1.08, fire:1.00, lives:0, invuln:1.5 },
-  { id:"nova",     name:"NOVA", unlockMission:28, apex:true,
+  { id:"nova",     name:"NOVA", unlockMission:31, apex:true,
     blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
     pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
     speed:1.12, fire:0.90, lives:1, magnet:1.5 },
-  { id:"apex",     name:"APEX", unlockMission:25, apex:true,
+  { id:"apex",     name:"APEX", unlockMission:27, apex:true,
     blurb:"The Leviathan's core, fitted to your ship. Gold trim. You earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
     speed:1.08, fire:0.95, lives:1 },
@@ -3018,6 +3018,21 @@ const OBJECTIVES = {
    * quarter of the ropes the level flies at its thinnest tier, so it is a
    * nudge toward trying the second answer rather than a demand for it.
    */
+  /*
+   * One star each for the three newest rules, and each pays for the thing the
+   * level is actually teaching rather than for clearing the sky. A generic
+   * trio on a level with a rule of its own is a wasted third star - see the
+   * ratchet in the smoke test, which is what caught these.
+   */
+  unseen:    { label:"Destroy 15 unseen", icon:"🫥",
+               test: s => (s.darkKills || 0) >= 15,
+               progress: s => (s.darkKills || 0) + "/15" },
+  squeeze:   { label:"Destroy 10 in the squeeze", icon:"🪨",
+               test: s => (s.tightKills || 0) >= 10,
+               progress: s => (s.tightKills || 0) + "/10" },
+  afterDark: { label:"Destroy 20 after dark", icon:"🌑",
+               test: s => (s.lateKills || 0) >= 20,
+               progress: s => (s.lateKills || 0) + "/20" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -3772,6 +3787,52 @@ const MISSIONS = [
     ],
     objectives: ["complete","coinRush","rescueAll"],
   },
+  /*
+   * SPOTLIGHT. Silent Running taught hiding; this is hiding under a light that
+   * is looking for you.
+   *
+   * The beam does not hurt. Standing in it makes every gun on the field pick
+   * you at once, which is a far better threat than damage: you can be lit over
+   * an empty sky and get away with it, and you can be caught in the open with
+   * six ships looking up. So the level is not a dodging drill - it is dodging
+   * you PLAN, a second ahead, by watching the swing and being somewhere else
+   * when it arrives.
+   *
+   * It swings between the two lower corners and turns round rather than
+   * spinning, because a beam that comes back the way it went has a rhythm a
+   * seven-year-old can learn, and learning the rhythm is the whole level.
+   *
+   * Shooters throughout, deliberately: a wave of things that cannot shoot back
+   * would make the light meaningless, and the light is the point.
+   */
+  {
+    id:14, name:"Spotlight", subtitle:"Don't be seen",
+    brief:"They've got a searchlight sweeping the whole sector. Standing in the beam doesn't hurt - but everything out there can SEE you, and they all shoot at once. Watch the swing. Be somewhere else.",
+    goal:"Stay OUT of the light!",
+    spot:true,
+    face:"sniper",
+    waves: [
+      // The first half-minute is deliberately almost harmless: the lesson is
+      // the SWING, and a child cannot learn a rhythm while being shot at from
+      // six directions. The guns arrive once the beam is understood.
+      w(1,   "grunt",   6, "line"),
+      w(9,   "grunt",   7, "arc"),
+      w(17,  "grunt",   7, "twinColumns"),
+      w(25,  "carrier", 1, "column"),
+      w(31,  "striker", 5, "sides"),
+      w(38,  "striker", 6, "vee"),
+      w(46,  "grunt",   8, "scatter"),
+      w(54,  "sniper",  3, "line"),
+      w(62,  "carrier", 1, "column"),
+      w(67,  "striker", 7, "pincer"),
+      w(75,  "sniper",  4, "twinColumns"),
+      w(84,  "grunt",  10, "wall"),
+      w(92,  "striker", 8, "arc"),
+      w(101, "turret",  4, "tripleColumns"),
+      w(110, "grunt",  11, "scatter"),
+    ],
+    objectives: ["complete","unseen","rescueAll"],
+  },
 
   /* =========================================================
      ACT TWO
@@ -3782,7 +3843,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:14, name:"The Wreck Line", subtitle:"Through the debris",
+    id:15, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
     goal:"Fly the scrap — it stops their shots",
     cover:true,                       // the debris shelters as well as blocks
@@ -3822,7 +3883,7 @@ const MISSIONS = [
      * turrets patrolling a line, thieves you can cut off the short way. All
      * `sides` and `pincer`, so the fight lives at the edges.
      */
-    id:15, name:"The Ring", subtitle:"this sky has no edges",
+    id:16, name:"The Ring", subtitle:"this sky has no edges",
     brief:"Nobody has ever found the edge of this place. Fly out one side and you come straight back in the other, same height, still going. They cannot do it — their ships are built to hold a lane. You are not.",
     goal:"GO ROUND THE BACK — the sky joins up",
     wrap:true,
@@ -3848,7 +3909,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","roundTheBack"],
   },
   {
-    id:16, name:"The Rival", subtitle:"One of them is good",
+    id:17, name:"The Rival", subtitle:"One of them is good",
     brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
     rival:true,
     face:"rival",
@@ -3872,7 +3933,7 @@ const MISSIONS = [
     goal:"VESPER copies you — trick her!",
   },
   {
-    id:17, name:"The Hatchery", subtitle:"It keeps growing",
+    id:18, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -3902,7 +3963,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:18, name:"The Warden", subtitle:"Their jailer",
+    id:19, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -3936,7 +3997,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:19, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:20, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
     // The weather remix: the Storm's gusts, six missions later, in a level
     // that's about CATCHING things - the wind blows the loot around, so the
@@ -3979,7 +4040,7 @@ const MISSIONS = [
      * menders - nothing that asks you to prioritise a target, because the
      * level's whole cognitive load is your own ship handling badly.
      */
-    id:20, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
+    id:21, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
     brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
@@ -4007,7 +4068,7 @@ const MISSIONS = [
     objectives: ["complete","shakenOff","rescueAll"],
   },
   {
-    id:21, name:"Cold Approach", subtitle:"Line up the shot",
+    id:22, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -4036,8 +4097,50 @@ const MISSIONS = [
     // makes freeing them one of its stars.
     objectives: ["complete","rescueAll","noDamage"],
   },
+  /*
+   * THE NARROWS, and the only level in the game not flown in space.
+   *
+   * "The walls close in" is a good idea with a bad excuse: there is nothing in
+   * open space for a wall to BE. So this one goes down to their world and flies
+   * a canyon, where a wall is just rock and the sky narrowing is the gorge
+   * doing what gorges do. It is also the campaign's one change of venue -
+   * thirty-nine missions above the clouds and one below them - which is worth
+   * having on its own.
+   *
+   * The rock breathes on a slow cycle with a faster one laid over it, so the
+   * squeeze never lands on a count you can tune out. Touching it costs a life
+   * and the rock is still there afterwards: the boulder rule, for the boulder
+   * reason. A wall you can trade a life for is not a wall.
+   *
+   * Heavy, slow enemies, because the level's pressure comes from the PLACE
+   * rather than from the crowd. Nothing here dives at you; the walls do that.
+   */
   {
-    id:22, name:"The Trench Run", subtitle:"Thread the walls",
+    id:23, name:"The Narrows", subtitle:"Down where the rock is",
+    brief:"Below the clouds now, {you} - straight down their canyon. The walls come IN and go out again, and rock does not care how good your guns are. Fly the middle when it squeezes.",
+    goal:"The canyon SQUEEZES — fly the middle",
+    narrows:true,
+    face:"brute",
+    waves: [
+      w(1,   "grunt",   6, "line"),
+      w(10,  "brute",   2, "twinColumns"),
+      w(18,  "weaver",  7, "arc"),
+      w(26,  "carrier", 1, "column"),
+      w(32,  "grunt",   8, "wall"),
+      w(41,  "brute",   3, "sides"),
+      w(50,  "striker", 6, "vee"),
+      w(58,  "weaver",  8, "tripleColumns"),
+      w(66,  "carrier", 1, "column"),
+      w(72,  "brute",   3, "line"),
+      w(81,  "grunt",  10, "scatter"),
+      w(90,  "striker", 7, "pincer"),
+      w(99,  "brute",   4, "twinColumns"),
+      w(108, "grunt",  11, "wall"),
+    ],
+    objectives: ["complete","squeeze","rescueAll"],
+  },
+  {
+    id:24, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -4064,7 +4167,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:23, name:"All Hands", subtitle:"Everyone who is left",
+    id:25, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -4111,7 +4214,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:24, name:"The Bright Side", subtitle:"standing on their sun",
+    id:26, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -4139,7 +4242,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:25, name:"The Leviathan", subtitle:"The last one",
+    id:27, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -4178,7 +4281,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:26, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:28, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -4202,8 +4305,51 @@ const MISSIONS = [
     ],
     objectives: ["complete","rescueAll","kill80"],
   },
+  /*
+   * NIGHTFALL: the bridge between the Searchlight and the Long Dark, made
+   * playable instead of narrated.
+   *
+   * Act three's story is a star going out. Until now that happened BETWEEN two
+   * missions - one level is lit, the next one is not - which is a fact you are
+   * told rather than a thing that happens to you. Here the light drains over
+   * the length of the flight, keyed to the wave script rather than to a clock,
+   * so the dark arrives because you are getting through it. The last wave is
+   * always the darkest one, whoever is flying and however long they take.
+   *
+   * It stops short of black. The Long Dark is the level that is actually pitch
+   * black, and a child has to be able to finish this one - a wave you genuinely
+   * cannot see is not tense, it is unfair.
+   *
+   * The roster is deliberately ordinary. The whole difficulty curve here is the
+   * light: the same ships you have been reading all campaign, getting harder to
+   * read, which is a kind of pressure the game has never applied.
+   */
   {
-    id:27, name:"The Long Dark", subtitle:"Something is out there",
+    id:29, name:"Nightfall", subtitle:"While the light lasts",
+    brief:"Their sun is going out, {you}, and it's going out WHILE we're in here. Everything you can see now, you'll be flying blind against by the end. Learn them early.",
+    goal:"It gets DARKER. Learn them early",
+    nightfall:true,
+    face:"swooper",
+    waves: [
+      w(1,   "grunt",   7, "line"),
+      w(9,   "weaver",  6, "arc"),
+      w(17,  "swooper", 5, "vee"),
+      w(25,  "carrier", 1, "column"),
+      w(31,  "grunt",   9, "twinColumns"),
+      w(40,  "swooper", 7, "sides"),
+      w(48,  "striker", 6, "scatter"),
+      w(57,  "weaver",  8, "tripleColumns"),
+      w(65,  "carrier", 1, "column"),
+      w(71,  "swooper", 8, "pincer"),
+      w(80,  "grunt",  10, "wall"),
+      w(89,  "striker", 8, "arc"),
+      w(98,  "swooper", 9, "scatter"),
+      w(108, "grunt",  12, "wall"),
+    ],
+    objectives: ["complete","afterDark","rescueAll"],
+  },
+  {
+    id:30, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -4234,7 +4380,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:28, name:"The Devourer", subtitle:"The last star",
+    id:31, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -4250,6 +4396,49 @@ const MISSIONS = [
     boss: "devourer",
     objectives: ["complete","rescueAll","keepLives"],
   },
+  /*
+   * THE CURRENT: a river through the middle of the sky, and the exact opposite
+   * of the Storm.
+   *
+   * A gust is a surprise you react to. A current is always there, always the
+   * same way, and every second of the level is a decision: drop into it to
+   * cross the field in a heartbeat, or stay above it to be able to aim. It
+   * carries everything loose - you, their shots, the coins, the pods - so a
+   * shot fired at you from below the band arrives somewhere else entirely, and
+   * after a minute a child stops aiming at ships and starts aiming at where
+   * the river will have put them.
+   *
+   * It sits next to The Undertow on purpose. A well BENDS what crosses it and
+   * a current TRANSLATES it; flying them back to back is the clearest possible
+   * statement of what act four is - the same sky, disobeying a different rule
+   * each time.
+   */
+  {
+    id:32, name:"The Current", subtitle:"Ride it or leave it",
+    brief:"There's a river running through the middle of this sky, {you} - it carries you, their shots, the money, everything. Drop in to travel fast. Climb out to shoot straight.",
+    goal:"A RIVER through the middle",
+    current:true,
+    face:"thief",
+    waves: [
+      w(1,   "grunt",   7, "line"),
+      w(9,   "striker", 6, "arc"),
+      w(18,  "thief",   1, "column"),
+      w(20,  "grunt",   8, "twinColumns"),
+      w(28,  "carrier", 1, "column"),
+      w(34,  "weaver",  7, "sides"),
+      w(43,  "striker", 7, "vee"),
+      w(52,  "thief",   2, "column"),
+      w(55,  "grunt",   9, "scatter"),
+      w(64,  "carrier", 1, "column"),
+      w(70,  "weaver",  9, "pincer"),
+      w(79,  "striker", 8, "tripleColumns"),
+      w(88,  "grunt",  11, "wall"),
+      w(97,  "thief",   2, "sides"),
+      w(100, "weaver", 10, "arc"),
+      w(109, "grunt",  12, "scatter"),
+    ],
+    objectives: ["complete","coinRush","rescueAll"],
+  },
 
   /* =========================================================
      ACT 4 - BEHIND THE SKY
@@ -4259,7 +4448,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:29, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:33, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -4302,7 +4491,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:30, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:34, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -4334,7 +4523,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:31, name:"The Chorus", subtitle:"They fire on the beat",
+    id:35, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -4376,7 +4565,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:32, name:"The Glass Sea", subtitle:"two of you",
+    id:36, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -4407,7 +4596,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:33, name:"The Foundry", subtitle:"Stop the production line",
+    id:37, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -4439,7 +4628,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:34, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:38, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -4470,7 +4659,7 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:35, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
     goal:"The workshop is awake. Fly!",
     face:"rival",
@@ -4501,7 +4690,7 @@ const MISSIONS = [
      * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
      * owns the pencil veil, the last stroke and the squadron photo.
      */
-    id:36, name:"Sky 36", subtitle:"the one Papa never finished",
+    id:40, name:"Sky 40", subtitle:"the one Papa never finished",
     brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, coinRain:true,
@@ -4997,6 +5186,29 @@ const COMMS = {
   ]},
 
   /* --- Act 4 openers and beats --- */
+  /* --- the four new levels. One opening line each, and one for the moment
+     the searchlight actually finds you, which needs saying every time. --- */
+  currentStart: { speaker:"control", cooldown:999, lines:[
+    "There's a RIVER through the middle, {you}. Ride it to move, leave it to aim.",
+    "Feel that drift? The whole middle of the sky is flowing. Use it.",
+  ]},
+  spotStart: { speaker:"control", cooldown:999, lines:[
+    "Searchlight, {you}. In the beam they can all SEE you - stay in the dark.",
+    "That light is hunting you. Watch it swing, then move behind it.",
+  ]},
+  spotted: { speaker:"control", cooldown:6, lines:[
+    "You're LIT UP, {you} - move!",
+    "They've got you in the beam!",
+    "Out of the light, {you}, out of the light!",
+  ]},
+  narrowsStart: { speaker:"control", cooldown:999, lines:[
+    "We're in the canyon, {you}. Those walls come IN - don't be there when they do.",
+    "Rock either side and it breathes. Fly the middle when it squeezes.",
+  ]},
+  nightfallStart: { speaker:"control", cooldown:999, lines:[
+    "Light's going, {you}. It'll be pitch black by the last wave - learn them NOW.",
+    "The sun's dying out here. Every minute you get less to see by.",
+  ]},
   wellsStart: { speaker:"control", cooldown:999, lines:[
     "Gravity's broken out here, {you}. Your shots will CURVE - swing them.",
     "See the whirlpools? They pull in everything loose - including YOU.",
@@ -5526,6 +5738,31 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 3) p.lastMission += 1;
     p.missionsVer = 7;
   }
+  /*
+   * v8: four new levels landed at once - Spotlight (14), The Narrows (23),
+   * Nightfall (29) and The Current (32) - so this is a map like v4 and v6
+   * rather than a single offset. Highest old id first, and every new id is
+   * above its old one, so nothing is overwritten before it moves. Ids 1-13 do
+   * not move at all.
+   *
+   * The hand-written mission ids move with it in the same release: the tune
+   * unlocks (data/config.js) and devourerDown below. This loop cannot reach
+   * either, and getting one wrong silently un-earns something a child worked
+   * for.
+   */
+  if((p.missionsVer || 1) < 8){
+    const SHIFT = [[36,40],[35,39],[34,38],[33,37],[32,36],[31,35],[30,34],[29,33],
+                   [28,31],[27,30],[26,28],[25,27],[24,26],[23,25],[22,24],[21,22],
+                   [20,21],[19,20],[18,19],[17,18],[16,17],[15,16],[14,15]];
+    SHIFT.forEach(([oldId, newId]) => {
+      if(p.missions[oldId]){ p.missions[newId] = p.missions[oldId]; delete p.missions[oldId]; }
+    });
+    if(typeof p.lastMission === "number"){
+      const hit = SHIFT.find(([oldId]) => oldId === p.lastMission);
+      if(hit) p.lastMission = hit[1];
+    }
+    p.missionsVer = 8;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -5718,7 +5955,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[28] && p.missions[28].cleared),
+    devourerDown: !!(p.missions[31] && p.missions[31].cleared),
   };
 }
 
@@ -14034,13 +14271,23 @@ function initBackground(missionIndex){
     skyIndex = idx;
   }
   skyScroll = 0;
+  /*
+   * THE ONE LEVEL FLOWN OVER GROUND.
+   *
+   * The Narrows is a canyon on their world, and the single detail that would
+   * put it straight back into space is the star layer streaming over the rock.
+   * So a surface mission gets no stars, no comets and no dust: all the motion
+   * comes from the ground itself scrolling, which is exactly what motion looks
+   * like when you are the thing that is moving.
+   */
+  const surface = SF.skygen.isSurface(idx);
   stars = [];
   // Star counts are per-area, not per-layer-constant: the playfield is 2.5x
   // the area it used to be, so a fixed count would read as empty space.
   // Layer speeds fan out well clear of the sky's crawl, so the parallax
   // stack reads as depth instead of one welded sheet.
   const density = (VW*VH) / (390*620);
-  [{n:18,s:24,size:1.1,a:0.38},{n:11,s:60,size:1.7,a:0.55},{n:6,s:130,size:2.6,a:0.8}]
+  (surface ? [] : [{n:18,s:24,size:1.1,a:0.38},{n:11,s:60,size:1.7,a:0.55},{n:6,s:130,size:2.6,a:0.8}])
     .forEach((L, li) => {
       const count = Math.round(L.n * density);
       for(let i=0;i<count;i++){
@@ -14051,11 +14298,11 @@ function initBackground(missionIndex){
       }
     });
   comets = [];
-  cometTimer = rand(3, 9);
+  cometTimer = surface ? Infinity : rand(3, 9);
   bgPhase = rand(0, TAU);
   warp = Math.min(1 + (missionIndex||0)*0.1, 2.0);
   dust = [];
-  const dn = Math.round(26 * density);
+  const dn = surface ? 0 : Math.round(26 * density);
   for(let i=0;i<dn;i++){
     dust.push({ x: rand(0,VW), y: rand(0,VH), speed: rand(320, 520),
                 len: rand(6, 16), a: rand(0.05, 0.16) });
@@ -15125,6 +15372,136 @@ let darkCv = null, darkCtx = null;
 function drawAct4(ctx, run, world, timeMs){
   if(!run || run.ended) return;
 
+  /* --- THE CURRENT: the river ---------------------------------------------
+     Drawn as a band and the things IN it. The band alone reads as a coloured
+     stripe somebody put on the screen; the motes streaming through it are
+     what say "this is moving, and it will move you". Under everything else,
+     because it is the water and not the fight. */
+  if(run.current){
+    const cu = run.current;
+    ctx.save();
+    const g = ctx.createLinearGradient(0, cu.y, 0, cu.y + cu.h);
+    g.addColorStop(0,    "rgba(56,189,248,0)");
+    g.addColorStop(0.22, "rgba(56,189,248,0.17)");
+    g.addColorStop(0.78, "rgba(45,212,191,0.17)");
+    g.addColorStop(1,    "rgba(45,212,191,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, cu.y, VW, cu.h);
+    // Both banks, so the edge you have to climb out over is visible.
+    ctx.globalCompositeOperation = "lighter";
+    [cu.y, cu.y + cu.h].forEach(y => {
+      const e = ctx.createLinearGradient(0, y - 5, 0, y + 5);
+      e.addColorStop(0, "rgba(125,211,252,0)");
+      e.addColorStop(0.5, "rgba(125,211,252,0.5)");
+      e.addColorStop(1, "rgba(125,211,252,0)");
+      ctx.fillStyle = e;
+      ctx.fillRect(0, y - 7, VW, 14);
+    });
+    ctx.strokeStyle = "#bae6fd";
+    ctx.lineCap = "round";
+    for(let i = 0; i < cu.motes.length; i++){
+      const m = cu.motes[i];
+      ctx.globalAlpha = Math.min(0.95, m.a * 2.6) * Math.min(1, m.life);
+      ctx.lineWidth = 1.4 + m.k*1.6;
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - cu.dir*m.len, m.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* --- THE NARROWS: the canyon --------------------------------------------
+     The rock IS the collision - both come off `run.narrows.w`, so the wall
+     that hurts is the wall you can see, to the pixel. Drawn as a ragged edge
+     rather than a straight one: a canyon with a ruler-straight side is a
+     corridor, and this has to read as somewhere the water cut. */
+  if(run.narrows){
+    const na = run.narrows;
+    const lit = "#c9ad86", dark = "#120c07";
+    ctx.save();
+    const STEP = 26;
+    [-1, 1].forEach(side => {
+      const inner = side < 0 ? na.w : VW - na.w;
+      const outer = side < 0 ? -2 : VW + 2;
+      ctx.beginPath();
+      ctx.moveTo(outer, -2);
+      for(let y = -2; y <= VH + STEP; y += STEP){
+        // Off y alone, so the face is a fixed shape that MOVES rather than a
+        // boiling edge. Two frequencies: big bays, and a rough surface on them.
+        const j = Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
+        ctx.lineTo(inner + side*j, y);
+      }
+      ctx.lineTo(outer, VH + 2);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(outer, 0, inner, 0);
+      g.addColorStop(0, dark);
+      g.addColorStop(0.62, "#2b1d11");
+      g.addColorStop(1, lit);
+      ctx.fillStyle = g;
+      ctx.fill();
+      // The lip catches the sun, which is the only thing stopping the rock
+      // from reading as a black bar down the side of the screen.
+      ctx.strokeStyle = "rgba(255,226,180,0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  /* --- SPOTLIGHT: the beam ------------------------------------------------
+     A wedge from off the top, brighter at the mouth and fading down its
+     length, and hotter still when it has actually found you. Drawn additively
+     so it lights the sky rather than covering it - the point is that being in
+     it is dangerous, not that it hides anything. */
+  if(run.spot){
+    const sp = run.spot;
+    const L = VH*1.5;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(sp.pivotX, sp.pivotY);
+    ctx.rotate(sp.a);
+    /*
+     * Loud on purpose. The first cut drew this at 17% over a 1.5-screen wedge
+     * and it was, measured in a screenshot, invisible - which for a mechanic
+     * whose entire rule is "do not be in this" is the worst possible outcome.
+     * A seven-year-old has to see the edge of it from across the room.
+     */
+    const hot = sp.lit ? 1 : 0.72;
+    const g = ctx.createLinearGradient(0, 0, L, 0);
+    g.addColorStop(0,    "rgba(255,247,214," + (0.55*hot).toFixed(3) + ")");
+    g.addColorStop(0.35, "rgba(255,240,180," + (0.30*hot).toFixed(3) + ")");
+    g.addColorStop(0.75, "rgba(255,228,150," + (0.12*hot).toFixed(3) + ")");
+    g.addColorStop(1,    "rgba(255,220,140,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(-sp.half)*L, Math.sin(-sp.half)*L);
+    ctx.lineTo(Math.cos(sp.half)*L, Math.sin(sp.half)*L);
+    ctx.closePath();
+    ctx.fill();
+    // Both edges drawn as lines. A cone with a soft edge reads as a glow; the
+    // hard rim is what tells you exactly where "in it" stops.
+    ctx.strokeStyle = "rgba(255,250,224," + (0.34*hot).toFixed(3) + ")";
+    ctx.lineWidth = 2;
+    [-sp.half, sp.half].forEach(h => {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(h)*L, Math.sin(h)*L);
+      ctx.stroke();
+    });
+    ctx.restore();
+    // The lamp itself, so the beam comes from somewhere.
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const lg = ctx.createRadialGradient(sp.pivotX, sp.pivotY, 0, sp.pivotX, sp.pivotY, 120);
+    lg.addColorStop(0, "rgba(255,250,230,0.55)");
+    lg.addColorStop(1, "rgba(255,230,160,0)");
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.arc(sp.pivotX, sp.pivotY, 120, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
   /* --- THE RING: the two seams -------------------------------------------
      A pair of shimmering vertical edges, so the place looks like it has a
      join rather than looking like the walls stopped working. They breathe on
@@ -15441,6 +15818,41 @@ function drawDisco(ctx, timeMs){
     ctx.closePath();
     ctx.fill();
   }
+  ctx.restore();
+}
+
+/*
+ * NIGHTFALL: the light going out while you fly.
+ *
+ * Deliberately NOT the blackout. The blackout is a lid with holes punched in
+ * it - you see what glows and nothing else, and it is a puzzle. This is dusk:
+ * one even veil that deepens as the mission runs, so the same enemies simply
+ * get harder to READ. Difficulty as atmosphere rather than numbers.
+ *
+ * It stops at 0.82 rather than reaching black. The Long Dark, two stops later,
+ * is the level that is actually pitch black; if this one got there too, the
+ * mission that owns the idea would have nothing left to be. And a child has to
+ * be able to finish this - a wave you genuinely cannot see is not tense, it is
+ * unfair.
+ *
+ * The veil is warm at first and cold at the end: a sky losing its sun goes
+ * amber before it goes blue-black, and that is most of the dread.
+ */
+function drawNightfall(ctx, k){
+  if(!(k > 0.02)) return;
+  const a = Math.min(0.82, k*0.92);
+  const warm = Math.max(0, 1 - k*1.6);
+  const r = Math.round(6 + warm*34), g = Math.round(7 + warm*16), b = Math.round(20 - warm*6);
+  ctx.save();
+  ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + a.toFixed(3) + ")";
+  ctx.fillRect(0, 0, VW, VH);
+  // The last of the light drains from the top down, so the dark arrives from
+  // the direction the waves come from.
+  const gd = ctx.createLinearGradient(0, 0, 0, VH);
+  gd.addColorStop(0, "rgba(2,3,10," + (a*0.35).toFixed(3) + ")");
+  gd.addColorStop(1, "rgba(2,3,10,0)");
+  ctx.fillStyle = gd;
+  ctx.fillRect(0, 0, VW, VH);
   ctx.restore();
 }
 
@@ -17588,6 +18000,7 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
+  drawNightfall,
   drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
@@ -18798,6 +19211,24 @@ const SKIES = [
     props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
             {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
 
+  /*
+   * SPOTLIGHT's sky, and it is dark on purpose: the level is about not being
+   * seen, so the dark has to be somewhere you can actually be. Grey-green
+   * rather than navy, because The Blockade is the navy void two stops back and
+   * these are close enough together to be told apart by hue as well as value.
+   *
+   * Two watchposts, cold and barely lit. They are not the searchlight - that
+   * swings from off the top of the screen - they are the reason there is one.
+   */
+  { name:"The Sentry Line", clouds:["#1f3a34","#4b7f70","#040c0a"], dust:"#020705", star:"#d7efe4",
+    lum:0.6, density:0.7, stars:0.5, bright:1,
+    props:[ {k:"station", x:0.22, y:0.30, r:0.10, n:1,
+             lit:"#bfe8da", dark:"#04100c", beacon:"#ff8a6b"},
+            {k:"station", x:0.80, y:0.72, r:0.075, n:1,
+             lit:"#bfe8da", dark:"#04100c", beacon:"#ff8a6b"},
+            {k:"rocks",   x:0.52, y:0.50, r:0.20, n:16} ] },
+
+
   /* Separated from The Blockade by VALUE rather than hue, because they are
      neighbours and were the closest pair in the campaign: both dark, both
      desaturated, 25 apart in mean colour. The Blockade is a navy void you
@@ -18883,6 +19314,23 @@ const SKIES = [
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
             {k:"planet", x:0.22, y:0.20, r:0.057, lit:"#93b8f5", dark:"#152540", craters:true} ] },
 
+  /*
+   * THE NARROWS, and the only backdrop in the game that is GROUND.
+   *
+   * `surface:true` is read by the renderer, not by the painter: it switches off
+   * the star layer, the comets and the streaming dust. Stars over a canyon
+   * floor is the one detail that would put the whole level back in space, and
+   * no amount of good rock survives it.
+   *
+   * Rust and bone, lit from the same corner as every other sky so the canyon
+   * walls drawn over it agree about where the sun is.
+   */
+  { name:"Red Canyon", surface:true,
+    clouds:["#7c2d12","#c2703a","#1a0a04"], dust:"#160802", star:"#ffe0c0",
+    lum:1.0, density:0.9, stars:0, bright:0,
+    props:[ {k:"ground", x:0.50, y:0.50, n:52, lit:"#c08a52", dark:"#40200f"} ] },
+
+
   { name:"The Fortress Wall", clouds:["#7f1d1d","#57534e","#1c1917"], dust:"#0a0505", star:"#e7e5e4",
     lum:0.9, density:1.3, stars:0.5, bright:1,
     props:[ {k:"rocks", x:0.12, y:0.30, r:0.17, n:18},
@@ -18956,6 +19404,22 @@ const SKIES = [
     props:[ {k:"planet", x:0.80, y:0.20, r:0.10, lit:"#26324e", dark:"#0a0e1c", crescent:true},
             {k:"rocks",  x:0.18, y:0.68, r:0.12, n:8} ] },
 
+  /*
+   * NIGHTFALL's sky. It has to start LIT - the level's whole idea is losing
+   * the light, and you cannot lose what you never had, so this is the warmest
+   * dusk in the campaign and the veil takes it down from there.
+   *
+   * Amber over indigo, with the sun already on the floor of the frame: a sky
+   * that is visibly most of the way through its own evening before the first
+   * wave arrives.
+   */
+  { name:"Last Light", clouds:["#b45309","#fbbf24","#1e1b4b"], dust:"#0a0714", star:"#ffedd5",
+    lum:1.2, density:1.0, stars:0.7, bright:2,
+    props:[ {k:"sun",    x:0.72, y:0.86, r:0.16, color:"#ffb46b"},
+            {k:"planet", x:0.24, y:0.34, r:0.16, lit:"#6b5a8a", dark:"#0d0a1c", crescent:true},
+            {k:"planet", x:0.86, y:0.20, r:0.048, lit:"#e8d3a8", dark:"#2a1f14", craters:true} ] },
+
+
   { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
     lum:0.55, density:0.4, stars:0.45, bright:1,
     props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
@@ -18966,6 +19430,23 @@ const SKIES = [
     props:[ {k:"sun",    x:0.50, y:0.30, r:0.20, color:"#ff6b4a"},
             {k:"rocks",  x:0.22, y:0.70, r:0.20, n:24},
             {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
+
+  /*
+   * THE CURRENT's sky. Indigo and cornflower, which nothing else in act four
+   * owns - The Undertow next door is teal and The Devourer before it is red,
+   * so the three stops in a row are three colours.
+   *
+   * It flies the aurora, and that is the whole reason it exists: curtains are
+   * the only thing in the vocabulary that read as FLOW, and this is the level
+   * where the sky is going somewhere.
+   */
+  { name:"The Race", clouds:["#312e81","#818cf8","#080620"], dust:"#040318", star:"#e0e7ff",
+    lum:1.05, density:0.95, stars:1.0, bright:3,
+    props:[ {k:"aurora", x:0.50, y:0.44, r:0.30, w:1.0, n:6,
+             hi:"#a5b4fc", lo:"#4338ca"},
+            {k:"planet", x:0.80, y:0.78, r:0.14, lit:"#6f7bd8", dark:"#151132", bands:true},
+            {k:"planet", x:0.16, y:0.18, r:0.045, lit:"#c7d2fe", dark:"#2a2550", craters:true} ] },
+
 
   /* --- Act 4. Through the crack the Devourer left. Not "more space":
      somewhere space doesn't quite work - and, at the end, the place where
@@ -19048,7 +19529,7 @@ const SKIES = [
      and the busiest, brightest sky in the game, because it took every star to
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
-  { name:"Sky 36", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+  { name:"Sky 40", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
     lum:1.35, density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
@@ -19742,6 +20223,117 @@ function drawVortex(ctx, W, H, p, rand){
   });
 }
 
+/*
+ * GROUND. The one backdrop in the game that is not sky.
+ *
+ * The Narrows is flown below the clouds, down a canyon, and a canyon needs a
+ * floor. Everything above paints things hanging in a void; this paints the
+ * void's opposite - a surface, seen from directly overhead, scrolling past.
+ *
+ * What sells it in one glance is not the rock, it is the WATERCOURSE. A field
+ * of stones reads as an asteroid belt seen close up; a stone field with a
+ * braided channel wandering down it reads as a place with weather, which is to
+ * say a planet. So the channel is drawn first and everything else is arranged
+ * around it.
+ *
+ * The mission that flies this also switches off the star layer (see
+ * render.js): stars streaming over a canyon floor is the one detail that would
+ * put the whole thing back in space.
+ */
+function drawGround(ctx, W, H, p, rand){
+  const base = p.dark || "#3a1f10";
+  const pale = p.lit || "#a8794a";
+  /*
+   * NOT drawn through `tiled`, and that is the whole trick.
+   *
+   * `tiled` calls its body up to three times so a prop can straddle the wrap,
+   * and each call draws fresh random numbers - which is right for a planet or
+   * a rock field, where the copies are the same OBJECT seen at three scroll
+   * positions, and catastrophic for a texture that fills the frame, where the
+   * three copies came out as three different pieces of ground with a visible
+   * join between them.
+   *
+   * So this one is drawn once, and made periodic in H by construction: the
+   * channels use frequencies that complete a whole number of cycles over the
+   * height, and every blotch and boulder near an edge is drawn again at the
+   * far one. Scroll it forever and the seam never arrives.
+   */
+  const wrapY = (y, r, draw) => {
+    draw(y);
+    if(y - r < 0) draw(y + H);
+    if(y + r > H) draw(y - H);
+  };
+  ctx.save();
+  // The bedrock, and a slow shading across it so the floor is not a flat wash.
+  ctx.fillStyle = base;
+  ctx.fillRect(-2, -2, W + 4, H + 4);
+  for(let i = 0; i < 26; i++){
+    const bx = rand()*W, by = rand()*H, br = W*(0.12 + rand()*0.3);
+    const up = rand() < 0.5;
+    const c0 = mixA(pale, base, up ? 0.45 : 0.9, up ? 0.30 : 0.55);
+    const c1 = mixA(pale, base, 1, 0);
+    wrapY(by, br, y => {
+      const g = ctx.createRadialGradient(bx, y, 0, bx, y, br);
+      g.addColorStop(0, c0); g.addColorStop(1, c1);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(bx, y, br, 0, TAU); ctx.fill();
+    });
+  }
+  /*
+   * The channel: a braid of dry beds wandering down the frame, and the one
+   * thing that makes this read as a PLANET rather than as an asteroid seen
+   * close up. A field of stones is a belt; a field of stones with a
+   * watercourse through it is somewhere with weather.
+   */
+  for(let b = 0; b < 3; b++){
+    const wide = W*(0.05 + rand()*0.10);
+    const phase = rand()*TAU, wob = W*(0.10 + rand()*0.16);
+    const mid = W*(0.3 + rand()*0.4);
+    // Whole cycles over H, so the top of the bed meets its own bottom exactly.
+    const k1 = (TAU/H) * (1 + Math.floor(rand()*2));
+    const k2 = (TAU/H) * (3 + Math.floor(rand()*3));
+    ctx.beginPath();
+    for(let y = -20; y <= H + 20; y += 14){
+      const x = mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.3;
+      if(y <= -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = mixA(pale, base, 0.25, 0.5);
+    ctx.lineWidth = wide;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    // A pale thread down the middle of the bed - the last of the water.
+    ctx.strokeStyle = mixA(pale, "#ffffff", 0.5, 0.22);
+    ctx.lineWidth = Math.max(1.5, wide*0.16);
+    ctx.stroke();
+  }
+  // Boulders lying on it, lit from the same corner as everything else, each
+  // with the shadow that puts it ON the ground rather than above it.
+  for(let i = 0; i < (p.n || 44); i++){
+    const bx = rand()*W, by = rand()*H, r = W*(0.006 + rand()*0.022);
+    const N = 6 + Math.floor(rand()*3);
+    const va = [], vr = [];
+    for(let k = 0; k < N; k++){ va.push(k/N*TAU + rand()*0.3); vr.push(r*(0.7 + rand()*0.5)); }
+    wrapY(by, r*2, y => {
+      ctx.beginPath();
+      for(let k = 0; k < N; k++){
+        const px = bx + Math.cos(va[k])*vr[k], py = y + Math.sin(va[k])*vr[k]*0.8;
+        if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      const g = ctx.createLinearGradient(bx - r, y - r, bx + r, y + r);
+      g.addColorStop(0, mixA(pale, base, 0.15, 0.92));
+      g.addColorStop(1, mixA(pale, base, 1, 0.95));
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.30)";
+      ctx.beginPath();
+      ctx.ellipse(bx + r*0.5, y + r*0.55, r*0.9, r*0.5, 0, 0, TAU);
+      ctx.fill();
+    });
+  }
+  ctx.restore();
+}
+
 /** One long visitor, head and tail, crossing the whole frame. */
 function drawComet(ctx, W, H, p){
   const cx = p.x*W, head = (p.r || 0.014)*W, len = (p.len || 0.7)*W;
@@ -20191,6 +20783,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
         else if(pr.k === "station") drawStation(px, W, H, pr, rand);
         else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
+        else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
       });
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";
@@ -20261,7 +20854,15 @@ function photoFor(missionIndex){
   return (SKIES[missionIndex % SKIES.length] || {}).photo || null;
 }
 
-SF.skygen = { build, buildTitle, photoFor, SKIES };
+/** True when this mission is flown over a surface rather than through space.
+ *  The renderer switches off the star field, the comets and the streaming dust
+ *  for it - stars over a canyon floor is the one detail that would undo the
+ *  whole illusion. */
+function isSurface(missionIndex){
+  return !!(SKIES[missionIndex % SKIES.length] || {}).surface;
+}
+
+SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES };
 })();
 
 
@@ -22139,7 +22740,7 @@ function startMission(missionIndex, difficultyId){
     // so a mission can make its own lesson its third star instead of asking
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
-    ropesCut: 0,
+    ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
     stars: 0,
   };
 
@@ -22248,6 +22849,38 @@ function startMission(missionIndex, difficultyId){
     // The Tithe Serpent: spawns once, eats coins, grows, and must be slain.
     serpent: mission.serpent ? { at: 14, head: null, eaten: 0, eatenValue: 0,
       grown: 0, tailGoneSaid: false, fleeAt: 0 } : null,
+    /*
+     * THE CURRENT: a river across a band of the sky, and the opposite of the
+     * Storm in every way that matters. A gust is a surprise you react to; a
+     * current is always there, always the same way, and the whole level is
+     * deciding whether to get into it. It carries EVERYTHING loose - you,
+     * their shots, the coins, the pods - which is what makes "drop in to
+     * travel, climb out to aim" a real choice rather than a slogan.
+     */
+    current: mission.current ? { y: VH*0.42, h: VH*0.30, dir: 1,
+      speed: mission.current === "fast" ? 210 : 150, motes: [] } : null,
+    /*
+     * SPOTLIGHT: a beam swinging from off the top of the screen. Standing in
+     * it does not hurt - being SEEN does. Every gun on the field fires at you
+     * while you are lit, so the level is dodging you plan a second ahead
+     * instead of a reflex, and the dark between sweeps is somewhere to be.
+     */
+    spot: mission.spot ? { a: Math.PI*0.5, dir: 1, sweep: 0.42, lit: false,
+      litFor: 0, volley: 0, pivotX: VW*0.5, pivotY: -70, half: 0.21 } : null,
+    /*
+     * THE NARROWS: the walls of a canyon, and the only level in the game that
+     * is not flown in space. `w` is how far in each wall stands, breathing on
+     * a slow cycle. Nothing here is a "playfield resize" - the field is the
+     * same size it always is, and the rock is simply in the way.
+     */
+    narrows: mission.narrows ? { t: 0, w: 0, lastHit: -99 } : null,
+    /*
+     * NIGHTFALL: the light going out, over the length of the mission rather
+     * than between two of them. `k` runs 0 to 1 with the wave script, so the
+     * dark arrives because you are getting through the level, not because a
+     * timer somewhere decided it was time.
+     */
+    nightfall: mission.nightfall ? { k: 0 } : null,
     rushList: rush ? rushBossList(profile) : [],
     rushIndex: 0,
     ended: false,
@@ -22340,6 +22973,10 @@ function startMission(missionIndex, difficultyId){
              : mission.convoy ? "convoyStart"
              : mission.trench ? "trenchStart"
              : mission.blackout ? "blackoutStart"
+             : mission.narrows ? "narrowsStart"
+             : mission.spot ? "spotStart"
+             : mission.nightfall ? "nightfallStart"
+             : mission.current ? "currentStart"
              : mission.wells ? "wellsStart"
              : mission.beat ? "chorusStart"
              : mission.foundry ? "foundryStart"
@@ -22580,6 +23217,17 @@ const callbacks = {
      * and drifting away from a cable is not cutting it.
      */
     if(SF.tether.live(e)) run.stats.ropesCut++;
+    /*
+     * The three newest levels each pay for a kill made under their own rule -
+     * out of the searchlight, inside the squeeze, after the light has gone.
+     * Behind the same guard as `kills` above, so a boss add can no more inflate
+     * one of these than it can the kill ratio.
+     */
+    if(e.counted && !e.fromBoss){
+      if(run.spot && !run.spot.lit) run.stats.darkKills++;
+      if(run.narrows && run.narrows.w > VW*0.115) run.stats.tightKills++;
+      if(run.nightfall && run.nightfall.k > 0.5) run.stats.lateKills++;
+    }
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
     // The Glass Sea: the twin earns its own tally, which is a whole star.
@@ -23990,6 +24638,179 @@ function update(dt, timeMs){
     }
   }
 
+  /*
+   * THE CURRENT. One band, one direction, always on.
+   *
+   * Everything loose inside the band is translated - the player hardest,
+   * because the choice has to be felt in the thumb. Enemies ride it at a
+   * fraction: a wave that gets swept off the field is a wave you cannot
+   * shoot, and a kill objective you cannot reach. Their bullets ride it in
+   * full, which is the interesting part - a shot fired at you from below the
+   * band arrives somewhere else entirely, and after a minute a child starts
+   * aiming for where the river will put things.
+   */
+  if(run.current && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const cu = run.current;
+    const top = cu.y, bot = cu.y + cu.h;
+    // Soft edges: a hard boundary makes the band a trap you fall into, and a
+    // ramp makes it a thing you lean into. `pull` is 0 outside, 1 in the middle.
+    const pull = y => {
+      if(y < top - 26 || y > bot + 26) return 0;
+      const into = Math.min(y - (top - 26), (bot + 26) - y);
+      return Math.min(1, into / 46);
+    };
+    const p = game.world.player;
+    if(p && p.alive){
+      const k = pull(p.y);
+      if(k > 0) p.x = clamp(p.x + cu.dir*cu.speed*k*dt, 20, VW - 20);
+    }
+    const es = game.world.enemies.items;
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive) continue;
+      const k = pull(e.y);
+      // Kept on the field for the same reason the Storm keeps them: a ship
+      // shoved into the gap between the clamp and the cull sits there
+      // unreachable, holding a mission open that cannot be finished.
+      if(k > 0 && e.x > -20 && e.x < VW + 20)
+        e.x = clamp(e.x + cu.dir*cu.speed*0.45*k*dt, 16, VW - 16);
+    }
+    const ebs = game.world.enemyBullets.items;
+    for(let i = 0; i < ebs.length; i++){
+      const b = ebs[i];
+      if(!b.alive) continue;
+      const k = pull(b.y);
+      if(k > 0) b.x += cu.dir*cu.speed*k*dt;
+    }
+    const pk = game.world.pickups.items;
+    for(let i = 0; i < pk.length; i++){
+      const it = pk[i];
+      if(!it.alive) continue;
+      const k = pull(it.y);
+      if(k > 0) it.x = clamp(it.x + cu.dir*cu.speed*0.9*k*dt, 12, VW - 12);
+    }
+    // The river has to be SEEN, and it is seen by what it carries. Motes are
+    // cosmetic and drawn from Math.random, so they can never move a spawn.
+    for(let i = cu.motes.length - 1; i >= 0; i--){
+      const m = cu.motes[i];
+      m.x += cu.dir*cu.speed*m.k*dt;
+      m.life -= dt;
+      if(m.life <= 0 || m.x < -40 || m.x > VW + 40) cu.motes.splice(i, 1);
+    }
+    if(cu.motes.length < 62 && Math.random() < 0.95){
+      cu.motes.push({ x: cu.dir > 0 ? -20 : VW + 20,
+                      y: top + Math.random()*cu.h,
+                      k: 0.5 + Math.random()*0.7,
+                      len: 14 + Math.random()*30,
+                      a: 0.14 + Math.random()*0.26,
+                      life: 3 + Math.random()*3 });
+    }
+  }
+
+  /*
+   * SPOTLIGHT. The beam swings; being inside it is what costs.
+   *
+   * It does not damage. It makes every gun on the field pick you, which is a
+   * far better threat than a hurting beam: you can be in the light and get
+   * away with it if the sky happens to be empty, and you can be caught in the
+   * open with six ships looking at you. `lit` is read by the shooting code.
+   */
+  if(run.spot && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const sp = run.spot;
+    sp.a += sp.dir*sp.sweep*dt;
+    // Swings between the two lower corners and turns round, rather than
+    // spinning: a beam that comes back the way it went is one a child can
+    // learn the rhythm of, and learning the rhythm is the whole level.
+    const lo = Math.PI*0.22, hi = Math.PI*0.78;
+    if(sp.a > hi){ sp.a = hi; sp.dir = -1; }
+    if(sp.a < lo){ sp.a = lo; sp.dir = 1; }
+    const p = game.world.player;
+    let lit = false;
+    if(p && p.alive){
+      const ang = Math.atan2(p.y - sp.pivotY, p.x - sp.pivotX);
+      let d = ang - sp.a;
+      while(d > Math.PI) d -= Math.PI*2;
+      while(d < -Math.PI) d += Math.PI*2;
+      lit = Math.abs(d) < sp.half;
+    }
+    // A hair of hysteresis, so clipping the edge of the beam does not strobe
+    // the whole sky's aggression on and off several times a second.
+    if(lit) sp.litFor = 0.35;
+    else sp.litFor = Math.max(0, sp.litFor - dt);
+    const was = sp.lit;
+    sp.lit = sp.litFor > 0;
+    if(sp.lit && !was){ audio.play("telegraph"); SF.comms.say("spotted"); }
+    /*
+     * The volley. Caught in the light, every gun on the field looks at you -
+     * done by bringing each armed ship's own trigger forward rather than by
+     * teaching entities.js a new rule, so nothing about how an enemy shoots
+     * changes and the level cannot leak into any other. Staggered across a
+     * third of a second, because thirty simultaneous shots is a wall and a
+     * ragged burst is a fright.
+     */
+    sp.volley = Math.max(0, (sp.volley || 0) - dt);
+    if(sp.lit && sp.volley <= 0){
+      sp.volley = 2.2;
+      const es = game.world.enemies.items;
+      for(let i = 0; i < es.length; i++){
+        const e = es[i];
+        if(!e.alive || !e.type.fire || e.y < 10 || e.y > VH - 60) continue;
+        e.fireTimer = Math.min(e.fireTimer, 0.05 + Math.random()*0.32);
+      }
+    }
+  }
+
+  /*
+   * THE NARROWS. The canyon breathes.
+   *
+   * `w` is how far the rock stands in from each edge, on a slow cycle with a
+   * second, faster one laid over it so the squeeze never arrives on a count a
+   * child can tune out. Touching the rock costs a life and the rock is still
+   * there afterwards - the boulder rule, for the same reason: a wall you can
+   * trade a life for is a wall that isn't one.
+   */
+  if(run.narrows && !run.ended && run.phase !== "intro" &&
+     run.phase !== "lap" && run.phase !== "outro"){
+    const na = run.narrows;
+    na.t += dt;
+    const squeeze = 0.5 - Math.cos(na.t*0.42)*0.5;        // 0 open, 1 shut
+    const ripple = Math.sin(na.t*0.9)*0.5 + 0.5;
+    na.w = VW*(0.02 + (0.155 + ripple*0.03)*squeeze);
+    const p = game.world.player;
+    if(p && p.alive && p.invuln <= 0 && !callbacks.godMode){
+      const into = Math.min(p.x - (na.w + p.r), (VW - na.w - p.r) - p.x);
+      if(into < 0 && simMs - na.lastHit > 400){
+        na.lastHit = simMs;
+        fx.sparks(p.x, p.y, 14, "#d9c2a4", 210);
+        fx.shake(11);
+        callbacks.onPlayerHit("rock", null);
+        // Pushed clear, so a hit cannot repeat every frame while a child is
+        // still holding the stick into the wall.
+        p.x = p.x < VW*0.5 ? na.w + p.r + 3 : VW - na.w - p.r - 3;
+      }
+    }
+    // Anything that flies into the rock is stopped by it too, or a wave could
+    // park itself inside a cliff where no bullet reaches.
+    const es = game.world.enemies.items;
+    for(let i = 0; i < es.length; i++){
+      const e = es[i];
+      if(!e.alive || e.y < 0) continue;
+      e.x = clamp(e.x, na.w + e.r*0.5, VW - na.w - e.r*0.5);
+    }
+  }
+
+  /*
+   * NIGHTFALL. The light goes out as you get through the level, not as a clock
+   * runs down - so the dark is something the mission does TO you in answer to
+   * how far you have come, and the last wave is always the darkest one.
+   */
+  if(run.nightfall && !run.ended){
+    const done = run.director ? Math.min(1, run.director.time / Math.max(1, run.wavesEndT)) : 0;
+    run.nightfall.k = Math.max(run.nightfall.k, done);   // it never gets lighter
+  }
+
   if(run.storm && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){
     const st = run.storm;
@@ -24729,6 +25550,11 @@ function draw(timeMs){
   // except what glows. HUD and texts draw after - instruments still work.
   if(game.run && game.run.mission.blackout && !game.run.ended)
     SF.render.drawBlackout(ctx, world, timeMs, game.run.mission.blackout === "soft");
+  // NIGHTFALL: the same slot as the blackout, and for the same reason - the
+  // world above is finished, and this is the light it is being seen by. HUD
+  // and texts draw after, so the instruments never go out with the sun.
+  if(game.run && game.run.nightfall && !game.run.ended)
+    SF.render.drawNightfall(ctx, game.run.nightfall.k);
   // DISCO SKY: over the world, under the HUD - it recolours the sky and never
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)
@@ -26676,6 +27502,10 @@ const FACE_KINDS = {
   rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
   rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
   anchor:  { c0:"#22d3ee", c1:"#0b3a44" },   // The Anchor: cables, and the gaps
+  beam:    { c0:"#ffe9a8", c1:"#4a3a12" },   // Spotlight: don't be seen
+  canyon:  { c0:"#c9793d", c1:"#3a1d0c" },   // The Narrows: rock, not sky
+  dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
+  flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -26794,6 +27624,15 @@ function missionFace(m){
   // identity on the map is still "the coin level", not "another windy one".
   const kind = m.noGuns ? "noGuns"
              : m.rival ? "duel"
+             // The four newest rules, asked before the generic ones. Each of
+             // these levels is ABOUT its rule - a searchlight, a canyon, the
+             // light failing, a river - and the heuristic below would file
+             // three of them as "another fight" and the fourth as "another
+             // coin run", which is the one thing the map must not do.
+             : m.spot ? "beam"
+             : m.narrows ? "canyon"
+             : m.nightfall ? "dusk"
+             : m.current ? "flow"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -26903,26 +27742,26 @@ const SECTORS = [
   { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
     sub:"guard the hauler, then carry the load yourself" }, // 9-12
   { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
-    sub:"behind their lines, where nobody is friendly" },   // 13-16
-  { at:16, name:"WARDEN'S REACH",  hue:"#34d399",
-    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 17-20
-  { at:20, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 21-23
+    sub:"behind their lines, where nobody is friendly" },   // 13-17
+  { at:17, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
+  { at:21, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 22-25
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:23, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 24-25
-  { at:25, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 26-28
-  { at:28, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 29-32
-  { at:32, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 33-35
-  { at:35, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 36
+  { at:25, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 26-27
+  { at:27, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 28-30
+  { at:31, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 32-36
+  { at:36, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 37-39
+  { at:39, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 40
 ];
 
 /*

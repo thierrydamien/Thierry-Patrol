@@ -1153,6 +1153,10 @@ const FACE_KINDS = {
   rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
   rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
   anchor:  { c0:"#22d3ee", c1:"#0b3a44" },   // The Anchor: cables, and the gaps
+  beam:    { c0:"#ffe9a8", c1:"#4a3a12" },   // Spotlight: don't be seen
+  canyon:  { c0:"#c9793d", c1:"#3a1d0c" },   // The Narrows: rock, not sky
+  dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
+  flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1271,6 +1275,15 @@ function missionFace(m){
   // identity on the map is still "the coin level", not "another windy one".
   const kind = m.noGuns ? "noGuns"
              : m.rival ? "duel"
+             // The four newest rules, asked before the generic ones. Each of
+             // these levels is ABOUT its rule - a searchlight, a canyon, the
+             // light failing, a river - and the heuristic below would file
+             // three of them as "another fight" and the fourth as "another
+             // coin run", which is the one thing the map must not do.
+             : m.spot ? "beam"
+             : m.narrows ? "canyon"
+             : m.nightfall ? "dusk"
+             : m.current ? "flow"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -1380,26 +1393,26 @@ const SECTORS = [
   { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
     sub:"guard the hauler, then carry the load yourself" }, // 9-12
   { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
-    sub:"behind their lines, where nobody is friendly" },   // 13-16
-  { at:16, name:"WARDEN'S REACH",  hue:"#34d399",
-    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 17-20
-  { at:20, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 21-23
+    sub:"behind their lines, where nobody is friendly" },   // 13-17
+  { at:17, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
+  { at:21, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 22-25
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:23, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 24-25
-  { at:25, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 26-28
-  { at:28, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 29-32
-  { at:32, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 33-35
-  { at:35, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 36
+  { at:25, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 26-27
+  { at:27, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 28-30
+  { at:31, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 32-36
+  { at:36, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 37-39
+  { at:39, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 40
 ];
 
 /*

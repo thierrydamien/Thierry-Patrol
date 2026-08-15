@@ -207,6 +207,24 @@ const SKIES = [
     props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
             {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
 
+  /*
+   * SPOTLIGHT's sky, and it is dark on purpose: the level is about not being
+   * seen, so the dark has to be somewhere you can actually be. Grey-green
+   * rather than navy, because The Blockade is the navy void two stops back and
+   * these are close enough together to be told apart by hue as well as value.
+   *
+   * Two watchposts, cold and barely lit. They are not the searchlight - that
+   * swings from off the top of the screen - they are the reason there is one.
+   */
+  { name:"The Sentry Line", clouds:["#1f3a34","#4b7f70","#040c0a"], dust:"#020705", star:"#d7efe4",
+    lum:0.6, density:0.7, stars:0.5, bright:1,
+    props:[ {k:"station", x:0.22, y:0.30, r:0.10, n:1,
+             lit:"#bfe8da", dark:"#04100c", beacon:"#ff8a6b"},
+            {k:"station", x:0.80, y:0.72, r:0.075, n:1,
+             lit:"#bfe8da", dark:"#04100c", beacon:"#ff8a6b"},
+            {k:"rocks",   x:0.52, y:0.50, r:0.20, n:16} ] },
+
+
   /* Separated from The Blockade by VALUE rather than hue, because they are
      neighbours and were the closest pair in the campaign: both dark, both
      desaturated, 25 apart in mean colour. The Blockade is a navy void you
@@ -292,6 +310,23 @@ const SKIES = [
     props:[ {k:"planet", x:0.72, y:0.66, r:0.26, lit:"#3f6fc4", dark:"#050d21", crescent:true},
             {k:"planet", x:0.22, y:0.20, r:0.057, lit:"#93b8f5", dark:"#152540", craters:true} ] },
 
+  /*
+   * THE NARROWS, and the only backdrop in the game that is GROUND.
+   *
+   * `surface:true` is read by the renderer, not by the painter: it switches off
+   * the star layer, the comets and the streaming dust. Stars over a canyon
+   * floor is the one detail that would put the whole level back in space, and
+   * no amount of good rock survives it.
+   *
+   * Rust and bone, lit from the same corner as every other sky so the canyon
+   * walls drawn over it agree about where the sun is.
+   */
+  { name:"Red Canyon", surface:true,
+    clouds:["#7c2d12","#c2703a","#1a0a04"], dust:"#160802", star:"#ffe0c0",
+    lum:1.0, density:0.9, stars:0, bright:0,
+    props:[ {k:"ground", x:0.50, y:0.50, n:52, lit:"#c08a52", dark:"#40200f"} ] },
+
+
   { name:"The Fortress Wall", clouds:["#7f1d1d","#57534e","#1c1917"], dust:"#0a0505", star:"#e7e5e4",
     lum:0.9, density:1.3, stars:0.5, bright:1,
     props:[ {k:"rocks", x:0.12, y:0.30, r:0.17, n:18},
@@ -365,6 +400,22 @@ const SKIES = [
     props:[ {k:"planet", x:0.80, y:0.20, r:0.10, lit:"#26324e", dark:"#0a0e1c", crescent:true},
             {k:"rocks",  x:0.18, y:0.68, r:0.12, n:8} ] },
 
+  /*
+   * NIGHTFALL's sky. It has to start LIT - the level's whole idea is losing
+   * the light, and you cannot lose what you never had, so this is the warmest
+   * dusk in the campaign and the veil takes it down from there.
+   *
+   * Amber over indigo, with the sun already on the floor of the frame: a sky
+   * that is visibly most of the way through its own evening before the first
+   * wave arrives.
+   */
+  { name:"Last Light", clouds:["#b45309","#fbbf24","#1e1b4b"], dust:"#0a0714", star:"#ffedd5",
+    lum:1.2, density:1.0, stars:0.7, bright:2,
+    props:[ {k:"sun",    x:0.72, y:0.86, r:0.16, color:"#ffb46b"},
+            {k:"planet", x:0.24, y:0.34, r:0.16, lit:"#6b5a8a", dark:"#0d0a1c", crescent:true},
+            {k:"planet", x:0.86, y:0.20, r:0.048, lit:"#e8d3a8", dark:"#2a1f14", craters:true} ] },
+
+
   { name:"The Long Dark", clouds:["#0a0a16","#141430","#03030a"], dust:"#010104", star:"#9aa8c8",
     lum:0.55, density:0.4, stars:0.45, bright:1,
     props:[ {k:"devourer", x:0.52, y:0.30, r:0.30},
@@ -375,6 +426,23 @@ const SKIES = [
     props:[ {k:"sun",    x:0.50, y:0.30, r:0.20, color:"#ff6b4a"},
             {k:"rocks",  x:0.22, y:0.70, r:0.20, n:24},
             {k:"rocks",  x:0.80, y:0.62, r:0.16, n:18} ] },
+
+  /*
+   * THE CURRENT's sky. Indigo and cornflower, which nothing else in act four
+   * owns - The Undertow next door is teal and The Devourer before it is red,
+   * so the three stops in a row are three colours.
+   *
+   * It flies the aurora, and that is the whole reason it exists: curtains are
+   * the only thing in the vocabulary that read as FLOW, and this is the level
+   * where the sky is going somewhere.
+   */
+  { name:"The Race", clouds:["#312e81","#818cf8","#080620"], dust:"#040318", star:"#e0e7ff",
+    lum:1.05, density:0.95, stars:1.0, bright:3,
+    props:[ {k:"aurora", x:0.50, y:0.44, r:0.30, w:1.0, n:6,
+             hi:"#a5b4fc", lo:"#4338ca"},
+            {k:"planet", x:0.80, y:0.78, r:0.14, lit:"#6f7bd8", dark:"#151132", bands:true},
+            {k:"planet", x:0.16, y:0.18, r:0.045, lit:"#c7d2fe", dark:"#2a2550", craters:true} ] },
+
 
   /* --- Act 4. Through the crack the Devourer left. Not "more space":
      somewhere space doesn't quite work - and, at the end, the place where
@@ -457,7 +525,7 @@ const SKIES = [
      and the busiest, brightest sky in the game, because it took every star to
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
-  { name:"Sky 36", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+  { name:"Sky 40", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
     lum:1.35, density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
@@ -1151,6 +1219,117 @@ function drawVortex(ctx, W, H, p, rand){
   });
 }
 
+/*
+ * GROUND. The one backdrop in the game that is not sky.
+ *
+ * The Narrows is flown below the clouds, down a canyon, and a canyon needs a
+ * floor. Everything above paints things hanging in a void; this paints the
+ * void's opposite - a surface, seen from directly overhead, scrolling past.
+ *
+ * What sells it in one glance is not the rock, it is the WATERCOURSE. A field
+ * of stones reads as an asteroid belt seen close up; a stone field with a
+ * braided channel wandering down it reads as a place with weather, which is to
+ * say a planet. So the channel is drawn first and everything else is arranged
+ * around it.
+ *
+ * The mission that flies this also switches off the star layer (see
+ * render.js): stars streaming over a canyon floor is the one detail that would
+ * put the whole thing back in space.
+ */
+function drawGround(ctx, W, H, p, rand){
+  const base = p.dark || "#3a1f10";
+  const pale = p.lit || "#a8794a";
+  /*
+   * NOT drawn through `tiled`, and that is the whole trick.
+   *
+   * `tiled` calls its body up to three times so a prop can straddle the wrap,
+   * and each call draws fresh random numbers - which is right for a planet or
+   * a rock field, where the copies are the same OBJECT seen at three scroll
+   * positions, and catastrophic for a texture that fills the frame, where the
+   * three copies came out as three different pieces of ground with a visible
+   * join between them.
+   *
+   * So this one is drawn once, and made periodic in H by construction: the
+   * channels use frequencies that complete a whole number of cycles over the
+   * height, and every blotch and boulder near an edge is drawn again at the
+   * far one. Scroll it forever and the seam never arrives.
+   */
+  const wrapY = (y, r, draw) => {
+    draw(y);
+    if(y - r < 0) draw(y + H);
+    if(y + r > H) draw(y - H);
+  };
+  ctx.save();
+  // The bedrock, and a slow shading across it so the floor is not a flat wash.
+  ctx.fillStyle = base;
+  ctx.fillRect(-2, -2, W + 4, H + 4);
+  for(let i = 0; i < 26; i++){
+    const bx = rand()*W, by = rand()*H, br = W*(0.12 + rand()*0.3);
+    const up = rand() < 0.5;
+    const c0 = mixA(pale, base, up ? 0.45 : 0.9, up ? 0.30 : 0.55);
+    const c1 = mixA(pale, base, 1, 0);
+    wrapY(by, br, y => {
+      const g = ctx.createRadialGradient(bx, y, 0, bx, y, br);
+      g.addColorStop(0, c0); g.addColorStop(1, c1);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(bx, y, br, 0, TAU); ctx.fill();
+    });
+  }
+  /*
+   * The channel: a braid of dry beds wandering down the frame, and the one
+   * thing that makes this read as a PLANET rather than as an asteroid seen
+   * close up. A field of stones is a belt; a field of stones with a
+   * watercourse through it is somewhere with weather.
+   */
+  for(let b = 0; b < 3; b++){
+    const wide = W*(0.05 + rand()*0.10);
+    const phase = rand()*TAU, wob = W*(0.10 + rand()*0.16);
+    const mid = W*(0.3 + rand()*0.4);
+    // Whole cycles over H, so the top of the bed meets its own bottom exactly.
+    const k1 = (TAU/H) * (1 + Math.floor(rand()*2));
+    const k2 = (TAU/H) * (3 + Math.floor(rand()*3));
+    ctx.beginPath();
+    for(let y = -20; y <= H + 20; y += 14){
+      const x = mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.3;
+      if(y <= -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = mixA(pale, base, 0.25, 0.5);
+    ctx.lineWidth = wide;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    // A pale thread down the middle of the bed - the last of the water.
+    ctx.strokeStyle = mixA(pale, "#ffffff", 0.5, 0.22);
+    ctx.lineWidth = Math.max(1.5, wide*0.16);
+    ctx.stroke();
+  }
+  // Boulders lying on it, lit from the same corner as everything else, each
+  // with the shadow that puts it ON the ground rather than above it.
+  for(let i = 0; i < (p.n || 44); i++){
+    const bx = rand()*W, by = rand()*H, r = W*(0.006 + rand()*0.022);
+    const N = 6 + Math.floor(rand()*3);
+    const va = [], vr = [];
+    for(let k = 0; k < N; k++){ va.push(k/N*TAU + rand()*0.3); vr.push(r*(0.7 + rand()*0.5)); }
+    wrapY(by, r*2, y => {
+      ctx.beginPath();
+      for(let k = 0; k < N; k++){
+        const px = bx + Math.cos(va[k])*vr[k], py = y + Math.sin(va[k])*vr[k]*0.8;
+        if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      const g = ctx.createLinearGradient(bx - r, y - r, bx + r, y + r);
+      g.addColorStop(0, mixA(pale, base, 0.15, 0.92));
+      g.addColorStop(1, mixA(pale, base, 1, 0.95));
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.30)";
+      ctx.beginPath();
+      ctx.ellipse(bx + r*0.5, y + r*0.55, r*0.9, r*0.5, 0, 0, TAU);
+      ctx.fill();
+    });
+  }
+  ctx.restore();
+}
+
 /** One long visitor, head and tail, crossing the whole frame. */
 function drawComet(ctx, W, H, p){
   const cx = p.x*W, head = (p.r || 0.014)*W, len = (p.len || 0.7)*W;
@@ -1600,6 +1779,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
         else if(pr.k === "station") drawStation(px, W, H, pr, rand);
         else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
+        else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
       });
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";
@@ -1670,5 +1850,13 @@ function photoFor(missionIndex){
   return (SKIES[missionIndex % SKIES.length] || {}).photo || null;
 }
 
-SF.skygen = { build, buildTitle, photoFor, SKIES };
+/** True when this mission is flown over a surface rather than through space.
+ *  The renderer switches off the star field, the comets and the streaming dust
+ *  for it - stars over a canyon floor is the one detail that would undo the
+ *  whole illusion. */
+function isSurface(missionIndex){
+  return !!(SKIES[missionIndex % SKIES.length] || {}).surface;
+}
+
+SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES };
 })();

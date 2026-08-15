@@ -416,8 +416,8 @@ async function run(){
            SF.skygen.SKIES[M.indexOf(gift)].name === "Sky " + at &&
            SF.config.PAINTS.some(t => t.name === "SKY " + at);
   })());
-  check("36 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 36 &&
+  check("40 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 40 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
@@ -426,9 +426,9 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 105 && (() => {
+    SF.profile.maxStars() === 117 && (() => {
       const p = SF.profile.load("LEDGER");
-      p.missions[36] = { cleared:true, stars:{ pilot:3 } };
+      p.missions[40] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
     })());
   check("the workshop curtain doesn't wait for the gift", (() => {
@@ -854,9 +854,21 @@ async function run(){
       const g = SF.missions.MISSIONS.filter(m => m.id >= a && m.id <= b);
       return g.reduce((s, m) => s + weigh(m), 0) / g.length;
     };
-    // 28-33: the last act's real levels. 34 hands off to backstage.js after
-    // seven waves and 35 is the victory lap, so neither is a fight to weigh.
-    return act(28, 33) >= act(13, 24) * 0.9;
+    /*
+     * Named rather than numbered, because the ids move every time a level is
+     * inserted and this comparison is between two ACTS, not two id ranges.
+     * The final act runs from the first stop past the Devourer up to the
+     * finale - which hands off to backstage.js after seven waves - and the
+     * gift after it is a victory lap, so neither is a fight to weigh.
+     */
+    const M = SF.missions.MISSIONS;
+    const at = n => M.findIndex(m => m.name === n);
+    const span = (a, b) => {
+      const g = M.slice(a, b);
+      return g.reduce((s, m) => s + weigh(m), 0) / g.length;
+    };
+    return span(at("The Devourer") + 1, at("Behind the Sky")) >=
+           span(at("Silent Running"), at("The Leviathan") + 1) * 0.9;
   })());
   check("a Guardian's bubble covers ships, not rocks and belt parts", (() => {
     const pr = SF.entityConst.protectable;
@@ -1114,7 +1126,7 @@ async function run(){
   check("most skies are somewhere rather than some colour", (() => {
     const FURNITURE = { planet:1, galaxy:1, sun:1 };
     const bare = SF.skygen.SKIES.filter(k => (k.props || []).every(p => FURNITURE[p.k]));
-    return bare.length <= 9;
+    return bare.length <= 10;
   })());
   /*
    * ...and every word the painter knows is a word some sky actually says. A
@@ -1181,7 +1193,11 @@ async function run(){
     return Math.min.apply(null, fam.map(lum)) <= 0.75;
   })());
   check("every generated sky has something with an edge in it",
-    SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
+    // ...except the one flown over GROUND, where the single prop IS the
+    // ground and fills the whole frame. Two hazy blobs is the failure this
+    // guards against, and a canyon floor is not that.
+    SF.skygen.SKIES.filter(k => !k.photo)
+      .every(k => (k.props || []).length >= (k.surface ? 1 : 2)));
   /*
    * The photo backdrop path outlived the last photo backdrop, so it is pinned
    * against a probe sky rather than against a mission: build() must still
@@ -3348,7 +3364,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,18,21,25,28,35");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,22,27,31,39");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -3564,6 +3580,57 @@ async function run(){
     SF.game.run.ended = true; SF.game.state = "idle";   // leave no live run behind
   }
 
+  /* ---------- the four newest rules ---------- */
+  {
+    const M = SF.missions.MISSIONS;
+    const by = n => M.find(m => m.name === n);
+    /*
+     * Each of the four is ABOUT its rule, so each pays for its rule rather
+     * than for clearing the sky. Three of them shipped with the generic trio
+     * and the star-variety ratchet is what caught it.
+     */
+    check("each new level's star is about its own rule", () =>
+      by("Spotlight").objectives.indexOf("unseen") >= 0 && by("Spotlight").spot === true &&
+      by("The Narrows").objectives.indexOf("squeeze") >= 0 && by("The Narrows").narrows === true &&
+      by("Nightfall").objectives.indexOf("afterDark") >= 0 && by("Nightfall").nightfall === true &&
+      by("The Current").current === true);
+    /*
+     * A CANYON, NOT WALLS IN SPACE. The whole reason this level is flown over
+     * ground is that there is nothing in open space for a wall to be, so the
+     * two halves have to stay together: the sky it flies must be the surface
+     * one, and the surface one must switch off the stars.
+     */
+    check("the level with walls is the level on a planet", (() => {
+      const i = M.indexOf(by("The Narrows"));
+      return SF.skygen.isSurface(i) && SF.skygen.SKIES[i].stars === 0 &&
+             (SF.skygen.SKIES[i].props || []).some(pr => pr.k === "ground") &&
+             // ...and no OTHER mission is accidentally flown over ground.
+             M.filter((m, k) => SF.skygen.isSurface(k)).length === 1;
+    })());
+    check("nothing streams past a canyon floor", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = r.slice(r.indexOf("function initBackground"), r.indexOf("function updateBackground"));
+      return /SF\.skygen\.isSurface\(idx\)/.test(fn) &&
+             /surface \? \[\]/.test(fn) &&              // no star layers
+             /surface \? Infinity/.test(fn) &&           // no comets
+             /surface \? 0 :/.test(fn);                  // no streaming dust
+    })());
+    /*
+     * The ground is a TEXTURE that fills the frame, and `tiled` draws its body
+     * up to three times with fresh random numbers each pass - right for a
+     * planet seen at three scroll positions, fatal here, where it came out as
+     * three different pieces of ground with a join between them. It is drawn
+     * once and made periodic in H instead.
+     */
+    check("the canyon floor scrolls forever without a seam", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+      const fn = g.slice(g.indexOf("function drawGround"), g.indexOf("/** One long visitor"));
+      return !/tiled\(/.test(fn) &&                      // never tiled
+             /const wrapY = /.test(fn) &&                 // edges drawn twice
+             /TAU\/H/.test(fn);                          // whole cycles per height
+    })());
+  }
+
   /* ---------- THE ANCHOR: the cable, and what it is tied to ---------- */
   {
     const W = SF.game.world;
@@ -3664,36 +3731,37 @@ async function run(){
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
     /*
-     * Six inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
-     * v4's four-level map, v5 (The Rival at 13), v6's six-level map, and v7
-     * (The Anchor at 3). Old 8 rides to 12; old 9 to 14; old 14 to 25.
+     * SEVEN inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+     * v4's four-level map, v5 (The Rival at 13), v6's six-level map, v7 (The
+     * Anchor at 3) and v8's four at once. Old 8 rides to 12; old 9 to 15; old
+     * 14 to 27; and old 3 - which never moved for the game's first six
+     * releases - is now at 4.
      *
-     * Old 3 moves for the first time in the game's life. It used to be the
-     * proof that act one never shifted - nothing had ever gone in below it -
-     * and The Anchor is the first level that has. That is precisely what this
-     * chain is for: a save from the first release still has to arrive with
-     * every star filed against the level it was actually won on.
+     * Fifteen levels have been inserted into the middle of this campaign over
+     * its life. A save from the very first release still has to arrive with
+     * every star filed against the level it was actually won on, and that is
+     * the only thing this chain exists to guarantee.
      */
     check("pre-insert records ride every shift",
       shifted.missions["12"] && shifted.missions["12"].stars.pilot === 2 &&
-      shifted.missions["14"] && shifted.missions["14"].stars.pilot === 3 &&
-      shifted.missions["25"] && shifted.missions["25"].stars.pilot === 1 &&
+      shifted.missions["15"] && shifted.missions["15"].stars.pilot === 3 &&
+      shifted.missions["27"] && shifted.missions["27"].stars.pilot === 1 &&
       !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["10"] &&
-      !shifted.missions["11"] && !shifted.missions["13"] && !shifted.missions["20"] &&
-      !shifted.missions["24"] &&
-      shifted.lastMission === 14);
+      !shifted.missions["11"] && !shifted.missions["13"] && !shifted.missions["14"] &&
+      !shifted.missions["20"] && !shifted.missions["24"] && !shifted.missions["25"] &&
+      shifted.lastMission === 15);
     check("the oldest record rides the newest insert too",
       shifted.missions["4"] && shifted.missions["4"].stars.pilot === 2 &&
       !shifted.missions["3"]);
     check("the shifts run exactly once",
-      SF.profile.migrate(shifted).missions["14"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["25"].stars.pilot === 1);
+      SF.profile.migrate(shifted).missions["15"].stars.pilot === 3 &&
+      SF.profile.migrate(shifted).missions["27"].stars.pilot === 1);
     // A v2-era save (Silent Running already counted) picks up v3 onward only.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
     check("a v2-era save shifts only the later inserts",
-      v2era.missions["21"] && !v2era.missions["13"] && !v2era.missions["20"] &&
-      v2era.lastMission === 21);
+      v2era.missions["22"] && !v2era.missions["13"] && !v2era.missions["21"] &&
+      v2era.lastMission === 22);
   }
 
   /* ---------- settings ---------- */

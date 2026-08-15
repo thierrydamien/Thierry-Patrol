@@ -221,13 +221,23 @@ function initBackground(missionIndex){
     skyIndex = idx;
   }
   skyScroll = 0;
+  /*
+   * THE ONE LEVEL FLOWN OVER GROUND.
+   *
+   * The Narrows is a canyon on their world, and the single detail that would
+   * put it straight back into space is the star layer streaming over the rock.
+   * So a surface mission gets no stars, no comets and no dust: all the motion
+   * comes from the ground itself scrolling, which is exactly what motion looks
+   * like when you are the thing that is moving.
+   */
+  const surface = SF.skygen.isSurface(idx);
   stars = [];
   // Star counts are per-area, not per-layer-constant: the playfield is 2.5x
   // the area it used to be, so a fixed count would read as empty space.
   // Layer speeds fan out well clear of the sky's crawl, so the parallax
   // stack reads as depth instead of one welded sheet.
   const density = (VW*VH) / (390*620);
-  [{n:18,s:24,size:1.1,a:0.38},{n:11,s:60,size:1.7,a:0.55},{n:6,s:130,size:2.6,a:0.8}]
+  (surface ? [] : [{n:18,s:24,size:1.1,a:0.38},{n:11,s:60,size:1.7,a:0.55},{n:6,s:130,size:2.6,a:0.8}])
     .forEach((L, li) => {
       const count = Math.round(L.n * density);
       for(let i=0;i<count;i++){
@@ -238,11 +248,11 @@ function initBackground(missionIndex){
       }
     });
   comets = [];
-  cometTimer = rand(3, 9);
+  cometTimer = surface ? Infinity : rand(3, 9);
   bgPhase = rand(0, TAU);
   warp = Math.min(1 + (missionIndex||0)*0.1, 2.0);
   dust = [];
-  const dn = Math.round(26 * density);
+  const dn = surface ? 0 : Math.round(26 * density);
   for(let i=0;i<dn;i++){
     dust.push({ x: rand(0,VW), y: rand(0,VH), speed: rand(320, 520),
                 len: rand(6, 16), a: rand(0.05, 0.16) });
@@ -1312,6 +1322,136 @@ let darkCv = null, darkCtx = null;
 function drawAct4(ctx, run, world, timeMs){
   if(!run || run.ended) return;
 
+  /* --- THE CURRENT: the river ---------------------------------------------
+     Drawn as a band and the things IN it. The band alone reads as a coloured
+     stripe somebody put on the screen; the motes streaming through it are
+     what say "this is moving, and it will move you". Under everything else,
+     because it is the water and not the fight. */
+  if(run.current){
+    const cu = run.current;
+    ctx.save();
+    const g = ctx.createLinearGradient(0, cu.y, 0, cu.y + cu.h);
+    g.addColorStop(0,    "rgba(56,189,248,0)");
+    g.addColorStop(0.22, "rgba(56,189,248,0.17)");
+    g.addColorStop(0.78, "rgba(45,212,191,0.17)");
+    g.addColorStop(1,    "rgba(45,212,191,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, cu.y, VW, cu.h);
+    // Both banks, so the edge you have to climb out over is visible.
+    ctx.globalCompositeOperation = "lighter";
+    [cu.y, cu.y + cu.h].forEach(y => {
+      const e = ctx.createLinearGradient(0, y - 5, 0, y + 5);
+      e.addColorStop(0, "rgba(125,211,252,0)");
+      e.addColorStop(0.5, "rgba(125,211,252,0.5)");
+      e.addColorStop(1, "rgba(125,211,252,0)");
+      ctx.fillStyle = e;
+      ctx.fillRect(0, y - 7, VW, 14);
+    });
+    ctx.strokeStyle = "#bae6fd";
+    ctx.lineCap = "round";
+    for(let i = 0; i < cu.motes.length; i++){
+      const m = cu.motes[i];
+      ctx.globalAlpha = Math.min(0.95, m.a * 2.6) * Math.min(1, m.life);
+      ctx.lineWidth = 1.4 + m.k*1.6;
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - cu.dir*m.len, m.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* --- THE NARROWS: the canyon --------------------------------------------
+     The rock IS the collision - both come off `run.narrows.w`, so the wall
+     that hurts is the wall you can see, to the pixel. Drawn as a ragged edge
+     rather than a straight one: a canyon with a ruler-straight side is a
+     corridor, and this has to read as somewhere the water cut. */
+  if(run.narrows){
+    const na = run.narrows;
+    const lit = "#c9ad86", dark = "#120c07";
+    ctx.save();
+    const STEP = 26;
+    [-1, 1].forEach(side => {
+      const inner = side < 0 ? na.w : VW - na.w;
+      const outer = side < 0 ? -2 : VW + 2;
+      ctx.beginPath();
+      ctx.moveTo(outer, -2);
+      for(let y = -2; y <= VH + STEP; y += STEP){
+        // Off y alone, so the face is a fixed shape that MOVES rather than a
+        // boiling edge. Two frequencies: big bays, and a rough surface on them.
+        const j = Math.sin(y*0.037 + side)*13 + Math.sin(y*0.11 + side*2.3)*7;
+        ctx.lineTo(inner + side*j, y);
+      }
+      ctx.lineTo(outer, VH + 2);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(outer, 0, inner, 0);
+      g.addColorStop(0, dark);
+      g.addColorStop(0.62, "#2b1d11");
+      g.addColorStop(1, lit);
+      ctx.fillStyle = g;
+      ctx.fill();
+      // The lip catches the sun, which is the only thing stopping the rock
+      // from reading as a black bar down the side of the screen.
+      ctx.strokeStyle = "rgba(255,226,180,0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  /* --- SPOTLIGHT: the beam ------------------------------------------------
+     A wedge from off the top, brighter at the mouth and fading down its
+     length, and hotter still when it has actually found you. Drawn additively
+     so it lights the sky rather than covering it - the point is that being in
+     it is dangerous, not that it hides anything. */
+  if(run.spot){
+    const sp = run.spot;
+    const L = VH*1.5;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(sp.pivotX, sp.pivotY);
+    ctx.rotate(sp.a);
+    /*
+     * Loud on purpose. The first cut drew this at 17% over a 1.5-screen wedge
+     * and it was, measured in a screenshot, invisible - which for a mechanic
+     * whose entire rule is "do not be in this" is the worst possible outcome.
+     * A seven-year-old has to see the edge of it from across the room.
+     */
+    const hot = sp.lit ? 1 : 0.72;
+    const g = ctx.createLinearGradient(0, 0, L, 0);
+    g.addColorStop(0,    "rgba(255,247,214," + (0.55*hot).toFixed(3) + ")");
+    g.addColorStop(0.35, "rgba(255,240,180," + (0.30*hot).toFixed(3) + ")");
+    g.addColorStop(0.75, "rgba(255,228,150," + (0.12*hot).toFixed(3) + ")");
+    g.addColorStop(1,    "rgba(255,220,140,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(-sp.half)*L, Math.sin(-sp.half)*L);
+    ctx.lineTo(Math.cos(sp.half)*L, Math.sin(sp.half)*L);
+    ctx.closePath();
+    ctx.fill();
+    // Both edges drawn as lines. A cone with a soft edge reads as a glow; the
+    // hard rim is what tells you exactly where "in it" stops.
+    ctx.strokeStyle = "rgba(255,250,224," + (0.34*hot).toFixed(3) + ")";
+    ctx.lineWidth = 2;
+    [-sp.half, sp.half].forEach(h => {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(h)*L, Math.sin(h)*L);
+      ctx.stroke();
+    });
+    ctx.restore();
+    // The lamp itself, so the beam comes from somewhere.
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const lg = ctx.createRadialGradient(sp.pivotX, sp.pivotY, 0, sp.pivotX, sp.pivotY, 120);
+    lg.addColorStop(0, "rgba(255,250,230,0.55)");
+    lg.addColorStop(1, "rgba(255,230,160,0)");
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.arc(sp.pivotX, sp.pivotY, 120, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
   /* --- THE RING: the two seams -------------------------------------------
      A pair of shimmering vertical edges, so the place looks like it has a
      join rather than looking like the walls stopped working. They breathe on
@@ -1628,6 +1768,41 @@ function drawDisco(ctx, timeMs){
     ctx.closePath();
     ctx.fill();
   }
+  ctx.restore();
+}
+
+/*
+ * NIGHTFALL: the light going out while you fly.
+ *
+ * Deliberately NOT the blackout. The blackout is a lid with holes punched in
+ * it - you see what glows and nothing else, and it is a puzzle. This is dusk:
+ * one even veil that deepens as the mission runs, so the same enemies simply
+ * get harder to READ. Difficulty as atmosphere rather than numbers.
+ *
+ * It stops at 0.82 rather than reaching black. The Long Dark, two stops later,
+ * is the level that is actually pitch black; if this one got there too, the
+ * mission that owns the idea would have nothing left to be. And a child has to
+ * be able to finish this - a wave you genuinely cannot see is not tense, it is
+ * unfair.
+ *
+ * The veil is warm at first and cold at the end: a sky losing its sun goes
+ * amber before it goes blue-black, and that is most of the dread.
+ */
+function drawNightfall(ctx, k){
+  if(!(k > 0.02)) return;
+  const a = Math.min(0.82, k*0.92);
+  const warm = Math.max(0, 1 - k*1.6);
+  const r = Math.round(6 + warm*34), g = Math.round(7 + warm*16), b = Math.round(20 - warm*6);
+  ctx.save();
+  ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + a.toFixed(3) + ")";
+  ctx.fillRect(0, 0, VW, VH);
+  // The last of the light drains from the top down, so the dark arrives from
+  // the direction the waves come from.
+  const gd = ctx.createLinearGradient(0, 0, 0, VH);
+  gd.addColorStop(0, "rgba(2,3,10," + (a*0.35).toFixed(3) + ")");
+  gd.addColorStop(1, "rgba(2,3,10,0)");
+  ctx.fillStyle = gd;
+  ctx.fillRect(0, 0, VW, VH);
   ctx.restore();
 }
 
@@ -3775,6 +3950,7 @@ SF.render = {
   initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
+  drawNightfall,
   drawAct4,
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
