@@ -1259,6 +1259,93 @@ async function run(){
            rocks.length >= 2 && rocks.every(p => p.ice) &&
            k.density <= 0.6;                    // the emptiest sky in the table
   })());
+  /*
+   * PLANETS ARE BODIES, NOT AIRBRUSHES.
+   *
+   * The old painter stacked canvas gradients and measured 1.6-3.3% local
+   * contrast with its brightest pixel at the DEAD CENTRE of the disc - a
+   * snooker ball under a camera flash. The per-pixel renderer is pinned on
+   * the numbers that diagnosis used: real surface detail, a highlight pushed
+   * out toward the star, a crescent that is a lit sliver rather than a hole,
+   * and the same seed baking the same planet forever.
+   *
+   * The suite's own canvas is a deliberate stub (see the top of this file),
+   * where pixelsWritable() correctly hands rendering to the ink fallback - so
+   * these pins run skygen in a PRIVATE instance backed by node-canvas, the
+   * same way the game runs it in a browser. If node-canvas is missing the
+   * pins pass vacuously, exactly like the suite's other native-dep escapes.
+   */
+  {
+    let NC = null;
+    try { NC = require("canvas"); } catch(e){}
+    let sg2 = null;
+    if(NC){
+      const w2 = { SF: {}, devicePixelRatio: 1,
+                   localStorage: { getItem: () => null, setItem: () => {} } };
+      const d2 = { createElement: () => NC.createCanvas(1, 1) };
+      ["src/core.js", "src/skygen.js"].forEach(f =>
+        new Function("window", "document",
+          fs.readFileSync(path.join(__dirname, f), "utf8"))(w2, d2));
+      sg2 = w2.SF.skygen;
+    }
+    const probe = (props, N) => {
+      const S = sg2.SKIES, n = S.length;
+      S.push({ name:"__probe", clouds:["#1e3a8a","#3b82f6","#0c1836"], dust:"#020510",
+        star:"#dbeafe", density:0.0001, stars:0, bright:0, props });
+      try { return sg2.build(n, N, N, 1); } finally { S.pop(); }
+    };
+    check("a planet has a surface, and its light comes from its star", !sg2 || (() => {
+      const N = 200;
+      const cv = probe([{k:"planet", x:0.5, y:0.5, r:0.40,
+                         lit:"#8cc7f2", dark:"#0a1a2e", bands:true}], N);
+      const d = cv.getContext("2d").getImageData(0, 0, N, N).data;
+      const L = (px,py) => { const i=((py|0)*N+(px|0))*4;
+        return 0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2]; };
+      const R = N*0.40, c = N/2;
+      let sum=0, cnt=0, mean=0, hi=-1, hd=0;
+      for(let py=1;py<N-1;py++) for(let px=1;px<N-1;px++){
+        const dx=px-c, dy=py-c, dd=Math.sqrt(dx*dx+dy*dy);
+        if(dd > R*0.9) continue;
+        const l = L(px,py);
+        sum += Math.abs(l-L(px+1,py)) + Math.abs(l-L(px,py+1));
+        mean += l; cnt++;
+        if(l > hi){ hi = l; hd = dd; }
+      }
+      const detail = (sum/(2*cnt))/Math.max(1, mean/cnt)*100;
+      return detail > 3.5 && hd > R*0.5;
+    })());
+    check("a crescent is a lit sliver on a body, not a hole", !sg2 || (() => {
+      const N = 160;
+      const cv = probe([{k:"planet", x:0.5, y:0.5, r:0.40,
+                         lit:"#8cc7f2", dark:"#0a1a2e", crescent:true}], N);
+      const d = cv.getContext("2d").getImageData(0, 0, N, N).data;
+      const R = N*0.40, c = N/2;
+      let mx=-1, mean=0, cnt=0;
+      for(let py=0;py<N;py++) for(let px=0;px<N;px++){
+        const dx=px-c, dy=py-c;
+        if(dx*dx+dy*dy > R*R*0.92) continue;
+        const i=(py*N+px)*4;
+        const l = 0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2];
+        mean += l; cnt++;
+        if(l > mx) mx = l;
+      }
+      mean /= cnt;
+      return mx > 30 && mean < mx*0.45;
+    })());
+    check("the same seed bakes the same planet forever", !sg2 || (() => {
+      const mk = () => probe([{k:"planet", x:0.5, y:0.5, r:0.35, lit:"#e0a13e",
+                               dark:"#3a1f04", bands:true, rings:true}], 140).toDataURL();
+      const a = mk(), b = mk();
+      return a === b && a.length > 2000;
+    })());
+  }
+  // ...and the gradient painter stays, verbatim, as the no-pixel fallback -
+  // which is also what the suite's own stubbed canvas exercises above.
+  check("the ink planet remains the fallback", (() => {
+    const src = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    return /function drawPlanetInk/.test(src) &&
+           /if\(!pixelsWritable\(\)\) return drawPlanetInk/.test(src);
+  })());
   check("planets are lit, not drawn: mottling, weather and a terminator", (() => {
     const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
     return /Surface mottling/.test(s) &&                   // material, not vinyl

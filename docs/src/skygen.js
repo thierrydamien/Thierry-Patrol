@@ -601,7 +601,372 @@ function tiled(ctx, H, y, fn){
    coloured haze - the difference between "a nebula" and
    "somewhere".
    --------------------------------------------------------- */
-function drawPlanet(ctx, W, H, p, rand, lightDir){
+/* ---------------------------------------------------------
+   PLANETS, PER PIXEL
+   ---------------------------------------------------------
+ * The old painter (kept below as drawPlanetInk, the fallback) built a planet
+ * out of canvas gradients: a radial base, 26 soft blobs, wobbling band
+ * rectangles. Measured, the result had 2-3% local contrast - an airbrushed
+ * ball - and its brightest point sat at the CENTRE of the disc, decaying
+ * symmetrically, which is how a snooker ball photographs under a camera
+ * flash. A world lit by a distant star keeps its bright point pushed toward
+ * the light, a crisp terminator, and texture that forshortens into the limb.
+ * None of that is reachable with stacked gradients, so this renderer computes
+ * every pixel instead:
+ *
+ *  - the NORMAL of the sphere at each pixel, so brightness comes from the
+ *    actual surface direction (a real terminator, limb darkening, and the
+ *    highlight where it belongs);
+ *  - 3D value noise sampled AT THE POINT ON THE BALL, so terrain and weather
+ *    compress toward the limb exactly the way a globe's features do - the
+ *    single strongest cue that you are looking at a sphere and not a circle;
+ *  - bands as a function of LATITUDE, so they bend into the limb for free
+ *    instead of being clipped rectangles;
+ *  - crescents as ordinary lighting with the sun mostly behind the body -
+ *    the same code path, no special-case cut, so the sliver curves correctly
+ *    and the night side keeps a faint body instead of reading as a hole;
+ *  - craters as 3D stamps (lit rim toward the sun, shadowed rim away), which
+ *    also foreshorten at the limb for free;
+ *  - rings that cast a shadow band on the disc, and a disc that casts its
+ *    shadow bite on the rings.
+ *
+ * COST. This runs once per mission, at bake time, into a sprite - the sky is
+ * already baked once for the same reason. The sprite is capped at ~520 device
+ * pixels and blitted into the wrap copies, which also fixes a real bug the
+ * old painter had: its mottles drew fresh random numbers inside `tiled`, so
+ * the wrap copies of a planet were not even the same planet.
+ *
+ * Everything random comes from ONE draw off the mission's seeded stream,
+ * expanded locally - the same sky builds the same planet forever.
+ */
+const m32 = a => () => {
+  a |= 0; a = (a + 0x6D2B79F5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+/* Integer lattice hash -> [0,1). The whole texture stands on this. */
+function latticeH(ix, iy, iz, seed){
+  let n = (ix*374761393 + iy*668265263 + iz*1274126177 + seed*69069) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
+/* Trilinear value noise on that lattice. */
+function vnoise3(x, y, z, seed){
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  let fx = x - ix, fy = y - iy, fz = z - iz;
+  fx = fx*fx*(3 - 2*fx); fy = fy*fy*(3 - 2*fy); fz = fz*fz*(3 - 2*fz);
+  const c000 = latticeH(ix, iy, iz, seed),     c100 = latticeH(ix+1, iy, iz, seed);
+  const c010 = latticeH(ix, iy+1, iz, seed),   c110 = latticeH(ix+1, iy+1, iz, seed);
+  const c001 = latticeH(ix, iy, iz+1, seed),   c101 = latticeH(ix+1, iy, iz+1, seed);
+  const c011 = latticeH(ix, iy+1, iz+1, seed), c111 = latticeH(ix+1, iy+1, iz+1, seed);
+  const x00 = c000 + (c100-c000)*fx, x10 = c010 + (c110-c010)*fx;
+  const x01 = c001 + (c101-c001)*fx, x11 = c011 + (c111-c011)*fx;
+  const y0 = x00 + (x10-x00)*fy, y1 = x01 + (x11-x01)*fy;
+  return y0 + (y1-y0)*fz;
+}
+/* Fractal sum: each octave doubles the frequency and halves the say. */
+function fbm3(x, y, z, seed, oct){
+  let v = 0, amp = 0.5, f = 1, norm = 0;
+  for(let o = 0; o < oct; o++){
+    v += vnoise3(x*f, y*f, z*f, seed + o*101) * amp;
+    norm += amp; amp *= 0.5; f *= 2.03;
+  }
+  return v / norm;
+}
+
+/* Can this context do per-pixel work at all? Write-side ImageData is nearly
+   universal, but a fallback that costs one try/catch is cheap insurance. */
+let hdOK = null;
+function pixelsWritable(){
+  if(hdOK !== null) return hdOK;
+  try {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 2;
+    const x = cv.getContext("2d");
+    x.putImageData(x.createImageData(2, 2), 0, 0);
+    hdOK = true;
+  } catch(e){ hdOK = false; }
+  return hdOK;
+}
+
+function drawPlanet(ctx, W, H, p, rand, lightDir, dpr){
+  if(!pixelsWritable()) return drawPlanetInk(ctx, W, H, p, rand, lightDir);
+  drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr || 1);
+}
+
+function drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr){
+  const rL = p.r * W;                                    // logical radius
+  const extL = rL * (p.rings ? 1.95 : 1.25);             // sprite half-extent
+  const scale = Math.min(dpr, 384 / (2*extL)) || 1;      // device px per logical
+  const S = Math.max(8, Math.ceil(extL * 2 * scale));    // sprite size, device px
+  const R = rL * scale;                                  // disc radius, device px
+  const c = S / 2;
+  const rng = m32((rand() * 2147483646 + 1) | 0);
+  const seed = (rng() * 1e9) | 0;
+
+  /* The sun. 2D direction from the sky's own bright core, given a Z: in
+     front of the body for a lit world, mostly BEHIND it for a crescent -
+     which is all a crescent is. */
+  let Lx = lightDir[0], Ly = lightDir[1];
+  let Lz = p.crescent ? -0.62 : 0.52;
+  { const il = 1 / Math.hypot(Lx, Ly, Lz); Lx *= il; Ly *= il; Lz *= il; }
+
+  /* The spin axis, tilted a little and leaning slightly out of the screen,
+     so no two planets wear their stripes at the same angle. */
+  const tilt = (rng() - 0.5) * 0.9;
+  let ax = Math.sin(tilt), ay = -Math.cos(tilt), az = (rng() - 0.5) * 0.55;
+  { const il = 1 / Math.hypot(ax, ay, az); ax *= il; ay *= il; az *= il; }
+
+  const hex = h => { const v = parseInt(h.slice(1), 16);
+    return [(v>>16)&255, (v>>8)&255, v&255]; };
+  const Dk = hex(p.dark || "#0a0f1c"), Lt = hex(p.lit || "#8899bb");
+  const deep = [Dk[0]*0.55, Dk[1]*0.55, Dk[2]*0.55];
+  const hi   = [Lt[0] + (255-Lt[0])*0.35, Lt[1] + (255-Lt[1])*0.35, Lt[2] + (255-Lt[2])*0.35];
+  const atm  = [Lt[0] + (255-Lt[0])*0.5,  Lt[1] + (255-Lt[1])*0.5,  Lt[2] + (255-Lt[2])*0.5];
+
+  // Texture-space offset: each planet samples its own neighbourhood of the
+  // noise field, so two planets in one sky never share weather.
+  const ox = rng()*61, oy = rng()*67, oz = rng()*71;
+
+  /* Material knobs, all drawn before the loop so the loop stays hot. */
+  const gas = !!p.bands;
+  const bandN = 4.5 + rng()*4;              // stripe count
+  const twist = 1.1 + rng()*1.4;            // how hard weather bends them
+  const sea = 0.40 + rng()*0.16;            // rocky: where lowlands end
+  const hasCaps = !gas && rng() < 0.4;
+  const capLat = 0.62 + rng()*0.16;
+
+  // The storm every gas giant earns - placed on the visible hemisphere.
+  let stx = 0, sty = 0, stz = 0, stS = 0, st1x=0,st1y=0,st1z=0, st2x=0,st2y=0,st2z=0;
+  if(gas && rng() < 0.8){
+    const phi = (rng() - 0.5) * 1.0, psi = (rng() - 0.5) * 1.6;
+    // Basis on the sphere: b1 along the bands, b2 completing it.
+    let b1x = -ay, b1y = ax, b1z = 0;
+    { const il = 1/Math.hypot(b1x,b1y,b1z); b1x*=il; b1y*=il; b1z*=il; }
+    const b2x = ay*b1z - az*b1y, b2y = az*b1x - ax*b1z, b2z = ax*b1y - ay*b1x;
+    const cp = Math.cos(phi), sp = Math.sin(phi), cs = Math.cos(psi), ss = Math.sin(psi);
+    stx = b1x*cp*cs + b2x*cp*ss + ax*sp;
+    sty = b1y*cp*cs + b2y*cp*ss + ay*sp;
+    stz = b1z*cp*cs + b2z*cp*ss + az*sp;
+    if(stz < 0.15){ stx -= 2*b2x*cp*ss; sty -= 2*b2y*cp*ss; stz -= 2*b2z*cp*ss; }
+    stS = 0.05 + rng()*0.06;                // in 1-cos(angle) units
+    // Storm-local frame: st1 along the band, st2 across it.
+    st1x = ay*stz - az*sty; st1y = az*stx - ax*stz; st1z = ax*sty - ay*stx;
+    { const il = 1/(Math.hypot(st1x,st1y,st1z)||1); st1x*=il; st1y*=il; st1z*=il; }
+    st2x = sty*st1z - stz*st1y; st2y = stz*st1x - stx*st1z; st2z = stx*st1y - sty*st1x;
+  }
+
+  // Craters, as 3D points with sizes. Biased to the visible hemisphere.
+  const CR = [];
+  if(p.craters){
+    const n = 7 + (rng()*4 | 0);
+    for(let k = 0; k < n; k++){
+      const z = 0.05 + rng()*0.92, a = rng()*TAU, s = Math.sqrt(1 - z*z);
+      CR.push({ x: Math.cos(a)*s, y: Math.sin(a)*s, z,
+                s: 0.015 + rng()*0.06 });
+    }
+  }
+
+  // Ring geometry, needed both for the shadow band on the disc and the
+  // ring draw itself.
+  const ringRoll = -0.38 + (rng() - 0.5)*0.3;
+  const squash = 0.17 + rng()*0.09;
+  // Where the ring's shadow lies on the body: a band of latitude on the
+  // sun's side of the equator.
+  const shLat = -(Lx*ax + Ly*ay + Lz*az) * 0.55;
+
+  /* ---- the disc, one pixel at a time ---- */
+  const disc = document.createElement("canvas");
+  disc.width = disc.height = S;
+  const dx2 = disc.getContext("2d");
+  const img = dx2.createImageData(S, S);
+  const px = img.data;
+  const sstep = (e0, e1, v) => {
+    const t = Math.min(1, Math.max(0, (v - e0) / (e1 - e0)));
+    return t*t*(3 - 2*t);
+  };
+  for(let j = 0; j < S; j++){
+    const ny = (j - c) / R;
+    if(ny < -1.05 || ny > 1.05) continue;
+    // Only the columns this row of the disc actually crosses.
+    const half = R * Math.sqrt(Math.max(0, 1.1 - ny*ny)) + 1;
+    const i0 = Math.max(0, Math.floor(c - half)), i1 = Math.min(S - 1, Math.ceil(c + half));
+    for(let i = i0; i <= i1; i++){
+      const nx = (i - c) / R;
+      const d2 = nx*nx + ny*ny;
+      if(d2 > 1.10) continue;
+      const d = Math.sqrt(d2);
+      const cov = Math.min(1, Math.max(0, (1 - d) * R + 0.5));   // 1px AA edge
+      if(cov <= 0) continue;
+      const nz = Math.sqrt(Math.max(0, 1 - Math.min(1, d2)));
+      const lat = nx*ax + ny*ay + nz*az;
+      const ndlEarly = nx*Lx + ny*Ly + nz*Lz;
+
+      // ---- material ----
+      let r, g, b;
+      const qx = nx*2.2 + ox, qy = ny*2.2 + oy, qz = nz*2.2 + oz;
+      if(ndlEarly <= -0.05){
+        // Full night: 0.11 x material under the prop layer's dim is a hint of
+        // a colour, not a landscape - so the landscape is not computed. This
+        // is most of a crescent's disc, and most of the old cost.
+        r = (Dk[0] + Lt[0]) * 0.5; g = (Dk[1] + Lt[1]) * 0.5; b = (Dk[2] + Lt[2]) * 0.5;
+      } else if(gas){
+        const warp = fbm3(qx*0.9, qy*0.9, qz*0.9, seed, 2) - 0.5;
+        let tt = lat*bandN*Math.PI + warp*twist*1.7;
+        // The storm bends the stripes around itself before it paints itself.
+        let stormW = 0, collarW = 0;
+        if(stS){
+          const ex = nx - stx, ey = ny - sty, ez = nz - stz;
+          const du = (ex*st1x + ey*st1y + ez*st1z) / 1.9;
+          const dv = ex*st2x + ey*st2y + ez*st2z;
+          const ell = Math.sqrt(du*du + dv*dv) / stS;
+          if(ell < 1.5){
+            stormW = Math.max(0, 1 - ell);
+            collarW = Math.max(0, 1 - Math.abs(ell - 1.05)*4);
+            tt += stormW*stormW * 5.2;
+          }
+        }
+        let v = Math.sin(tt)*0.5 + 0.5 + Math.sin(tt*2 + 1.7)*0.15;
+        // Contrast, then grain: soft sine stripes read as watercolour.
+        v = 0.5 + (v - 0.5)*1.75;
+        v += (fbm3(qx*3.4, qy*3.4, qz*3.4, seed + 7, 2) - 0.5)*0.22;
+        v = Math.min(1, Math.max(0, v));
+        r = Dk[0] + (Lt[0]-Dk[0])*v; g = Dk[1] + (Lt[1]-Dk[1])*v; b = Dk[2] + (Lt[2]-Dk[2])*v;
+        if(stS && stormW > 0){
+          const k1 = stormW*stormW*0.72;
+          r += (deep[0]-r)*k1; g += (deep[1]-g)*k1; b += (deep[2]-b)*k1;
+          const k2 = collarW*0.38;
+          r += (hi[0]-r)*k2; g += (hi[1]-g)*k2; b += (hi[2]-b)*k2;
+        }
+      } else {
+        // Rocky: elevation ramp deep -> dark -> lit -> high, with a low-
+        // frequency tint so a whole face is never one material.
+        const e = fbm3(qx*1.35, qy*1.35, qz*1.35, seed, 5);
+        const macro = fbm3(qx*0.5 + 13, qy*0.5 + 13, qz*0.5 + 13, seed + 31, 2) - 0.5;
+        let v;
+        if(e < sea){ const t = e/sea; r = deep[0]+(Dk[0]-deep[0])*t; g = deep[1]+(Dk[1]-deep[1])*t; b = deep[2]+(Dk[2]-deep[2])*t; }
+        else if(e < sea + 0.3){ const t = (e-sea)/0.3; r = Dk[0]+(Lt[0]-Dk[0])*t; g = Dk[1]+(Lt[1]-Dk[1])*t; b = Dk[2]+(Lt[2]-Dk[2])*t; }
+        else { const t = Math.min(1, (e-sea-0.3)/0.25); r = Lt[0]+(hi[0]-Lt[0])*t; g = Lt[1]+(hi[1]-Lt[1])*t; b = Lt[2]+(hi[2]-Lt[2])*t; }
+        r *= 1 + macro*0.3; g *= 1 + macro*0.3; b *= 1 + macro*0.3;
+        // Craters: shadowed floor, rim lit toward the sun, dark away from it.
+        for(let k = 0; k < CR.length; k++){
+          const cr = CR[k];
+          const dd = 1 - (nx*cr.x + ny*cr.y + nz*cr.z);
+          if(dd > cr.s) continue;
+          const rel = dd / cr.s;
+          if(rel < 0.62){
+            const fw = (1 - rel/0.62) * 0.5;
+            r += (deep[0]-r)*fw; g += (deep[1]-g)*fw; b += (deep[2]-b)*fw;
+          } else {
+            const rimw = Math.max(0, 1 - Math.abs(rel - 0.81)*5.2);
+            const ex = nx - cr.x, ey = ny - cr.y, ez = nz - cr.z;
+            const sn = Math.min(1, Math.max(-1, (ex*Lx + ey*Ly + ez*Lz) / (cr.s*1.6)));
+            const t = rimw * 0.5 * Math.abs(sn);
+            const tc = sn > 0 ? hi : deep;
+            r += (tc[0]-r)*t; g += (tc[1]-g)*t; b += (tc[2]-b)*t;
+          }
+        }
+        if(hasCaps){
+          const cw = sstep(capLat, capLat + 0.08, Math.abs(lat)) * 0.85;
+          r += (255-r)*cw*0.55; g += (255-g)*cw*0.55; b += (255-b)*cw*0.58;
+        }
+      }
+
+      // ---- light ----
+      const ndl = ndlEarly;
+      const day = sstep(-0.045, 0.13, ndl);
+      const limbd = 0.78 + 0.22*nz;                     // limb darkening, gentle
+      let light = 0.11 + 1.0 * day * limbd;
+      if(p.rings){
+        const q = (lat - shLat) / 0.10;
+        if(q > -1 && q < 1) light *= 1 - 0.62 * day * (1 - q*q);
+      }
+      // Atmosphere in-scatter: the lit limb glows in the sky's own colour.
+      const rim = (1 - nz);
+      const rimw = rim*rim*rim * (0.14 + 0.6*day);
+      let rr = r*light + atm[0]*rimw;
+      let gg = g*light + atm[1]*rimw;
+      let bb = b*light + atm[2]*rimw;
+
+      const o = (j*S + i) * 4;
+      px[o]   = rr > 255 ? 255 : rr;
+      px[o+1] = gg > 255 ? 255 : gg;
+      px[o+2] = bb > 255 ? 255 : bb;
+      px[o+3] = cov * 255;
+    }
+  }
+  dx2.putImageData(img, 0, 0);
+
+  /* ---- the sprite: back rings, disc, halo, front rings ---- */
+  const sprite = document.createElement("canvas");
+  sprite.width = sprite.height = S;
+  const sx = sprite.getContext("2d");
+
+  const ringPass = front => {
+    if(!p.rings) return;
+    const bands = [
+      { rr: R*1.30, w: R*0.070, a: 0.46 },
+      { rr: R*1.42, w: R*0.110, a: 0.26 },
+      { rr: R*1.56, w: R*0.050, a: 0.44 },   // then the gap
+      { rr: R*1.70, w: R*0.040, a: 0.24 },
+    ];
+    const cosR = Math.cos(ringRoll), sinR = Math.sin(ringRoll);
+    sx.save();
+    sx.lineCap = "round";
+    const STEPS = 150;
+    for(const bd of bands){
+      for(let k = 0; k < STEPS; k++){
+        const t0 = (k / STEPS) * TAU, t1 = ((k + 1.35) / STEPS) * TAU;
+        const my = Math.sin((t0 + t1)/2);
+        const isFront = my >= 0;                 // near half dips below centre
+        if(isFront !== front) continue;
+        const pt = t => {
+          const ux = Math.cos(t) * bd.rr, uy = Math.sin(t) * bd.rr * squash;
+          return [c + ux*cosR - uy*sinR, c + ux*sinR + uy*cosR];
+        };
+        const [x0, y0] = pt(t0), [x1, y1] = pt(t1);
+        // The planet's shadow bites the ring on the far side from the sun.
+        const mx = (x0+x1)/2 - c, myy = (y0+y1)/2 - c;
+        const along = mx*Lx + myy*Ly;
+        const perp = Math.abs(mx*Ly - myy*Lx);
+        const shade = (along < -R*0.2 && perp < R*0.95) ? 0.12 : 1;
+        sx.strokeStyle = "rgba(" + ((Lt[0]+hi[0])/2|0) + "," + ((Lt[1]+hi[1])/2|0) + "," +
+                         ((Lt[2]+hi[2])/2|0) + "," + (bd.a * shade).toFixed(3) + ")";
+        sx.lineWidth = bd.w;
+        sx.beginPath(); sx.moveTo(x0, y0); sx.lineTo(x1, y1); sx.stroke();
+      }
+    }
+    sx.restore();
+  };
+
+  ringPass(false);                    // the far half, behind the body
+  sx.drawImage(disc, 0, 0);
+  if(!p.crescent){
+    // Atmosphere halo just outside the lit limb. Offset toward the sun and
+    // kept tight: a halo drawn all the way round reads as a grey donut.
+    const gx = c + Lx*R*0.28, gy = c + Ly*R*0.28;
+    const g = sx.createRadialGradient(gx, gy, R*0.90, gx, gy, R*1.075);
+    g.addColorStop(0, "rgba(" + atm[0] + "," + atm[1] + "," + atm[2] + ",0)");
+    g.addColorStop(0.5, "rgba(" + atm[0] + "," + atm[1] + "," + atm[2] + ",0.15)");
+    g.addColorStop(1, "rgba(" + atm[0] + "," + atm[1] + "," + atm[2] + ",0)");
+    sx.save();
+    sx.globalCompositeOperation = "lighter";
+    sx.fillStyle = g;
+    sx.beginPath(); sx.arc(gx, gy, R*1.075, 0, TAU); sx.fill();
+    sx.restore();
+  }
+  ringPass(true);                     // the near half, over the body
+
+  /* ---- blit into the sky, wrapped. One sprite, identical copies. ---- */
+  const cxL = p.x * W, cyL = p.y * H;
+  tiled(ctx, H, cyL, yy => {
+    ctx.drawImage(sprite, cxL - extL, yy - extL, extL*2, extL*2);
+  });
+}
+
+function drawPlanetInk(ctx, W, H, p, rand, lightDir){
   const cx = p.x*W, cy = p.y*H, r = p.r*W;
   // Unit vector toward the sky's bright core - the nebula is the light source,
   // so the lit limb agrees with the brightest sky behind it.
@@ -1795,7 +2160,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         return [dx/d, dy/d];
       };
       props.forEach(pr => {
-        if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H));
+        if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), dpr);
         else if(pr.k === "sun") drawSun(px, W, H, pr);
         else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
         // Rocks light from the same core the planets do, and borrow the sky's
