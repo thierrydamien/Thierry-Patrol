@@ -890,6 +890,16 @@ async function run(){
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
     return /e\.noSplit = true;/.test(g) && /!byRamming && !e\.noSplit/.test(g);
   })());
+  check("no mission can report more kills than it ever spawned", (() => {
+    // The invariant behind the readout, stated where it can be checked: a
+    // spawn that pays, combos and scores but is not part of the script must
+    // never reach the tally the objective and the progress bar read.
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    const split = g.slice(g.indexOf("const split = e.type.splitsInto;"),
+                          g.indexOf("fx.ring(e.x, e.y, 34"));
+    return /uncounted:\s*true/.test(split) &&
+           /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; \}/.test(g);
+  })());
   check("the Star Vault stays out of the campaign ledger", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
     return /\} else if\(run\.mission\.vault\)\{/.test(g);
@@ -2810,6 +2820,31 @@ async function run(){
       dir.queueSalvo({ type:"grunt", n:8, form:"line" }, 8, 0);
       return dir.pending.filter(s => s.bounty).length === 1;
     })());
+    /*
+     * A HEADCOUNT CANNOT EXCEED THE HEAD IT COUNTED.
+     *
+     * `totalPlanned` and `spawnedCount` come from the wave script. A Splitter is
+     * ONE planned enemy that comes apart, and its three shards were being
+     * spawned into the world with no flag - so each one added to `kills` against
+     * a total that never included it. Reported from a real flight of the
+     * Hatchery on ACE: "Destroy every enemy 401/247", with the mission bar
+     * sitting at 100% while the level was still running.
+     */
+    check("killing a splitter counts as one kill, not four", (() => {
+      const W = SF.game.world, d = SF.config.DIFFICULTY_BY_ID.pilot;
+      W.reset(); W.mods = {};
+      W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Split"), d));
+      const run = SF.game.run;
+      run.stats.kills = 0;
+      const parent = W.spawnEnemy("splitter", 200, 200, { difficulty: d });
+      if(!parent.counted) return false;             // the parent MUST count
+      SF.game.callbacks.onEnemyKilled(parent, null, false, true);
+      const shards = W.enemies.items.filter(e => e.alive && e.typeId === "shard");
+      if(shards.length !== 3) return false;         // it really did come apart
+      shards.forEach(sh => SF.game.callbacks.onEnemyKilled(sh, null, false, true));
+      return run.stats.kills === 1 && shards.every(sh => !sh.counted);
+    })());
+
     check("a wanted ship pays five times over", (() => {
       const d = SF.game.run.difficulty;
       const want = SF.game.world.spawnEnemy("grunt", 320, 200, { difficulty: d, bounty: true });

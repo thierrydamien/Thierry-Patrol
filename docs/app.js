@@ -17,28 +17,28 @@
  *     5157  src/profile.js
  *     5735  src/cloud.js
  *     6340  src/fx.js
- *     7187  src/input.js
- *     7566  src/entities.js
- *     8669  src/bossart.js
- *     9428  src/bosses.js
- *    10178  src/bossintro.js
- *    10301  src/rewind.js
- *    10823  src/finale.js
- *    11144  src/papadeath.js
- *    11466  src/backstage.js
- *    12669  src/sky29.js
- *    12910  src/systems.js
- *    13444  src/render.js
- *    17111  src/enemyart.js
- *    17857  src/insignia.js
- *    18102  src/skygen.js
- *    19270  src/shipart.js
- *    20348  src/paintjob.js
- *    20506  src/pilotart.js
- *    20601  src/comms.js
- *    20722  src/game.js
- *    23784  src/workshop.js
- *    24481  src/ui.js
+ *     7223  src/input.js
+ *     7602  src/entities.js
+ *     8705  src/bossart.js
+ *     9464  src/bosses.js
+ *    10214  src/bossintro.js
+ *    10337  src/rewind.js
+ *    10859  src/finale.js
+ *    11180  src/papadeath.js
+ *    11502  src/backstage.js
+ *    12705  src/sky29.js
+ *    12946  src/systems.js
+ *    13480  src/render.js
+ *    17147  src/enemyart.js
+ *    17893  src/insignia.js
+ *    18138  src/skygen.js
+ *    19306  src/shipart.js
+ *    20384  src/paintjob.js
+ *    20542  src/pilotart.js
+ *    20637  src/comms.js
+ *    20758  src/game.js
+ *    23838  src/workshop.js
+ *    24535  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6353,7 +6353,8 @@ const SF = window.SF;
 const { Pool, rand, randInt, clamp, TAU } = SF.core;
 
 const particles  = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,life:0,max:1,size:2,color:"#fff",
-                                     kind:"spark", drag:0.94, gravity:0, spin:0, angle:0, delay:0 }), 900);
+                                     kind:"spark", drag:0.94, gravity:0, spin:0, angle:0, delay:0,
+                                     edge:null }), 900);
 const texts      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:-34,gravity:0,pop:0,
                                      life:0,max:0.9,text:"",color:"#fff",size:14,bold:true,
                                      rise:false }), 80);
@@ -6384,7 +6385,10 @@ let nowMs = 0;
  */
 let spawnDelay = 0;
 function at(d, fn){ const prev = spawnDelay; spawnDelay = d; fn(); spawnDelay = prev; }
-function pspawn(){ const p = particles.spawn(); p.delay = spawnDelay; return p; }
+/* `edge` is cleared HERE rather than at each call site: these objects are
+   pooled and reused, so a shed armour panel that set it would otherwise hand
+   an outline to whatever plain speck inherited its slot next. */
+function pspawn(){ const p = particles.spawn(); p.delay = spawnDelay; p.edge = null; return p; }
 function rspawn(){ const r = rings.spawn();     r.delay = spawnDelay; return r; }
 
 /* ---------------------------------------------------------
@@ -6551,9 +6555,10 @@ const DEATHS = {
       const p = pspawn();
       p.x = x + Math.cos(a)*size*0.2; p.y = y + Math.sin(a)*size*0.2;
       p.vx = Math.cos(a)*sp; p.vy = Math.sin(a)*sp - 55;
-      p.color = "#b9c2d4";                       // bare metal, not the ship's tint
-      p.life = 0; p.max = mrand(0.85, 1.5); p.size = size*mrand(0.17, 0.30);
-      p.kind = "debris"; p.drag = 0.992; p.gravity = 340;
+      p.color = "#7d8798";                       // bare metal, not the ship's tint
+      p.edge = "#d8e2f2";                        // the lit face, so it reads as metal
+      p.life = 0; p.max = mrand(0.6, 1.0); p.size = size*mrand(0.10, 0.18);
+      p.kind = "debris"; p.drag = 0.988; p.gravity = 250;
       p.angle = mrand(0, TAU); p.spin = mrand(-3.5, 3.5);
     }
     at(0.05, () => ring(x, y, size*0.9, "#dfe6f5", 2, 0.26));
@@ -6570,17 +6575,31 @@ const DEATHS = {
     }
     at(0.10, () => ring(x, y, size*1.6, color, 2.5, 0.42));
   },
-  /* The one that was already two things: it goes out as two things. */
+  /*
+   * The one that was already two things - but a Splitter drops three REAL
+   * shard enemies on death, so this must not also draw chunks: the first
+   * version threw two slabs a fifth the size of the ship and they read as
+   * orange bars parked over the fireball, competing with the actual shards
+   * arriving underneath them. What is left is the SEAM - a hard lateral tear
+   * and two small pieces leaving sideways, which says "it came apart"
+   * without pretending to be the halves.
+   */
   split(x, y, size, color){
+    at(0.02, () => {
+      const r = rspawn();
+      r.x = x; r.y = y; r.life = 0; r.max = 0.18;
+      r.r0 = 4; r.r1 = size*0.85; r.color = "#fff6e0"; r.width = 2;
+    });
     [-1, 1].forEach(side => {
       const p = pspawn();
-      p.x = x + side*size*0.16; p.y = y;
-      p.vx = side*mrand(120, 210); p.vy = mrand(-70, 10);
+      p.x = x + side*size*0.12; p.y = y;
+      p.vx = side*mrand(190, 280); p.vy = mrand(-40, 20);
       p.color = color;
-      p.life = 0; p.max = mrand(0.5, 0.8); p.size = size*mrand(0.32, 0.42);
-      p.kind = "debris"; p.drag = 0.99; p.gravity = 300;
-      p.angle = mrand(0, TAU); p.spin = side*mrand(4, 9);
-      at(0.08, () => fireball(x + side*size*0.4, y + 6, 2, size*0.45, mrand));
+      p.edge = "rgba(255,246,224,0.9)";
+      p.life = 0; p.max = mrand(0.35, 0.55); p.size = size*mrand(0.09, 0.13);
+      p.kind = "debris"; p.drag = 0.985; p.gravity = 240;
+      p.angle = mrand(0, TAU); p.spin = side*mrand(7, 13);
+      at(0.06, () => fireball(x + side*size*0.34, y + 4, 1, size*0.34, mrand));
     });
   },
   /* Rock does not burn. It goes to gravel. */
@@ -7002,8 +7021,25 @@ function drawParticles(ctx){
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.angle);
+      const w = p.size, h = p.size*0.7;
       ctx.fillStyle = p.color;
-      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.7);
+      ctx.fillRect(-w/2, -h/2, w, h);
+      /*
+       * Ordinary wreckage is a two-pixel speck and a flat fill is all it
+       * needs. A shed armour PANEL is ten times that, and at that size an
+       * unshaded rectangle stops reading as metal and starts reading as a
+       * grey bar somebody left on the screen - which is exactly what it
+       * looked like. Anything big enough to be a shape gets the fleet's own
+       * lighting: a dark rim so it sits against the sky, and one lit edge so
+       * it turns as it tumbles.
+       */
+      if(p.edge){
+        ctx.strokeStyle = "rgba(8,10,18,0.85)";
+        ctx.lineWidth = Math.max(1, w*0.14);
+        ctx.strokeRect(-w/2, -h/2, w, h);
+        ctx.fillStyle = p.edge;
+        ctx.fillRect(-w/2, -h/2, w, Math.max(1, h*0.26));
+      }
       ctx.restore();
     }
   }
@@ -21654,6 +21690,24 @@ const callbacks = {
         const shard = game.world.spawnEnemy(split.type, e.x, e.y, {
           difficulty: run.difficulty,
           vx: Math.cos(a)*120, vy: Math.sin(a)*120 + 60,
+          /*
+           * NOT COUNTED, and this was breaking the mission readout.
+           *
+           * `totalPlanned` and `spawnedCount` come from the wave script, and
+           * a Splitter is ONE planned enemy that happens to come apart. Its
+           * three shards were spawned straight into the world with no flag,
+           * so each one added to `kills` against a total that never included
+           * it. On the Hatchery - thirty-two splitters, times ACE's density -
+           * that read "Destroy every enemy 401/247" and drove the mission bar
+           * to 100% while the level was still going.
+           *
+           * The hive's brood has always passed this flag for exactly the same
+           * reason; the splitter simply never did. (Boulders were already
+           * safe: asteroids are hazards, and hazards are never counted.)
+           * Shards still pay, still combo, still score - they just are not
+           * part of a headcount that was fixed before the mission started.
+           */
+          uncounted: true,
         });
         shard.fromBoss = e.fromBoss;
       }

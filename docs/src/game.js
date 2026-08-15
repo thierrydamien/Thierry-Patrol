@@ -933,6 +933,24 @@ const callbacks = {
         const shard = game.world.spawnEnemy(split.type, e.x, e.y, {
           difficulty: run.difficulty,
           vx: Math.cos(a)*120, vy: Math.sin(a)*120 + 60,
+          /*
+           * NOT COUNTED, and this was breaking the mission readout.
+           *
+           * `totalPlanned` and `spawnedCount` come from the wave script, and
+           * a Splitter is ONE planned enemy that happens to come apart. Its
+           * three shards were spawned straight into the world with no flag,
+           * so each one added to `kills` against a total that never included
+           * it. On the Hatchery - thirty-two splitters, times ACE's density -
+           * that read "Destroy every enemy 401/247" and drove the mission bar
+           * to 100% while the level was still going.
+           *
+           * The hive's brood has always passed this flag for exactly the same
+           * reason; the splitter simply never did. (Boulders were already
+           * safe: asteroids are hazards, and hazards are never counted.)
+           * Shards still pay, still combo, still score - they just are not
+           * part of a headcount that was fixed before the mission started.
+           */
+          uncounted: true,
         });
         shard.fromBoss = e.fromBoss;
       }
