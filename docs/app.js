@@ -9,36 +9,36 @@
  *      778  src/haptics.js
  *      957  src/audio.js
  *     1655  src/data/config.js
- *     2108  src/data/enemies.js
- *     2942  src/data/missions.js
- *     4494  src/wacky.js
- *     4710  src/data/comms.js
- *     5051  src/data/story.js
- *     5148  src/profile.js
- *     5726  src/cloud.js
- *     6331  src/fx.js
- *     7178  src/input.js
- *     7557  src/entities.js
- *     8660  src/bossart.js
- *     9419  src/bosses.js
- *    10169  src/bossintro.js
- *    10292  src/rewind.js
- *    10814  src/finale.js
- *    11135  src/papadeath.js
- *    11457  src/backstage.js
- *    12660  src/sky29.js
- *    12901  src/systems.js
- *    13435  src/render.js
- *    17102  src/enemyart.js
- *    17848  src/insignia.js
- *    18093  src/skygen.js
- *    19261  src/shipart.js
- *    20339  src/paintjob.js
- *    20497  src/pilotart.js
- *    20592  src/comms.js
- *    20713  src/game.js
- *    23760  src/workshop.js
- *    24457  src/ui.js
+ *     2117  src/data/enemies.js
+ *     2951  src/data/missions.js
+ *     4503  src/wacky.js
+ *     4719  src/data/comms.js
+ *     5060  src/data/story.js
+ *     5157  src/profile.js
+ *     5735  src/cloud.js
+ *     6340  src/fx.js
+ *     7187  src/input.js
+ *     7566  src/entities.js
+ *     8669  src/bossart.js
+ *     9428  src/bosses.js
+ *    10178  src/bossintro.js
+ *    10301  src/rewind.js
+ *    10823  src/finale.js
+ *    11144  src/papadeath.js
+ *    11466  src/backstage.js
+ *    12669  src/sky29.js
+ *    12910  src/systems.js
+ *    13444  src/render.js
+ *    17111  src/enemyart.js
+ *    17857  src/insignia.js
+ *    18102  src/skygen.js
+ *    19270  src/shipart.js
+ *    20348  src/paintjob.js
+ *    20506  src/pilotart.js
+ *    20601  src/comms.js
+ *    20722  src/game.js
+ *    23784  src/workshop.js
+ *    24481  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1946,10 +1946,19 @@ DIFFICULTIES.forEach(d => DIFFICULTY_BY_ID[d.id] = d);
 /* ---------------------------------------------------------
    FLOATING PICK-UPS
    --------------------------------------------------------- */
+/*
+ * `calm` means "still worth having when the guns are cold", and it is the
+ * same flag SUPPLIES carries for the same reason (see pickSupply). On the
+ * blockade run the ship cannot fire at all, and four of these five were
+ * still falling out of the sky every twenty seconds: three of them improve a
+ * gun that is not there, and DOUBLE SCORE multiplies kill score, which you
+ * cannot earn without a kill. Two minutes of a mission handing a child
+ * presents that do nothing.
+ */
 const POWERUPS = [
   { id:"rapid",  color:"#ffd23f", glyph:"R",  label:"RAPID FIRE" },
   { id:"spread", color:"#3399ff", glyph:"S",  label:"SPREAD SHOT" },
-  { id:"shield", color:"#2ecc71", glyph:"+",  label:"SHIELD UP" },
+  { id:"shield", color:"#2ecc71", glyph:"+",  label:"SHIELD UP", calm:true },
   { id:"score2x",color:"#ff66b3", glyph:"x2", label:"DOUBLE SCORE" },
   { id:"homing", color:"#22d3ee", glyph:"H",  label:"HOMING SHOT" },
 ];
@@ -21986,8 +21995,20 @@ function spawnSupply(x, y){
   return s;
 }
 
+/*
+ * On a silent run only the `calm` powerups drop - the same rule pickSupply
+ * has always followed, and for the same reason: a faster gun is not a prize
+ * on the mission where the guns are broken.
+ *
+ * `pick` still draws exactly one number from the seeded stream whatever the
+ * pool's length, so filtering here cannot move anything else in the mission.
+ */
+function powerupPool(){
+  const run = game.run;
+  return POWERUPS.filter(p => !(run && run.mission.noGuns) || p.calm);
+}
 function spawnPowerup(x, y){
-  const def = pick(POWERUPS);
+  const def = pick(powerupPool());
   game.world.spawnPickup("power", x, y, def);
 }
 
@@ -23752,6 +23773,9 @@ Object.assign(game, {
   // are set in here, and all three have to agree about what time it is.
   now: () => simMs,
   buildLoadout, squadronDue, callbacks,
+  // Exported so the suite can check what a mission is actually willing to
+  // hand a player, rather than inferring it from a spawn it happened to see.
+  powerupPool, spawnPowerup,
 });
 })();
 

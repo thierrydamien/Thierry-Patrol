@@ -2992,6 +2992,40 @@ async function run(){
       SF.missions.MISSIONS.find(m => m.noGuns).waves.every(wv => wv.type !== "bomber") &&
       SF.missions.MISSIONS.find(m => m.noGuns).waves
         .filter(wv => wv.type === "sniper").reduce((n,wv) => n + wv.n, 0) <= 6);
+    /*
+     * NOTHING ON OFFER MAY BE A PRESENT THAT DOES NOTHING.
+     *
+     * The supply crates and the pre-flight kit already filtered themselves
+     * down to the `calm` entries here - a bomb you cannot fire is no prize -
+     * but the free powerups never did. Four of the five kept falling every
+     * twenty seconds on the one mission where the guns are cold: three
+     * improve a gun that is not there, and DOUBLE SCORE multiplies kill
+     * score, which cannot be earned without a kill.
+     */
+    check("a silent run only drops powerups that do something", (() => {
+      const pool = SF.game.powerupPool();
+      return pool.length > 0 &&
+             pool.every(p => p.calm) &&
+             pool.length < SF.config.POWERUPS.length &&
+             !pool.some(p => p.id === "rapid" || p.id === "spread" ||
+                             p.id === "homing" || p.id === "score2x");
+    })());
+    check("...and every other mission still offers the full set", (() => {
+      const was = SF.game.run.mission.noGuns;
+      SF.game.run.mission.noGuns = false;
+      const full = SF.game.powerupPool().length;
+      SF.game.run.mission.noGuns = was;
+      return full === SF.config.POWERUPS.length;
+    })());
+    // Fifty draws, so this is the real spawn path and not just the filter.
+    check("fifty drops on a silent run are all useful ones", (() => {
+      const W = SF.game.world;
+      W.pickups.killAll();
+      for(let i = 0; i < 50; i++) SF.game.spawnPowerup(100 + i, 60);
+      return W.pickups.items.filter(pk => pk.alive && pk.kind === "power")
+        .every(pk => pk.data && pk.data.calm);
+    })());
+
     check("the broken guns are explained before launch",
       /guns/i.test(SF.missions.MISSIONS.find(m => m.noGuns).brief) &&
       !!SF.storyData.STORY.silent && SF.storyData.STORY.silent.panels.length >= 2 &&

@@ -1274,8 +1274,20 @@ function spawnSupply(x, y){
   return s;
 }
 
+/*
+ * On a silent run only the `calm` powerups drop - the same rule pickSupply
+ * has always followed, and for the same reason: a faster gun is not a prize
+ * on the mission where the guns are broken.
+ *
+ * `pick` still draws exactly one number from the seeded stream whatever the
+ * pool's length, so filtering here cannot move anything else in the mission.
+ */
+function powerupPool(){
+  const run = game.run;
+  return POWERUPS.filter(p => !(run && run.mission.noGuns) || p.calm);
+}
 function spawnPowerup(x, y){
-  const def = pick(POWERUPS);
+  const def = pick(powerupPool());
   game.world.spawnPickup("power", x, y, def);
 }
 
@@ -3040,5 +3052,8 @@ Object.assign(game, {
   // are set in here, and all three have to agree about what time it is.
   now: () => simMs,
   buildLoadout, squadronDue, callbacks,
+  // Exported so the suite can check what a mission is actually willing to
+  // hand a player, rather than inferring it from a spawn it happened to see.
+  powerupPool, spawnPowerup,
 });
 })();

@@ -292,10 +292,19 @@ DIFFICULTIES.forEach(d => DIFFICULTY_BY_ID[d.id] = d);
 /* ---------------------------------------------------------
    FLOATING PICK-UPS
    --------------------------------------------------------- */
+/*
+ * `calm` means "still worth having when the guns are cold", and it is the
+ * same flag SUPPLIES carries for the same reason (see pickSupply). On the
+ * blockade run the ship cannot fire at all, and four of these five were
+ * still falling out of the sky every twenty seconds: three of them improve a
+ * gun that is not there, and DOUBLE SCORE multiplies kill score, which you
+ * cannot earn without a kill. Two minutes of a mission handing a child
+ * presents that do nothing.
+ */
 const POWERUPS = [
   { id:"rapid",  color:"#ffd23f", glyph:"R",  label:"RAPID FIRE" },
   { id:"spread", color:"#3399ff", glyph:"S",  label:"SPREAD SHOT" },
-  { id:"shield", color:"#2ecc71", glyph:"+",  label:"SHIELD UP" },
+  { id:"shield", color:"#2ecc71", glyph:"+",  label:"SHIELD UP", calm:true },
   { id:"score2x",color:"#ff66b3", glyph:"x2", label:"DOUBLE SCORE" },
   { id:"homing", color:"#22d3ee", glyph:"H",  label:"HOMING SHOT" },
 ];
