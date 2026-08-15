@@ -18,27 +18,27 @@
  *     5726  src/cloud.js
  *     6331  src/fx.js
  *     7178  src/input.js
- *     7478  src/entities.js
- *     8581  src/bossart.js
- *     9340  src/bosses.js
- *    10090  src/bossintro.js
- *    10213  src/rewind.js
- *    10735  src/finale.js
- *    11056  src/papadeath.js
- *    11378  src/backstage.js
- *    12581  src/sky29.js
- *    12822  src/systems.js
- *    13356  src/render.js
- *    17023  src/enemyart.js
- *    17769  src/insignia.js
- *    18014  src/skygen.js
- *    19182  src/shipart.js
- *    20227  src/paintjob.js
- *    20385  src/pilotart.js
- *    20480  src/comms.js
- *    20601  src/game.js
- *    23648  src/workshop.js
- *    24345  src/ui.js
+ *     7534  src/entities.js
+ *     8637  src/bossart.js
+ *     9396  src/bosses.js
+ *    10146  src/bossintro.js
+ *    10269  src/rewind.js
+ *    10791  src/finale.js
+ *    11112  src/papadeath.js
+ *    11434  src/backstage.js
+ *    12637  src/sky29.js
+ *    12878  src/systems.js
+ *    13412  src/render.js
+ *    17079  src/enemyart.js
+ *    17825  src/insignia.js
+ *    18070  src/skygen.js
+ *    19238  src/shipart.js
+ *    20283  src/paintjob.js
+ *    20441  src/pilotart.js
+ *    20536  src/comms.js
+ *    20657  src/game.js
+ *    23704  src/workshop.js
+ *    24401  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -7204,6 +7204,49 @@ const TOUCH_LIFT = 48;   // keeps a thumb clear of the (now larger) ship
 let dragPointerId = null;
 let hoverSteer = false;  // mouse steering with no button held (see pointermove)
 
+/*
+ * WHICHEVER ONE YOU LAST USED IS THE ONE FLYING.
+ *
+ * Hover steering made a trackpad play like glass, and in doing so it quietly
+ * took the keyboard away. `state.dragging` latched true the moment the cursor
+ * first crossed the playfield and never let go, and the player entity does not
+ * ADD the pointer's pull to the keys - it overwrites the velocity with it. So
+ * on any Mac, holding Left flew the ship RIGHT, back to wherever the cursor
+ * happened to be resting. Measured before the fix: ship centred at 191, Left
+ * held for six-tenths of a second, ship at 309 - the cursor's position.
+ *
+ * A passive hover now yields to the keys, and the pointer takes the ship back
+ * when it actually MOVES. A held drag - a finger on glass, a mouse button
+ * down - is not a hover and still outranks everything, because that is
+ * somebody deliberately holding on.
+ *
+ * The threshold is what makes it usable rather than a fight: a hand resting on
+ * a trackpad emits tiny moves, and without it the ship would be stolen back
+ * mid-keypress by a knuckle.
+ */
+const RECLAIM_PX = 5;
+let keysHaveIt = false;       // the keys took the ship off a hovering cursor
+let hoverX = 0, hoverY = 0;   // the last pointer position we saw
+let yieldX = 0, yieldY = 0;   // where it was standing when the keys took over
+
+/** A movement key went down: the hover lets go, a real grip does not. */
+function keysTakeOver(){
+  if(!hoverSteer) return;
+  hoverSteer = false;
+  state.dragging = dragPointerId !== null;
+  keysHaveIt = true;
+  yieldX = hoverX; yieldY = hoverY;
+}
+
+/** True when the pointer is entitled to the ship. */
+function pointerMeansIt(x, y){
+  hoverX = x; hoverY = y;
+  if(hoverSteer || !keysHaveIt) return true;    // already flying, or nobody took it
+  if(Math.hypot(x - yieldX, y - yieldY) < RECLAIM_PX) return false;
+  keysHaveIt = false;                            // a deliberate move: it is theirs
+  return true;
+}
+
 /* ---------------------------------------------------------
    POINTER LOCK - fullscreen that actually holds on
    ---------------------------------------------------------
@@ -7305,10 +7348,13 @@ function press(el){
 
 function keyDown(e){
   const k = e.key;
+  const was = state.left || state.right || state.up || state.down;
   if(k === "ArrowLeft" || k === "a" || k === "A") state.left = true;
   if(k === "ArrowRight"|| k === "d" || k === "D") state.right = true;
   if(k === "ArrowUp"   || k === "w" || k === "W") state.up = true;
   if(k === "ArrowDown" || k === "s" || k === "S") state.down = true;
+  // Steering with the keys means the hovering cursor is not steering.
+  if(!was && (state.left || state.right || state.up || state.down)) keysTakeOver();
   if(k === "b" || k === "B" || k === " ") state.bombPressed = true;
   if(k === "v" || k === "V" || k === "Shift") state.overdrivePressed = true;
   /*
@@ -7395,6 +7441,8 @@ function attach(canvasEl, vw, vh){
       (e.clientX >= r.left && e.clientX <= r.right &&
        e.clientY >= r.top && e.clientY <= r.bottom));
     if(live){
+      // A pointer that has not really moved does not get to interrupt the keys.
+      if(!pointerMeansIt(e.clientX, e.clientY)) return;
       hoverSteer = true; state.dragging = true;
       pointerToVirtual(e.clientX, e.clientY, 0);
     } else if(hoverSteer){
@@ -7425,9 +7473,12 @@ function attach(canvasEl, vw, vh){
     if(!locked) return;
     lockX = clamp(lockX + (e.movementX || 0), 0, window.innerWidth  - 1);
     lockY = clamp(lockY + (e.movementY || 0), 0, window.innerHeight - 1);
+    // Same rule under lock: the cursor is ours, but the keys can still have
+    // the ship until somebody actually moves it.
+    hover(document.elementFromPoint(lockX, lockY));
+    if(!pointerMeansIt(lockX, lockY)) return;
     hoverSteer = true; state.dragging = true;
     pointerToVirtual(lockX, lockY, 0);
-    hover(document.elementFromPoint(lockX, lockY));
   });
 
   window.addEventListener("mousedown", e => {
@@ -7467,9 +7518,14 @@ function consumePause(){ const v = state.pausePressed; state.pausePressed = fals
 function clearMovement(){
   state.up = state.down = state.left = state.right = false;
   state.dragging = false; hoverSteer = false;
+  // A clean slate, so the next pointer move re-acquires however small it is.
+  // Leaving the yield point standing here made an untouched cursor unable to
+  // take the ship back after a pause, which is not what "clear" means.
+  keysHaveIt = false;
 }
 
 SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+             _hoverSteering: () => hoverSteer,
              lockPointer, unlockPointer, isPointerLocked, lockSupported };
 })();
 

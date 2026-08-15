@@ -5679,6 +5679,46 @@ async function run(){
     ptr("touch", "pointerup", 150, 200, null, 7);
     check("lifting the finger releases the drag", !st.dragging);
 
+    /* ---------- whichever one you last used is the one flying ---------- */
+    /*
+     * Hover steering made a trackpad play like glass and quietly took the
+     * keyboard away with it: `dragging` latched true the moment the cursor
+     * first crossed the playfield and never let go, and the player entity
+     * OVERWRITES its velocity with the pointer's pull rather than adding to
+     * it. So on any Mac, holding Left flew the ship RIGHT, back to wherever
+     * the cursor was resting. Measured in Chromium before the fix: ship
+     * centred at 191, Left held six-tenths of a second, ship at 309 - which
+     * was the cursor's position, not anywhere Left points.
+     */
+    const key = (name, k) => window.dispatchEvent(new window.KeyboardEvent(name, { key: k }));
+    SF.input.clearMovement();
+    ptr("mouse", "pointermove", 150, 200);
+    check("the trackpad has the ship after a bare move", st.dragging === true);
+    key("keydown", "ArrowLeft");
+    check("a steering key takes the ship off a hovering cursor",
+      st.left === true && st.dragging === false && SF.input._hoverSteering() === false);
+    // A hand resting on a trackpad twitches. That must not steal the ship back.
+    ptr("mouse", "pointermove", 152, 201);
+    check("...and a resting hand's jitter does not steal it back", st.dragging === false);
+    // A deliberate move does.
+    ptr("mouse", "pointermove", 210, 240);
+    check("...but moving the pointer for real takes it straight back", st.dragging === true);
+    key("keyup", "ArrowLeft");
+
+    /*
+     * A HELD grip is not a hover, and outranks the keys either way: somebody
+     * with a finger on the glass is deliberately holding on, and a child
+     * leaning on the keyboard must not wrench the ship out of their hand.
+     */
+    SF.input.clearMovement();
+    ptr("touch", "pointerdown", 150, 200, cv, 11);
+    key("keydown", "ArrowLeft");
+    check("a key never takes the ship off a finger that is holding it",
+      st.dragging === true);
+    key("keyup", "ArrowLeft");
+    ptr("touch", "pointerup", 150, 200, null, 11);
+    SF.input.clearMovement();
+
     ptr("mouse", "pointerdown", 150, 200, cv, 3);
     ptr("mouse", "pointermove", 160, 210);
     ptr("mouse", "pointerup", 160, 210, null, 3);
