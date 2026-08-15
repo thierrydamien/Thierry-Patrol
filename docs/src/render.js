@@ -34,8 +34,6 @@ SF.field.onChange(w => {
 const ASSET_PATHS = {
   ship: "assets/orange.png",
   enemy: "assets/red.png",
-  playfieldBg: "assets/BackNew.jpg",
-  backAlt: "assets/BackBack.jpg",
 };
 /*
  * Everything that uses these has procedural art to fall back on, so a missing
@@ -48,6 +46,17 @@ const ASSET_PATHS = {
  * because it was mandatory, one 404 silently killed the briefing hero art for
  * all 29 missions (isReady()'s only consumer). `enemy` is likewise a fallback
  * for when enemyArt has no silhouette, which it currently always does.
+ *
+ * The two backdrop photographs are gone from this table entirely. `backAlt`
+ * was the last photo-backed sky (Ice Fields, now painted like the other
+ * thirty-four), and `playfieldBg` had not been DRAWN by anything for a long
+ * time - its only mention was as the third fallback of a probe whose first
+ * two candidates always load. Between them they were 579KB fetched at every
+ * cold boot, both mandatory, so either one 404ing took the briefing art down
+ * with it. The photo branch below stays and is still pinned: `photoFor` is the
+ * documented contract, so a sky that wants a painting can name one again - it
+ * just has to put the file back in this table at the same time, because
+ * nothing else fetches it now.
  */
 const OPTIONAL_ASSETS = { enemy: true, ship: true };
 const assets = {};
@@ -144,7 +153,7 @@ function canReadPixels(){
     const pctx = probe.getContext("2d");
     // Any same-origin image will do; use whichever tintable art actually
     // loaded rather than requiring one particular file to be present.
-    const probeImg = assets.enemy || assets.ship || assets.playfieldBg;
+    const probeImg = assets.enemy || assets.ship;
     if(!probeImg) return (pixelsReadable = false);
     pctx.drawImage(probeImg, 0, 0, 2, 2);
     pctx.getImageData(0, 0, 1, 1);
@@ -371,6 +380,76 @@ function drawForeground(ctx){
     }
   }
   ctx.drawImage(vignette, 0, 0);
+}
+
+/*
+ * THE LENS GLOW.
+ *
+ * Every single thing in this game that matters is bright and sits on
+ * near-black: bullets, engine wakes, explosions, coins, the shield ring, the
+ * gold on an elite. A lens does not hand those to you with a hard edge - light
+ * bleeds around them - and that bleed is most of the visible distance between
+ * "drawn with canvas primitives" and "bought in a shop".
+ *
+ * It is a post pass over the finished world, so it does not care what drew
+ * what. No brightness threshold, deliberately: thresholding on a 2D canvas
+ * means reading pixels back, which is the one thing that would make this
+ * genuinely expensive - and it is unnecessary, because the sky IS the
+ * threshold. Composited with `lighter`, a near-black pixel contributes
+ * near-nothing and a white one contributes all of itself.
+ *
+ * ONE composite, not two, and that is the whole performance story.
+ *
+ * The first version blurred to a quarter and to a sixteenth and laid both
+ * back over the frame, which is the textbook shape and looked slightly
+ * better. Measured end to end - the only honest way, because canvas 2D queues
+ * its commands and timing individual calls reports nothing - it took a
+ * software-rendered frame from 16.7ms to 33.3ms: a game running at half rate,
+ * reproducibly, across repeated trials. The cost is not in the blurring, which
+ * happens at a sixteenth of an inch; it is in the DESTINATION, because every
+ * composite is a bilinear blend over every pixel on screen. So there is one.
+ * The two downscales stay - they are nearly free at that size, and chaining
+ * them gives a smoother kernel than one box would.
+ *
+ * Even at one it is not free, so `glowCost` below watches for the case where
+ * it cannot be afforded at all.
+ *
+ * Drawn UNDER the floating texts and the HUD, so numbers and instruments stay
+ * crisp - a bloomed readout is the failure mode this effect is famous for.
+ */
+let glowTight = null, glowWide = null;
+function drawGlow(ctx){
+  if(!SF.fx.glowActive()) return;
+  const cv = ctx.canvas;
+  const W = cv.width, H = cv.height;                 // device pixels, not logical
+  if(!(W > 16 && H > 16)) return;
+  const w1 = W >> 2, h1 = H >> 2, w2 = W >> 4, h2 = H >> 4;
+  if(!(w2 > 1 && h2 > 1)) return;
+  if(!glowTight){
+    glowTight = document.createElement("canvas");
+    glowWide  = document.createElement("canvas");
+  }
+  if(glowTight.width !== w1 || glowTight.height !== h1){ glowTight.width = w1; glowTight.height = h1; }
+  if(glowWide.width  !== w2 || glowWide.height  !== h2){ glowWide.width  = w2; glowWide.height  = h2; }
+  const a = glowTight.getContext("2d"), b = glowWide.getContext("2d");
+  if(!a || !b) return;
+  // `copy` rather than a clear-then-draw: one operation, and it guarantees no
+  // ghost of the previous frame survives in the margins if a resize raced us.
+  a.globalCompositeOperation = "copy";
+  a.drawImage(cv, 0, 0, w1, h1);
+  b.globalCompositeOperation = "copy";
+  b.drawImage(glowTight, 0, 0, w2, h2);
+
+  const k = SF.fx.calmEnabled() ? 0.6 : 1;
+  ctx.save();
+  // The world is finished; this works on the frame itself, so it has to shed
+  // the camera zoom, the shake offset and the dpr scale all at once.
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.30*k;
+  ctx.drawImage(glowWide, 0, 0, W, H);
+  ctx.restore();
 }
 
 /* ---------------------------------------------------------
@@ -3652,7 +3731,7 @@ SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   // exposed so the smoke test can watch the retry sweep rather than guess
   _papaPhoto: papaPhoto, _papaState: () => ({ ready: papaImgReady, tryIdx: papaTry, sweeps: papaSweeps }),
-  initBackground, updateBackground, drawBackground, drawForeground,
+  initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
   drawAct4,

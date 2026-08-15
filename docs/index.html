@@ -410,6 +410,12 @@
            media query cannot reach it. -->
       <button id="setCalm" class="settings-row">
         <span>Calmer visuals</span><span class="set-pill">OFF</span></button>
+      <!-- The lens bloom over the playfield. Separate from Calmer visuals on
+           purpose: a steady glow softens hard edges rather than flashing, so
+           calm keeps it. This switch is for an old device where two extra
+           full-frame composites a frame cost more than the look is worth. -->
+      <button id="setGlow" class="settings-row">
+        <span>Glow</span><span class="set-pill">ON</span></button>
       <!-- Always shown, even on the iPhones and iPads that cannot do it: a
            switch that quietly vanishes reads as a broken feature, and the note
            below turns "nothing happens" into an answer. -->
@@ -419,6 +425,10 @@
     <p id="rumbleNote" class="settings-note hidden">
       Rumble needs an Android phone or tablet. iPhones and iPads don't let a
       web app buzz — that's Apple's rule, not the game's.</p>
+    <p id="glowNote" class="settings-note hidden">
+      Glow is on, but this device couldn't draw it and keep a smooth 60 frames
+      a second, so the game switched it off to stay fast. Turn Glow off and on
+      again to try once more.</p>
     <div class="settings-rows">
       <button id="setCloud" class="settings-row hidden">
         <span>Squad Sync</span><span class="set-chev">›</span></button>

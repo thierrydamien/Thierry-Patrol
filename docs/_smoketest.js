@@ -1026,18 +1026,28 @@ async function run(){
   check("no two missions look alike",
     new Set(SF.skygen.SKIES.map(k => k.photo || k.clouds.join(""))).size === SF.skygen.SKIES.length);
   /*
-   * THE FIRST SCREEN ANYBODY SEES CANNOT BE THE ODD ONE OUT.
+   * ONE HAND PAINTED ALL OF IT.
    *
    * Mission 1 used to be a photograph - thirty-four generated skies and then a
-   * JPG, on the opening flight, and it showed. It is painted by the same
-   * generator as everything after it now. One photograph is left in the
-   * campaign (Ice Fields), which is a look worth keeping; it just cannot be
-   * the one that sets the expectation.
+   * JPG, on the opening flight, and it showed. Repainting it left Ice Fields
+   * as the last photograph, which simply moved the odd-one-out four missions
+   * along; that one is painted now too. Every sky in the campaign comes out of
+   * the same generator, so no mission can look like it was pasted in from
+   * somewhere else. (`photoFor` and the renderer's photo branch still work -
+   * this pins the campaign's own consistency, not the machinery.)
    */
   check("the campaign opens on a generated sky, like the rest of it",
     !SF.skygen.SKIES[0].photo && (SF.skygen.SKIES[0].props || []).length >= 3);
-  check("the original artwork is still in use somewhere",
-    SF.skygen.SKIES.some(k => k.photo === "backAlt"));
+  check("no sky in the campaign is a photograph",
+    SF.skygen.SKIES.every(k => !k.photo && (k.props || []).length >= 1));
+  /*
+   * Rock fields are lit by the sky they float in, not filled with one flat
+   * slate - so the painter needs the light vector and the sky, and every rock
+   * prop needs a `n` and an `r` for it to work with.
+   */
+  check("every rock field has a size and a population",
+    SF.skygen.SKIES.every(k => (k.props || []).every(p =>
+      p.k !== "rocks" || (p.n > 0 && p.r > 0))));
   /*
    * Every element of a sky is drawn three times so the backdrop can scroll
    * forever. A body that does not FIT inside one screen therefore has two of
@@ -1056,10 +1066,66 @@ async function run(){
       })));
   check("every generated sky has something with an edge in it",
     SF.skygen.SKIES.filter(k => !k.photo).every(k => (k.props || []).length >= 2));
-  check("a photo mission generates no canvas", (() => {
-    const ix = SF.skygen.SKIES.findIndex(k => k.photo);
-    return ix >= 0 && SF.skygen.build(ix, 100, 100) === null &&
-           SF.skygen.build(0, 100, 100) !== null;   // ...and mission 1 is not one
+  /*
+   * The photo backdrop path outlived the last photo backdrop, so it is pinned
+   * against a probe sky rather than against a mission: build() must still
+   * decline to paint one, and photoFor() must still name the asset, so a
+   * future sky can go back to a painting. (It would also have to put the file
+   * back in the renderer's ASSET_PATHS - nothing fetches the two old JPGs any
+   * more. That is pinned separately, below.)
+   */
+  check("the photo backdrop path still works, though no campaign sky uses it", (() => {
+    const S = SF.skygen.SKIES, n = S.length;
+    S.push({ name:"__probe", photo:"backAlt" });
+    let ok = false;
+    try { ok = SF.skygen.build(n, 100, 100) === null &&
+               SF.skygen.photoFor(n) === "backAlt" &&
+               SF.skygen.build(0, 100, 100) !== null; }   // ...and mission 1 is not one
+    finally { S.pop(); }
+    return ok && S.length === n;
+  })());
+  /*
+   * 579KB of backdrop photograph used to be fetched at every cold boot, both
+   * files MANDATORY, so one 404 took the briefing art for all 29 missions down
+   * with it - and one of the two had not been drawn by anything in months.
+   */
+  check("the boot no longer fetches a backdrop photograph", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+    const table = s.slice(s.indexOf("const ASSET_PATHS"), s.indexOf("const OPTIONAL_ASSETS"));
+    return !/BackNew|BackBack/.test(table);
+  })());
+  /*
+   * ROCKS ARE LIT BY THE SKY THEY ARE IN.
+   *
+   * The old painter filled every chunk with one flat slate, so eighteen fields
+   * across thirteen missions read as black paper cutouts - and the same slate
+   * grey sat in an amber nebula as in a silver one. Both halves matter: the
+   * light DIRECTION comes from the same core the planets use, so a field and
+   * the planet beside it agree; the light COLOUR comes from the sky's own star
+   * and cloud, so stone under an orange cloud comes back warm.
+   */
+  check("a rock field takes its light from the sky, not from a constant", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const fn = s.slice(s.indexOf("function drawRocks"), s.indexOf("let propLayer"));
+    return /drawRocks\(ctx, W, H, p, rand, light, sky\)/.test(fn) &&
+           /sky\.star/.test(fn) && /sky\.clouds/.test(fn) &&      // colour of the light
+           /nx\/nl\)\*lx \+ \(ny\/nl\)\*ly/.test(fn) &&           // per-edge rim, facing the light
+           /createLinearGradient/.test(fn) &&                     // a lit face and a dark one
+           !/rgba\(26,30,42/.test(fn) &&                          // the old flat slate is gone
+           /drawRocks\(px, W, H, pr, rand, coreDir\(pr\.x\*W, pr\.y\*H\), sky\)/.test(s);
+  })());
+  /*
+   * Ice Fields is the one sky in the campaign that inverts the arrangement -
+   * bright scenery on a dark, nearly empty ground instead of bright cloud with
+   * dark scenery in front of it. That is the whole reason it is memorable
+   * without a photograph, so the belt has to actually be ice.
+   */
+  check("Ice Fields is an ice field", (() => {
+    const k = SF.skygen.SKIES[4];
+    const rocks = (k.props || []).filter(p => p.k === "rocks");
+    return k.name === "Ice Fields" && !k.photo &&
+           rocks.length >= 2 && rocks.every(p => p.ice) &&
+           k.density <= 0.6;                    // the emptiest sky in the table
   })());
   check("planets are lit, not drawn: mottling, weather and a terminator", (() => {
     const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
@@ -3517,6 +3583,121 @@ async function run(){
       SF.fx.setShakeEnabled(was);
       SF.fx.cameraReset();
       return z === 1;
+    })());
+
+    /* ---------- the lens glow ---------- */
+    /*
+     * A bloom is famous for exactly one failure: smearing the writing. The
+     * whole effect is worth nothing if a seven-year-old cannot read the score,
+     * so its position in draw() - after the world, before the texts and the
+     * HUD - is the load-bearing part and is pinned as such.
+     */
+    check("the glow goes over the world and under the writing", (() => {
+      const s = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const d = s.slice(s.indexOf("function draw(timeMs)"), s.indexOf("MAIN LOOP"));
+      const glow = d.indexOf("SF.render.drawGlow(ctx)");
+      return glow > d.indexOf("SF.render.drawEnemies") &&
+             glow > d.indexOf("SF.render.drawForeground") &&
+             glow < d.indexOf("fx.drawTexts(ctx)") &&
+             glow < d.indexOf("SF.render.drawHud");
+    })());
+    /*
+     * It samples the finished frame in DEVICE pixels, so it has to shed the
+     * shake offset, the camera zoom and the dpr scale together. Leaving any of
+     * them on would blit the glow back at the wrong size and turn a lens into
+     * a smear that slides around when the camera punches in.
+     */
+    check("the glow works on the frame, not in the camera", (() => {
+      const s = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = s.slice(s.indexOf("function drawGlow"), s.indexOf("ENTITIES"));
+      return /ctx\.setTransform\(1, 0, 0, 1, 0, 0\)/.test(fn) &&
+             /globalCompositeOperation = "lighter"/.test(fn) &&
+             /globalCompositeOperation = "copy"/.test(fn) &&      // no ghost of last frame
+             /ctx\.canvas/.test(fn) &&
+             /ctx\.save\(\)/.test(fn) && /ctx\.restore\(\)/.test(fn);
+    })());
+    /*
+     * Calmer Visuals exists for eyes that flashing hurts. A steady bloom is
+     * the opposite of a flash - it takes the hard edge off every bright thing
+     * on screen - so calm must SOFTEN it, never switch it off, or the mode
+     * built for sensitive eyes becomes the harsher-looking one.
+     */
+    check("calmer visuals keeps the glow, gently", (() => {
+      const s = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = s.slice(s.indexOf("function drawGlow"), s.indexOf("ENTITIES"));
+      const m = fn.match(/calmEnabled\(\) \? ([0-9.]+) : 1/);
+      return !!m && Number(m[1]) > 0.3 && Number(m[1]) < 1;
+    })());
+    check("the glow switch remembers itself", (() => {
+      const was = SF.fx.glowEnabled();
+      SF.fx.setGlowEnabled(false);
+      const off = !SF.fx.glowEnabled() && window.localStorage.getItem("patrol_glow_off") === "1";
+      SF.fx.setGlowEnabled(true);
+      const on = SF.fx.glowEnabled() && window.localStorage.getItem("patrol_glow_off") === "0";
+      SF.fx.setGlowEnabled(was);
+      return off && on;
+    })());
+    /*
+     * Two scratch canvases, made once. A bloom that allocates per frame is a
+     * bloom that stutters every time the collector runs, which on a five-year
+     * -old iPad is the difference between "smooth" and "the game is broken".
+     */
+    check("the glow allocates its scratch canvases once", (() => {
+      const s = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = s.slice(s.indexOf("function drawGlow"), s.indexOf("ENTITIES"));
+      return /if\(!glowTight\)\{/.test(fn) &&
+             (fn.match(/document\.createElement\("canvas"\)/g) || []).length === 2;
+    })());
+    /*
+     * THE LENS PAYS FOR ITSELF OR IT GOES.
+     *
+     * One bilinear blend over every pixel on screen is nothing on a GPU and
+     * more than a whole frame on a machine drawing canvas in software - where
+     * it took a measured 16.7ms frame to 33.3ms. No device list can tell us
+     * which one a child is holding, so the game watches its own frame clock
+     * and sheds the effect if it cannot be afforded. These pin the three
+     * things that have to be true: it takes SUSTAINED trouble (a hitch must
+     * not cost you the look), it eventually gives up, and there is a way back.
+     */
+    check("one bad frame does not cost you the glow", (() => {
+      const was = SF.fx.glowEnabled();
+      SF.fx.setGlowEnabled(true);                     // also re-arms the probe
+      for(let i=0;i<400;i++) SF.fx.glowWatch(16.7);   // a healthy run...
+      SF.fx.glowWatch(180); SF.fx.glowWatch(140);     // ...with two nasty hitches
+      const ok = SF.fx.glowActive() && !SF.fx.glowShed();
+      SF.fx.setGlowEnabled(was);
+      return ok;
+    })());
+    check("a device that cannot hold 60fps loses the glow, and can ask again", (() => {
+      const was = SF.fx.glowEnabled();
+      SF.fx.setGlowEnabled(true);
+      // Half rate, sustained - exactly what the software-rendered case measured.
+      for(let i=0;i<600;i++) SF.fx.glowWatch(33.3);
+      const shed = !SF.fx.glowActive() && SF.fx.glowShed() && SF.fx.glowEnabled();
+      SF.fx.setGlowEnabled(false); SF.fx.setGlowEnabled(true);
+      const back = SF.fx.glowActive() && !SF.fx.glowShed();
+      SF.fx.setGlowEnabled(was);
+      return shed && back;
+    })());
+    /*
+     * ...and the verdict has to reach the renderer. Asking glowEnabled() here
+     * would draw the lens on a device that had already been measured as unable
+     * to afford it - the switch is what the player wants, glowActive() is what
+     * the game can actually deliver.
+     */
+    check("the renderer asks what is affordable, not what was asked for", (() => {
+      const s = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = s.slice(s.indexOf("function drawGlow"), s.indexOf("ENTITIES"));
+      return /SF\.fx\.glowActive\(\)/.test(fn) && !/SF\.fx\.glowEnabled\(\)/.test(fn);
+    })());
+    check("the settings screen offers the glow switch", (() => {
+      const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+      const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      return /id="setGlow"/.test(h) && /pill\("setGlow"/.test(u) &&
+             /setGlowEnabled\(!SF\.fx\.glowEnabled\(\)\)/.test(u) &&
+             // ...and says so when the switch is on but the device shed it,
+             // the way the rumble row explains itself on an iPad.
+             /id="glowNote"/.test(h) && /glowNote.*glowShed\(\)/s.test(u);
     })());
 
     /* ---------- where a sound is ---------- */

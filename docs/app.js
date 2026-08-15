@@ -17,28 +17,28 @@
  *     5157  src/profile.js
  *     5735  src/cloud.js
  *     6340  src/fx.js
- *     7223  src/input.js
- *     7602  src/entities.js
- *     8705  src/bossart.js
- *     9464  src/bosses.js
- *    10214  src/bossintro.js
- *    10337  src/rewind.js
- *    10859  src/finale.js
- *    11180  src/papadeath.js
- *    11502  src/backstage.js
- *    12705  src/sky29.js
- *    12946  src/systems.js
- *    13480  src/render.js
- *    17147  src/enemyart.js
- *    17893  src/insignia.js
- *    18138  src/skygen.js
- *    19340  src/shipart.js
- *    20418  src/paintjob.js
- *    20576  src/pilotart.js
- *    20671  src/comms.js
- *    20792  src/game.js
- *    23872  src/workshop.js
- *    24569  src/ui.js
+ *     7284  src/input.js
+ *     7663  src/entities.js
+ *     8766  src/bossart.js
+ *     9525  src/bosses.js
+ *    10275  src/bossintro.js
+ *    10398  src/rewind.js
+ *    10920  src/finale.js
+ *    11241  src/papadeath.js
+ *    11563  src/backstage.js
+ *    12766  src/sky29.js
+ *    13007  src/systems.js
+ *    13541  src/render.js
+ *    17287  src/enemyart.js
+ *    18033  src/insignia.js
+ *    18278  src/skygen.js
+ *    19611  src/shipart.js
+ *    20689  src/paintjob.js
+ *    20847  src/pilotart.js
+ *    20942  src/comms.js
+ *    21063  src/game.js
+ *    24151  src/workshop.js
+ *    24848  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6823,6 +6823,66 @@ function setCalmEnabled(v){
   if(calmOn) flashAlpha = Math.min(flashAlpha, 0.12);
 }
 
+/*
+ * THE LENS GLOW, switchable. Off is for one case and one only: an old device
+ * where two extra full-frame composites a frame cost more than the look is
+ * worth. It is deliberately NOT folded into Calmer Visuals - a steady bloom is
+ * not a flash hazard, it is the opposite, it takes the hard edge off every
+ * bright thing on screen - so calm keeps it, at a little over half strength.
+ */
+let glowOn = localStorage.getItem("patrol_glow_off") !== "1";
+function glowEnabled(){ return glowOn; }
+function setGlowEnabled(v){
+  glowOn = !!v;
+  localStorage.setItem("patrol_glow_off", glowOn ? "0" : "1");
+  // Switching it back on asks the question again: the device may simply have
+  // been busy the first time, and there is no other way back from a verdict.
+  if(glowOn){ glowAfford = true; glowJudged = false; glowSeen = 0; glowSlowAvg = 0; }
+}
+
+/*
+ * ...AND WHETHER THE DEVICE CAN ACTUALLY AFFORD IT.
+ *
+ * The glow is one bilinear blend over every pixel on screen. On a GPU that is
+ * nothing. On a machine drawing canvas in software it is more than a whole
+ * 60fps frame: measured end to end, glow on took 16.7ms a frame to 33.3ms -
+ * half rate, reproducibly. There is no device list that would tell us which
+ * one a family member is holding, so the game asks the only instrument that
+ * knows: its own frame clock.
+ *
+ * It watches for the WHOLE session, and that is the part worth explaining.
+ * The first version measured a hundred and twenty frames, decided, and never
+ * looked again - and it passed a machine that then ran at half rate for the
+ * rest of the mission, because it had made its judgement during the opening
+ * seconds when the sky is empty. The heaviest frame of a mission is never the
+ * first one; it is the one with a fully upgraded gun's worth of bullets, a
+ * wave of elites and an explosion on it. So the measurement has to still be
+ * running when that frame arrives.
+ *
+ * A decaying average of "did this frame miss the deadline", rather than a
+ * window: one number, no buffer, and it takes sustained trouble to move. A
+ * single hitch - a garbage collection, a wave spawning - barely registers,
+ * while forty-odd bad frames in a row cross the line and shed the lens for the
+ * session. Nothing is announced mid-fight; the settings screen explains it,
+ * the way the rumble row explains itself on an iPad.
+ *
+ * A device that is merely busy fails this too, and that is the right answer as
+ * well: something struggling should not be paying for a lens effect.
+ */
+let glowAfford = true, glowJudged = false, glowSeen = 0, glowSlowAvg = 0;
+const GLOW_WARMUP = 60, GLOW_SLOW_MS = 20, GLOW_FAIL = 0.6, GLOW_EASE = 1/45;
+/** Is the glow both wanted and affordable? The renderer asks this one. */
+function glowActive(){ return glowOn && glowAfford; }
+/** True when the player asked for it and the device could not keep up. */
+function glowShed(){ return glowOn && !glowAfford; }
+/** Fed one frame delta (ms) from the main loop, while a mission is running. */
+function glowWatch(dtMs){
+  if(glowJudged || !glowOn) return;
+  if(glowSeen++ < GLOW_WARMUP) return;      // first paint, JIT, the sky bake
+  glowSlowAvg += ((dtMs > GLOW_SLOW_MS ? 1 : 0) - glowSlowAvg) * GLOW_EASE;
+  if(glowSlowAvg > GLOW_FAIL){ glowJudged = true; glowAfford = false; }
+}
+
 function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag * (calmOn ? 0.35 : 1)); }
 
 /* ---------------------------------------------------------
@@ -7213,6 +7273,7 @@ SF.fx = {
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
   calmEnabled, setCalmEnabled,
+  glowEnabled, setGlowEnabled, glowActive, glowShed, glowWatch,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },
 };
@@ -13513,8 +13574,6 @@ SF.field.onChange(w => {
 const ASSET_PATHS = {
   ship: "assets/orange.png",
   enemy: "assets/red.png",
-  playfieldBg: "assets/BackNew.jpg",
-  backAlt: "assets/BackBack.jpg",
 };
 /*
  * Everything that uses these has procedural art to fall back on, so a missing
@@ -13527,6 +13586,17 @@ const ASSET_PATHS = {
  * because it was mandatory, one 404 silently killed the briefing hero art for
  * all 29 missions (isReady()'s only consumer). `enemy` is likewise a fallback
  * for when enemyArt has no silhouette, which it currently always does.
+ *
+ * The two backdrop photographs are gone from this table entirely. `backAlt`
+ * was the last photo-backed sky (Ice Fields, now painted like the other
+ * thirty-four), and `playfieldBg` had not been DRAWN by anything for a long
+ * time - its only mention was as the third fallback of a probe whose first
+ * two candidates always load. Between them they were 579KB fetched at every
+ * cold boot, both mandatory, so either one 404ing took the briefing art down
+ * with it. The photo branch below stays and is still pinned: `photoFor` is the
+ * documented contract, so a sky that wants a painting can name one again - it
+ * just has to put the file back in this table at the same time, because
+ * nothing else fetches it now.
  */
 const OPTIONAL_ASSETS = { enemy: true, ship: true };
 const assets = {};
@@ -13623,7 +13693,7 @@ function canReadPixels(){
     const pctx = probe.getContext("2d");
     // Any same-origin image will do; use whichever tintable art actually
     // loaded rather than requiring one particular file to be present.
-    const probeImg = assets.enemy || assets.ship || assets.playfieldBg;
+    const probeImg = assets.enemy || assets.ship;
     if(!probeImg) return (pixelsReadable = false);
     pctx.drawImage(probeImg, 0, 0, 2, 2);
     pctx.getImageData(0, 0, 1, 1);
@@ -13850,6 +13920,76 @@ function drawForeground(ctx){
     }
   }
   ctx.drawImage(vignette, 0, 0);
+}
+
+/*
+ * THE LENS GLOW.
+ *
+ * Every single thing in this game that matters is bright and sits on
+ * near-black: bullets, engine wakes, explosions, coins, the shield ring, the
+ * gold on an elite. A lens does not hand those to you with a hard edge - light
+ * bleeds around them - and that bleed is most of the visible distance between
+ * "drawn with canvas primitives" and "bought in a shop".
+ *
+ * It is a post pass over the finished world, so it does not care what drew
+ * what. No brightness threshold, deliberately: thresholding on a 2D canvas
+ * means reading pixels back, which is the one thing that would make this
+ * genuinely expensive - and it is unnecessary, because the sky IS the
+ * threshold. Composited with `lighter`, a near-black pixel contributes
+ * near-nothing and a white one contributes all of itself.
+ *
+ * ONE composite, not two, and that is the whole performance story.
+ *
+ * The first version blurred to a quarter and to a sixteenth and laid both
+ * back over the frame, which is the textbook shape and looked slightly
+ * better. Measured end to end - the only honest way, because canvas 2D queues
+ * its commands and timing individual calls reports nothing - it took a
+ * software-rendered frame from 16.7ms to 33.3ms: a game running at half rate,
+ * reproducibly, across repeated trials. The cost is not in the blurring, which
+ * happens at a sixteenth of an inch; it is in the DESTINATION, because every
+ * composite is a bilinear blend over every pixel on screen. So there is one.
+ * The two downscales stay - they are nearly free at that size, and chaining
+ * them gives a smoother kernel than one box would.
+ *
+ * Even at one it is not free, so `glowCost` below watches for the case where
+ * it cannot be afforded at all.
+ *
+ * Drawn UNDER the floating texts and the HUD, so numbers and instruments stay
+ * crisp - a bloomed readout is the failure mode this effect is famous for.
+ */
+let glowTight = null, glowWide = null;
+function drawGlow(ctx){
+  if(!SF.fx.glowActive()) return;
+  const cv = ctx.canvas;
+  const W = cv.width, H = cv.height;                 // device pixels, not logical
+  if(!(W > 16 && H > 16)) return;
+  const w1 = W >> 2, h1 = H >> 2, w2 = W >> 4, h2 = H >> 4;
+  if(!(w2 > 1 && h2 > 1)) return;
+  if(!glowTight){
+    glowTight = document.createElement("canvas");
+    glowWide  = document.createElement("canvas");
+  }
+  if(glowTight.width !== w1 || glowTight.height !== h1){ glowTight.width = w1; glowTight.height = h1; }
+  if(glowWide.width  !== w2 || glowWide.height  !== h2){ glowWide.width  = w2; glowWide.height  = h2; }
+  const a = glowTight.getContext("2d"), b = glowWide.getContext("2d");
+  if(!a || !b) return;
+  // `copy` rather than a clear-then-draw: one operation, and it guarantees no
+  // ghost of the previous frame survives in the margins if a resize raced us.
+  a.globalCompositeOperation = "copy";
+  a.drawImage(cv, 0, 0, w1, h1);
+  b.globalCompositeOperation = "copy";
+  b.drawImage(glowTight, 0, 0, w2, h2);
+
+  const k = SF.fx.calmEnabled() ? 0.6 : 1;
+  ctx.save();
+  // The world is finished; this works on the frame itself, so it has to shed
+  // the camera zoom, the shake offset and the dpr scale all at once.
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.30*k;
+  ctx.drawImage(glowWide, 0, 0, W, H);
+  ctx.restore();
 }
 
 /* ---------------------------------------------------------
@@ -17131,7 +17271,7 @@ SF.render = {
   loadAssets, assets, isReady: () => assetsReady,
   // exposed so the smoke test can watch the retry sweep rather than guess
   _papaPhoto: papaPhoto, _papaState: () => ({ ready: papaImgReady, tryIdx: papaTry, sweeps: papaSweeps }),
-  initBackground, updateBackground, drawBackground, drawForeground,
+  initBackground, updateBackground, drawBackground, drawForeground, drawGlow,
   drawPlayer, drawEnemies, drawBullets, drawPickups, drawBoss, drawHud, drawComms,
   drawArena, drawFleet, drawFinaleIntro, drawBossIntro, drawHaulers, drawBlackout, drawDisco,
   drawAct4,
@@ -18220,7 +18360,36 @@ const SKIES = [
             {k:"rocks",  x:0.25, y:0.30, r:0.177, n:22},
             {k:"sun",    x:0.10, y:0.82, r:0.026, color:"#ffd9a0"} ] },
 
-  { name:"Ice Fields",   photo:"backAlt" },
+  /*
+   * ICE FIELDS.
+   *
+   * The last photograph in the campaign, and once Home Reach was repainted it
+   * became the new odd-one-out: thirty-four painted skies and one JPG sitting
+   * in the middle of them. It was also a purple-pink astrophotograph, which is
+   * not what "Ice Fields" is called, and the busiest ground in the game to
+   * pick a pink bullet out of.
+   *
+   * It is a PLACE now rather than a haze. Nearly empty and nearly colourless -
+   * the lowest density in the table - so that the one thing in it is the belt
+   * of ice across the middle, lit hard by a small white sun up in the corner.
+   * Every other sky in the campaign is bright cloud with dark scenery in front
+   * of it; this is the only one that inverts that, and it is what makes the
+   * mission memorable without needing a photograph to do the work.
+   *
+   * Value, not hue, keeps it clear of its cyan cousins: Squall Line is dense
+   * and stormy, Warden's Watch is saturated teal, The Relief Line is pale over
+   * near-white. This one is a dark, thin, cold void with brilliant chips in it.
+   */
+  { name:"Ice Fields",   clouds:["#155e75","#a5f3fc","#04121b"], dust:"#010810", star:"#ecfeff",
+    lum:0.72, density:0.45, stars:1.5, bright:5,
+    props:[ {k:"sun",   x:0.80, y:0.13, r:0.021, color:"#ffffff"},
+            // The belt. Wide enough to cross the whole frame, offset from
+            // centre so it is a drift the ship flies THROUGH rather than a
+            // stripe painted across the middle of the picture.
+            {k:"rocks", x:0.46, y:0.50, r:0.40, n:38, ice:true},
+            {k:"rocks", x:0.14, y:0.15, r:0.15, n:11, ice:true},
+            {k:"rocks", x:0.88, y:0.82, r:0.13, n:9,  ice:true},
+            {k:"planet", x:0.26, y:0.86, r:0.10, lit:"#8fc4dd", dark:"#040d16", craters:true} ] },
 
   { name:"Squall Line",  clouds:["#0891b2","#67e8f9","#164e63"], dust:"#03090c", star:"#cffafe",
     lum:0.9, density:1.5, stars:0.7, bright:2,
@@ -18481,6 +18650,22 @@ function mixHex(a, b, t){
   return "rgb(" + Math.round(x[0] + (y[0]-x[0])*t) + "," +
                   Math.round(x[1] + (y[1]-x[1])*t) + "," +
                   Math.round(x[2] + (y[2]-x[2])*t) + ")";
+}
+/** The same blend, with an alpha. `rgba()` only parses hex, and `mixHex`
+ *  hands back an rgb() string, so the two do not compose - the rock painter
+ *  needs a blended colour and a transparency in the same stop. */
+function mixA(a, b, t, alpha){
+  const x = hexToRgb(a), y = hexToRgb(b);
+  return "rgba(" + Math.round(x[0] + (y[0]-x[0])*t) + "," +
+                   Math.round(x[1] + (y[1]-x[1])*t) + "," +
+                   Math.round(x[2] + (y[2]-x[2])*t) + "," + alpha + ")";
+}
+/** ...and again as a hex, for the places that pass a colour on to something
+ *  which will blend it further. */
+function mixHexHex(a, b, t){
+  const x = hexToRgb(a), y = hexToRgb(b);
+  const h = v => ("0" + Math.round(v).toString(16)).slice(-2);
+  return "#" + h(x[0] + (y[0]-x[0])*t) + h(x[1] + (y[1]-x[1])*t) + h(x[2] + (y[2]-x[2])*t);
 }
 
 /**
@@ -18993,23 +19178,106 @@ function drawDevourerSilhouette(ctx, W, H, p){
   });
 }
 
-function drawRocks(ctx, W, H, p, rand){
+/*
+ * A rock field, LIT.
+ *
+ * The old painter filled every chunk with one flat slate and ran one flat line
+ * round it, so a field came out as a scatter of paper cutouts - black holes
+ * punched in the sky rather than things floating in front of it. That painter
+ * is used by eighteen props across thirteen missions, which made it the single
+ * most hand-made thing left in the backdrop.
+ *
+ * Four cheap things make a lump into a stone:
+ *  - a FILL that ramps lit-to-dark along the sky's own light vector, the same
+ *    one the planets use, so a field and the planet beside it agree about
+ *    where the light is coming from;
+ *  - a RIM lit per edge by how squarely that edge faces the light, so the
+ *    bright line wraps the lit limb and dies on the far side, instead of a
+ *    uniform outline that reads as ink;
+ *  - DEPTH from size: small chunks are far chunks, so they lose contrast
+ *    against the sky rather than staying as black as the big ones;
+ *  - a few BOULDERS. A field of identical gravel is a texture; a field with
+ *    some big pieces in it is a place.
+ *
+ * `ice:true` swaps the material for something that catches light instead of
+ * swallowing it - pale, harder-edged, with a glint on the biggest faces. It
+ * is what makes Ice Fields an ice field.
+ */
+function drawRocks(ctx, W, H, p, rand, light, sky){
   const cx = p.x*W, r = p.r*W;
+  const lx = light ? light[0] : -0.55, ly = light ? light[1] : -0.84;
+  const ice = !!p.ice;
+  /* Both ends of the material come out of the SKY, not out of this function:
+     stone lit by an orange nebula is warm, and its shadow is the same dark the
+     sky's own dust lanes are. A fixed slate made every field in the campaign
+     look like it had been cut from the same grey card and pasted in - which,
+     until now, it had. */
+  const star = (sky && sky.star) || "#aebfd6";
+  const soil = (sky && sky.dust) || "#0b0f1a";
+  // The light itself is the sky's star colour carrying some of the nebula it
+  // shines through - grey stone under an amber cloud comes back tan, and grey
+  // stone under a silver one comes back silver. Then desaturated hard, because
+  // rock is rock.
+  const glow = (sky && sky.clouds && sky.clouds[1]) || star;
+  const lit  = p.lit  || (ice ? "#e2f6ff" : mixHexHex(mixHexHex(star, glow, 0.35), "#5d6b82", 0.42));
+  const dark = p.dark || (ice ? "#0a2231" : mixHexHex(soil, "#0b0f1a", 0.45));
   tiled(ctx, H, p.y*H, yy => {
     for(let i=0;i<p.n;i++){
       const a = rand()*TAU, d = Math.sqrt(rand())*r;
       const x = cx + Math.cos(a)*d, y = yy + Math.sin(a)*d*0.7;
-      const rr = r*(0.03 + rand()*0.07);
-      ctx.fillStyle = "rgba(26,30,42,0.92)";
-      ctx.beginPath();
-      for(let k=0;k<7;k++){
-        const ka = k/7*TAU, kr = rr*(0.7 + rand()*0.5);
-        const kx = x + Math.cos(ka)*kr, ky = y + Math.sin(ka)*kr;
-        if(k === 0) ctx.moveTo(kx, ky); else ctx.lineTo(kx, ky);
+      const big = rand() < 0.18;
+      const rr = r*(big ? 0.085 + rand()*0.085 : 0.026 + rand()*0.048);
+      // How near this chunk reads, from its size alone. Distant gravel keeps
+      // only a third of the contrast, which is what stops a dense field from
+      // turning into a black stain.
+      const near = Math.max(0, Math.min(1, (rr/r - 0.026) / 0.13));
+      const face = 0.34 + near*0.66;
+
+      // Built once into arrays: the fill wants the path, and so does the
+      // per-edge rim, and tracing it twice doubles the cost of the whole sky.
+      const N = 6 + Math.floor(rand()*4);
+      const vx = [], vy = [];
+      for(let k=0;k<N;k++){
+        const ka = k/N*TAU + rand()*0.22;
+        // Ice fractures into flatter, straighter faces than rock crumbles into.
+        const kr = rr*(ice ? 0.80 + rand()*0.34 : 0.66 + rand()*0.54);
+        vx.push(x + Math.cos(ka)*kr); vy.push(y + Math.sin(ka)*kr);
       }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "rgba(160,175,200,0.22)";
-      ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(vx[0], vy[0]);
+      for(let k=1;k<N;k++) ctx.lineTo(vx[k], vy[k]);
+      ctx.closePath();
+
+      const g = ctx.createLinearGradient(x + lx*rr, y + ly*rr, x - lx*rr*1.15, y - ly*rr*1.15);
+      g.addColorStop(0,    mixA(lit, dark, ice ? 0.04 : 0.22, 0.90*face + 0.06));
+      g.addColorStop(0.42, mixA(lit, dark, ice ? 0.46 : 0.66, 0.93));
+      g.addColorStop(1,    mixA(lit, dark, 1, 0.95));
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      /* The rim, edge by edge. `t` is the outward normal dotted with the light
+         vector: +1 square on, 0 at the terminator, negative round the back. */
+      ctx.lineWidth = big ? 1.4 : 1;
+      for(let k=0;k<N;k++){
+        const x1 = vx[k], y1 = vy[k], x2 = vx[(k+1)%N], y2 = vy[(k+1)%N];
+        const nx = (x1+x2)*0.5 - x, ny = (y1+y2)*0.5 - y;
+        const nl = Math.hypot(nx, ny) || 1;
+        const t = (nx/nl)*lx + (ny/nl)*ly;
+        if(t <= 0.03) continue;
+        ctx.strokeStyle = rgba(lit, (ice ? 0.30 : 0.16) * t * face + 0.05*t);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      }
+
+      // Ice glints. Only on the boulders, and only on the lit shoulder - a
+      // field where every chip sparkles reads as glitter, not as ice.
+      if(ice && big){
+        const sx = x + lx*rr*0.45, sy = y + ly*rr*0.45, sr = rr*0.42;
+        const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+        sg.addColorStop(0, rgba("#ffffff", 0.42*face));
+        sg.addColorStop(1, rgba("#ffffff", 0));
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+      }
     }
   });
 }
@@ -19256,7 +19524,10 @@ function paint(sky, seed, W, H, dpr, wrap){
         if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H));
         else if(pr.k === "sun") drawSun(px, W, H, pr);
         else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
-        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand);
+        // Rocks light from the same core the planets do, and borrow the sky's
+        // own star tint, so a field belongs to the sky it is floating in
+        // instead of being the same slate grey in all thirteen of them.
+        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
         else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
         else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
         else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
@@ -23786,6 +24057,9 @@ function draw(timeMs){
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)
     SF.render.drawDisco(ctx, timeMs);
+  // The lens. Last thing over the WORLD and the first thing under the writing:
+  // bullets and engines bleed light, score readouts and objective text do not.
+  SF.render.drawGlow(ctx);
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
@@ -23804,9 +24078,14 @@ let last = 0;
 function frame(now){
   // Queue the next frame first: one bad frame can never freeze the game.
   requestAnimationFrame(frame);
-  let dt = (now - last)/1000;
+  const raw = now - last;          // before the clamp: the watchdog wants the truth
+  let dt = raw/1000;
   last = now;
   if(dt > 0.05) dt = 0.05;         // tab-switch guard
+
+  // Can this device afford the lens? Only measured during play, where the
+  // frame is at its heaviest and a shortfall is worth acting on. See glowWatch.
+  if(game.state === "playing" && raw > 0 && raw < 500) fx.glowWatch(raw);
 
   if(game.state === "playing" || game.state === "ending"){
     // Advances through the death sequence as well as play: fx's own hit-stop
@@ -29636,6 +29915,7 @@ function renderSettings(){
   pill("setSfx", audio.sfxEnabled());
   pill("setShake", SF.fx.shakeEnabled());
   pill("setCalm", SF.fx.calmEnabled());
+  pill("setGlow", SF.fx.glowEnabled());
   /*
    * The row stays visible on a device that cannot rumble, greyed out with a
    * note under it. Hiding it was the first instinct and it was wrong: every
@@ -29651,6 +29931,13 @@ function renderSettings(){
   rumbleBtn.querySelector(".set-pill").textContent =
     !canRumble ? "N/A" : (SF.haptics.isEnabled() ? "ON" : "OFF");
   $("rumbleNote").classList.toggle("hidden", canRumble);
+  /*
+   * The glow can be ON and not drawing: the game measures its own frame clock
+   * during play and sheds the lens on a device that cannot hold 60fps with it.
+   * Same reasoning as the rumble note above - a switch that says ON while
+   * nothing happens reads as a bug, and an explanation beats an absence.
+   */
+  $("glowNote").classList.toggle("hidden", !SF.fx.glowShed());
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
@@ -29696,6 +29983,7 @@ click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); re
 click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
 click($("setCalm"), () => { SF.fx.setCalmEnabled(!SF.fx.calmEnabled()); renderSettings(); });
+click($("setGlow"), () => { SF.fx.setGlowEnabled(!SF.fx.glowEnabled()); renderSettings(); });
 click($("setRumble"), () => {
   if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());

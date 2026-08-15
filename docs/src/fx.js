@@ -484,6 +484,66 @@ function setCalmEnabled(v){
   if(calmOn) flashAlpha = Math.min(flashAlpha, 0.12);
 }
 
+/*
+ * THE LENS GLOW, switchable. Off is for one case and one only: an old device
+ * where two extra full-frame composites a frame cost more than the look is
+ * worth. It is deliberately NOT folded into Calmer Visuals - a steady bloom is
+ * not a flash hazard, it is the opposite, it takes the hard edge off every
+ * bright thing on screen - so calm keeps it, at a little over half strength.
+ */
+let glowOn = localStorage.getItem("patrol_glow_off") !== "1";
+function glowEnabled(){ return glowOn; }
+function setGlowEnabled(v){
+  glowOn = !!v;
+  localStorage.setItem("patrol_glow_off", glowOn ? "0" : "1");
+  // Switching it back on asks the question again: the device may simply have
+  // been busy the first time, and there is no other way back from a verdict.
+  if(glowOn){ glowAfford = true; glowJudged = false; glowSeen = 0; glowSlowAvg = 0; }
+}
+
+/*
+ * ...AND WHETHER THE DEVICE CAN ACTUALLY AFFORD IT.
+ *
+ * The glow is one bilinear blend over every pixel on screen. On a GPU that is
+ * nothing. On a machine drawing canvas in software it is more than a whole
+ * 60fps frame: measured end to end, glow on took 16.7ms a frame to 33.3ms -
+ * half rate, reproducibly. There is no device list that would tell us which
+ * one a family member is holding, so the game asks the only instrument that
+ * knows: its own frame clock.
+ *
+ * It watches for the WHOLE session, and that is the part worth explaining.
+ * The first version measured a hundred and twenty frames, decided, and never
+ * looked again - and it passed a machine that then ran at half rate for the
+ * rest of the mission, because it had made its judgement during the opening
+ * seconds when the sky is empty. The heaviest frame of a mission is never the
+ * first one; it is the one with a fully upgraded gun's worth of bullets, a
+ * wave of elites and an explosion on it. So the measurement has to still be
+ * running when that frame arrives.
+ *
+ * A decaying average of "did this frame miss the deadline", rather than a
+ * window: one number, no buffer, and it takes sustained trouble to move. A
+ * single hitch - a garbage collection, a wave spawning - barely registers,
+ * while forty-odd bad frames in a row cross the line and shed the lens for the
+ * session. Nothing is announced mid-fight; the settings screen explains it,
+ * the way the rumble row explains itself on an iPad.
+ *
+ * A device that is merely busy fails this too, and that is the right answer as
+ * well: something struggling should not be paying for a lens effect.
+ */
+let glowAfford = true, glowJudged = false, glowSeen = 0, glowSlowAvg = 0;
+const GLOW_WARMUP = 60, GLOW_SLOW_MS = 20, GLOW_FAIL = 0.6, GLOW_EASE = 1/45;
+/** Is the glow both wanted and affordable? The renderer asks this one. */
+function glowActive(){ return glowOn && glowAfford; }
+/** True when the player asked for it and the device could not keep up. */
+function glowShed(){ return glowOn && !glowAfford; }
+/** Fed one frame delta (ms) from the main loop, while a mission is running. */
+function glowWatch(dtMs){
+  if(glowJudged || !glowOn) return;
+  if(glowSeen++ < GLOW_WARMUP) return;      // first paint, JIT, the sky bake
+  glowSlowAvg += ((dtMs > GLOW_SLOW_MS ? 1 : 0) - glowSlowAvg) * GLOW_EASE;
+  if(glowSlowAvg > GLOW_FAIL){ glowJudged = true; glowAfford = false; }
+}
+
 function shake(mag){ if(shakeOn) shakeMag = Math.max(shakeMag, mag * (calmOn ? 0.35 : 1)); }
 
 /* ---------------------------------------------------------
@@ -874,6 +934,7 @@ SF.fx = {
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
   calmEnabled, setCalmEnabled,
+  glowEnabled, setGlowEnabled, glowActive, glowShed, glowWatch,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
   _pools: { particles, texts, rings },
 };

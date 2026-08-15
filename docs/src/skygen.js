@@ -83,7 +83,36 @@ const SKIES = [
             {k:"rocks",  x:0.25, y:0.30, r:0.177, n:22},
             {k:"sun",    x:0.10, y:0.82, r:0.026, color:"#ffd9a0"} ] },
 
-  { name:"Ice Fields",   photo:"backAlt" },
+  /*
+   * ICE FIELDS.
+   *
+   * The last photograph in the campaign, and once Home Reach was repainted it
+   * became the new odd-one-out: thirty-four painted skies and one JPG sitting
+   * in the middle of them. It was also a purple-pink astrophotograph, which is
+   * not what "Ice Fields" is called, and the busiest ground in the game to
+   * pick a pink bullet out of.
+   *
+   * It is a PLACE now rather than a haze. Nearly empty and nearly colourless -
+   * the lowest density in the table - so that the one thing in it is the belt
+   * of ice across the middle, lit hard by a small white sun up in the corner.
+   * Every other sky in the campaign is bright cloud with dark scenery in front
+   * of it; this is the only one that inverts that, and it is what makes the
+   * mission memorable without needing a photograph to do the work.
+   *
+   * Value, not hue, keeps it clear of its cyan cousins: Squall Line is dense
+   * and stormy, Warden's Watch is saturated teal, The Relief Line is pale over
+   * near-white. This one is a dark, thin, cold void with brilliant chips in it.
+   */
+  { name:"Ice Fields",   clouds:["#155e75","#a5f3fc","#04121b"], dust:"#010810", star:"#ecfeff",
+    lum:0.72, density:0.45, stars:1.5, bright:5,
+    props:[ {k:"sun",   x:0.80, y:0.13, r:0.021, color:"#ffffff"},
+            // The belt. Wide enough to cross the whole frame, offset from
+            // centre so it is a drift the ship flies THROUGH rather than a
+            // stripe painted across the middle of the picture.
+            {k:"rocks", x:0.46, y:0.50, r:0.40, n:38, ice:true},
+            {k:"rocks", x:0.14, y:0.15, r:0.15, n:11, ice:true},
+            {k:"rocks", x:0.88, y:0.82, r:0.13, n:9,  ice:true},
+            {k:"planet", x:0.26, y:0.86, r:0.10, lit:"#8fc4dd", dark:"#040d16", craters:true} ] },
 
   { name:"Squall Line",  clouds:["#0891b2","#67e8f9","#164e63"], dust:"#03090c", star:"#cffafe",
     lum:0.9, density:1.5, stars:0.7, bright:2,
@@ -344,6 +373,22 @@ function mixHex(a, b, t){
   return "rgb(" + Math.round(x[0] + (y[0]-x[0])*t) + "," +
                   Math.round(x[1] + (y[1]-x[1])*t) + "," +
                   Math.round(x[2] + (y[2]-x[2])*t) + ")";
+}
+/** The same blend, with an alpha. `rgba()` only parses hex, and `mixHex`
+ *  hands back an rgb() string, so the two do not compose - the rock painter
+ *  needs a blended colour and a transparency in the same stop. */
+function mixA(a, b, t, alpha){
+  const x = hexToRgb(a), y = hexToRgb(b);
+  return "rgba(" + Math.round(x[0] + (y[0]-x[0])*t) + "," +
+                   Math.round(x[1] + (y[1]-x[1])*t) + "," +
+                   Math.round(x[2] + (y[2]-x[2])*t) + "," + alpha + ")";
+}
+/** ...and again as a hex, for the places that pass a colour on to something
+ *  which will blend it further. */
+function mixHexHex(a, b, t){
+  const x = hexToRgb(a), y = hexToRgb(b);
+  const h = v => ("0" + Math.round(v).toString(16)).slice(-2);
+  return "#" + h(x[0] + (y[0]-x[0])*t) + h(x[1] + (y[1]-x[1])*t) + h(x[2] + (y[2]-x[2])*t);
 }
 
 /**
@@ -856,23 +901,106 @@ function drawDevourerSilhouette(ctx, W, H, p){
   });
 }
 
-function drawRocks(ctx, W, H, p, rand){
+/*
+ * A rock field, LIT.
+ *
+ * The old painter filled every chunk with one flat slate and ran one flat line
+ * round it, so a field came out as a scatter of paper cutouts - black holes
+ * punched in the sky rather than things floating in front of it. That painter
+ * is used by eighteen props across thirteen missions, which made it the single
+ * most hand-made thing left in the backdrop.
+ *
+ * Four cheap things make a lump into a stone:
+ *  - a FILL that ramps lit-to-dark along the sky's own light vector, the same
+ *    one the planets use, so a field and the planet beside it agree about
+ *    where the light is coming from;
+ *  - a RIM lit per edge by how squarely that edge faces the light, so the
+ *    bright line wraps the lit limb and dies on the far side, instead of a
+ *    uniform outline that reads as ink;
+ *  - DEPTH from size: small chunks are far chunks, so they lose contrast
+ *    against the sky rather than staying as black as the big ones;
+ *  - a few BOULDERS. A field of identical gravel is a texture; a field with
+ *    some big pieces in it is a place.
+ *
+ * `ice:true` swaps the material for something that catches light instead of
+ * swallowing it - pale, harder-edged, with a glint on the biggest faces. It
+ * is what makes Ice Fields an ice field.
+ */
+function drawRocks(ctx, W, H, p, rand, light, sky){
   const cx = p.x*W, r = p.r*W;
+  const lx = light ? light[0] : -0.55, ly = light ? light[1] : -0.84;
+  const ice = !!p.ice;
+  /* Both ends of the material come out of the SKY, not out of this function:
+     stone lit by an orange nebula is warm, and its shadow is the same dark the
+     sky's own dust lanes are. A fixed slate made every field in the campaign
+     look like it had been cut from the same grey card and pasted in - which,
+     until now, it had. */
+  const star = (sky && sky.star) || "#aebfd6";
+  const soil = (sky && sky.dust) || "#0b0f1a";
+  // The light itself is the sky's star colour carrying some of the nebula it
+  // shines through - grey stone under an amber cloud comes back tan, and grey
+  // stone under a silver one comes back silver. Then desaturated hard, because
+  // rock is rock.
+  const glow = (sky && sky.clouds && sky.clouds[1]) || star;
+  const lit  = p.lit  || (ice ? "#e2f6ff" : mixHexHex(mixHexHex(star, glow, 0.35), "#5d6b82", 0.42));
+  const dark = p.dark || (ice ? "#0a2231" : mixHexHex(soil, "#0b0f1a", 0.45));
   tiled(ctx, H, p.y*H, yy => {
     for(let i=0;i<p.n;i++){
       const a = rand()*TAU, d = Math.sqrt(rand())*r;
       const x = cx + Math.cos(a)*d, y = yy + Math.sin(a)*d*0.7;
-      const rr = r*(0.03 + rand()*0.07);
-      ctx.fillStyle = "rgba(26,30,42,0.92)";
-      ctx.beginPath();
-      for(let k=0;k<7;k++){
-        const ka = k/7*TAU, kr = rr*(0.7 + rand()*0.5);
-        const kx = x + Math.cos(ka)*kr, ky = y + Math.sin(ka)*kr;
-        if(k === 0) ctx.moveTo(kx, ky); else ctx.lineTo(kx, ky);
+      const big = rand() < 0.18;
+      const rr = r*(big ? 0.085 + rand()*0.085 : 0.026 + rand()*0.048);
+      // How near this chunk reads, from its size alone. Distant gravel keeps
+      // only a third of the contrast, which is what stops a dense field from
+      // turning into a black stain.
+      const near = Math.max(0, Math.min(1, (rr/r - 0.026) / 0.13));
+      const face = 0.34 + near*0.66;
+
+      // Built once into arrays: the fill wants the path, and so does the
+      // per-edge rim, and tracing it twice doubles the cost of the whole sky.
+      const N = 6 + Math.floor(rand()*4);
+      const vx = [], vy = [];
+      for(let k=0;k<N;k++){
+        const ka = k/N*TAU + rand()*0.22;
+        // Ice fractures into flatter, straighter faces than rock crumbles into.
+        const kr = rr*(ice ? 0.80 + rand()*0.34 : 0.66 + rand()*0.54);
+        vx.push(x + Math.cos(ka)*kr); vy.push(y + Math.sin(ka)*kr);
       }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "rgba(160,175,200,0.22)";
-      ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(vx[0], vy[0]);
+      for(let k=1;k<N;k++) ctx.lineTo(vx[k], vy[k]);
+      ctx.closePath();
+
+      const g = ctx.createLinearGradient(x + lx*rr, y + ly*rr, x - lx*rr*1.15, y - ly*rr*1.15);
+      g.addColorStop(0,    mixA(lit, dark, ice ? 0.04 : 0.22, 0.90*face + 0.06));
+      g.addColorStop(0.42, mixA(lit, dark, ice ? 0.46 : 0.66, 0.93));
+      g.addColorStop(1,    mixA(lit, dark, 1, 0.95));
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      /* The rim, edge by edge. `t` is the outward normal dotted with the light
+         vector: +1 square on, 0 at the terminator, negative round the back. */
+      ctx.lineWidth = big ? 1.4 : 1;
+      for(let k=0;k<N;k++){
+        const x1 = vx[k], y1 = vy[k], x2 = vx[(k+1)%N], y2 = vy[(k+1)%N];
+        const nx = (x1+x2)*0.5 - x, ny = (y1+y2)*0.5 - y;
+        const nl = Math.hypot(nx, ny) || 1;
+        const t = (nx/nl)*lx + (ny/nl)*ly;
+        if(t <= 0.03) continue;
+        ctx.strokeStyle = rgba(lit, (ice ? 0.30 : 0.16) * t * face + 0.05*t);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      }
+
+      // Ice glints. Only on the boulders, and only on the lit shoulder - a
+      // field where every chip sparkles reads as glitter, not as ice.
+      if(ice && big){
+        const sx = x + lx*rr*0.45, sy = y + ly*rr*0.45, sr = rr*0.42;
+        const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+        sg.addColorStop(0, rgba("#ffffff", 0.42*face));
+        sg.addColorStop(1, rgba("#ffffff", 0));
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+      }
     }
   });
 }
@@ -1119,7 +1247,10 @@ function paint(sky, seed, W, H, dpr, wrap){
         if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H));
         else if(pr.k === "sun") drawSun(px, W, H, pr);
         else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
-        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand);
+        // Rocks light from the same core the planets do, and borrow the sky's
+        // own star tint, so a field belongs to the sky it is floating in
+        // instead of being the same slate grey in all thirteen of them.
+        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
         else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
         else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
         else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);

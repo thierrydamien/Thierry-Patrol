@@ -5068,6 +5068,7 @@ function renderSettings(){
   pill("setSfx", audio.sfxEnabled());
   pill("setShake", SF.fx.shakeEnabled());
   pill("setCalm", SF.fx.calmEnabled());
+  pill("setGlow", SF.fx.glowEnabled());
   /*
    * The row stays visible on a device that cannot rumble, greyed out with a
    * note under it. Hiding it was the first instinct and it was wrong: every
@@ -5083,6 +5084,13 @@ function renderSettings(){
   rumbleBtn.querySelector(".set-pill").textContent =
     !canRumble ? "N/A" : (SF.haptics.isEnabled() ? "ON" : "OFF");
   $("rumbleNote").classList.toggle("hidden", canRumble);
+  /*
+   * The glow can be ON and not drawing: the game measures its own frame clock
+   * during play and sheds the lens on a device that cannot hold 60fps with it.
+   * Same reasoning as the rumble note above - a switch that says ON while
+   * nothing happens reads as a bug, and an explanation beats an absence.
+   */
+  $("glowNote").classList.toggle("hidden", !SF.fx.glowShed());
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
@@ -5128,6 +5136,7 @@ click($("setMusicRow"), () => { audio.setMusicEnabled(!audio.musicEnabled()); re
 click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSettings(); });
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
 click($("setCalm"), () => { SF.fx.setCalmEnabled(!SF.fx.calmEnabled()); renderSettings(); });
+click($("setGlow"), () => { SF.fx.setGlowEnabled(!SF.fx.glowEnabled()); renderSettings(); });
 click($("setRumble"), () => {
   if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());

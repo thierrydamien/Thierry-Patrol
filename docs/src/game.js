@@ -2995,6 +2995,9 @@ function draw(timeMs){
   // hides a bullet.
   if(game.run && game.run.mods.disco && !game.run.ended)
     SF.render.drawDisco(ctx, timeMs);
+  // The lens. Last thing over the WORLD and the first thing under the writing:
+  // bullets and engines bleed light, score readouts and objective text do not.
+  SF.render.drawGlow(ctx);
   fx.drawTexts(ctx);
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
@@ -3013,9 +3016,14 @@ let last = 0;
 function frame(now){
   // Queue the next frame first: one bad frame can never freeze the game.
   requestAnimationFrame(frame);
-  let dt = (now - last)/1000;
+  const raw = now - last;          // before the clamp: the watchdog wants the truth
+  let dt = raw/1000;
   last = now;
   if(dt > 0.05) dt = 0.05;         // tab-switch guard
+
+  // Can this device afford the lens? Only measured during play, where the
+  // frame is at its heaviest and a shortfall is worth acting on. See glowWatch.
+  if(game.state === "playing" && raw > 0 && raw < 500) fx.glowWatch(raw);
 
   if(game.state === "playing" || game.state === "ending"){
     // Advances through the death sequence as well as play: fx's own hit-stop
