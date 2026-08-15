@@ -18,27 +18,27 @@
  *     5726  src/cloud.js
  *     6331  src/fx.js
  *     7178  src/input.js
- *     7534  src/entities.js
- *     8637  src/bossart.js
- *     9396  src/bosses.js
- *    10146  src/bossintro.js
- *    10269  src/rewind.js
- *    10791  src/finale.js
- *    11112  src/papadeath.js
- *    11434  src/backstage.js
- *    12637  src/sky29.js
- *    12878  src/systems.js
- *    13412  src/render.js
- *    17079  src/enemyart.js
- *    17825  src/insignia.js
- *    18070  src/skygen.js
- *    19238  src/shipart.js
- *    20316  src/paintjob.js
- *    20474  src/pilotart.js
- *    20569  src/comms.js
- *    20690  src/game.js
- *    23737  src/workshop.js
- *    24434  src/ui.js
+ *     7557  src/entities.js
+ *     8660  src/bossart.js
+ *     9419  src/bosses.js
+ *    10169  src/bossintro.js
+ *    10292  src/rewind.js
+ *    10814  src/finale.js
+ *    11135  src/papadeath.js
+ *    11457  src/backstage.js
+ *    12660  src/sky29.js
+ *    12901  src/systems.js
+ *    13435  src/render.js
+ *    17102  src/enemyart.js
+ *    17848  src/insignia.js
+ *    18093  src/skygen.js
+ *    19261  src/shipart.js
+ *    20339  src/paintjob.js
+ *    20497  src/pilotart.js
+ *    20592  src/comms.js
+ *    20713  src/game.js
+ *    23760  src/workshop.js
+ *    24457  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -7298,13 +7298,27 @@ function unlockPointer(){
 }
 function isPointerLocked(){ return locked; }
 
-/** A ring that appears only over something clickable - see hover(). */
+/*
+ * OUR CURSOR HAS TO BE SOMEWHERE YOU CAN SEE IT.
+ *
+ * Pointer lock means the OS cursor is gone and this ring is the only cursor
+ * there is - and it used to be drawn ONLY while over something clickable. Off
+ * a button it was nothing at all, so in fullscreen the pointer simply
+ * vanished and finding it again meant waving the trackpad until something lit
+ * up. A cursor you have to search for is not a cursor.
+ *
+ * It is always drawn while locked now, in two strengths: a small dim ring
+ * that says "your pointer is here", and the bright one over anything
+ * clickable. In flight the quiet ring is worth having on its own - the ship
+ * springs TOWARD the pointer and lags behind it, so the ring is the steering
+ * target, which is information the game was hiding.
+ */
 function place(){
   if(!reticle) return;
   reticle.style.left = lockX + "px";
   reticle.style.top  = lockY + "px";
 }
-function showReticle(on){
+function showReticle(on, hot){
   if(!on && !reticle) return;
   if(!reticle){
     reticle = document.createElement("div");
@@ -7313,6 +7327,7 @@ function showReticle(on){
     document.body.appendChild(reticle);
   }
   reticle.classList.toggle("on", !!on);
+  reticle.classList.toggle("hot", !!hot);
 }
 /*
  * The cursor is ours now, so :hover never fires. `vhover` stands in for it:
@@ -7324,8 +7339,9 @@ function hover(raw){
     if(hovered) hovered.classList.remove("vhover");
     hovered = el;
     if(hovered) hovered.classList.add("vhover");
-    showReticle(!!hovered);
   }
+  // Always on while the pointer is ours; bright only over something tappable.
+  showReticle(locked, !!hovered);
   place();
 }
 
@@ -7495,7 +7511,14 @@ function attach(canvasEl, vw, vh){
 
   document.addEventListener("pointerlockchange", () => {
     locked = !!document.pointerLockElement;
-    if(locked){ releasing = false; return; }
+    if(locked){
+      releasing = false;
+      // Draw it the moment the lock lands, at the spot lockPointer parked it,
+      // rather than leaving the screen cursor-less until the first move.
+      showReticle(true, false);
+      place();
+      return;
+    }
     hover(null); showReticle(false);
     state.dragging = false; hoverSteer = false;
     if(releasing){ releasing = false; return; }

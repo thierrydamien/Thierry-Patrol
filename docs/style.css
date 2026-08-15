@@ -811,9 +811,31 @@ html, body {
   width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%;
   border:2px solid rgba(255,255,255,0.9);
   box-shadow:0 0 10px rgba(124,196,255,0.8), inset 0 0 6px rgba(124,196,255,0.6);
-  opacity:0; transform:scale(0.7); transition:opacity .09s ease, transform .09s ease;
+  opacity:0; transform:scale(0.7);
+  transition:opacity .09s ease, transform .09s ease, border-color .09s ease;
 }
-#vcursor.on { opacity:1; transform:scale(1); }
+/* THE QUIET STATE, which is most of the time. Small, dim, and carrying a dot
+   in the middle so it reads as a pointer at a glance on a busy sky - but faint
+   enough to sit over a boss fight without becoming a thing you look at. It
+   exists because the alternative was an invisible cursor. */
+#vcursor.on {
+  opacity:0.5; transform:scale(0.62);
+  border-color:rgba(200,228,255,0.85);
+  box-shadow:0 0 8px rgba(124,196,255,0.45), inset 0 0 5px rgba(124,196,255,0.35);
+}
+#vcursor.on::after {
+  content:""; position:absolute; left:50%; top:50%;
+  width:4px; height:4px; margin:-2px 0 0 -2px; border-radius:50%;
+  background:rgba(255,255,255,0.95);
+  box-shadow:0 0 6px rgba(124,196,255,0.9);
+}
+/* Over something clickable: full size, full brightness, the ring it always
+   was - so "you can press this" still reads instantly. */
+#vcursor.on.hot {
+  opacity:1; transform:scale(1);
+  border-color:rgba(255,255,255,0.95);
+  box-shadow:0 0 12px rgba(124,196,255,0.85), inset 0 0 6px rgba(124,196,255,0.6);
+}
 .vhover { filter:brightness(1.35) saturate(1.1); }
 
 .icon-btn {

@@ -121,13 +121,27 @@ function unlockPointer(){
 }
 function isPointerLocked(){ return locked; }
 
-/** A ring that appears only over something clickable - see hover(). */
+/*
+ * OUR CURSOR HAS TO BE SOMEWHERE YOU CAN SEE IT.
+ *
+ * Pointer lock means the OS cursor is gone and this ring is the only cursor
+ * there is - and it used to be drawn ONLY while over something clickable. Off
+ * a button it was nothing at all, so in fullscreen the pointer simply
+ * vanished and finding it again meant waving the trackpad until something lit
+ * up. A cursor you have to search for is not a cursor.
+ *
+ * It is always drawn while locked now, in two strengths: a small dim ring
+ * that says "your pointer is here", and the bright one over anything
+ * clickable. In flight the quiet ring is worth having on its own - the ship
+ * springs TOWARD the pointer and lags behind it, so the ring is the steering
+ * target, which is information the game was hiding.
+ */
 function place(){
   if(!reticle) return;
   reticle.style.left = lockX + "px";
   reticle.style.top  = lockY + "px";
 }
-function showReticle(on){
+function showReticle(on, hot){
   if(!on && !reticle) return;
   if(!reticle){
     reticle = document.createElement("div");
@@ -136,6 +150,7 @@ function showReticle(on){
     document.body.appendChild(reticle);
   }
   reticle.classList.toggle("on", !!on);
+  reticle.classList.toggle("hot", !!hot);
 }
 /*
  * The cursor is ours now, so :hover never fires. `vhover` stands in for it:
@@ -147,8 +162,9 @@ function hover(raw){
     if(hovered) hovered.classList.remove("vhover");
     hovered = el;
     if(hovered) hovered.classList.add("vhover");
-    showReticle(!!hovered);
   }
+  // Always on while the pointer is ours; bright only over something tappable.
+  showReticle(locked, !!hovered);
   place();
 }
 
@@ -318,7 +334,14 @@ function attach(canvasEl, vw, vh){
 
   document.addEventListener("pointerlockchange", () => {
     locked = !!document.pointerLockElement;
-    if(locked){ releasing = false; return; }
+    if(locked){
+      releasing = false;
+      // Draw it the moment the lock lands, at the spot lockPointer parked it,
+      // rather than leaving the screen cursor-less until the first move.
+      showReticle(true, false);
+      place();
+      return;
+    }
     hover(null); showReticle(false);
     state.dragging = false; hoverSteer = false;
     if(releasing){ releasing = false; return; }

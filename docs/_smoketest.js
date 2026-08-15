@@ -6087,8 +6087,55 @@ async function run(){
     check("a release we asked for doesn't bounce back through exitFullscreen",
       exited === 1);
 
+    /* ---------- and you can always see where it is ---------- */
+    /*
+     * Pointer lock takes the OS cursor away, so this ring is the only cursor
+     * there is - and it used to be drawn ONLY while over something clickable.
+     * Off a button it was nothing at all: in fullscreen the pointer vanished
+     * and finding it again meant waving the trackpad until something lit up.
+     */
+    setLock(doc.documentElement);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    const ring = () => doc.getElementById("vcursor");
+    check("locking the pointer puts a cursor on screen straight away",
+      !!ring() && ring().classList.contains("on"));
+    {
+      // Over empty sky - the case that used to draw nothing.
+      const realFrom = doc.elementFromPoint;
+      doc.elementFromPoint = () => doc.getElementById("game");
+      const move = (dx, dy) => {
+        const e = new window.MouseEvent("mousemove", { bubbles: true });
+        Object.defineProperty(e, "movementX", { value: dx });
+        Object.defineProperty(e, "movementY", { value: dy });
+        window.dispatchEvent(e);
+      };
+      move(140, 90);
+      check("over open sky it is still there, just quiet",
+        ring().classList.contains("on") && !ring().classList.contains("hot"));
+      const wasLeft = ring().style.left;
+      move(60, 0);
+      check("...and it tracks where the pointer actually went",
+        ring().style.left !== wasLeft);
+      // Over something tappable it goes bright, the way it always did.
+      const btn = doc.getElementById("pauseBtn");
+      doc.elementFromPoint = () => btn;
+      move(1, 0);
+      check("over something clickable it lights up",
+        ring().classList.contains("hot") && btn.classList.contains("vhover"));
+      doc.elementFromPoint = realFrom;
+    }
+    setLock(null);
+    doc.dispatchEvent(new window.Event("pointerlockchange"));
+    check("giving the cursor back takes our ring away",
+      !ring().classList.contains("on"));
+
     const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
     check("our own cursor has something to draw", /#vcursor\s*\{/.test(css));
+    /* The two strengths have to be different, or "quiet" is just "invisible"
+       again under another name. */
+    check("the quiet cursor and the bright one are drawn differently",
+      /#vcursor\.on\s*\{[^}]*opacity/.test(css) &&
+      /#vcursor\.on\.hot\s*\{[^}]*opacity\s*:\s*1/.test(css));
     check("...and a stand-in for the :hover that can never fire",
       /\.vhover\s*\{/.test(css));
 
