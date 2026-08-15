@@ -33,12 +33,12 @@
  *    17825  src/insignia.js
  *    18070  src/skygen.js
  *    19238  src/shipart.js
- *    20283  src/paintjob.js
- *    20441  src/pilotart.js
- *    20536  src/comms.js
- *    20657  src/game.js
- *    23704  src/workshop.js
- *    24401  src/ui.js
+ *    20316  src/paintjob.js
+ *    20474  src/pilotart.js
+ *    20569  src/comms.js
+ *    20690  src/game.js
+ *    23737  src/workshop.js
+ *    24434  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -19895,7 +19895,14 @@ function drawShip(ctx, cx, cy, size, opts){
     ghost: false, alpha: 1,
   };
   const levels = opts.levels || {};
-  const S = size;
+  /*
+   * A hull may draw bigger than the size it was handed. This is the Anvil's
+   * loudest cue and the honest one: it carries a 14-pixel hitbox against the
+   * Dart's 11, so a card that says "bigger target" should be showing a bigger
+   * ship. Everything scales together - hull, parts, livery, exhaust - so no
+   * bolted-on part goes anywhere near out of register.
+   */
+  const S = size * (hullOf(opts.hull).artScale || 1);
   const bob = opts.idle === false ? 0 : Math.sin(o.t*1.6)*size*0.018;
 
   ctx.save();
@@ -19992,30 +19999,56 @@ const FIN = [0.052, 0.245,  0.150, 0.420,  0.052, 0.360];
  * the parts refactored onto named anchors first.
  */
 const ANVIL_BODY = [
-   0.060,-0.500, 0.108,-0.470,
-   0.150,-0.395,  0.196,-0.300,  0.226,-0.200,  0.242,-0.100,
-   0.248,-0.005,  0.244, 0.100,  0.232, 0.205,  0.180, 0.305,  0.132, 0.360,
-  -0.132, 0.360, -0.180, 0.305, -0.232, 0.205, -0.244, 0.100, -0.248,-0.005,
-  -0.242,-0.100, -0.226,-0.200, -0.196,-0.300, -0.150,-0.395,
-  -0.108,-0.470, -0.060,-0.500,
+   0.090,-0.500, 0.132,-0.462,
+   0.166,-0.390,  0.186,-0.300,  0.198,-0.200,  0.204,-0.100,
+   0.206,-0.005,  0.202, 0.100,  0.194, 0.205,  0.166, 0.305,  0.124, 0.360,
+  -0.124, 0.360, -0.166, 0.305, -0.194, 0.205, -0.202, 0.100, -0.206,-0.005,
+  -0.204,-0.100, -0.198,-0.200, -0.186,-0.300, -0.166,-0.390,
+  -0.132,-0.462, -0.090,-0.500,
 ];
-// A straight delta: same tips, no sweep-back in the trailing edge.
+/*
+ * A STUBBY SLAB, NOT A SWEPT DART - and this is the whole difference.
+ *
+ * The first Anvil kept the Dart's wing exactly: same tips at 0.460/0.185, same
+ * sweep. Measured, the two ships shared 76% of their pixels bare and 92%
+ * FITTED OUT, which is how anybody actually sees their ship - the twenty-one
+ * bolted-on parts are identical on both hulls and swamped what little the
+ * fuselage was saying. The family looked at them and said they were the same
+ * plane, and they were right.
+ *
+ * The wing is where a top-down aircraft is recognised, so this is a different
+ * wing: it starts further forward, runs almost straight out instead of raking
+ * back, and is CLIPPED SQUARE at the tip rather than drawn to a point. Deep
+ * chord, blunt ends, no taper - a heavy-lifter's wing beside a dart's.
+ *
+ * The fuselage is only moderately wider than the Dart's, and that is a
+ * correction: at 0.268 it was so broad it swallowed its own wing, and the ship
+ * read as an egg with fins. The wing has to be the thing you see.
+ *
+ * The parts still land: nothing bolts on outboard of |x| 0.37, so the whole
+ * span from there to the tip is ours to reshape.
+ */
 const ANVIL_WING = [
-   0,    -0.130,
-   0.190,-0.010,  0.460, 0.185,  0.415, 0.290,  0.236, 0.262,
+   0,    -0.175,
+   0.175,-0.120,  0.430,-0.010,         // forward and nearly straight out
+   0.430, 0.245,                         // squared-off tip: a straight edge
+   0.230, 0.250,
    0,     0.300,
-  -0.236, 0.262, -0.415, 0.290, -0.460, 0.185, -0.190,-0.010,
+  -0.230, 0.250, -0.430, 0.245, -0.430,-0.010, -0.175,-0.120,
 ];
-const ANVIL_FIN = [0.070, 0.245,  0.150, 0.420,  0.070, 0.372];
+/* Two fins set out on the wing, where the Dart carries a small pair beside
+   its tail. At flight size this is the cue that survives being covered in
+   bought hardware. */
+const ANVIL_FIN = [0.290, 0.230,  0.375, 0.415,  0.290, 0.330];
 const ANVIL_POLY = [
-  [0.060, -0.500], [0.108, -0.470],
-  [0.196, -0.300], [0.242, -0.100], [0.248, -0.005],
-  [0.460, 0.185], [0.415, 0.290], [0.236, 0.262],
-  [0.180, 0.305], [0.150, 0.420], [0.075, 0.400],
-  [-0.075, 0.400], [-0.150, 0.420], [-0.180, 0.305],
-  [-0.236, 0.262], [-0.415, 0.290], [-0.460, 0.185],
-  [-0.248, -0.005], [-0.242, -0.100], [-0.196, -0.300],
-  [-0.108, -0.470], [-0.060, -0.500],
+  [0.090, -0.500], [0.132, -0.462],
+  [0.186, -0.300], [0.204, -0.100],
+  [0.430, -0.010], [0.430, 0.245], [0.375, 0.415], [0.290, 0.250],
+  [0.230, 0.250], [0.194, 0.205], [0.166, 0.305], [0.124, 0.400],
+  [-0.124, 0.400], [-0.166, 0.305], [-0.194, 0.205], [-0.230, 0.250],
+  [-0.290, 0.250], [-0.375, 0.415], [-0.430, 0.245], [-0.430, -0.010],
+  [-0.204, -0.100], [-0.186, -0.300],
+  [-0.132, -0.462], [-0.090, -0.500],
 ];
 
 /*
@@ -20052,12 +20085,12 @@ const HULLS = [
     blurb:"The ship the family has always flown. Slim, quick, and a small thing to hit.",
     pros:["small target","quickest hull"], cons:[],
     body:BODY, wing:WING, fin:FIN, outline:HULL_POLY,
-    r:11, lives:0, shield:0, speed:1.00, invuln:1.00 },
+    r:11, lives:0, shield:0, speed:1.00, invuln:1.00, artScale:1.00 },
   { id:"anvil", name:"THE ANVIL", cost:30000,
     blurb:"Twice the shoulders and a plate for a nose. Slower, and a much easier thing to hit - but it takes a beating and gets straight back up.",
     pros:["+1 life","+1 shield","+30% recovery"], cons:["bigger target","-12% speed"],
     body:ANVIL_BODY, wing:ANVIL_WING, fin:ANVIL_FIN, outline:ANVIL_POLY,
-    r:14, lives:1, shield:1, speed:0.88, invuln:1.30 },
+    r:14, lives:1, shield:1, speed:0.88, invuln:1.30, artScale:1.16 },
 ];
 const HULL_BY_ID = {};
 HULLS.forEach(h => { HULL_BY_ID[h.id] = h; });
@@ -27508,14 +27541,19 @@ function renderHullShelf(panel){
     const lines =
       h.pros.map(x => `<em class="good">▲ ${esc(x)}</em>`).join("") +
       h.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
-    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(h.name)}</b>
+    /* 128, not 96: a fully-fitted ship reaches |x| 0.70 of its box once the
+       drone cradle and the shield ring are on, and the Anvil draws 16% larger
+       again - both were being cut off at the canvas edge. Display size is
+       unchanged (48px in CSS), so this is more room and a sharper card, not a
+       bigger one. */
+    card.innerHTML = `<canvas class="tc-ship" width="128" height="128"></canvas><b>${esc(h.name)}</b>
       <span>${esc(h.blurb)}</span>${lines}
       <u>${on ? "FLYING IT ✓" : owns ? "tap to fly" : money(h.cost)}</u>`;
     fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
     // Your colour, your parts, your tune - on that airframe. The most honest
     // preview there is, and the only way to see the difference before buying.
     const hc = card.querySelector(".tc-ship").getContext("2d");
-    if(hc) SF.shipart.drawShip(hc, 48, 50, 72,
+    if(hc) SF.shipart.drawShip(hc, 64, 72, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
         t: 0.8, idle: false, tune: profile.tune, hull: h.id });
     click(card, () => {
@@ -27561,13 +27599,13 @@ function renderPartsTab(panel){
       t.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
     // The card's icon is YOUR ship wearing this tune - the most honest
     // preview possible, and no pasted-on emoji.
-    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(t.name)}</b>
+    card.innerHTML = `<canvas class="tc-ship" width="128" height="128"></canvas><b>${esc(t.name)}</b>
       <span>${esc(t.blurb)}</span>${lines}
       <u>${on ? "FITTED ✓" : open ? "tap to fit"
             : `<i class="lock-slot"></i> beat Mission ` + t.unlockMission + "'s boss"}</u>`;
     fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
     const tc = card.querySelector(".tc-ship").getContext("2d");
-    if(tc) SF.shipart.drawShip(tc, 48, 50, 72,
+    if(tc) SF.shipart.drawShip(tc, 64, 72, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
         t: 0.8, idle: false, tune: t.id, hull: profile.hull });
     click(card, () => {

@@ -3108,14 +3108,19 @@ function renderHullShelf(panel){
     const lines =
       h.pros.map(x => `<em class="good">▲ ${esc(x)}</em>`).join("") +
       h.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
-    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(h.name)}</b>
+    /* 128, not 96: a fully-fitted ship reaches |x| 0.70 of its box once the
+       drone cradle and the shield ring are on, and the Anvil draws 16% larger
+       again - both were being cut off at the canvas edge. Display size is
+       unchanged (48px in CSS), so this is more room and a sharper card, not a
+       bigger one. */
+    card.innerHTML = `<canvas class="tc-ship" width="128" height="128"></canvas><b>${esc(h.name)}</b>
       <span>${esc(h.blurb)}</span>${lines}
       <u>${on ? "FLYING IT ✓" : owns ? "tap to fly" : money(h.cost)}</u>`;
     fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
     // Your colour, your parts, your tune - on that airframe. The most honest
     // preview there is, and the only way to see the difference before buying.
     const hc = card.querySelector(".tc-ship").getContext("2d");
-    if(hc) SF.shipart.drawShip(hc, 48, 50, 72,
+    if(hc) SF.shipart.drawShip(hc, 64, 72, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
         t: 0.8, idle: false, tune: profile.tune, hull: h.id });
     click(card, () => {
@@ -3161,13 +3166,13 @@ function renderPartsTab(panel){
       t.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
     // The card's icon is YOUR ship wearing this tune - the most honest
     // preview possible, and no pasted-on emoji.
-    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(t.name)}</b>
+    card.innerHTML = `<canvas class="tc-ship" width="128" height="128"></canvas><b>${esc(t.name)}</b>
       <span>${esc(t.blurb)}</span>${lines}
       <u>${on ? "FITTED ✓" : open ? "tap to fit"
             : `<i class="lock-slot"></i> beat Mission ` + t.unlockMission + "'s boss"}</u>`;
     fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
     const tc = card.querySelector(".tc-ship").getContext("2d");
-    if(tc) SF.shipart.drawShip(tc, 48, 50, 72,
+    if(tc) SF.shipart.drawShip(tc, 64, 72, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
         t: 0.8, idle: false, tune: t.id, hull: profile.hull });
     click(card, () => {

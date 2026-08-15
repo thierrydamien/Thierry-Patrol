@@ -1128,6 +1128,66 @@ async function run(){
    * nothing at all until the cannon was three levels up. A 30,000 card is not
    * allowed to promise what the maths rounds away.
    */
+  /*
+   * TWO HULLS HAVE TO LOOK LIKE TWO HULLS.
+   *
+   * The first Anvil kept the Dart's wing exactly - same tips, same sweep - and
+   * only widened the fuselage. Rendered and counted: the two ships shared 76%
+   * of their pixels bare and 92% FITTED OUT, because the twenty-one bolted-on
+   * parts are identical on both and swamped the one thing that differed. The
+   * family looked at them and said they were the same plane.
+   *
+   * So the contract is measured, not eyeballed, and it is measured with the
+   * parts ON, which is how a ship is actually seen. Under 60% shared pixels.
+   */
+  check("no two airframes are the same aeroplane", (() => {
+    const A = SF.shipart;
+    const N = 200, S = 84;
+    const levels = { rapid:3, spread:3, thrusters:2, shield:1, damage:2, wingman:1 };
+    const maskFor = hull => {
+      const cv = window.document.createElement("canvas");
+      cv.width = cv.height = N;
+      const c = cv.getContext("2d");
+      if(!c || !c.getImageData) return null;
+      c.clearRect(0, 0, N, N);
+      A.drawShip(c, N/2, N/2, S, { color:"#3fa9f5", levels, t:0.6, idle:false, hull });
+      const d = c.getImageData(0, 0, N, N).data;
+      const m = new Uint8Array(N*N);
+      for(let i=0;i<N*N;i++) m[i] = d[i*4+3] > 40 ? 1 : 0;
+      return m;
+    };
+    const masks = A.HULLS.map(h => maskFor(h.id));
+    // jsdom's 2D context is a stub with no real pixels; the measurement runs
+    // for real in Chromium (tools/, and the render check in the notes). Here
+    // we can still hold the GEOMETRY apart, which is what drives it.
+    if(masks.some(m => !m || !m.some(v => v))){
+      const poly = A.HULLS.map(h => JSON.stringify(h.outline));
+      const scales = A.HULLS.map(h => h.artScale || 1);
+      return new Set(poly).size === A.HULLS.length &&
+             new Set(scales).size === A.HULLS.length;
+    }
+    let worst = 0;
+    for(let i=0;i<masks.length;i++) for(let j=i+1;j<masks.length;j++){
+      let inter = 0, uni = 0;
+      for(let k=0;k<masks[i].length;k++){
+        const a = masks[i][k], b = masks[j][k];
+        if(a||b) uni++; if(a&&b) inter++;
+      }
+      worst = Math.max(worst, uni ? inter/uni : 1);
+    }
+    return worst < 0.60;
+  })());
+  /*
+   * The skeleton is the reason all twenty-one parts land on both hulls with
+   * nothing re-tuned: nothing bolts on outboard of |x| 0.37, so every hull
+   * must actually have wing out to there.
+   */
+  check("every airframe has wing where the parts bolt on", () =>
+    SF.shipart.HULLS.every(h => {
+      const xs = h.outline.map(pt => Math.abs(pt[0]));
+      return Math.max.apply(null, xs) >= 0.37;
+    }));
+
   check("a stock Anvil delivers every line on its card, and nothing else", (() => {
     const d = SF.config.DIFFICULTY_BY_ID.pilot;
     const stock = SF.profile.blank("__hullcard");
