@@ -68,10 +68,16 @@ const SKIES = [
             {k:"planet", x:0.80, y:0.74, r:0.068, lit:"#f2d79a", dark:"#4a3410", craters:true},
             {k:"rocks",  x:0.72, y:0.34, r:0.114, n:12} ] },
 
-  { name:"The Trade Lane", clouds:["#a16207","#fcd34d","#713f12"], dust:"#0e0a02", star:"#fef9c3",
+  /* Magenta, which nothing else in the table owns - and it has to, because it
+     follows Gold Reach. Measured against every other backdrop, the old amber
+     Trade Lane was the second-closest NEIGHBOURING pair in the campaign: mean
+     colour 8.9 apart from the sky immediately before it, so two missions in a
+     row opened on the same picture. Gold, then magenta, then the ice-blue
+     Relief Line is three beats a child can tell apart from the doorway. */
+  { name:"The Trade Lane", clouds:["#be185d","#f9a8d4","#4a1d3f"], dust:"#0d0410", star:"#fce7f3",
     lum:1.15, density:0.9, stars:1.0, bright:3,
-    props:[ {k:"planet", x:0.82, y:0.30, r:0.13, lit:"#e8b45a", dark:"#4a2c08", rings:true},
-            {k:"planet", x:0.14, y:0.72, r:0.05, lit:"#f5deb0", dark:"#5c4318", craters:true},
+    props:[ {k:"planet", x:0.82, y:0.30, r:0.13, lit:"#e0709f", dark:"#40122c", rings:true},
+            {k:"planet", x:0.14, y:0.72, r:0.05, lit:"#f7cede", dark:"#5c2340", craters:true},
             {k:"galaxy", x:0.24, y:0.14, r:0.18} ] },
 
   /* Cold, clean and medical - the only pale ice-blue-over-near-white in the
@@ -97,8 +103,14 @@ const SKIES = [
     props:[ {k:"planet", x:0.78, y:0.80, r:0.20, lit:"#20406e", dark:"#040914", crescent:true},
             {k:"rocks",  x:0.22, y:0.24, r:0.15, n:12} ] },
 
-  { name:"The Wreck Line", clouds:["#475569","#64748b","#1e293b"], dust:"#05070c", star:"#e2e8f0",
-    lum:0.75, density:0.8, stars:1.1, bright:2,
+  /* Separated from The Blockade by VALUE rather than hue, because they are
+     neighbours and were the closest pair in the campaign: both dark, both
+     desaturated, 25 apart in mean colour. The Blockade is a navy void you
+     sneak across with no guns; this is the glare off a million pieces of
+     broken metal, bright enough that the debris you are meant to hide behind
+     can actually be seen. Same grey family, opposite end of the scale. */
+  { name:"The Wreck Line", clouds:["#94a3b8","#e2e8f0","#334155"], dust:"#0a0d14", star:"#f8fafc",
+    lum:1.2, density:0.8, stars:1.1, bright:3,
     props:[ {k:"rocks",  x:0.50, y:0.42, r:0.30, n:34},
             {k:"planet", x:0.16, y:0.76, r:0.104, lit:"#6b7c94", dark:"#0d131f", craters:true},
             {k:"rocks",  x:0.80, y:0.14, r:0.14, n:14} ] },

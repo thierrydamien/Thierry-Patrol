@@ -403,6 +403,12 @@ function startMission(missionIndex, difficultyId){
     // The six newer stops each count their own thing.
     delivered: 0, dropped: 0, wraps: 0, limpetsShaken: 0,
     flareHits: 0, crushed: 0, mirrorKills: 0,
+    // Three things the game already DID and never scored: the gold-ringed
+    // ship on the bounty level, the cut-it-fine swerve on the kamikaze level,
+    // and the weak points a boss brief tells you to shoot off. Counted here
+    // so a mission can make its own lesson its third star instead of asking
+    // fifteen missions in a row for the same 80%.
+    bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
     stars: 0,
   };
 
@@ -836,6 +842,8 @@ const callbacks = {
      * farming adds - the mirror image of the bug that made it unreachable.
      */
     if(e.counted && !e.fromBoss){ run.stats.kills++; }
+    // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
+    if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
     // The Glass Sea: the twin earns its own tally, which is a whole star.
     if(bullet && bullet.fromMirror) run.stats.mirrorKills++;
     if(run.mission.sky29) SF.sky29.splash(e.x, e.y);   // every kill, a drop of paint
@@ -1089,6 +1097,7 @@ const callbacks = {
     const run = game.run;
     const res = SF.bosses.damage(boss, bullet.dmg, bullet.x, bullet.y);
     if(res.weakPointDestroyed){
+      run.stats.partsOff++;
       run.score += Math.round(250 * run.difficulty.pay);
       fx.text(boss.x + res.weakPointDestroyed.ox, boss.y + res.weakPointDestroyed.oy,
               "WEAK POINT DOWN", "#ffd23f", 14, true);
@@ -1591,6 +1600,9 @@ function update(dt, timeMs){
         run.bossActive = true;
         run.bossSpawned = true;
         game.world.boss = SF.bosses.create(run.mission.boss, run.difficulty, game.world.player.dps);
+        // How many parts this fight HAS, so a "shoot them all off" star knows
+        // what "all" means without the objective naming a boss.
+        run.stats.partsTotal = game.world.boss.weakPoints.length;
         if(BOSSES[run.mission.boss].finale){
           // The Devourer gets an arrival instead of a banner: the sky goes
           // out, it comes down, it is named. finale.js owns the timeline.

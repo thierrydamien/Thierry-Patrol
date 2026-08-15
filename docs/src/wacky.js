@@ -113,6 +113,21 @@ function conflicts(a, b){
 }
 
 /**
+ * Every modifier id that cannot share a sky with this one. The Drawing Board
+ * hands the table to a child instead of a dice roll, so it needs to know what
+ * to switch OFF when they tap something - "your ship is tiny AND enormous" has
+ * to be impossible to build, not merely improbable to roll.
+ */
+function clashesWith(id){
+  const out = [];
+  CONFLICTS.forEach(pair => {
+    if(pair.indexOf(id) < 0) return;
+    pair.forEach(other => { if(other !== id && out.indexOf(other) < 0) out.push(other); });
+  });
+  return out;
+}
+
+/**
  * Rolls this flight's modifiers: two, with a one-in-three chance of a third.
  * A shuffled walk that skips anything conflicting with what's already in the
  * hand, so the count survives an exclusion.
@@ -194,5 +209,5 @@ function skyIndex(){
   return Math.floor(Math.random() * SF.missions.MISSIONS.length);
 }
 
-SF.wacky = { build, roll, skyIndex, MODIFIERS };
+SF.wacky = { build, roll, skyIndex, MODIFIERS, MOD_BY_ID, clashesWith };
 })();

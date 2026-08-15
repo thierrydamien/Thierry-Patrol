@@ -713,6 +713,98 @@ async function run(){
     return SF.missions.MISSIONS.every(m => !m.waves ||
       m.waves.every((wv, i) => i === 0 || wv.t >= m.waves[i-1].t));
   })());
+  /* ---------- the star lists, and the shape of the campaign ---------- */
+  /*
+   * A star list that never changes is a star list nobody reads. Fifteen of
+   * thirty-five stops used to carry the identical trio - finish it, kill 80%,
+   * free everyone - INCLUDING the first six missions in a row, so a child
+   * could reach act two without ever learning that the third star is where a
+   * level says what it is about. Four of them now ask for their own brief's
+   * promise instead. This is the ratchet: the number may fall, never rise.
+   */
+  check("no single trio of stars covers a third of the campaign", (() => {
+    const tally = {};
+    SF.missions.MISSIONS.forEach(m => {
+      const k = m.objectives.join(",");
+      tally[k] = (tally[k] || 0) + 1;
+    });
+    const worst = Math.max.apply(null, Object.keys(tally).map(k => tally[k]));
+    return worst <= 11 && worst < SF.missions.MISSIONS.length / 3;
+  })());
+  /*
+   * Each of the four new stars asks for a thing that only happens when the
+   * level's own mechanic is switched on. Fitting `wanted` to a mission with no
+   * bounty flag would be a star that cannot light, with nothing on screen to
+   * explain why - the same class of bug the Drawing Board's "Destroy 80% of a
+   * minefield" was.
+   */
+  check("a mechanic star is only fitted where the mechanic runs", (() => {
+    const M = SF.missions.MISSIONS;
+    const has = (o, flag) => M.filter(m => m.objectives.indexOf(o) >= 0).every(m => !!m[flag]);
+    return has("wanted", "bounty") && has("nearMiss", "nearMiss") &&
+           M.some(m => m.objectives.indexOf("wanted") >= 0) &&
+           M.some(m => m.objectives.indexOf("nearMiss") >= 0);
+  })());
+  /*
+   * The subtle one. An ARMOURED boss is sealed until every plate is off (see
+   * bosses.damage), so on the Sentinel or the Leviathan "shoot off every weak
+   * point" would light itself the instant you won - a free star dressed up as
+   * a challenge. It may only be fitted to a boss that can die with its parts
+   * still attached.
+   */
+  check("'shoot off every weak point' is never fitted to a sealed boss", () =>
+    SF.missions.MISSIONS.filter(m => m.objectives.indexOf("stripBoss") >= 0)
+      .every(m => {
+        const b = SF.missions.BOSSES[m.boss];
+        return b && !b.armoured && b.weakPoints.length > 0;
+      }));
+  check("the elite star is winnable on the thinnest tier", (() => {
+    const m = SF.missions.MISSIONS.find(x => x.objectives.indexOf("eliteHunt") >= 0);
+    if(!m) return false;
+    const dir = new SF.systems.WaveDirector(m, SF.config.DIFFICULTY_BY_ID.rookie, SF.game.world);
+    let lit = 0;
+    m.waves.forEach(wv => { dir.pending.length = 0; dir.queueWave(wv);
+                            lit += dir.pending.filter(s => s.elite).length; });
+    return lit >= 10;      // the star asks for 8
+  })());
+  /*
+   * THE LAST ACT HAS TO BE THE HEAVIEST FIGHT, NOT THE LIGHTEST.
+   *
+   * Measured across the campaign: on PILOT nothing scales enemies to your guns
+   * (hpTrack is 0 there, deliberately - buying a cannon is supposed to make
+   * things melt), while the shop moves a ship from 3.3 dps to 326. So the only
+   * curve the campaign HAS is what each mission fields. Act 4 used to field
+   * 207 points of fighting health against act 2's 348 - the final act was act
+   * one's weight, arriving at the player's strongest. Rocks and mines are
+   * excluded: scenery is flown around, not shot, and counting a trench full of
+   * boulders made a dodging level read as the hardest fight in the game.
+   */
+  check("the final act fields at least as much fight as the middle one", (() => {
+    const SCENERY = ["asteroid","boulder","mine","shard"];
+    const W = SF.game.world, d = SF.config.DIFFICULTY_BY_ID.pilot;
+    W.reset(); W.mods = {};
+    W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Weigh"), d));
+    const hp = {};
+    const hpFor = t => {
+      if(hp[t] === undefined){
+        try { const e = W.spawnEnemy(t, 200, 200, { difficulty: d }); hp[t] = e.hp; e.alive = false; }
+        catch(err){ hp[t] = 0; }
+      }
+      return hp[t];
+    };
+    const weigh = m => m.waves.reduce((s, wv) => {
+      if(SCENERY.indexOf(wv.type) >= 0) return s;
+      const el = Math.min(wv.n, wv.elite || 0);      // elites carry 3.5x hull
+      return s + hpFor(wv.type) * ((wv.n - el) + el*3.5);
+    }, 0);
+    const act = (a, b) => {
+      const g = SF.missions.MISSIONS.filter(m => m.id >= a && m.id <= b);
+      return g.reduce((s, m) => s + weigh(m), 0) / g.length;
+    };
+    // 28-33: the last act's real levels. 34 hands off to backstage.js after
+    // seven waves and 35 is the victory lap, so neither is a fight to weigh.
+    return act(28, 33) >= act(13, 24) * 0.9;
+  })());
   check("a Guardian's bubble covers ships, not rocks and belt parts", (() => {
     const pr = SF.entityConst.protectable;
     return pr({ hazard:false, typeId:"grunt" }) === true &&
@@ -2548,6 +2640,42 @@ async function run(){
     check("a drawn sky compiles to a real mission",
       m.custom === true && m.wells === true && m.waves.length === 2 &&
       m.objectives.includes("kill80") && m.objectives.includes("rescueAll"));
+    /*
+     * THE SILLY BITS. The Wacky Sky rolls two or three of these; the Drawing
+     * Board hands the whole table to a child and lets them choose. They ride
+     * out in the same two fields the roll uses (`mods` and `modList`), which
+     * is the entire integration - every hook downstream already reads those.
+     */
+    {
+      const silly = SF.workshop.toMission({
+        id:"ws-silly", name:"Silly Sky", author: prof.name, authorCall:"TEST",
+        sky:9, rule:"none", boss:"", mods:["giant","disco","confetti"],
+        waves:[ { type:"grunt", n:6, form:"vee" } ] });
+      check("a drawn sky can carry the Wacky Sky's silly bits",
+        silly.mods.giant === true && silly.mods.disco === true &&
+        silly.modList.length === 3 && /GIANT ENEMIES/.test(silly.goal));
+      // Two names is a promise a child can read on the banner; six is a wall.
+      check("more than two silly bits are counted, not listed",
+        / 2 more silly things!$/.test(silly.goal));
+      const plain = SF.workshop.toMission({
+        id:"ws-plain", name:"Plain Sky", author: prof.name, authorCall:"TEST",
+        sky:9, rule:"none", boss:"", waves:[ { type:"grunt", n:6, form:"vee" } ] });
+      check("a sky with no silly bits declares none at all",
+        plain.mods === undefined && plain.modList === undefined);
+      /*
+       * A dice roll can decline to put TINY SHIP and MEGA SHIP in the same
+       * hand. A child tapping chips cannot, so the board has to switch the
+       * loser off - the same CONFLICTS table, one exported helper.
+       */
+      check("the board knows which silly bits cannot share a sky",
+        SF.wacky.clashesWith("tiny").indexOf("mega") >= 0 &&
+        SF.wacky.clashesWith("mega").indexOf("tiny") >= 0 &&
+        SF.wacky.clashesWith("bouncy").indexOf("vacuum") >= 0 &&
+        SF.wacky.clashesWith("disco").length === 0);
+      check("every silly bit the board offers is a real modifier",
+        SF.workshop.modList().length === SF.wacky.MODIFIERS.length &&
+        SF.workshop.modList().every(x => !!SF.wacky.MOD_BY_ID[x.id] && !!x.name && !!x.blurb));
+    }
     SF.game.startMission(m, "pilot");
     await runFrames(300);
     check("a drawn sky flies", SF.game.run.mission.custom === true &&

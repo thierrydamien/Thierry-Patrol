@@ -45,6 +45,22 @@ const RULES = [
   { id:"serpent",  name:"THE SERPENT",hint:"it eats your coins - hit the tail" },
 ];
 
+/*
+ * THE SILLY BITS - the Wacky Sky's table, handed over with everything else.
+ *
+ * The Wacky Sky rolls two or three of these and the pull is "what did we get
+ * THIS time?". On the board the pull is the opposite and better: a kid gets to
+ * DECIDE. Every entry already obeys wacky.js's two rules - visible within
+ * seconds, and never harder than the campaign - so there is no cap on how many
+ * can go on one sky. Picking all of them is a perfectly good joke to build.
+ *
+ * Nothing here is declared twice: the list, the colours, the blurbs and the
+ * pairs that cannot share a sky all come from wacky.js, and the physics lives
+ * where it already lived (spawnEnemy, updatePickups, the kill callback), keyed
+ * off mission.mods exactly as the Wacky Sky's own roll is.
+ */
+function modList(){ return (SF.wacky && SF.wacky.MODIFIERS) || []; }
+
 const BOSSES = [
   { id:"",          name:"NO BOSS" },
   { id:"sentinel",  name:"SENTINEL" },
@@ -61,6 +77,7 @@ const MAX_WAVES = 6, MIN_WAVES = 1, MAX_SAVED = 8;
 
 let draft = null;
 let els = null;      // resolved once at init
+let modHint = null;  // the silly bit whose blurb is currently showing
 
 function freshDraft(){
   const me = SF.ui.getProfile();
@@ -69,6 +86,7 @@ function freshDraft(){
     name: call + "'S SKY",
     sky: 10,                      // The Deep - a pretty default
     rule: "none",
+    mods: [],                     // silly bits, off until somebody taps one
     boss: "",
     waves: [
       { type:"grunt",  n:8, form:"vee" },
@@ -132,6 +150,24 @@ function toMission(saved){
   };
   if(d.boss) m.boss = d.boss;
   if(d.rule && d.rule !== "none") m[d.rule] = true;
+  /*
+   * The silly bits ride out in the same two fields the Wacky Sky uses, so
+   * every hook downstream - the giant enemies in spawnEnemy, the bouncing
+   * coins in updatePickups, the confetti in the kill callback, the reveal
+   * card the launch banner plays - works on a drawn sky without knowing the
+   * Drawing Board exists. `modList` is what the reveal reads out.
+   */
+  const picked = (d.mods || []).map(id => SF.wacky.MOD_BY_ID[id]).filter(Boolean);
+  if(picked.length){
+    m.mods = {};
+    picked.forEach(x => { m.mods[x.id] = true; });
+    m.modList = picked;
+    // The goal line is what a child reads on the launch banner. Two names is
+    // a promise; six is a wall of text, so past that it counts them instead.
+    m.goal = picked.length <= 2
+      ? picked.map(x => x.name).join(" + ") + "!"
+      : picked[0].name + " + " + (picked.length - 1) + " more silly things!";
+  }
   return m;
 }
 
@@ -143,6 +179,7 @@ function saveDraft(){
   const entry = {
     id: "ws" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: draft.name, sky: draft.sky, rule: draft.rule, boss: draft.boss,
+    mods: (draft.mods || []).slice(),
     waves: draft.waves.map(w => ({ type:w.type, n:w.n, form:w.form })),
     author: me.name, authorCall: me.callsign || me.name,
     created: Date.now(),
@@ -505,6 +542,29 @@ function render(){
   const rule = RULES.find(r => r.id === draft.rule);
   els.hint.textContent = rule ? rule.hint : "";
 
+  if(!Array.isArray(draft.mods)) draft.mods = [];
+  els.modRow.innerHTML = "";
+  modList().forEach(mo => {
+    const on = draft.mods.indexOf(mo.id) >= 0;
+    els.modRow.appendChild(chip(mo.name, on, () => {
+      if(on){
+        draft.mods = draft.mods.filter(x => x !== mo.id);
+      } else {
+        // Switch off anything that cannot share a sky with this, so the board
+        // can never build a ship that is tiny and enormous at once.
+        const clash = SF.wacky.clashesWith(mo.id);
+        draft.mods = draft.mods.filter(x => clash.indexOf(x) < 0).concat([mo.id]);
+      }
+      modHint = mo;
+      render();
+    }, mo.color));
+  });
+  // One line of plain English about the last thing they touched: the names are
+  // shouty on purpose, and BOUNCY COINS does not explain itself to a six-year-old.
+  els.modHint.textContent = modHint ? modHint.blurb
+    : draft.mods.length ? draft.mods.length + " picked — tap one to read it"
+    : "tap as many as you like — they all stack";
+
   els.waves.innerHTML = "";
   draft.waves.forEach((w, i) => els.waves.appendChild(waveRow(w, i)));
   const add = document.createElement("button");
@@ -598,6 +658,8 @@ function init(){
     hint:    document.getElementById("wsHint"),
     skyRow:  document.getElementById("wsSkyRow"),
     ruleRow: document.getElementById("wsRuleRow"),
+    modRow:  document.getElementById("wsModRow"),
+    modHint: document.getElementById("wsModHint"),
     waves:   document.getElementById("wsWaves"),
     bossRow: document.getElementById("wsBossRow"),
     family:  document.getElementById("wsFamily"),
@@ -622,10 +684,11 @@ function init(){
     saveDraft();
     SF.ui.queueToast({ glyph:"star", name:'"' + draft.name + '" is on the family board. Squad Sync will carry it to everyone.', label:"SKY SAVED" });
     draft = freshDraft();
+    modHint = null;
     render();
   });
 }
 
 SF.workshop = { init, open, toMission, familySkies, bestFor,
-                TYPES, FORMS, RULES, BOSSES, _draft: () => draft };
+                TYPES, FORMS, RULES, BOSSES, modList, _draft: () => draft };
 })();

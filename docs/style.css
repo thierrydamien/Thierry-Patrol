@@ -1745,6 +1745,13 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .ws-unflown { color: rgba(255,255,255,0.4) !important; font-style:italic; }
 .ws-fly { width:auto; min-width:84px; margin:0; padding:10px 14px; font-size:13px; }
 .ws-empty { font-size:13px; color: rgba(255,255,255,0.5); line-height:1.5; padding:4px 2px; }
+/* One line of plain English under the silly bits. The chip names shout
+   (BOUNCY COINS, PAPA RAIN) and a six-year-old cannot tell from the name what
+   they are about to build, so the last one tapped explains itself here. */
+.ws-modhint {
+  margin:6px 2px 0; font-size:12px; line-height:1.45; min-height:17px;
+  color: rgba(255,255,255,0.55);
+}
 
 /* ---------------- CAMPAIGN: goal header, star hunt, sector rail ------------
    The map answers "what do I fly next, and why?" now, and these are the three

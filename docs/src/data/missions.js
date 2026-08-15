@@ -40,6 +40,38 @@ const OBJECTIVES = {
   coinRush:  { label:"Grab 60 coins", icon:"🪙",
                test: s => s.coins >= 60,
                progress: s => (s.coins || 0) + "/60" },
+  /*
+   * FOUR STARS THAT ASK FOR THE LEVEL'S OWN LESSON.
+   *
+   * Fifteen of the thirty-five stops used to carry the identical trio -
+   * finish it, kill 80%, free everyone - including the first six in a row.
+   * A star list that never changes is a star list nobody reads, and the
+   * briefs were already promising something better: "the ringed one pays
+   * five times", "the closer you cut it the more they pay", "the gold
+   * glowing ones are elites", "shoot the guns off its arms". Every one of
+   * those was a thing the game already counted and never scored.
+   *
+   * The thresholds are set against the smallest fleet each level can field
+   * (measured on ROOKIE, the thinnest tier): 16 ringed ships, 61 divers and
+   * 11 elites, so none of these can become unwinnable on an easy tier.
+   */
+  wanted:    { label:"Bag 10 WANTED ships", icon:"🎯",
+               test: s => (s.bounties || 0) >= 10,
+               progress: s => (s.bounties || 0) + "/10" },
+  nearMiss:  { label:"Cut 20 near misses", icon:"💨",
+               test: s => (s.grazes || 0) >= 20,
+               progress: s => (s.grazes || 0) + "/20" },
+  eliteHunt: { label:"Destroy 8 elites", icon:"🌟",
+               test: s => (s.elitesKilled || 0) >= 8,
+               progress: s => (s.elitesKilled || 0) + "/8" },
+  /*
+   * Only worth fitting on a boss that is NOT armoured. An armoured hull is
+   * sealed until every plate is off (see bosses.damage), so on the Sentinel
+   * or the Leviathan this star would light itself the moment you won.
+   */
+  stripBoss: { label:"Shoot off every weak point", icon:"🔩",
+               test: s => s.partsTotal > 0 && s.partsOff >= s.partsTotal,
+               progress: s => (s.partsOff || 0) + "/" + (s.partsTotal || "?") },
   keepLives: { label:"Don't lose a single life", icon:"❤️",
                test: s => s.livesLost === 0,
                progress: s => s.livesLost === 0 ? "clean" : (s.livesLost + " lost") },
@@ -384,7 +416,7 @@ const MISSIONS = [
       w(98,  "grunt", 11, "wall"),
       w(106, "weaver",10, "pincer"),
     ],
-    objectives: ["complete","kill80","rescueAll"],
+    objectives: ["complete","wanted","rescueAll"],
   },
   {
     id:3, name:"Return Fire", subtitle:"They shoot back",
@@ -445,7 +477,7 @@ const MISSIONS = [
       w(103, "grunt",  12, "wall"),
     ],
     boss: "marauder",
-    objectives: ["complete","kill80","rescueAll"],
+    objectives: ["complete","stripBoss","rescueAll"],
   },
   {
     id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
@@ -477,7 +509,7 @@ const MISSIONS = [
       w(113, "kamikaze", 9, "arc"),
       w(121, "grunt",   12, "wall"),
     ],
-    objectives: ["complete","kill80","rescueAll"],
+    objectives: ["complete","nearMiss","rescueAll"],
   },
   {
     id:6, name:"The Storm", subtitle:"Fly the wind",
@@ -565,7 +597,7 @@ const MISSIONS = [
       w(131, "striker",  8, "tripleColumns", { elite: 2 }),
       w(139, "kamikaze",10, "scatter"),
     ],
-    objectives: ["complete","kill80","rescueAll"],
+    objectives: ["complete","eliteHunt","rescueAll"],
   },
   {
     id:9, name:"The Convoy", subtitle:"Bring them home",
@@ -872,7 +904,7 @@ const MISSIONS = [
       w(103, "grunt",   13, "wall"),
     ],
     boss: "warden",
-    objectives: ["complete","kill80","rescueAll"],
+    objectives: ["complete","stripBoss","rescueAll"],
   },
   /*
    * The breather between the two hardest bosses - the customer's rule is a
@@ -1219,15 +1251,23 @@ const MISSIONS = [
       w(38,  "asteroid", 6, "scatter"),      // rocks in a whirlpool: chaos, the fun kind
       w(41,  "shard",    5, "scatter"),
       w(44,  "weaver",   8, "twinColumns"),
-      w(52,  "striker",  5, "sides"),
-      w(60,  "grunt",   10, "wall"),
-      w(68,  "swooper",  7, "arc", { elite:1 }),
+      // A curved shot is only interesting if there is something worth aiming
+      // it AT. The back half is parked, armoured and gold-lit rather than
+      // simply more numerous - the whirlpool does the work, not the crowd.
+      w(50,  "turret",   4, "sides"),
+      w(56,  "striker",  6, "sides", { elite: 2 }),
+      w(62,  "grunt",   10, "wall"),
+      w(68,  "shielder", 2, "twinColumns"),
+      w(70,  "swooper",  8, "arc", { elite: 2 }),
       w(76,  "carrier",  1, "column"),
       w(80,  "boulder",  1, "column"),
-      w(84,  "sniper",   3, "sides"),
-      w(92,  "weaver",   9, "tripleColumns", { elite:1 }),
-      w(100, "striker",  6, "pincer"),
-      w(108, "grunt",   12, "wall"),
+      w(84,  "sniper",   4, "sides"),
+      w(90,  "hive",     3, "twinColumns"),
+      w(96,  "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(104, "brute",    5, "pincer", { elite: 1 }),
+      w(112, "turret",   5, "twinColumns", { elite: 2 }),
+      w(118, "striker",  8, "wall", { elite: 2 }),
+      w(126, "grunt",   13, "wall"),
     ],
     objectives: ["complete","kill80","rescueAll"],
   },
@@ -1251,16 +1291,23 @@ const MISSIONS = [
       w(17,  "interceptor", 8, "scatter"),
       w(25,  "swooper",     9, "pincer"),
       w(33,  "carrier",     1, "column"),
-      w(39,  "brute",       4, "line"),
+      w(39,  "brute",       4, "line", { elite: 1 }),
       w(47,  "grunt",      13, "wall"),
-      w(54,  "turret",      4, "tripleColumns"),
+      w(54,  "turret",      5, "tripleColumns", { elite: 1 }),
       w(61,  "weaver",     11, "scatter"),
       w(69,  "interceptor", 9, "sides"),
       w(76,  "carrier",     1, "column"),
-      w(82,  "brute",       5, "wall", { elite: 1 }),
+      // The back half is the argument for the ox: things you would rather
+      // flatten than out-shoot. No rocks - see the note above.
+      w(82,  "brute",       6, "wall", { elite: 2 }),
+      // Marksmen, not Guardians: a Guardian's bubble is a big pale dome, and
+      // the ox has to stay the only big pale thing in this sky.
+      w(88,  "sniper",      4, "sides"),
       w(90,  "swooper",    11, "vee"),
       w(98,  "grunt",      14, "wall"),
-      w(106, "weaver",     12, "tripleColumns"),
+      w(104, "turret",      5, "twinColumns", { elite: 2 }),
+      w(110, "brute",       6, "tripleColumns", { elite: 2 }),
+      w(118, "weaver",     12, "tripleColumns"),
     ],
     objectives: ["complete","roundUp","rescueAll"],
   },
@@ -1281,13 +1328,21 @@ const MISSIONS = [
       w(44,  "striker",  6, "twinColumns", { elite:1 }),   // the first conductor
       w(52,  "sniper",   3, "arc"),
       w(58,  "weaver",   8, "wall"),
-      w(66,  "turret",   3, "sides"),
-      w(72,  "striker",  6, "tripleColumns", { elite:1 }),
+      w(66,  "turret",   4, "sides", { elite:1 }),
+      w(72,  "striker",  7, "tripleColumns", { elite:2 }),
       w(80,  "interceptor", 8, "scatter"),
+      w(86,  "shielder", 2, "twinColumns"),
       w(88,  "carrier",  1, "column"),
-      w(92,  "striker",  8, "wall", { elite:2 }),          // the full choir
+      // The full choir: a fuller CHORD, not a busier sky. More voices that
+      // can hold a note (gold-lit strikers, parked guns, a hive) rather than
+      // more bodies - a crowded screen is the one thing that stops a kid
+      // hearing the beat they are supposed to weave through.
+      w(92,  "striker", 10, "wall", { elite:3 }),
       w(100, "grunt",   12, "pincer"),
-      w(108, "sniper",   4, "sides"),
+      w(106, "hive",     3, "sides"),
+      w(112, "turret",   5, "twinColumns", { elite:2 }),
+      w(118, "sniper",   6, "sides"),
+      w(124, "striker",  9, "vee", { elite:3 }),
     ],
     objectives: ["complete","kill80","rescueAll"],
   },
@@ -1315,12 +1370,17 @@ const MISSIONS = [
       w(49,  "brute",       4, "twinColumns"),
       w(57,  "splitter",    6, "arc"),
       w(65,  "weaver",     12, "pincer"),
-      w(73,  "turret",      4, "sides"),
+      w(73,  "turret",      5, "sides", { elite: 2 }),
       w(80,  "carrier",     2, "twinColumns"),
-      w(86,  "striker",     9, "vee", { elite: 1 }),
+      // Mirrored pairs all the way down, and heavier ones late: the twin
+      // earns its keep against things that take more than one pass.
+      w(86,  "striker",    10, "vee", { elite: 3 }),
+      w(92,  "shielder",    2, "sides"),
       w(94,  "interceptor",10, "pincer"),
-      w(102, "sniper",      6, "sides"),
-      w(108, "swooper",    12, "arc", { elite: 1 }),
+      w(100, "brute",       6, "twinColumns", { elite: 2 }),
+      w(108, "sniper",      6, "sides"),
+      w(114, "swooper",    12, "arc", { elite: 3 }),
+      w(120, "turret",      6, "sides", { elite: 2 }),
     ],
     objectives: ["complete","rescueAll","twin20"],
   },
@@ -1343,11 +1403,16 @@ const MISSIONS = [
       w(60,  "striker",  6, "wall"),
       w(68,  "turret",   3, "sides"),
       w(76,  "carrier",  1, "column"),
-      w(82,  "brute",    4, "vee", { elite:1 }),
+      // The belts only bite if the escort makes you choose. Late waves are
+      // things you cannot afford to leave alive OR ignore, so every part that
+      // gets through is a decision rather than an oversight.
+      w(82,  "brute",    5, "vee", { elite:2 }),
       w(90,  "grunt",   11, "scatter"),
-      w(98,  "shielder", 1, "column"),
-      w(100, "striker",  7, "twinColumns"),
-      w(108, "brute",    5, "wall", { elite:1 }),
+      w(96,  "hive",     2, "sides"),
+      w(98,  "shielder", 2, "column"),
+      w(102, "striker",  8, "twinColumns", { elite:2 }),
+      w(110, "turret",   5, "tripleColumns", { elite:2 }),
+      w(118, "brute",    6, "wall", { elite:2 }),
     ],
     objectives: ["complete","denyParts","rescueAll"],
   },
@@ -1367,13 +1432,18 @@ const MISSIONS = [
       w(43,  "thief",    2, "sides"),
       w(47,  "weaver",   8, "twinColumns"),
       w(55,  "swooper",  7, "arc", { elite:1 }),
-      w(63,  "mender",   1, "column"),
+      w(63,  "mender",   2, "column"),
       w(65,  "grunt",   10, "wall"),
-      w(73,  "hive",     1, "column"),
+      // The garden gets thicker the deeper in you go, and the serpent is
+      // eating your coins the whole time: the late waves are the reason you
+      // cannot simply farm it in circles.
+      w(73,  "hive",     2, "sides"),
       w(79,  "carrier",  1, "column"),
-      w(85,  "splitter", 5, "pincer"),
-      w(93,  "weaver",   9, "tripleColumns", { elite:1 }),
-      w(101, "swooper",  8, "wall"),
+      w(85,  "splitter", 6, "pincer", { elite:2 }),
+      w(91,  "brute",    5, "twinColumns", { elite:2 }),
+      w(97,  "weaver",  10, "tripleColumns", { elite:2 }),
+      w(105, "turret",   4, "sides", { elite:1 }),
+      w(111, "swooper",  9, "wall", { elite:2 }),
     ],
     objectives: ["complete","serpent","rescueAll"],
   },
