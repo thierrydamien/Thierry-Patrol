@@ -28,6 +28,10 @@ class WaveDirector {
     this.nextWave = 0;
     this.pending = [];       // enemies staged by a formation's per-slot delay
     this.spawnedCount = 0;
+    // The Anchor: `tetherTag` hands every pair in the mission its own number,
+    // and `waiting` holds the first end of each until the second arrives.
+    this.tetherTag = 1;
+    this.waiting = {};
     this.density = difficulty.density || 1;
     // Asteroids and other scenery are spawned like waves but are not the
     // opposition, so "destroy 80% of enemies" doesn't count them.
@@ -66,6 +70,17 @@ class WaveDirector {
           // so parking next to the hauler is never a free win.
           huntsEscort: !!this.mission.convoy && chance(0.66),
         });
+        // Tie the knot once the other end exists. `waiting` holds the first of
+        // a pair by its tag; the second one to arrive finds it and ties. If
+        // the first died in the fraction of a second between the two - shot at
+        // the top of the screen, or stolen from the pool by a wave far bigger
+        // than the ceiling - the tag simply never matches and the second flies
+        // alone, which is a loose ship rather than a cable to nowhere.
+        if(s.pair){
+          const first = this.waiting[s.pair];
+          if(first && first.alive && !first.mate) this.world.tetherPair(first, spawned);
+          else this.waiting[s.pair] = spawned;
+        }
         if(spawned.counted) this.spawnedCount++;
         this.pending.splice(i, 1);
       }
@@ -119,14 +134,32 @@ class WaveDirector {
      */
     const bountyIdx = this.mission.bounty && slots.length
       ? randInt(0, slots.length - 1) : -1;
+    /*
+     * THE ANCHOR (wave flag): adjacent slots fly out joined by a cable.
+     *
+     * Pairing by SLOT is what makes the shape do the work, and it is why this
+     * belongs here rather than in the world. In a `line` two neighbours are
+     * side by side, so the cable is a short fence you go over or under; in
+     * `twinColumns` they are on opposite edges, so the same flag draws a wire
+     * clean across the field. The formation is the level design.
+     *
+     * The two ends do not arrive together - every formation staggers its slots
+     * by a fraction of a second - so the pair is agreed HERE as a shared tag
+     * and tied together at the far end, when the second one actually exists.
+     * A salvo with an odd count leaves its last ship untied, which is fine:
+     * one loose ship in a fence reads as a gap, and gaps are the lesson.
+     */
+    const pairs = wave.tether ? slots.length >> 1 : 0;
     slots.forEach((s, i) => {
       this.pending.push({
         type: wave.type, x: clamp(s.x, 34, VW-34), y: s.y,
         delay: s.delay + extraDelay, elite: eliteIdx.has(i),
         bounty: i === bountyIdx && !eliteIdx.has(i),   // never double-decorated
         hoverY: 155 + (i % 4) * 52 + rand(-14, 14),   // four hover bands in the taller field
+        pair: (i >> 1) < pairs ? this.tetherTag + (i >> 1) : 0,
       });
     });
+    if(pairs) this.tetherTag += pairs;
   }
 }
 
@@ -166,6 +199,11 @@ function sweep(b, px, py, cx, cy, rr){
   return HIT;
 }
 const HIT = { x:0, y:0 };   // one scratch object; the hot loop stays allocation-free
+// The tether's curve, walked as this many straight pieces. Same reason as HIT:
+// reused, never allocated, because this runs per cable per frame.
+const TETHER_STEPS = 6;
+const TCURVE = { x0:0, y0:0, cx:0, cy:0, x1:0, y1:0 };
+const TA = { x:0, y:0 }, TB = { x:0, y:0 };
 
 /*
  * Is this round threading the hull toward a part it has not reached yet?
@@ -460,6 +498,53 @@ function resolve(world, ctxObj, dt){
           fx.shake(10);
         }
         ctxObj.onPlayerHit("collision", e);
+        break;
+      }
+    }
+  }
+
+  /*
+   * THE ANCHOR (mission flag): the cable between a pair is solid.
+   *
+   * Its own pass, gated on the world flag, so no other level in the campaign
+   * pays a single distance test for a mechanic it does not use - the same deal
+   * `cover` gets below. Only the LEAD of each pair is walked, so a cable is
+   * considered once rather than once per end.
+   *
+   * Touching it costs a life and leaves both ships flying. That is deliberate
+   * and it is the difference between this and ramming: a ship you fly into
+   * dies with you, which makes ramming a trade a child will happily keep
+   * making. A cable is not a trade. It is a wall with a ship at each end, and
+   * the only two ways past it are round it or through one of the ends.
+   */
+  if(world.tethered && !invulnerable && p.alive){
+    const rr = p.r + SF.tether.R;
+    for(let i=0;i<enemies.length;i++){
+      const e = enemies[i];
+      if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
+      // The drawn cable hangs, so the measured one has to hang identically:
+      // the curve is walked as TETHER_STEPS straight pieces, which tracks the
+      // painted quadratic to well under a pixel at the spans this game flies.
+      const c = SF.tether.curve(e, TCURVE);
+      SF.tether.at(c, 0, TA);
+      let hit = false;
+      for(let k = 1; k <= TETHER_STEPS && !hit; k++){
+        SF.tether.at(c, k/TETHER_STEPS, TB);
+        const sx = TB.x - TA.x, sy = TB.y - TA.y;
+        const len2 = sx*sx + sy*sy;
+        let u = 0;
+        if(len2 > 0.0001){
+          u = ((p.x - TA.x)*sx + (p.y - TA.y)*sy) / len2;
+          u = u < 0 ? 0 : u > 1 ? 1 : u;
+        }
+        const dx = p.x - (TA.x + sx*u), dy = p.y - (TA.y + sy*u);
+        hit = dx*dx + dy*dy < rr*rr;
+        TA.x = TB.x; TA.y = TB.y;
+      }
+      if(hit){
+        fx.sparks(p.x, p.y, 14, "#a5f3fc", 220);
+        fx.shake(10);
+        ctxObj.onPlayerHit("tether", e);
         break;
       }
     }

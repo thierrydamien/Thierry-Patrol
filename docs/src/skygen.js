@@ -28,24 +28,58 @@ const TAU = Math.PI*2;
    --------------------------------------------------------- */
 const SKIES = [
   /*
-   * HOME.
+   * THE WORKSHOP, AND THE CAMPAIGN'S OLDEST SECRET.
    *
-   * This was the one photograph left at the front of the campaign, and it
-   * showed: thirty-four generated skies and then a JPG, on the very first
-   * screen anybody sees. It is generated now, out of the same painter as
-   * everything after it - but it is deliberately the one sky in the game that
-   * looks like somewhere you would want to come back to.
+   * The first sky anybody ever flies is the same sky as the LAST one but two:
+   * the workshop's own twilight, graphite and one warm lamp, which mission 34
+   * finally gives a name to. You are behind the sky on your very first patrol
+   * and nobody tells you for thirty-three missions. A campaign that finishes
+   * somewhere you have already been finishes somewhere, instead of stopping.
    *
-   * The picture is the family's own world, close and low, so the first flight
-   * reads as a patrol just above home rather than a drift through empty space.
-   * It carries the biggest planet in the campaign (The Deep's was 0.322) with
-   * a weather-banded surface, an aurora over the pole, and dawn coming up
-   * behind it - the only warm-over-cool sky in the table. Everything after
-   * this gets stranger, emptier and colder, which is the whole arc; you have
-   * to have seen home for that to mean anything.
+   * It earns the slot on its own merits too, which is what makes the trick
+   * affordable rather than clever: this is the quietest palette in the table -
+   * half the usual cloud, barely any stars, one lamp - and the tutorial's
+   * backdrop must never compete with the first enemy a seven-year-old ever
+   * sees.
    *
-   * Deliberately quiet on density: this is the tutorial, and the backdrop must
-   * never compete with the first enemy a seven-year-old ever sees.
+   * Deliberately not unique, and the smoke test knows about this ONE pair by
+   * name; any other repeat is still a failure.
+   */
+  { name:"Lamplight",    clouds:["#3d3a55","#c9b458","#15131f"], dust:"#0a0a12", star:"#e2e8f0",
+    lum:1.0, density:0.5, stars:0.55, bright:1,
+    /*
+     * Its own corner of the same room, though. The finale's version is nearly
+     * bare because the finale overpaints it live - blueprint flashes, act
+     * repaints - while this one has to stand up as a picture on its own, so it
+     * gets the far wall, the lamp, and a moon low enough to fly over. Nothing
+     * sits where the first wave will come down.
+     */
+    props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
+            {k:"planet", x:0.74, y:0.72, r:0.150, lit:"#6b6787", dark:"#191627", crescent:true},
+            {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
+            {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
+
+
+  { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
+    lum:1.15, density:1.0, stars:1.0, bright:3,
+    props:[ {k:"planet", x:0.20, y:0.30, r:0.177, lit:"#8b6bd8", dark:"#241245", rings:true},
+            {k:"planet", x:0.82, y:0.70, r:0.047, lit:"#c9b6f0", dark:"#3a2a5c", craters:true},
+            {k:"galaxy", x:0.78, y:0.16, r:0.22} ] },
+
+  /*
+   * HOME, which is now stop three rather than stop one.
+   *
+   * The family's own world, close and low, so the flight reads as a patrol
+   * just above home rather than a drift through empty space. It carries the
+   * biggest planet in the campaign (The Deep's was 0.322) with a weather-banded
+   * surface, an aurora over the pole, and dawn coming up behind it - the only
+   * warm-over-cool sky in the table. Everything after this gets stranger,
+   * emptier and colder, which is the whole arc; you have to have seen home for
+   * that to mean anything.
+   *
+   * It reads even better here than it did at the front, because now you have
+   * flown twice to get to it: the opening sky is a room with no windows, and
+   * this is the first time the game shows you what is outside.
    */
   { name:"Home Reach",   clouds:["#2563eb","#7dd3fc","#061027"], dust:"#02050e", star:"#eaf4ff",
     lum:1.0, density:0.9, stars:1.2, bright:4,
@@ -64,12 +98,6 @@ const SKIES = [
             {k:"aurora", x:0.50, y:0.56, r:0.15},
             {k:"planet", x:0.78, y:0.22, r:0.050, lit:"#dbeafe", dark:"#1b2740", craters:true},
             {k:"sun",    x:0.17, y:0.15, r:0.030, color:"#ffe9a8"} ] },
-
-  { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
-    lum:1.15, density:1.0, stars:1.0, bright:3,
-    props:[ {k:"planet", x:0.20, y:0.30, r:0.177, lit:"#8b6bd8", dark:"#241245", rings:true},
-            {k:"planet", x:0.82, y:0.70, r:0.047, lit:"#c9b6f0", dark:"#3a2a5c", craters:true},
-            {k:"galaxy", x:0.78, y:0.16, r:0.22} ] },
 
   { name:"Emerald Veil", clouds:["#059669","#14b8a6","#065f46"], dust:"#02100c", star:"#d1fae5",
     lum:1.2, density:0.95, stars:0.9, bright:3,
@@ -341,7 +369,7 @@ const SKIES = [
      and the busiest, brightest sky in the game, because it took every star to
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
-  { name:"Sky 35", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+  { name:"Sky 36", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
     lum:1.35, density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},

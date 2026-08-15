@@ -583,6 +583,11 @@ function drawPlayer(ctx, p, timeMs){
   }
 }
 
+// Scratch for the tether's curve and a point on it. Reused rather than
+// allocated: this runs once per cable per frame, in the hot path.
+const TCURVE = { x0:0, y0:0, cx:0, cy:0, x1:0, y1:0 };
+const TPT = { x:0, y:0 };
+
 function drawEnemies(ctx, world, timeMs){
   const items = world.enemies.items;
   const t = (timeMs || 0)/1000;
@@ -610,6 +615,42 @@ function drawEnemies(ctx, world, timeMs){
     ctx.strokeStyle = rim;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(g.x, g.y, rad, 0, TAU); ctx.stroke();
+  }
+
+  /*
+   * THE ANCHOR: the cable, drawn under the ships that carry it.
+   *
+   * The one thing it must never be is a thin line. It is a wall, it costs a
+   * life, and it has to be as loud as anything else that costs a life - so it
+   * is three passes: a wide soft haze that says "this whole corridor is shut",
+   * a hard bright core that says exactly where the edge is, and a travelling
+   * bead that says the thing is LIVE rather than a strut between two hulls.
+   *
+   * The curve comes from SF.tether, which is also what the collision pass
+   * measures against - see there for why it hangs rather than running straight,
+   * and why there is only one copy of the shape.
+   */
+  if(world.tethered) for(let i=0;i<items.length;i++){
+    const e = items[i];
+    if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
+    const c = SF.tether.curve(e, TCURVE);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    const path = () => {
+      ctx.beginPath(); ctx.moveTo(c.x0, c.y0); ctx.quadraticCurveTo(c.cx, c.cy, c.x1, c.y1);
+    };
+    ctx.strokeStyle = "rgba(34,211,238,0.16)";  ctx.lineWidth = 13;  path(); ctx.stroke();
+    ctx.strokeStyle = "rgba(103,232,249,0.42)"; ctx.lineWidth = 5;   path(); ctx.stroke();
+    ctx.strokeStyle = "rgba(236,254,255,0.92)"; ctx.lineWidth = 1.8; path(); ctx.stroke();
+    // One bright bead running the cable. Wall-clock, not sim time - it is decor.
+    SF.tether.at(c, (t*0.55) % 1, TPT);
+    const bead = ctx.createRadialGradient(TPT.x, TPT.y, 0, TPT.x, TPT.y, 11);
+    bead.addColorStop(0, "rgba(236,254,255,0.85)");
+    bead.addColorStop(1, "rgba(34,211,238,0)");
+    ctx.fillStyle = bead;
+    ctx.beginPath(); ctx.arc(TPT.x, TPT.y, 11, 0, TAU); ctx.fill();
+    ctx.restore();
   }
 
   // Telegraphs and beams go under the sprites, so nothing is ever hidden by

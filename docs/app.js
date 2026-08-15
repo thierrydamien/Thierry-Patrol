@@ -11,34 +11,34 @@
  *     1655  src/data/config.js
  *     2117  src/data/enemies.js
  *     2951  src/data/missions.js
- *     4503  src/wacky.js
- *     4719  src/data/comms.js
- *     5060  src/data/story.js
- *     5157  src/profile.js
- *     5735  src/cloud.js
- *     6340  src/fx.js
- *     7284  src/input.js
- *     7663  src/entities.js
- *     8766  src/bossart.js
- *     9525  src/bosses.js
- *    10275  src/bossintro.js
- *    10398  src/rewind.js
- *    10920  src/finale.js
- *    11241  src/papadeath.js
- *    11563  src/backstage.js
- *    12766  src/sky29.js
- *    13007  src/systems.js
- *    13541  src/render.js
- *    17287  src/enemyart.js
- *    18033  src/insignia.js
- *    18278  src/skygen.js
- *    19611  src/shipart.js
- *    20689  src/paintjob.js
- *    20847  src/pilotart.js
- *    20942  src/comms.js
- *    21063  src/game.js
- *    24151  src/workshop.js
- *    24848  src/ui.js
+ *     4575  src/wacky.js
+ *     4791  src/data/comms.js
+ *     5132  src/data/story.js
+ *     5229  src/profile.js
+ *     5825  src/cloud.js
+ *     6430  src/fx.js
+ *     7374  src/input.js
+ *     7753  src/entities.js
+ *     8954  src/bossart.js
+ *     9713  src/bosses.js
+ *    10463  src/bossintro.js
+ *    10586  src/rewind.js
+ *    11108  src/finale.js
+ *    11429  src/papadeath.js
+ *    11751  src/backstage.js
+ *    12954  src/sky29.js
+ *    13195  src/systems.js
+ *    13814  src/render.js
+ *    17601  src/enemyart.js
+ *    18347  src/insignia.js
+ *    18592  src/skygen.js
+ *    19953  src/shipart.js
+ *    21031  src/paintjob.js
+ *    21189  src/pilotart.js
+ *    21284  src/comms.js
+ *    21405  src/game.js
+ *    24511  src/workshop.js
+ *    25208  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1715,7 +1715,7 @@ const PAINTS = [
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
   // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
   // painting the sky is the only way to wear it.
-  { id:"sky29",    name:"SKY 35",     hex:"#ff9e7d", secret:true },
+  { id:"sky29",    name:"SKY 36",     hex:"#ff9e7d", secret:true },
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [
@@ -2070,31 +2070,31 @@ const TUNES = [
     blurb:"The ship as the yard built it.",
     pros:["ready for anything"], cons:[],
     speed:1.00, fire:1.00, lives:0 },
-  { id:"falcon",   name:"FALCON", unlockMission:4,
+  { id:"falcon",   name:"FALCON", unlockMission:5,
     blurb:"The Marauder's engines, bolted on. Swept fins, hot twin plumes.",
     pros:["+20% speed"], cons:[],
     speed:1.20, fire:1.00, lives:0 },
-  { id:"titan",    name:"TITAN", unlockMission:7,
+  { id:"titan",    name:"TITAN", unlockMission:8,
     blurb:"The Jailer's armour plates. A spare seat and slabs down the flanks.",
     pros:["+1 life"], cons:[],
     speed:1.00, fire:1.00, lives:1 },
-  { id:"viper",    name:"VIPER", unlockMission:11,
+  { id:"viper",    name:"VIPER", unlockMission:12,
     blurb:"The Sentinel's overclocked cannons on twin rails.",
     pros:["+12% fire rate"], cons:[],
     speed:1.00, fire:0.88, lives:0 },
-  { id:"scavenger",name:"SCAVENGER", unlockMission:17,
+  { id:"scavenger",name:"SCAVENGER", unlockMission:18,
     blurb:"The Warden's collector rig. A golden scoop under the nose.",
     pros:["coins fly to you","+15% pay"], cons:[],
     speed:1.00, fire:1.00, lives:0, magnet:1.7, money:1.15 },
-  { id:"ghost",    name:"GHOST", unlockMission:20,
+  { id:"ghost",    name:"GHOST", unlockMission:21,
     blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
     pros:["+8% speed","longer safety after a hit"], cons:[],
     speed:1.08, fire:1.00, lives:0, invuln:1.5 },
-  { id:"nova",     name:"NOVA", unlockMission:27, apex:true,
+  { id:"nova",     name:"NOVA", unlockMission:28, apex:true,
     blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
     pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
     speed:1.12, fire:0.90, lives:1, magnet:1.5 },
-  { id:"apex",     name:"APEX", unlockMission:24, apex:true,
+  { id:"apex",     name:"APEX", unlockMission:25, apex:true,
     blurb:"The Leviathan's core, fitted to your ship. Gold trim. You earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
     speed:1.08, fire:0.95, lives:1 },
@@ -3011,6 +3011,16 @@ const OBJECTIVES = {
   nearMiss:  { label:"Cut 20 near misses", icon:"💨",
                test: s => (s.grazes || 0) >= 20,
                progress: s => (s.grazes || 0) + "/20" },
+  /*
+   * The Anchor's own star, and it deliberately pays for the OTHER answer.
+   * A cable has two solutions - fly round it, or shoot an end and cut it -
+   * and flying round is the one a child finds without being told. Six is a
+   * quarter of the ropes the level flies at its thinnest tier, so it is a
+   * nudge toward trying the second answer rather than a demand for it.
+   */
+  ropes:     { label:"Cut 6 ropes", icon:"✂️",
+               test: s => (s.ropesCut || 0) >= 6,
+               progress: s => (s.ropesCut || 0) + "/6" },
   eliteHunt: { label:"Destroy 8 elites", icon:"🌟",
                test: s => (s.elitesKilled || 0) >= 8,
                progress: s => (s.elitesKilled || 0) + "/8" },
@@ -3368,8 +3378,70 @@ const MISSIONS = [
     ],
     objectives: ["complete","wanted","rescueAll"],
   },
+  /*
+   * THE ANCHOR.
+   *
+   * The third stop, and the first level that is about where you are NOT.
+   *
+   * Missions 1 and 2 are both "put the ship under the thing and it dies" - the
+   * guns fire themselves, so up to here the whole game has been a reading
+   * exercise in points. This one puts LINES in the sky. Pairs fly out joined by
+   * a cable that costs a life to touch, and suddenly the enemies are not a list
+   * of targets, they are the posts holding up a fence: what a child has to read
+   * is the GAP. It is the last idea the campaign can teach before mission 4
+   * starts shooting back, and every dodging level after it is downstream of
+   * this one.
+   *
+   * The teaching order inside the level is the level:
+   *  - `line` first, and only ever four ships. Two short fences side by side,
+   *    slow, with the whole width of the field either side of them. You can
+   *    fly round without ever understanding what happened, which is the point:
+   *    nobody is punished for not having read the manual yet.
+   *  - Then `twinColumns`, which is the same flag and a completely different
+   *    problem - the pair spawns on OPPOSITE edges, so the cable is a wire
+   *    across the entire field and round is not available. That is the moment
+   *    the mechanic is actually taught, and it is taught by flying, not by a
+   *    sentence in the briefing.
+   *  - `sides` and `pincer` late, once cutting an end is an option a child has
+   *    thought of by themselves.
+   *
+   * Loose ships throughout, deliberately: an odd count leaves one untied, and
+   * a fence with a hole in it is more interesting than a fence.
+   *
+   * A new id, not a renumbering. Every star this family has ever earned is
+   * filed under a mission's `id`, so inserting a stop in the middle of the
+   * campaign has to leave all thirty-five of those numbers alone and take the
+   * next free one.
+   */
   {
-    id:3, name:"Return Fire", subtitle:"They shoot back",
+    id:3, name:"The Anchor", subtitle:"Mind the gap",
+    brief:"They fly in PAIRS, roped together with a live cable. The cable hurts - go round it, or shoot one end and watch it snap.",
+    goal:"Fly the gaps — or cut the rope!",
+    waves: [
+      // Two short fences, wide apart, slow. Round is free here.
+      w(1,   "grunt",  4, "line",  { tether:true }),
+      w(10,  "grunt",  6, "vee"),                        // a breather, and free kills
+      w(17,  "grunt",  4, "line",  { tether:true }),
+      // The lesson: a cable clean across the field. Round is gone.
+      w(26,  "grunt",  4, "twinColumns", { tether:true }),
+      w(34,  "carrier",1, "column"),                     // the rescue, on time as ever
+      w(40,  "grunt",  6, "arc"),
+      w(46,  "grunt",  6, "twinColumns", { tether:true }),
+      // An odd count: five ships, two ropes, one loose one. The hole moves.
+      w(55,  "grunt",  5, "line",  { tether:true }),
+      w(63,  "weaver", 6, "scatter"),                    // the old lesson, still marked
+      w(70,  "grunt",  6, "sides", { tether:true }),
+      w(78,  "carrier",1, "column"),
+      w(84,  "grunt",  8, "pincer", { tether:true }),
+      // The finale: two fences at once, and the only way through is a gap.
+      w(93,  "grunt",  6, "twinColumns", { tether:true }),
+      w(97,  "grunt",  6, "line",  { tether:true }),
+      w(106, "grunt", 10, "wall"),                       // and then just shooting again
+    ],
+    objectives: ["complete","ropes","rescueAll"],
+  },
+  {
+    id:4, name:"Return Fire", subtitle:"They shoot back",
     brief:"These ones stop and aim at you. Keep moving and they will miss - and out here the rocks are on your side: their shots cannot get through one.",
     goal:"They shoot back — hide behind rocks!",
     // Cover turns "they shoot back" from a dodging drill into a reason to
@@ -3402,7 +3474,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:4, name:"Heavy Metal", subtitle:"First boss",
+    id:5, name:"Heavy Metal", subtitle:"First boss",
     brief:"Brutes wear thick armour - Plasma Rounds chew through it. Then something HUGE shows up.",
     goal:"BOSS! Shoot the guns off its arms",
     waves: [
@@ -3430,7 +3502,7 @@ const MISSIONS = [
     objectives: ["complete","stripBoss","rescueAll"],
   },
   {
-    id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
+    id:6, name:"Kamikaze Run", subtitle:"Dodge or die",
     brief:"Kamikazes pick a spot and rocket at it. Let them come close, THEN swerve - the closer you cut it, the more they pay. Every near miss is money.",
     goal:"Cut it fine — near misses pay!",
     // The lesson is nerve: waiting before the swerve. Paying for the graze is
@@ -3462,7 +3534,7 @@ const MISSIONS = [
     objectives: ["complete","nearMiss","rescueAll"],
   },
   {
-    id:6, name:"The Storm", subtitle:"Fly the wind",
+    id:7, name:"The Storm", subtitle:"Fly the wind",
     brief:"A nebula squall is tearing through the Belt. The wind comes in gusts - watch for the streaks, lean against the push, and don't let it shove you into a rock.",
     goal:"WIND! Watch the streaks, then lean",
     storm:true,
@@ -3487,7 +3559,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:7, name:"Prison Break", subtitle:"Rescue mission",
+    id:8, name:"Prison Break", subtitle:"Rescue mission",
     brief:"Those big ships have our friends locked inside. Blast them before they get away!",
     goal:"Free our friends from the ships!",
     waves: [
@@ -3517,7 +3589,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:8, name:"The Gauntlet", subtitle:"Elites inbound",
+    id:9, name:"The Gauntlet", subtitle:"Elites inbound",
     brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
     goal:"Gold ones are tough — and rich!",
     face:"brute", faceElite:true,     // the gold glowing ones ARE the level
@@ -3550,7 +3622,7 @@ const MISSIONS = [
     objectives: ["complete","eliteHunt","rescueAll"],
   },
   {
-    id:9, name:"The Convoy", subtitle:"Bring them home",
+    id:10, name:"The Convoy", subtitle:"Bring them home",
     brief:"One supply hauler is crossing to the front with everything the squadron needs. It can't dodge and it can't shoot back, and they are coming straight for it. Stay close and keep it alive all the way home.",
     goal:"GUARD our hauler — keep it alive!",
     convoy:true,
@@ -3583,7 +3655,7 @@ const MISSIONS = [
      * park in front of the door) and no carriers (the crates are this level's
      * cargo, and a level gets exactly one thing to carry).
      */
-    id:10, name:"The Lifeline", subtitle:"you are the delivery",
+    id:11, name:"The Lifeline", subtitle:"you are the delivery",
     brief:"The forward squadron is out of everything. There is no hauler left to send, so you are the hauler: grab each crate, fly it up to the green door, and let go. Take a hit and you will drop the load — it will hang there a moment before it starts to sink, so go back for it.",
     goal:"CARRY 4 crates to the green door",
     ferry:4,
@@ -3607,7 +3679,7 @@ const MISSIONS = [
     objectives: ["complete","delivered","kill80"],
   },
   {
-    id:11, name:"Sky Sentinel", subtitle:"Their flagship",
+    id:12, name:"Sky Sentinel", subtitle:"Their flagship",
     brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
     goal:"BOSS! Knock its parts off",
     waves: [
@@ -3671,7 +3743,7 @@ const MISSIONS = [
    * objective even on the mission where you can't fire a shot.
    */
   {
-    id:12, name:"Silent Running", subtitle:"Guns down. Just fly.",
+    id:13, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
     goal:"Guns broken — just DODGE!",
     face:"swooper",                   // the thing you spend the level dodging
@@ -3710,7 +3782,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:13, name:"The Wreck Line", subtitle:"Through the debris",
+    id:14, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
     goal:"Fly the scrap — it stops their shots",
     cover:true,                       // the debris shelters as well as blocks
@@ -3750,7 +3822,7 @@ const MISSIONS = [
      * turrets patrolling a line, thieves you can cut off the short way. All
      * `sides` and `pincer`, so the fight lives at the edges.
      */
-    id:14, name:"The Ring", subtitle:"this sky has no edges",
+    id:15, name:"The Ring", subtitle:"this sky has no edges",
     brief:"Nobody has ever found the edge of this place. Fly out one side and you come straight back in the other, same height, still going. They cannot do it — their ships are built to hold a lane. You are not.",
     goal:"GO ROUND THE BACK — the sky joins up",
     wrap:true,
@@ -3776,7 +3848,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","roundTheBack"],
   },
   {
-    id:15, name:"The Rival", subtitle:"One of them is good",
+    id:16, name:"The Rival", subtitle:"One of them is good",
     brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
     rival:true,
     face:"rival",
@@ -3800,7 +3872,7 @@ const MISSIONS = [
     goal:"VESPER copies you — trick her!",
   },
   {
-    id:16, name:"The Hatchery", subtitle:"It keeps growing",
+    id:17, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -3830,7 +3902,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:17, name:"The Warden", subtitle:"Their jailer",
+    id:18, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -3864,7 +3936,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:18, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:19, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
     // The weather remix: the Storm's gusts, six missions later, in a level
     // that's about CATCHING things - the wind blows the loot around, so the
@@ -3907,7 +3979,7 @@ const MISSIONS = [
      * menders - nothing that asks you to prioritise a target, because the
      * level's whole cognitive load is your own ship handling badly.
      */
-    id:19, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
+    id:20, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
     brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
@@ -3935,7 +4007,7 @@ const MISSIONS = [
     objectives: ["complete","shakenOff","rescueAll"],
   },
   {
-    id:20, name:"Cold Approach", subtitle:"Line up the shot",
+    id:21, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -3965,7 +4037,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:21, name:"The Trench Run", subtitle:"Thread the walls",
+    id:22, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -3992,7 +4064,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:22, name:"All Hands", subtitle:"Everyone who is left",
+    id:23, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -4039,7 +4111,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:23, name:"The Bright Side", subtitle:"standing on their sun",
+    id:24, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -4067,7 +4139,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:24, name:"The Leviathan", subtitle:"The last one",
+    id:25, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -4106,7 +4178,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:25, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:26, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -4131,7 +4203,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","kill80"],
   },
   {
-    id:26, name:"The Long Dark", subtitle:"Something is out there",
+    id:27, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -4162,7 +4234,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:27, name:"The Devourer", subtitle:"The last star",
+    id:28, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -4187,7 +4259,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:28, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:29, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -4230,7 +4302,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:29, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:30, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -4262,7 +4334,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:30, name:"The Chorus", subtitle:"They fire on the beat",
+    id:31, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -4304,7 +4376,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:31, name:"The Glass Sea", subtitle:"two of you",
+    id:32, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -4335,7 +4407,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:32, name:"The Foundry", subtitle:"Stop the production line",
+    id:33, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -4367,7 +4439,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:33, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:34, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -4398,7 +4470,7 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:34, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:35, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
     goal:"The workshop is awake. Fly!",
     face:"rival",
@@ -4429,7 +4501,7 @@ const MISSIONS = [
      * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
      * owns the pencil veil, the last stroke and the squadron photo.
      */
-    id:35, name:"Sky 35", subtitle:"the one Papa never finished",
+    id:36, name:"Sky 36", subtitle:"the one Papa never finished",
     brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, coinRain:true,
@@ -5436,6 +5508,24 @@ function migrate(p){
     }
     p.missionsVer = 6;
   }
+  /*
+   * v7: The Anchor landed as mission 3 - the level that teaches reading a gap,
+   * which belongs before anything starts shooting back - pushing the old 3-35
+   * up one. A single offset, descending so nothing is overwritten before it
+   * moves, exactly like v5.
+   *
+   * The hand-written mission ids move with it in the same release: the tune
+   * unlocks (data/config.js), the Boss Rush queue (game.js) and devourerDown
+   * just below. This loop cannot reach any of them, and getting one wrong
+   * silently un-earns something a child worked for.
+   */
+  if((p.missionsVer || 1) < 7){
+    for(let id = 35; id >= 3; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 3) p.lastMission += 1;
+    p.missionsVer = 7;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -5628,7 +5718,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[27] && p.missions[27].cleared),
+    devourerDown: !!(p.missions[28] && p.missions[28].cleared),
   };
 }
 
@@ -7678,6 +7768,49 @@ const { spreadPattern, fireRateMult } = SF.config;
 const fx = SF.fx;
 const audio = SF.audio;
 
+/* Pair keys for the tether, from a counter that only ever goes up - see
+   tetherPair. It is deliberately module-wide and never reset: a key must not
+   be reachable twice in one session, or a recycled pool slot could inherit a
+   live cable from a ship that died minutes ago. */
+let tetherSeq = 0;
+
+/** Do these two still agree they are joined, and is the joint still theirs? */
+function tetherLive(e){
+  const m = e.mate;
+  return !!(e.tetherKey && m && m.alive && m.mate === e && m.tetherKey === e.tetherKey);
+}
+
+/*
+ * THE SHAPE OF THE CABLE, in one place.
+ *
+ * It sags: a straight segment reads as geometry, as something a renderer drew,
+ * and a hanging curve reads as a physical object between two moving points.
+ * The slack grows with the span and then stops, so a wire across the whole
+ * field droops like a heavy one instead of folding in half.
+ *
+ * The collision pass and the painter BOTH come here, and that is the point. A
+ * wall that hurts where it is not drawn is the worst bug this mechanic could
+ * have, and the only way two copies of a curve stay identical is by not
+ * existing. Fills and returns `out` with the quadratic's three points.
+ */
+const TETHER_R = 5;                       // the cable's own half-width
+function tetherCurve(e, out){
+  const m = e.mate;
+  const L = Math.hypot(m.x - e.x, m.y - e.y) || 1;
+  const sag = Math.min(26, L*0.09) * 2;   // a quadratic dips half its control offset
+  out.x0 = e.x;  out.y0 = e.y;
+  out.cx = (e.x + m.x)/2; out.cy = (e.y + m.y)/2 + sag;
+  out.x1 = m.x;  out.y1 = m.y;
+  return out;
+}
+/** A point on that curve, 0 at one ship and 1 at the other. */
+function tetherAt(c, u, out){
+  const v = 1 - u;
+  out.x = v*v*c.x0 + 2*v*u*c.cx + u*u*c.x1;
+  out.y = v*v*c.y0 + 2*v*u*c.cy + u*u*c.y1;
+  return out;
+}
+
 /*
  * Playfield coordinate system.
  *
@@ -7914,6 +8047,33 @@ class World {
     this.haulers = [];     // the Convoy's escort targets
     this.silent = false;   // set per mission by startMission (noGuns runs)
     this.silentClock = 0; this.lastSilentShot = -99;
+    this.tethered = false; // set per mission: pairs fly joined by a live cable
+  }
+
+  /* ---------------- THE ANCHOR (the tether) ----------------
+   *
+   * Pairs of ships fly joined by a taut cable, and the cable is what hurts.
+   * The point is that it puts LINES in a sky that has only ever had points: a
+   * child stops reading the field as a list of targets and starts reading the
+   * GAPS between them. Shoot either end and the cable snaps, so there are
+   * always two answers - go round it, or cut it - and both are flying.
+   *
+   * The link has to survive the enemy pool, which recycles dead slots into new
+   * ships. Holding a bare reference to a partner means that the moment its
+   * slot is reused, a live cable reattaches itself to a completely unrelated
+   * enemy somewhere else on the screen. So every pair gets a KEY, drawn from a
+   * counter that only goes up, and a link is only believed if both ends still
+   * agree about it AND both still carry the key. A recycled slot has a
+   * different key (or none), so the cable reads as cut rather than as moved.
+   *
+   * One end of each pair is the LEAD: it owns the collision test and the
+   * drawing, so a cable is considered once per pair rather than once per ship.
+   */
+  tetherPair(a, b){
+    const key = ++tetherSeq;
+    a.tetherKey = b.tetherKey = key;
+    a.mate = b; b.mate = a;
+    a.tetherLead = true; b.tetherLead = false;
   }
 
   /* ---------------- THE HAULER (the Convoy) ----------------
@@ -8505,6 +8665,11 @@ class World {
     e.lockX = 0; e.lockY = 0;
     e.dodgeCool = 0; e.dodgeDir = 0; e.dodgeTimer = 0; e.tell = 0;
     e.arming = false; e.noSplit = false;
+    // The Anchor's cable. Exactly the bug this block exists for: a ship that
+    // died on the end of one would otherwise hand its link to whatever plain
+    // grunt inherited the slot, and a live cable would stretch away to a ship
+    // that was never tied to anything.
+    e.tetherKey = 0; e.mate = null; e.tetherLead = false;
     e.spin = 0; e.spinRate = rand(-1.6, 1.6);
     e.charge = 0; e.chargeTime = type.chargeTime || 2;
     e.dropTimer = 0; e.fuse = 0; e.healTarget = null;
@@ -8529,6 +8694,25 @@ class World {
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
       e.life += dt;
+
+      /*
+       * The snap. Shoot one end and the cable lets go - and it has to be SEEN
+       * letting go, because "the thing that was hurting me is gone" is the
+       * whole reward for choosing to cut rather than to dodge. Detected here
+       * rather than in the kill handler so it also covers an end that left the
+       * field, was eaten by a boss, or lost its slot to the pool.
+       *
+       * It fires from the SURVIVOR, not from the lead: the lead is as likely
+       * to be the end that just died, and a dead ship is not updated. Exactly
+       * one end notices, which is exactly one flourish. (If both go on the
+       * same frame nobody notices, and nobody should - there are already two
+       * explosions there.)
+       */
+      if(e.mate && !tetherLive(e)){
+        fx.sparks(e.x, e.y, 5, "#a5f3fc", 190);
+        fx.ring(e.x, e.y, 26, "#67e8f9", 2, 0.28);
+        e.mate = null; e.tetherKey = 0; e.tetherLead = false;
+      }
 
       // Safety leash: whatever an archetype's behaviour is, after 28 seconds
       // on the field it gives up and dives away. A mission only ends when the
@@ -8757,6 +8941,10 @@ class World {
 }
 
 SF.World = World;
+// The collision pass and the painter both need to ask "is this cable real?"
+// and "where exactly does it hang?", and both answers must come from the one
+// place that knows what a stale link looks like.
+SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
 SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();
@@ -13034,6 +13222,10 @@ class WaveDirector {
     this.nextWave = 0;
     this.pending = [];       // enemies staged by a formation's per-slot delay
     this.spawnedCount = 0;
+    // The Anchor: `tetherTag` hands every pair in the mission its own number,
+    // and `waiting` holds the first end of each until the second arrives.
+    this.tetherTag = 1;
+    this.waiting = {};
     this.density = difficulty.density || 1;
     // Asteroids and other scenery are spawned like waves but are not the
     // opposition, so "destroy 80% of enemies" doesn't count them.
@@ -13072,6 +13264,17 @@ class WaveDirector {
           // so parking next to the hauler is never a free win.
           huntsEscort: !!this.mission.convoy && chance(0.66),
         });
+        // Tie the knot once the other end exists. `waiting` holds the first of
+        // a pair by its tag; the second one to arrive finds it and ties. If
+        // the first died in the fraction of a second between the two - shot at
+        // the top of the screen, or stolen from the pool by a wave far bigger
+        // than the ceiling - the tag simply never matches and the second flies
+        // alone, which is a loose ship rather than a cable to nowhere.
+        if(s.pair){
+          const first = this.waiting[s.pair];
+          if(first && first.alive && !first.mate) this.world.tetherPair(first, spawned);
+          else this.waiting[s.pair] = spawned;
+        }
         if(spawned.counted) this.spawnedCount++;
         this.pending.splice(i, 1);
       }
@@ -13125,14 +13328,32 @@ class WaveDirector {
      */
     const bountyIdx = this.mission.bounty && slots.length
       ? randInt(0, slots.length - 1) : -1;
+    /*
+     * THE ANCHOR (wave flag): adjacent slots fly out joined by a cable.
+     *
+     * Pairing by SLOT is what makes the shape do the work, and it is why this
+     * belongs here rather than in the world. In a `line` two neighbours are
+     * side by side, so the cable is a short fence you go over or under; in
+     * `twinColumns` they are on opposite edges, so the same flag draws a wire
+     * clean across the field. The formation is the level design.
+     *
+     * The two ends do not arrive together - every formation staggers its slots
+     * by a fraction of a second - so the pair is agreed HERE as a shared tag
+     * and tied together at the far end, when the second one actually exists.
+     * A salvo with an odd count leaves its last ship untied, which is fine:
+     * one loose ship in a fence reads as a gap, and gaps are the lesson.
+     */
+    const pairs = wave.tether ? slots.length >> 1 : 0;
     slots.forEach((s, i) => {
       this.pending.push({
         type: wave.type, x: clamp(s.x, 34, VW-34), y: s.y,
         delay: s.delay + extraDelay, elite: eliteIdx.has(i),
         bounty: i === bountyIdx && !eliteIdx.has(i),   // never double-decorated
         hoverY: 155 + (i % 4) * 52 + rand(-14, 14),   // four hover bands in the taller field
+        pair: (i >> 1) < pairs ? this.tetherTag + (i >> 1) : 0,
       });
     });
+    if(pairs) this.tetherTag += pairs;
   }
 }
 
@@ -13172,6 +13393,11 @@ function sweep(b, px, py, cx, cy, rr){
   return HIT;
 }
 const HIT = { x:0, y:0 };   // one scratch object; the hot loop stays allocation-free
+// The tether's curve, walked as this many straight pieces. Same reason as HIT:
+// reused, never allocated, because this runs per cable per frame.
+const TETHER_STEPS = 6;
+const TCURVE = { x0:0, y0:0, cx:0, cy:0, x1:0, y1:0 };
+const TA = { x:0, y:0 }, TB = { x:0, y:0 };
 
 /*
  * Is this round threading the hull toward a part it has not reached yet?
@@ -13466,6 +13692,53 @@ function resolve(world, ctxObj, dt){
           fx.shake(10);
         }
         ctxObj.onPlayerHit("collision", e);
+        break;
+      }
+    }
+  }
+
+  /*
+   * THE ANCHOR (mission flag): the cable between a pair is solid.
+   *
+   * Its own pass, gated on the world flag, so no other level in the campaign
+   * pays a single distance test for a mechanic it does not use - the same deal
+   * `cover` gets below. Only the LEAD of each pair is walked, so a cable is
+   * considered once rather than once per end.
+   *
+   * Touching it costs a life and leaves both ships flying. That is deliberate
+   * and it is the difference between this and ramming: a ship you fly into
+   * dies with you, which makes ramming a trade a child will happily keep
+   * making. A cable is not a trade. It is a wall with a ship at each end, and
+   * the only two ways past it are round it or through one of the ends.
+   */
+  if(world.tethered && !invulnerable && p.alive){
+    const rr = p.r + SF.tether.R;
+    for(let i=0;i<enemies.length;i++){
+      const e = enemies[i];
+      if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
+      // The drawn cable hangs, so the measured one has to hang identically:
+      // the curve is walked as TETHER_STEPS straight pieces, which tracks the
+      // painted quadratic to well under a pixel at the spans this game flies.
+      const c = SF.tether.curve(e, TCURVE);
+      SF.tether.at(c, 0, TA);
+      let hit = false;
+      for(let k = 1; k <= TETHER_STEPS && !hit; k++){
+        SF.tether.at(c, k/TETHER_STEPS, TB);
+        const sx = TB.x - TA.x, sy = TB.y - TA.y;
+        const len2 = sx*sx + sy*sy;
+        let u = 0;
+        if(len2 > 0.0001){
+          u = ((p.x - TA.x)*sx + (p.y - TA.y)*sy) / len2;
+          u = u < 0 ? 0 : u > 1 ? 1 : u;
+        }
+        const dx = p.x - (TA.x + sx*u), dy = p.y - (TA.y + sy*u);
+        hit = dx*dx + dy*dy < rr*rr;
+        TA.x = TB.x; TA.y = TB.y;
+      }
+      if(hit){
+        fx.sparks(p.x, p.y, 14, "#a5f3fc", 220);
+        fx.shake(10);
+        ctxObj.onPlayerHit("tether", e);
         break;
       }
     }
@@ -14123,6 +14396,11 @@ function drawPlayer(ctx, p, timeMs){
   }
 }
 
+// Scratch for the tether's curve and a point on it. Reused rather than
+// allocated: this runs once per cable per frame, in the hot path.
+const TCURVE = { x0:0, y0:0, cx:0, cy:0, x1:0, y1:0 };
+const TPT = { x:0, y:0 };
+
 function drawEnemies(ctx, world, timeMs){
   const items = world.enemies.items;
   const t = (timeMs || 0)/1000;
@@ -14150,6 +14428,42 @@ function drawEnemies(ctx, world, timeMs){
     ctx.strokeStyle = rim;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(g.x, g.y, rad, 0, TAU); ctx.stroke();
+  }
+
+  /*
+   * THE ANCHOR: the cable, drawn under the ships that carry it.
+   *
+   * The one thing it must never be is a thin line. It is a wall, it costs a
+   * life, and it has to be as loud as anything else that costs a life - so it
+   * is three passes: a wide soft haze that says "this whole corridor is shut",
+   * a hard bright core that says exactly where the edge is, and a travelling
+   * bead that says the thing is LIVE rather than a strut between two hulls.
+   *
+   * The curve comes from SF.tether, which is also what the collision pass
+   * measures against - see there for why it hangs rather than running straight,
+   * and why there is only one copy of the shape.
+   */
+  if(world.tethered) for(let i=0;i<items.length;i++){
+    const e = items[i];
+    if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
+    const c = SF.tether.curve(e, TCURVE);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    const path = () => {
+      ctx.beginPath(); ctx.moveTo(c.x0, c.y0); ctx.quadraticCurveTo(c.cx, c.cy, c.x1, c.y1);
+    };
+    ctx.strokeStyle = "rgba(34,211,238,0.16)";  ctx.lineWidth = 13;  path(); ctx.stroke();
+    ctx.strokeStyle = "rgba(103,232,249,0.42)"; ctx.lineWidth = 5;   path(); ctx.stroke();
+    ctx.strokeStyle = "rgba(236,254,255,0.92)"; ctx.lineWidth = 1.8; path(); ctx.stroke();
+    // One bright bead running the cable. Wall-clock, not sim time - it is decor.
+    SF.tether.at(c, (t*0.55) % 1, TPT);
+    const bead = ctx.createRadialGradient(TPT.x, TPT.y, 0, TPT.x, TPT.y, 11);
+    bead.addColorStop(0, "rgba(236,254,255,0.85)");
+    bead.addColorStop(1, "rgba(34,211,238,0)");
+    ctx.fillStyle = bead;
+    ctx.beginPath(); ctx.arc(TPT.x, TPT.y, 11, 0, TAU); ctx.fill();
+    ctx.restore();
   }
 
   // Telegraphs and beams go under the sprites, so nothing is ever hidden by
@@ -18305,24 +18619,58 @@ const TAU = Math.PI*2;
    --------------------------------------------------------- */
 const SKIES = [
   /*
-   * HOME.
+   * THE WORKSHOP, AND THE CAMPAIGN'S OLDEST SECRET.
    *
-   * This was the one photograph left at the front of the campaign, and it
-   * showed: thirty-four generated skies and then a JPG, on the very first
-   * screen anybody sees. It is generated now, out of the same painter as
-   * everything after it - but it is deliberately the one sky in the game that
-   * looks like somewhere you would want to come back to.
+   * The first sky anybody ever flies is the same sky as the LAST one but two:
+   * the workshop's own twilight, graphite and one warm lamp, which mission 34
+   * finally gives a name to. You are behind the sky on your very first patrol
+   * and nobody tells you for thirty-three missions. A campaign that finishes
+   * somewhere you have already been finishes somewhere, instead of stopping.
    *
-   * The picture is the family's own world, close and low, so the first flight
-   * reads as a patrol just above home rather than a drift through empty space.
-   * It carries the biggest planet in the campaign (The Deep's was 0.322) with
-   * a weather-banded surface, an aurora over the pole, and dawn coming up
-   * behind it - the only warm-over-cool sky in the table. Everything after
-   * this gets stranger, emptier and colder, which is the whole arc; you have
-   * to have seen home for that to mean anything.
+   * It earns the slot on its own merits too, which is what makes the trick
+   * affordable rather than clever: this is the quietest palette in the table -
+   * half the usual cloud, barely any stars, one lamp - and the tutorial's
+   * backdrop must never compete with the first enemy a seven-year-old ever
+   * sees.
    *
-   * Deliberately quiet on density: this is the tutorial, and the backdrop must
-   * never compete with the first enemy a seven-year-old ever sees.
+   * Deliberately not unique, and the smoke test knows about this ONE pair by
+   * name; any other repeat is still a failure.
+   */
+  { name:"Lamplight",    clouds:["#3d3a55","#c9b458","#15131f"], dust:"#0a0a12", star:"#e2e8f0",
+    lum:1.0, density:0.5, stars:0.55, bright:1,
+    /*
+     * Its own corner of the same room, though. The finale's version is nearly
+     * bare because the finale overpaints it live - blueprint flashes, act
+     * repaints - while this one has to stand up as a picture on its own, so it
+     * gets the far wall, the lamp, and a moon low enough to fly over. Nothing
+     * sits where the first wave will come down.
+     */
+    props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
+            {k:"planet", x:0.74, y:0.72, r:0.150, lit:"#6b6787", dark:"#191627", crescent:true},
+            {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
+            {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
+
+
+  { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
+    lum:1.15, density:1.0, stars:1.0, bright:3,
+    props:[ {k:"planet", x:0.20, y:0.30, r:0.177, lit:"#8b6bd8", dark:"#241245", rings:true},
+            {k:"planet", x:0.82, y:0.70, r:0.047, lit:"#c9b6f0", dark:"#3a2a5c", craters:true},
+            {k:"galaxy", x:0.78, y:0.16, r:0.22} ] },
+
+  /*
+   * HOME, which is now stop three rather than stop one.
+   *
+   * The family's own world, close and low, so the flight reads as a patrol
+   * just above home rather than a drift through empty space. It carries the
+   * biggest planet in the campaign (The Deep's was 0.322) with a weather-banded
+   * surface, an aurora over the pole, and dawn coming up behind it - the only
+   * warm-over-cool sky in the table. Everything after this gets stranger,
+   * emptier and colder, which is the whole arc; you have to have seen home for
+   * that to mean anything.
+   *
+   * It reads even better here than it did at the front, because now you have
+   * flown twice to get to it: the opening sky is a room with no windows, and
+   * this is the first time the game shows you what is outside.
    */
   { name:"Home Reach",   clouds:["#2563eb","#7dd3fc","#061027"], dust:"#02050e", star:"#eaf4ff",
     lum:1.0, density:0.9, stars:1.2, bright:4,
@@ -18341,12 +18689,6 @@ const SKIES = [
             {k:"aurora", x:0.50, y:0.56, r:0.15},
             {k:"planet", x:0.78, y:0.22, r:0.050, lit:"#dbeafe", dark:"#1b2740", craters:true},
             {k:"sun",    x:0.17, y:0.15, r:0.030, color:"#ffe9a8"} ] },
-
-  { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
-    lum:1.15, density:1.0, stars:1.0, bright:3,
-    props:[ {k:"planet", x:0.20, y:0.30, r:0.177, lit:"#8b6bd8", dark:"#241245", rings:true},
-            {k:"planet", x:0.82, y:0.70, r:0.047, lit:"#c9b6f0", dark:"#3a2a5c", craters:true},
-            {k:"galaxy", x:0.78, y:0.16, r:0.22} ] },
 
   { name:"Emerald Veil", clouds:["#059669","#14b8a6","#065f46"], dust:"#02100c", star:"#d1fae5",
     lum:1.2, density:0.95, stars:0.9, bright:3,
@@ -18618,7 +18960,7 @@ const SKIES = [
      and the busiest, brightest sky in the game, because it took every star to
      earn. The mission starts it under a pencil veil (see sky29.js); THIS is
      what the flying reveals. */
-  { name:"Sky 35", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
+  { name:"Sky 36", clouds:["#ff7a59","#ffd23f","#8b5cf6"], dust:"#160a14", star:"#fff3e0",
     lum:1.35, density:1.3, stars:1.25, bright:5,
     props:[ {k:"planet", x:0.74, y:0.68, r:0.24, lit:"#e8b45a", dark:"#3a2008", bands:true, rings:true},
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
@@ -21263,15 +21605,21 @@ function buildTestRange(){
  * you've actually learned them. Shields recharge between rounds - lives
  * don't. Fixed PILOT difficulty so the family record means one thing.
  */
-const RUSH_ORDER = [
-  { missionId: 4,  boss: "marauder"  },
-  { missionId: 7,  boss: "jailer"    },
-  { missionId: 10, boss: "sentinel"  },
-  { missionId: 15, boss: "warden"    },
-  { missionId: 17, boss: "phantom"   },
-  { missionId: 20, boss: "leviathan" },
-  { missionId: 23, boss: "devourer"  },
-];
+/*
+ * The rush queue: the campaign's seven set-piece bosses, in campaign order.
+ *
+ * Derived, not listed - and it had to become derived. The hand-kept version
+ * named mission ids 4/7/10/15/17/20/23, which had not been true for several
+ * releases: the Sentinel was filed under the id of the level BEFORE it, so a
+ * pilot who had beaten the Sentinel was queued the wrong boss and a pilot who
+ * had only cleared the level before it was queued one they had never met. The
+ * menu's own copy of this list (RUSH_IDS in ui.js) was derived years ago for
+ * exactly this reason; this one was missed. Inserting a level would have
+ * shifted the wrong numbers one further along.
+ */
+const RUSH_BOSSES = ["marauder","jailer","sentinel","warden","phantom","leviathan","devourer"];
+const RUSH_ORDER = MISSIONS.filter(m => RUSH_BOSSES.indexOf(m.boss) >= 0)
+                           .map(m => ({ missionId: m.id, boss: m.boss }));
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
                                 profile.missions[r.missionId].cleared)
@@ -21406,6 +21754,10 @@ function startMission(missionIndex, difficultyId){
   game.world.mirror = !!mission.mirror;   // the Glass Sea: a second gun, far side
   game.world.wrap = !!mission.wrap;       // the Ring: the sky joins up at the edges
   game.world.wrapped = 0;
+  // The Anchor: a level flies cables if any of its waves ties a pair. Derived
+  // rather than declared, so a wave cannot quietly carry a `tether` on a level
+  // whose collision pass is switched off - the flag and the data can't drift.
+  game.world.tethered = !!(mission.waves && mission.waves.some(wv => wv.tether));
   SF.render.initBackground(custom ? (mission.skyIndex || 0)
                           : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
@@ -21471,6 +21823,7 @@ function startMission(missionIndex, difficultyId){
     // so a mission can make its own lesson its third star instead of asking
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
+    ropesCut: 0,
     stars: 0,
   };
 
@@ -21904,6 +22257,13 @@ const callbacks = {
      * farming adds - the mirror image of the bug that made it unreachable.
      */
     if(e.counted && !e.fromBoss){ run.stats.kills++; }
+    /*
+     * A rope is cut the moment one of its two ends dies - counted HERE rather
+     * than at the snap, because only this side knows the player did it. The
+     * snap itself also fires when an end flies off the bottom of the screen,
+     * and drifting away from a cable is not cutting it.
+     */
+    if(SF.tether.live(e)) run.stats.ropesCut++;
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
     // The Glass Sea: the twin earns its own tally, which is a whole star.
@@ -25414,7 +25774,7 @@ function renderMenu(){
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
-  // The Wacky Sky opens once the basics are learned (mission 3 cleared).
+  // The Wacky Sky opens once the basics are learned - see wackyUnlocked.
   // Its sub is the score to beat - yours, or the leading brother's. The old
   // Daily Patrol bests carry straight over: same field, new party.
   {
@@ -25422,7 +25782,7 @@ function renderMenu(){
     $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("wackySub", !open ? "opens after Mission 3"
+    setSub("wackySub", !open ? "opens after Mission " + (WACKY_AFTER + 1)
       : rivals.length
         ? "beat " + (rivals[0].callsign || rivals[0].name) + "'s " +
           rivals[0].endlessBest.toLocaleString("en-US") + " pts"
@@ -25433,7 +25793,7 @@ function renderMenu(){
     const bosses = RUSH_IDS.filter(id => profile.missions && profile.missions[id] &&
                                          profile.missions[id].cleared).length;
     $("rushBtn").classList.toggle("locked", bosses === 0);
-    setSub("rushSub", bosses === 0 ? "beat the Mission 4 boss first"
+    setSub("rushSub", bosses === 0 ? "beat the Mission " + (RUSH_AFTER + 1) + " boss first"
       : bosses + " boss" + (bosses > 1 ? "es" : "") + " in the queue · best " +
         (profile.bossRushBest || 0) + " down");
   }
@@ -25999,6 +26359,7 @@ const FACE_KINDS = {
   coins:   { c0:"#ffc451", c1:"#6b4a09" },   // a coin run
   rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
   rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
+  anchor:  { c0:"#22d3ee", c1:"#0b3a44" },   // The Anchor: cables, and the gaps
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -26122,6 +26483,11 @@ function missionFace(m){
              : m.convoy ? "escort"
              : m.blackout ? "dark"
              : (totalN > 0 && rockN/totalN >= 0.3) ? "rocks"
+             // A tether level is all grunts by design - the mechanic is the
+             // level, not the roster - so the heuristic would file it as a
+             // plain fight next to the two stops either side of it. The cable
+             // is what it is about, so the cable picks the colour.
+             : m.waves.some(wv => wv.tether) ? "anchor"
              : (obj.includes("rescueAll") && rescueCount(m) >= 4) ? "rescue"
              : "fight";
   return (faceCache[m.id] = Object.assign({ enemy, kind, elite: !!m.faceElite },
@@ -26205,36 +26571,42 @@ function campaignLayout(){
  * `at` is the first node index in the stretch; the last is the next entry's
  * `at` minus one (see sectorStats).
  */
+/*
+ * The stops are INDICES into MISSIONS, so inserting a level shifts every
+ * boundary after it. The Anchor went in at stop 3 and HOME PATROL grew to hold
+ * it, which is where it belongs anyway: "our own sky, and how to fly in it" is
+ * exactly what fly, then lead a moving one, then read the gap adds up to.
+ */
 const SECTORS = [
   { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
-    sub:"our own sky, and how to fly in it" },              // 1-2
-  { at:2,  name:"THE BELT",        hue:"#f5a623",
-    sub:"rocks, raiders and the first big one" },           // 3-5
-  { at:5,  name:"THE STORM",       hue:"#7cc4ff",
-    sub:"wild wind, and friends to get out" },              // 6-7
-  { at:7,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
-    sub:"guard the hauler, then carry the load yourself" }, // 8-11
-  { at:11, name:"ENEMY SPACE",     hue:"#f472b6",
-    sub:"behind their lines, where nobody is friendly" },   // 12-15
-  { at:15, name:"WARDEN'S REACH",  hue:"#34d399",
-    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 16-19
-  { at:19, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 20-22
+    sub:"our own sky, and how to fly in it" },              // 1-3
+  { at:3,  name:"THE BELT",        hue:"#f5a623",
+    sub:"rocks, raiders and the first big one" },           // 4-6
+  { at:6,  name:"THE STORM",       hue:"#7cc4ff",
+    sub:"wild wind, and friends to get out" },              // 7-8
+  { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
+    sub:"guard the hauler, then carry the load yourself" }, // 9-12
+  { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
+    sub:"behind their lines, where nobody is friendly" },   // 13-16
+  { at:16, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 17-20
+  { at:20, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 21-23
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:22, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 23-24
-  { at:24, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 25-27
-  { at:27, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 28-31
-  { at:31, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 32-34
-  { at:34, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 35
+  { at:23, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 24-25
+  { at:25, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 26-28
+  { at:28, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 29-32
+  { at:32, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 33-35
+  { at:35, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 36
 ];
 
 /*
@@ -29070,8 +29442,19 @@ function drawBriefHero(index){
     hull: profile.hull });
 }
 
+/*
+ * The Wacky Sky opens once the basics are taught: fly, lead a moving one, read
+ * a gap, and then be shot at. That is the fourth stop.
+ *
+ * Derived from the campaign rather than written as a number, for the reason
+ * the note on RUSH_IDS below already gives - the hand-kept copy drifts. Two
+ * levels have been inserted ahead of this gate over the game's life, and each
+ * time the literal "3" quietly came to mean a different mission.
+ */
+const WACKY_AFTER = 3;                       // stop four, by index
 function wackyUnlocked(p){
-  const rec = p && p.missions && p.missions[3];
+  const m = MISSIONS[WACKY_AFTER];
+  const rec = m && p && p.missions && p.missions[m.id];
   return !!(rec && rec.cleared);
 }
 
@@ -29079,8 +29462,11 @@ function wackyUnlocked(p){
 // not listed: the hand-kept copy had drifted to pre-Act-3 mission numbers, so
 // the menu was counting ordinary clears as bosses in the queue.
 const RUSH_IDS = MISSIONS.filter(m => m.boss && ["marauder","jailer","sentinel","warden","phantom","leviathan","devourer"].includes(m.boss)).map(m => m.id);
+/* Boss Rush opens on the campaign's FIRST boss, whichever stop that is. */
+const RUSH_AFTER = MISSIONS.findIndex(m => RUSH_IDS.indexOf(m.id) >= 0);
 function rushUnlocked(p){
-  const rec = p && p.missions && p.missions[4];
+  const m = MISSIONS[RUSH_AFTER];
+  const rec = m && p && p.missions && p.missions[m.id];
   return !!(rec && rec.cleared);
 }
 

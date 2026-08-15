@@ -280,6 +280,24 @@ function migrate(p){
     }
     p.missionsVer = 6;
   }
+  /*
+   * v7: The Anchor landed as mission 3 - the level that teaches reading a gap,
+   * which belongs before anything starts shooting back - pushing the old 3-35
+   * up one. A single offset, descending so nothing is overwritten before it
+   * moves, exactly like v5.
+   *
+   * The hand-written mission ids move with it in the same release: the tune
+   * unlocks (data/config.js), the Boss Rush queue (game.js) and devourerDown
+   * just below. This loop cannot reach any of them, and getting one wrong
+   * silently un-earns something a child worked for.
+   */
+  if((p.missionsVer || 1) < 7){
+    for(let id = 35; id >= 3; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 3) p.lastMission += 1;
+    p.missionsVer = 7;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -472,7 +490,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[27] && p.missions[27].cleared),
+    devourerDown: !!(p.missions[28] && p.missions[28].cleared),
   };
 }
 

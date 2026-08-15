@@ -404,8 +404,20 @@ async function run(){
       .every(k => !SF.haptics._patterns[k]));
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
-  check("35 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 35 &&
+  /*
+   * The gift stop is named for the number it sits at, so inserting a level has
+   * to rename it - "SKY 35" printed over the thirty-sixth stop is the kind of
+   * small wrongness a child spots immediately and an adult never does.
+   */
+  check("the gift stop is named for the stop it is", (() => {
+    const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
+    const at = M.indexOf(gift) + 1;
+    return !!gift && gift.name === "Sky " + at &&
+           SF.skygen.SKIES[M.indexOf(gift)].name === "Sky " + at &&
+           SF.config.PAINTS.some(t => t.name === "SKY " + at);
+  })());
+  check("36 campaign missions defined, ids sequential",
+    SF.missions.MISSIONS.length === 36 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
@@ -414,9 +426,9 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 102 && (() => {
+    SF.profile.maxStars() === 105 && (() => {
       const p = SF.profile.load("LEDGER");
-      p.missions[35] = { cleared:true, stars:{ pilot:3 } };
+      p.missions[36] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
     })());
   check("the workshop curtain doesn't wait for the gift", (() => {
@@ -533,18 +545,20 @@ async function run(){
                  "trench","coinRain","noGuns","rival","vault","backstage","sky29",
                  "cover","bounty","nearMiss","lentDrones","starRain",
                  "ferry","wrap","limpets","flare","stampede","mirror"];
-    // The Gauntlet's identity is the elites themselves, which live in its
-    // waves rather than in a flag - that counts.
-    return SF.missions.MISSIONS.slice(0, 12).every(m =>
-      OWN.some(k => !!m[k]) || m.waves.filter(wv => wv.elite).length >= 4);
+    // Two identities live in the WAVES rather than in a mission flag, and
+    // both count: The Gauntlet is its elites, and The Anchor is its cables.
+    return SF.missions.MISSIONS.slice(0, 13).every(m =>
+      OWN.some(k => !!m[k]) || m.waves.some(wv => wv.tether) ||
+      m.waves.filter(wv => wv.elite).length >= 4);
   })());
-  check("the first five each teach their own thing", (() => {
+  check("the first six each teach their own thing", (() => {
     const M = SF.missions.MISSIONS;
     return M[0].lentDrones === 2 &&   // 1: you are not flying this alone
            M[1].bounty === true &&    // 2: pick ONE moving target out of a crowd
-           M[2].cover === true &&     // 3: they shoot back - so use the rocks
-           !!M[3].boss &&             // 4: the first boss
-           M[4].nearMiss === true;    // 5: nerve - wait, THEN swerve
+           M[2].waves.some(w => w.tether) &&  // 3: read the GAP, not the ships
+           M[3].cover === true &&     // 4: they shoot back - so use the rocks
+           !!M[4].boss &&             // 5: the first boss
+           M[5].nearMiss === true;    // 6: nerve - wait, THEN swerve
   })());
   check("every wave references a real enemy type",
     SF.missions.MISSIONS.every(m => m.waves.every(w => !!SF.enemyData.ENEMY_TYPES[w.type])));
@@ -775,9 +789,14 @@ async function run(){
   check("a mechanic star is only fitted where the mechanic runs", (() => {
     const M = SF.missions.MISSIONS;
     const has = (o, flag) => M.filter(m => m.objectives.indexOf(o) >= 0).every(m => !!m[flag]);
-    return has("wanted", "bounty") && has("nearMiss", "nearMiss") &&
+    // "Cut 6 ropes" is unlightable anywhere there are no ropes, and its
+    // mechanic lives in the waves rather than in a mission flag.
+    const ropesOk = M.filter(m => m.objectives.indexOf("ropes") >= 0)
+      .every(m => m.waves.some(wv => wv.tether));
+    return has("wanted", "bounty") && has("nearMiss", "nearMiss") && ropesOk &&
            M.some(m => m.objectives.indexOf("wanted") >= 0) &&
-           M.some(m => m.objectives.indexOf("nearMiss") >= 0);
+           M.some(m => m.objectives.indexOf("nearMiss") >= 0) &&
+           M.some(m => m.objectives.indexOf("ropes") >= 0);
   })());
   /*
    * The subtle one. An ARMOURED boss is sealed until every plate is off (see
@@ -1023,8 +1042,22 @@ async function run(){
     return SF.profile.badgeFor(p) === SF.profile.rankFor(p).badge;
   })());
   check("every mission has its own sky", SF.skygen.SKIES.length >= SF.missions.MISSIONS.length);
-  check("no two missions look alike",
-    new Set(SF.skygen.SKIES.map(k => k.photo || k.clouds.join(""))).size === SF.skygen.SKIES.length);
+  /*
+   * ...with exactly ONE deliberate echo, named here so it cannot be joined by
+   * an accidental second. The campaign opens on the workshop's own twilight
+   * and nobody is told; mission 34 flies the same sky and gives it a name.
+   * The pair is the point. Any other repeat is still a mistake.
+   */
+  check("no two missions look alike, bar the one that means to", (() => {
+    const ECHO = ["Lamplight", "Behind the Sky"];
+    const seen = SF.skygen.SKIES.filter(k => ECHO.indexOf(k.name) < 0)
+      .map(k => k.photo || k.clouds.join(""));
+    const pair = SF.skygen.SKIES.filter(k => ECHO.indexOf(k.name) >= 0);
+    return new Set(seen).size === seen.length &&
+           pair.length === 2 && pair[0].clouds.join("") === pair[1].clouds.join("") &&
+           // ...and the echo must not also collide with somebody else.
+           seen.indexOf(pair[0].clouds.join("")) < 0;
+  })());
   /*
    * ONE HAND PAINTED ALL OF IT.
    *
@@ -1121,9 +1154,9 @@ async function run(){
    * without a photograph, so the belt has to actually be ice.
    */
   check("Ice Fields is an ice field", (() => {
-    const k = SF.skygen.SKIES[4];
-    const rocks = (k.props || []).filter(p => p.k === "rocks");
-    return k.name === "Ice Fields" && !k.photo &&
+    const k = SF.skygen.SKIES.find(x => x.name === "Ice Fields");
+    const rocks = ((k && k.props) || []).filter(p => p.k === "rocks");
+    return !!k && !k.photo &&
            rocks.length >= 2 && rocks.every(p => p.ice) &&
            k.density <= 0.6;                    // the emptiest sky in the table
   })());
@@ -2063,7 +2096,7 @@ async function run(){
     check("no two ordinary stops wear the same face",
       new Set(pairs).size === pairs.length);
     check("a named face is the one that gets drawn",
-      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.id === 16)).enemy === "hive");
+      SF.ui.missionFace(SF.missions.MISSIONS.find(m => m.name === "The Hatchery")).enemy === "hive");
   }
   await runFrames(3);
   check("the campaign map draws without errors", errors.length === 0);
@@ -2275,7 +2308,8 @@ async function run(){
   /* ---------- how full the screen gets ---------- */
   {
     const W = SF.game.world;
-    const m8 = SF.missions.MISSIONS[7];
+    // By name: the point is a mission with a big wave in it, and indices move.
+    const m8 = SF.missions.MISSIONS.find(m => m.name === "The Gauntlet");
     const plannedOn = tierId => new SF.systems.WaveDirector(
       m8, SF.config.DIFFICULTY_BY_ID[tierId], W).totalPlanned;
     check("every tier declares a density", SF.config.DIFFICULTIES.every(d => d.density > 0));
@@ -2435,13 +2469,17 @@ async function run(){
 
   /* ---------- boss mission ---------- */
   const p2 = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
-  [1,2,3,4].forEach(mid => { p2.missions[mid] = { cleared:true, stars:{ pilot:3 }, best:{} }; });
+  // Everything up to and including the first boss, so its node is reachable.
+  SF.missions.MISSIONS.slice(0, SF.missions.MISSIONS.findIndex(m => m.boss) + 1)
+    .forEach(m => { p2.missions[m.id] = { cleared:true, stars:{ pilot:3 }, best:{} }; });
   window.localStorage.setItem("patrol_profile_Marc", JSON.stringify(p2));
   clickEl(id("missionsBackBtn"));
   clickEl(id("switchBtn"));
   clickEl(qa("#profileGrid .profile-card")[0]);
   clickEl(id("playBtn"));
-  clickEl(qa("#campaignNodes .map-node")[3]);        // mission 4 - first boss
+  // The campaign's first boss, wherever it sits.
+  clickEl(qa("#campaignNodes .map-node")[
+    SF.missions.MISSIONS.findIndex(m => m.boss)]);
   clickEl(qa("#briefDifficulties .diff-card")[1]);
   clickEl(id("launchBtn"));
   await runFrames(6300);   // ~3 minutes of mission, boss arrival cinematic, boss
@@ -2951,8 +2989,9 @@ async function run(){
     SF.game.endMission(false);
     await runFrames(4);
 
-    // COVER (missions 3 and 12): a rock eats their bullets.
-    SF.game.startMission(2, "pilot");   // index 2 == mission 3
+    // COVER: a rock eats their bullets. Found by flag rather than by index,
+    // so inserting a level ahead of it cannot silently test a different one.
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.cover), "pilot");
     await runFrames(60);
     check("rocks stop their shots on the levels that promise it", (() => {
       const w = SF.game.world;
@@ -2968,8 +3007,8 @@ async function run(){
     SF.game.endMission(false);
     await runFrames(4);
 
-    // NEAR MISS (mission 5): a diver that goes past your wingtip pays.
-    SF.game.startMission(4, "pilot");   // index 4 == mission 5
+    // NEAR MISS: a diver that goes past your wingtip pays.
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.nearMiss), "pilot");
     await runFrames(60);
     check("cutting it fine pays on the kamikaze level", (() => {
       const w = SF.game.world;
@@ -3218,15 +3257,15 @@ async function run(){
       M.filter(m => m.storm).length === 2 && M.filter(m => m.convoy).length === 1 &&
       M.filter(m => m.trench).length === 1 && M.filter(m => m.blackout).length === 2);
     check("the treasury remix keeps its coin identity on the map",
-      M.find(m => m.id === 18).storm === true &&
-      SF.ui.missionFace(M.find(m => m.id === 18)).kind === "coins");
+      M.find(m => m.name === "Their Treasury").storm === true &&
+      SF.ui.missionFace(M.find(m => m.name === "Their Treasury")).kind === "coins");
     check("the long dark's veil is the soft one",
-      M.find(m => m.id === 26).blackout === "soft" &&
-      M.find(m => m.id === 25).blackout === true &&
+      M.find(m => m.name === "The Long Dark").blackout === "soft" &&
+      M.find(m => m.name === "The Searchlight").blackout === true &&
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "4,7,11,17,20,24,27,34");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,18,21,25,28,35");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -3410,7 +3449,7 @@ async function run(){
 
       /* The rematch: once in the whole campaign, elite, sharper but valved. */
       check("vesper returns exactly once, elite, in All Hands",
-        M.find(m => m.id === 22).waves
+        M.find(m => m.name === "All Hands").waves
           .filter(wv => wv.type === "rival" && wv.elite).length === 1 &&
         M.filter(m => m.waves.some(wv => wv.type === "rival")).length === 2);
       check("the rematch is sharper but still a valve, not a wall", (() => {
@@ -3442,6 +3481,94 @@ async function run(){
     SF.game.run.ended = true; SF.game.state = "idle";   // leave no live run behind
   }
 
+  /* ---------- THE ANCHOR: the cable, and what it is tied to ---------- */
+  {
+    const W = SF.game.world;
+    const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+    W.reset(); W.createPlayer(SF.game.buildLoadout(SF.profile.blank("Rope"), diff));
+    W.tethered = true;
+    const pair = () => {
+      const a = W.spawnEnemy("grunt", 120, 300, { difficulty: diff });
+      const b = W.spawnEnemy("grunt", 320, 300, { difficulty: diff });
+      W.tetherPair(a, b);
+      return [a, b];
+    };
+    {
+      const [a, b] = pair();
+      check("a tied pair agrees from both ends, and only one end leads",
+        SF.tether.live(a) && SF.tether.live(b) &&
+        a.mate === b && b.mate === a && a.tetherKey === b.tetherKey &&
+        (a.tetherLead ? !b.tetherLead : b.tetherLead));
+      /*
+       * THE BUG THIS MECHANIC WOULD OTHERWISE HAVE. Enemy slots are pooled, so
+       * the moment a dead end's slot is handed to a new ship, a bare reference
+       * would reattach a live cable to a completely unrelated enemy somewhere
+       * else on screen. The key is what makes a stale link read as CUT.
+       */
+      b.alive = false;
+      check("a cable to a dead end is not a cable", !SF.tether.live(a));
+      const reused = W.spawnEnemy("grunt", 500, 100, { difficulty: diff });
+      check("...and a recycled slot never inherits the rope",
+        !SF.tether.live(a) && reused.tetherKey === 0 && reused.mate === null);
+      a.alive = false; reused.alive = false;
+    }
+    /*
+     * The drawn cable hangs, so the measured one has to hang identically - a
+     * wall that hurts where it is not drawn is the worst bug this could have.
+     * The curve dips BELOW the straight line between the two ships, and the
+     * player is placed on the sag to prove the collision follows it.
+     */
+    {
+      const [a, b] = pair();
+      const C = { x0:0, y0:0, cx:0, cy:0, x1:0, y1:0 }, P = { x:0, y:0 };
+      SF.tether.curve(a, C);
+      SF.tether.at(C, 0.5, P);
+      check("the cable hangs between its ends rather than running straight",
+        Math.abs(P.x - 220) < 1 && P.y > 305 && P.y < 330);
+      let hits = 0;
+      const cb = { onEnemyKilled(){}, onBossHit(){}, onEscape(){},
+                   onPlayerHit(){ hits++; }, godMode:false };
+      W.player.invuln = 0; W.player.x = P.x; W.player.y = P.y;
+      SF.systems.resolve(W, cb, 1/60);
+      check("touching the middle of a rope costs a life", hits === 1);
+      /* ...and the ships themselves are untouched. A ship you fly into dies
+         with you, which makes ramming a trade a child will happily keep
+         making; a cable is a wall, not a trade. */
+      check("a rope hurts you and leaves both ends flying",
+        a.alive === true && b.alive === true);
+      // Straight above the sag, well clear of both hulls: nothing there.
+      hits = 0; W.player.invuln = 0; W.player.x = 220; W.player.y = 240;
+      SF.systems.resolve(W, cb, 1/60);
+      check("the sky either side of a rope is still sky", hits === 0);
+      a.alive = false; b.alive = false;
+    }
+    /* Pairing is by SLOT, which is what lets one flag mean "a short fence" in
+       a line and "a wire across the whole field" in twinColumns. */
+    {
+      const m = SF.missions.MISSIONS.find(x => x.name === "The Anchor");
+      const dir = new SF.systems.WaveDirector(m, diff, W);
+      const wave = m.waves.find(wv => wv.tether && wv.form === "twinColumns");
+      dir.pending = []; dir.queueWave(wave);
+      const tagged = dir.pending.filter(x => x.pair);
+      const tags = new Set(tagged.map(x => x.pair));
+      check("a tethered wave stages its ships in pairs",
+        tagged.length >= 4 && tagged.length % 2 === 0 &&
+        tags.size === tagged.length / 2 &&
+        Array.from(tags).every(t => tagged.filter(x => x.pair === t).length === 2));
+      // An odd count leaves one loose, and a fence with a hole is the lesson.
+      dir.pending = []; dir.queueSalvo({ type:"grunt", form:"line", n:5, tether:true }, 5, 0);
+      check("an odd salvo leaves one ship untied",
+        dir.pending.filter(x => !x.pair).length === 1);
+    }
+    check("only the levels that fly ropes pay for the collision pass", (() => {
+      const s2 = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+      return /if\(world\.tethered && !invulnerable/.test(s2) &&
+             /world\.tethered = !!\(mission\.waves/.test(
+               fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8"));
+    })());
+    W.enemies.killAll(); W.tethered = false;
+  }
+
   /* ---------- act-two records shift around the new mission ---------- */
   {
     const oldSave = { name:"Shift", callsign:"Shift",
@@ -3453,27 +3580,37 @@ async function run(){
     window.localStorage.setItem("patrol_profile_Shift", JSON.stringify(oldSave));
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
-    // Five inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
-    // v4's four-level map, v5 (The Rival at 13), then v6's six-level map. Old
-    // 8 rides to 11; old 9 rides to 13; old 14 rides every shift to 24. Old 3
-    // never moves - nothing has ever been inserted below it.
+    /*
+     * Six inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+     * v4's four-level map, v5 (The Rival at 13), v6's six-level map, and v7
+     * (The Anchor at 3). Old 8 rides to 12; old 9 to 14; old 14 to 25.
+     *
+     * Old 3 moves for the first time in the game's life. It used to be the
+     * proof that act one never shifted - nothing had ever gone in below it -
+     * and The Anchor is the first level that has. That is precisely what this
+     * chain is for: a save from the first release still has to arrive with
+     * every star filed against the level it was actually won on.
+     */
     check("pre-insert records ride every shift",
-      shifted.missions["11"] && shifted.missions["11"].stars.pilot === 2 &&
-      shifted.missions["13"] && shifted.missions["13"].stars.pilot === 3 &&
-      shifted.missions["24"] && shifted.missions["24"].stars.pilot === 1 &&
-      !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["14"] &&
-      !shifted.missions["10"] && !shifted.missions["12"] && !shifted.missions["20"] &&
-      shifted.lastMission === 13);
-    check("act-one records stay where they were",
-      shifted.missions["3"] && shifted.missions["3"].stars.pilot === 2);
+      shifted.missions["12"] && shifted.missions["12"].stars.pilot === 2 &&
+      shifted.missions["14"] && shifted.missions["14"].stars.pilot === 3 &&
+      shifted.missions["25"] && shifted.missions["25"].stars.pilot === 1 &&
+      !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["10"] &&
+      !shifted.missions["11"] && !shifted.missions["13"] && !shifted.missions["20"] &&
+      !shifted.missions["24"] &&
+      shifted.lastMission === 14);
+    check("the oldest record rides the newest insert too",
+      shifted.missions["4"] && shifted.missions["4"].stars.pilot === 2 &&
+      !shifted.missions["3"]);
     check("the shifts run exactly once",
-      SF.profile.migrate(shifted).missions["13"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["24"].stars.pilot === 1);
+      SF.profile.migrate(shifted).missions["14"].stars.pilot === 3 &&
+      SF.profile.migrate(shifted).missions["25"].stars.pilot === 1);
     // A v2-era save (Silent Running already counted) picks up v3 onward only.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
     check("a v2-era save shifts only the later inserts",
-      v2era.missions["20"] && !v2era.missions["13"] && v2era.lastMission === 20);
+      v2era.missions["21"] && !v2era.missions["13"] && !v2era.missions["20"] &&
+      v2era.lastMission === 21);
   }
 
   /* ---------- settings ---------- */
@@ -4362,7 +4499,19 @@ async function run(){
   {
     const prof = SF.profile.blank("Rush"); prof.callsign = "Rush";
     prof.upgrades = { damage:5, rapid:4, spread:3, shield:2 };
-    [4, 10].forEach(mid => { prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
+    /*
+     * Named by BOSS, not by mission id.
+     *
+     * This used to clear ids 4 and 10 and expect "marauder,sentinel", which
+     * only worked because game.js held a hand-written rush queue that had
+     * drifted: it filed the Sentinel under the id of the level before it. The
+     * test agreed with the bug, so both survived. The queue is derived from
+     * the campaign now, and so is this - which is also the only way a pin
+     * about mission ids survives the next level anybody inserts.
+     */
+    const bossStop = b => SF.missions.MISSIONS.find(m => m.boss === b);
+    [bossStop("marauder").id, bossStop("sentinel").id].forEach(mid => {
+      prof.missions[mid] = { cleared:true, stars:{pilot:2}, best:{} }; });
     SF.profile.save(prof);
     SF.game.profile = prof;
     SF.ui.show("screen-game");
@@ -4434,8 +4583,8 @@ async function run(){
   /* ---------- the new bosses: the Jailer and the Phantom ---------- */
   {
     check("prison break and cold approach got their bosses",
-      SF.missions.MISSIONS.find(m => m.id === 7).boss === "jailer" &&
-      SF.missions.MISSIONS.find(m => m.id === 20).boss === "phantom" &&
+      SF.missions.MISSIONS.find(m => m.name === "Prison Break").boss === "jailer" &&
+      SF.missions.MISSIONS.find(m => m.name === "Cold Approach").boss === "phantom" &&
       SF.missions.BOSSES.jailer.rescuePods === true &&
       SF.missions.BOSSES.phantom.cloak === true);
 
@@ -4470,7 +4619,11 @@ async function run(){
 
     // All six bosses queue in campaign order once everything is cleared.
     const prof6 = SF.profile.blank("RushAll");
-    [4, 7, 10, 15, 17, 20].forEach(mid => { prof6.missions[mid] = { cleared:true, stars:{}, best:{} }; });
+    // Every boss up to (and including) the Leviathan, by boss rather than by
+    // id - the ids move whenever a level is inserted, the bosses do not.
+    ["marauder","jailer","sentinel","warden","phantom","leviathan"].forEach(b => {
+      const m = SF.missions.MISSIONS.find(x => x.boss === b);
+      prof6.missions[m.id] = { cleared:true, stars:{}, best:{} }; });
     SF.profile.save(prof6);
     SF.game.profile = prof6;
     SF.game.startMission("rush", "pilot");
@@ -4481,10 +4634,10 @@ async function run(){
 
   /* ---------- their treasury (the heist between the bosses) ---------- */
   {
-    const t = SF.missions.MISSIONS.find(m => m.id === 18);
+    const t = SF.missions.MISSIONS.find(m => m.name === "Their Treasury");
     check("the treasury sits between the wardens and never carries a boss",
-      t && t.name === "Their Treasury" && !t.boss &&
-      SF.missions.MISSIONS.find(m => m.id === 17).boss === "warden");
+      t && !t.boss &&
+      SF.missions.MISSIONS.find(m => m.name === "The Warden").boss === "warden");
     check("the heist stars greed and leans on thieves",
       t.objectives.includes("coinRush") &&
       t.waves.filter(wv => wv.type === "thief").reduce((n,wv) => n + wv.n, 0) >= 10);
@@ -4692,11 +4845,12 @@ async function run(){
     // Two finales now: the Devourer closes act 3 at 23, THE FORGERY closes
     // the whole campaign at 28.
     check("each finale closes its act",
-      SF.missions.MISSIONS.find(m => m.id === 27).boss === "devourer" &&
-      SF.missions.MISSIONS.find(m => m.id === 34).boss === "forgery" &&
-      SF.missions.MISSIONS.find(m => m.id === 26).boss === undefined);
+      SF.missions.MISSIONS.find(m => m.name === "The Devourer").boss === "devourer" &&
+      SF.missions.MISSIONS.find(m => m.name === "Behind the Sky").boss === "forgery" &&
+      SF.missions.MISSIONS.find(m => m.name === "The Long Dark").boss === undefined);
     check("beating it awards the last tune and the last medal",
-      SF.config.TUNES.some(t => t.id === "nova" && t.unlockMission === 27) &&
+      SF.config.TUNES.some(t => t.id === "nova" &&
+        t.unlockMission === SF.missions.MISSIONS.find(m => m.boss === "devourer").id) &&
       SF.config.ACHIEVEMENTS.some(a => a.id === "devourer" && a.pay > 0));
 
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
@@ -5022,7 +5176,9 @@ async function run(){
       Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
     check("locked tunes say which boss to beat, and refuse to fit", (() => {
       const viperCard = Array.from(qa(".tune-card")).find(c => /VIPER/.test(c.textContent));
-      if(!viperCard || !/beat Mission 11/.test(viperCard.textContent)) return false;
+      const viperAt = SF.missions.MISSIONS.findIndex(m =>
+        m.id === SF.config.TUNES.find(t => t.id === "viper").unlockMission) + 1;
+      if(!viperCard || !new RegExp("beat Mission " + viperAt).test(viperCard.textContent)) return false;
       clickEl(viperCard);
       return SF.profile.load("Tuner").tune === "falcon";   // unchanged
     })());
@@ -5036,14 +5192,15 @@ async function run(){
     let payload = null;
     const prevEnd = SF.game.onMissionEnd;
     SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
-    SF.game.startMission(6, "pilot");     // mission 7, the Jailer
+    const jailerAt = SF.missions.MISSIONS.findIndex(m => m.boss === "jailer");
+    SF.game.startMission(jailerAt, "pilot");
     SF.game.endMission(true);
     SF.game.onMissionEnd = prevEnd;
     check("a first boss clear flags the tune it won",
       payload && payload.firstClear === true &&
       payload.run.mission.boss === "jailer" &&
       SF.config.TUNES.some(t => t.unlockMission === payload.run.mission.id));
-    SF.game.startMission(6, "pilot");
+    SF.game.startMission(jailerAt, "pilot");
     payload = null;
     SF.game.onMissionEnd = r => { payload = r; prevEnd(r); };
     SF.game.endMission(true);

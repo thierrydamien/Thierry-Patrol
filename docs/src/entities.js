@@ -16,6 +16,49 @@ const { spreadPattern, fireRateMult } = SF.config;
 const fx = SF.fx;
 const audio = SF.audio;
 
+/* Pair keys for the tether, from a counter that only ever goes up - see
+   tetherPair. It is deliberately module-wide and never reset: a key must not
+   be reachable twice in one session, or a recycled pool slot could inherit a
+   live cable from a ship that died minutes ago. */
+let tetherSeq = 0;
+
+/** Do these two still agree they are joined, and is the joint still theirs? */
+function tetherLive(e){
+  const m = e.mate;
+  return !!(e.tetherKey && m && m.alive && m.mate === e && m.tetherKey === e.tetherKey);
+}
+
+/*
+ * THE SHAPE OF THE CABLE, in one place.
+ *
+ * It sags: a straight segment reads as geometry, as something a renderer drew,
+ * and a hanging curve reads as a physical object between two moving points.
+ * The slack grows with the span and then stops, so a wire across the whole
+ * field droops like a heavy one instead of folding in half.
+ *
+ * The collision pass and the painter BOTH come here, and that is the point. A
+ * wall that hurts where it is not drawn is the worst bug this mechanic could
+ * have, and the only way two copies of a curve stay identical is by not
+ * existing. Fills and returns `out` with the quadratic's three points.
+ */
+const TETHER_R = 5;                       // the cable's own half-width
+function tetherCurve(e, out){
+  const m = e.mate;
+  const L = Math.hypot(m.x - e.x, m.y - e.y) || 1;
+  const sag = Math.min(26, L*0.09) * 2;   // a quadratic dips half its control offset
+  out.x0 = e.x;  out.y0 = e.y;
+  out.cx = (e.x + m.x)/2; out.cy = (e.y + m.y)/2 + sag;
+  out.x1 = m.x;  out.y1 = m.y;
+  return out;
+}
+/** A point on that curve, 0 at one ship and 1 at the other. */
+function tetherAt(c, u, out){
+  const v = 1 - u;
+  out.x = v*v*c.x0 + 2*v*u*c.cx + u*u*c.x1;
+  out.y = v*v*c.y0 + 2*v*u*c.cy + u*u*c.y1;
+  return out;
+}
+
 /*
  * Playfield coordinate system.
  *
@@ -252,6 +295,33 @@ class World {
     this.haulers = [];     // the Convoy's escort targets
     this.silent = false;   // set per mission by startMission (noGuns runs)
     this.silentClock = 0; this.lastSilentShot = -99;
+    this.tethered = false; // set per mission: pairs fly joined by a live cable
+  }
+
+  /* ---------------- THE ANCHOR (the tether) ----------------
+   *
+   * Pairs of ships fly joined by a taut cable, and the cable is what hurts.
+   * The point is that it puts LINES in a sky that has only ever had points: a
+   * child stops reading the field as a list of targets and starts reading the
+   * GAPS between them. Shoot either end and the cable snaps, so there are
+   * always two answers - go round it, or cut it - and both are flying.
+   *
+   * The link has to survive the enemy pool, which recycles dead slots into new
+   * ships. Holding a bare reference to a partner means that the moment its
+   * slot is reused, a live cable reattaches itself to a completely unrelated
+   * enemy somewhere else on the screen. So every pair gets a KEY, drawn from a
+   * counter that only goes up, and a link is only believed if both ends still
+   * agree about it AND both still carry the key. A recycled slot has a
+   * different key (or none), so the cable reads as cut rather than as moved.
+   *
+   * One end of each pair is the LEAD: it owns the collision test and the
+   * drawing, so a cable is considered once per pair rather than once per ship.
+   */
+  tetherPair(a, b){
+    const key = ++tetherSeq;
+    a.tetherKey = b.tetherKey = key;
+    a.mate = b; b.mate = a;
+    a.tetherLead = true; b.tetherLead = false;
   }
 
   /* ---------------- THE HAULER (the Convoy) ----------------
@@ -843,6 +913,11 @@ class World {
     e.lockX = 0; e.lockY = 0;
     e.dodgeCool = 0; e.dodgeDir = 0; e.dodgeTimer = 0; e.tell = 0;
     e.arming = false; e.noSplit = false;
+    // The Anchor's cable. Exactly the bug this block exists for: a ship that
+    // died on the end of one would otherwise hand its link to whatever plain
+    // grunt inherited the slot, and a live cable would stretch away to a ship
+    // that was never tied to anything.
+    e.tetherKey = 0; e.mate = null; e.tetherLead = false;
     e.spin = 0; e.spinRate = rand(-1.6, 1.6);
     e.charge = 0; e.chargeTime = type.chargeTime || 2;
     e.dropTimer = 0; e.fuse = 0; e.healTarget = null;
@@ -867,6 +942,25 @@ class World {
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
       e.life += dt;
+
+      /*
+       * The snap. Shoot one end and the cable lets go - and it has to be SEEN
+       * letting go, because "the thing that was hurting me is gone" is the
+       * whole reward for choosing to cut rather than to dodge. Detected here
+       * rather than in the kill handler so it also covers an end that left the
+       * field, was eaten by a boss, or lost its slot to the pool.
+       *
+       * It fires from the SURVIVOR, not from the lead: the lead is as likely
+       * to be the end that just died, and a dead ship is not updated. Exactly
+       * one end notices, which is exactly one flourish. (If both go on the
+       * same frame nobody notices, and nobody should - there are already two
+       * explosions there.)
+       */
+      if(e.mate && !tetherLive(e)){
+        fx.sparks(e.x, e.y, 5, "#a5f3fc", 190);
+        fx.ring(e.x, e.y, 26, "#67e8f9", 2, 0.28);
+        e.mate = null; e.tetherKey = 0; e.tetherLead = false;
+      }
 
       // Safety leash: whatever an archetype's behaviour is, after 28 seconds
       // on the field it gives up and dives away. A mission only ends when the
@@ -1095,6 +1189,10 @@ class World {
 }
 
 SF.World = World;
+// The collision pass and the painter both need to ask "is this cable real?"
+// and "where exactly does it hang?", and both answers must come from the one
+// place that knows what a stale link looks like.
+SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
 SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();

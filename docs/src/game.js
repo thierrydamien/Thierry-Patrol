@@ -201,15 +201,21 @@ function buildTestRange(){
  * you've actually learned them. Shields recharge between rounds - lives
  * don't. Fixed PILOT difficulty so the family record means one thing.
  */
-const RUSH_ORDER = [
-  { missionId: 4,  boss: "marauder"  },
-  { missionId: 7,  boss: "jailer"    },
-  { missionId: 10, boss: "sentinel"  },
-  { missionId: 15, boss: "warden"    },
-  { missionId: 17, boss: "phantom"   },
-  { missionId: 20, boss: "leviathan" },
-  { missionId: 23, boss: "devourer"  },
-];
+/*
+ * The rush queue: the campaign's seven set-piece bosses, in campaign order.
+ *
+ * Derived, not listed - and it had to become derived. The hand-kept version
+ * named mission ids 4/7/10/15/17/20/23, which had not been true for several
+ * releases: the Sentinel was filed under the id of the level BEFORE it, so a
+ * pilot who had beaten the Sentinel was queued the wrong boss and a pilot who
+ * had only cleared the level before it was queued one they had never met. The
+ * menu's own copy of this list (RUSH_IDS in ui.js) was derived years ago for
+ * exactly this reason; this one was missed. Inserting a level would have
+ * shifted the wrong numbers one further along.
+ */
+const RUSH_BOSSES = ["marauder","jailer","sentinel","warden","phantom","leviathan","devourer"];
+const RUSH_ORDER = MISSIONS.filter(m => RUSH_BOSSES.indexOf(m.boss) >= 0)
+                           .map(m => ({ missionId: m.id, boss: m.boss }));
 function rushBossList(profile){
   return RUSH_ORDER.filter(r => profile.missions && profile.missions[r.missionId] &&
                                 profile.missions[r.missionId].cleared)
@@ -344,6 +350,10 @@ function startMission(missionIndex, difficultyId){
   game.world.mirror = !!mission.mirror;   // the Glass Sea: a second gun, far side
   game.world.wrap = !!mission.wrap;       // the Ring: the sky joins up at the edges
   game.world.wrapped = 0;
+  // The Anchor: a level flies cables if any of its waves ties a pair. Derived
+  // rather than declared, so a wave cannot quietly carry a `tether` on a level
+  // whose collision pass is switched off - the flag and the data can't drift.
+  game.world.tethered = !!(mission.waves && mission.waves.some(wv => wv.tether));
   SF.render.initBackground(custom ? (mission.skyIndex || 0)
                           : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
@@ -409,6 +419,7 @@ function startMission(missionIndex, difficultyId){
     // so a mission can make its own lesson its third star instead of asking
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
+    ropesCut: 0,
     stars: 0,
   };
 
@@ -842,6 +853,13 @@ const callbacks = {
      * farming adds - the mirror image of the bug that made it unreachable.
      */
     if(e.counted && !e.fromBoss){ run.stats.kills++; }
+    /*
+     * A rope is cut the moment one of its two ends dies - counted HERE rather
+     * than at the snap, because only this side knows the player did it. The
+     * snap itself also fires when an end flies off the bottom of the screen,
+     * and drifting away from a cable is not cutting it.
+     */
+    if(SF.tether.live(e)) run.stats.ropesCut++;
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
     // The Glass Sea: the twin earns its own tally, which is a whole star.

@@ -61,6 +61,16 @@ const OBJECTIVES = {
   nearMiss:  { label:"Cut 20 near misses", icon:"💨",
                test: s => (s.grazes || 0) >= 20,
                progress: s => (s.grazes || 0) + "/20" },
+  /*
+   * The Anchor's own star, and it deliberately pays for the OTHER answer.
+   * A cable has two solutions - fly round it, or shoot an end and cut it -
+   * and flying round is the one a child finds without being told. Six is a
+   * quarter of the ropes the level flies at its thinnest tier, so it is a
+   * nudge toward trying the second answer rather than a demand for it.
+   */
+  ropes:     { label:"Cut 6 ropes", icon:"✂️",
+               test: s => (s.ropesCut || 0) >= 6,
+               progress: s => (s.ropesCut || 0) + "/6" },
   eliteHunt: { label:"Destroy 8 elites", icon:"🌟",
                test: s => (s.elitesKilled || 0) >= 8,
                progress: s => (s.elitesKilled || 0) + "/8" },
@@ -418,8 +428,70 @@ const MISSIONS = [
     ],
     objectives: ["complete","wanted","rescueAll"],
   },
+  /*
+   * THE ANCHOR.
+   *
+   * The third stop, and the first level that is about where you are NOT.
+   *
+   * Missions 1 and 2 are both "put the ship under the thing and it dies" - the
+   * guns fire themselves, so up to here the whole game has been a reading
+   * exercise in points. This one puts LINES in the sky. Pairs fly out joined by
+   * a cable that costs a life to touch, and suddenly the enemies are not a list
+   * of targets, they are the posts holding up a fence: what a child has to read
+   * is the GAP. It is the last idea the campaign can teach before mission 4
+   * starts shooting back, and every dodging level after it is downstream of
+   * this one.
+   *
+   * The teaching order inside the level is the level:
+   *  - `line` first, and only ever four ships. Two short fences side by side,
+   *    slow, with the whole width of the field either side of them. You can
+   *    fly round without ever understanding what happened, which is the point:
+   *    nobody is punished for not having read the manual yet.
+   *  - Then `twinColumns`, which is the same flag and a completely different
+   *    problem - the pair spawns on OPPOSITE edges, so the cable is a wire
+   *    across the entire field and round is not available. That is the moment
+   *    the mechanic is actually taught, and it is taught by flying, not by a
+   *    sentence in the briefing.
+   *  - `sides` and `pincer` late, once cutting an end is an option a child has
+   *    thought of by themselves.
+   *
+   * Loose ships throughout, deliberately: an odd count leaves one untied, and
+   * a fence with a hole in it is more interesting than a fence.
+   *
+   * A new id, not a renumbering. Every star this family has ever earned is
+   * filed under a mission's `id`, so inserting a stop in the middle of the
+   * campaign has to leave all thirty-five of those numbers alone and take the
+   * next free one.
+   */
   {
-    id:3, name:"Return Fire", subtitle:"They shoot back",
+    id:3, name:"The Anchor", subtitle:"Mind the gap",
+    brief:"They fly in PAIRS, roped together with a live cable. The cable hurts - go round it, or shoot one end and watch it snap.",
+    goal:"Fly the gaps — or cut the rope!",
+    waves: [
+      // Two short fences, wide apart, slow. Round is free here.
+      w(1,   "grunt",  4, "line",  { tether:true }),
+      w(10,  "grunt",  6, "vee"),                        // a breather, and free kills
+      w(17,  "grunt",  4, "line",  { tether:true }),
+      // The lesson: a cable clean across the field. Round is gone.
+      w(26,  "grunt",  4, "twinColumns", { tether:true }),
+      w(34,  "carrier",1, "column"),                     // the rescue, on time as ever
+      w(40,  "grunt",  6, "arc"),
+      w(46,  "grunt",  6, "twinColumns", { tether:true }),
+      // An odd count: five ships, two ropes, one loose one. The hole moves.
+      w(55,  "grunt",  5, "line",  { tether:true }),
+      w(63,  "weaver", 6, "scatter"),                    // the old lesson, still marked
+      w(70,  "grunt",  6, "sides", { tether:true }),
+      w(78,  "carrier",1, "column"),
+      w(84,  "grunt",  8, "pincer", { tether:true }),
+      // The finale: two fences at once, and the only way through is a gap.
+      w(93,  "grunt",  6, "twinColumns", { tether:true }),
+      w(97,  "grunt",  6, "line",  { tether:true }),
+      w(106, "grunt", 10, "wall"),                       // and then just shooting again
+    ],
+    objectives: ["complete","ropes","rescueAll"],
+  },
+  {
+    id:4, name:"Return Fire", subtitle:"They shoot back",
     brief:"These ones stop and aim at you. Keep moving and they will miss - and out here the rocks are on your side: their shots cannot get through one.",
     goal:"They shoot back — hide behind rocks!",
     // Cover turns "they shoot back" from a dodging drill into a reason to
@@ -452,7 +524,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:4, name:"Heavy Metal", subtitle:"First boss",
+    id:5, name:"Heavy Metal", subtitle:"First boss",
     brief:"Brutes wear thick armour - Plasma Rounds chew through it. Then something HUGE shows up.",
     goal:"BOSS! Shoot the guns off its arms",
     waves: [
@@ -480,7 +552,7 @@ const MISSIONS = [
     objectives: ["complete","stripBoss","rescueAll"],
   },
   {
-    id:5, name:"Kamikaze Run", subtitle:"Dodge or die",
+    id:6, name:"Kamikaze Run", subtitle:"Dodge or die",
     brief:"Kamikazes pick a spot and rocket at it. Let them come close, THEN swerve - the closer you cut it, the more they pay. Every near miss is money.",
     goal:"Cut it fine — near misses pay!",
     // The lesson is nerve: waiting before the swerve. Paying for the graze is
@@ -512,7 +584,7 @@ const MISSIONS = [
     objectives: ["complete","nearMiss","rescueAll"],
   },
   {
-    id:6, name:"The Storm", subtitle:"Fly the wind",
+    id:7, name:"The Storm", subtitle:"Fly the wind",
     brief:"A nebula squall is tearing through the Belt. The wind comes in gusts - watch for the streaks, lean against the push, and don't let it shove you into a rock.",
     goal:"WIND! Watch the streaks, then lean",
     storm:true,
@@ -537,7 +609,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:7, name:"Prison Break", subtitle:"Rescue mission",
+    id:8, name:"Prison Break", subtitle:"Rescue mission",
     brief:"Those big ships have our friends locked inside. Blast them before they get away!",
     goal:"Free our friends from the ships!",
     waves: [
@@ -567,7 +639,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","killAll"],
   },
   {
-    id:8, name:"The Gauntlet", subtitle:"Elites inbound",
+    id:9, name:"The Gauntlet", subtitle:"Elites inbound",
     brief:"The gold glowing ones are elites. Really tough, but they pay FOUR times as much.",
     goal:"Gold ones are tough — and rich!",
     face:"brute", faceElite:true,     // the gold glowing ones ARE the level
@@ -600,7 +672,7 @@ const MISSIONS = [
     objectives: ["complete","eliteHunt","rescueAll"],
   },
   {
-    id:9, name:"The Convoy", subtitle:"Bring them home",
+    id:10, name:"The Convoy", subtitle:"Bring them home",
     brief:"One supply hauler is crossing to the front with everything the squadron needs. It can't dodge and it can't shoot back, and they are coming straight for it. Stay close and keep it alive all the way home.",
     goal:"GUARD our hauler — keep it alive!",
     convoy:true,
@@ -633,7 +705,7 @@ const MISSIONS = [
      * park in front of the door) and no carriers (the crates are this level's
      * cargo, and a level gets exactly one thing to carry).
      */
-    id:10, name:"The Lifeline", subtitle:"you are the delivery",
+    id:11, name:"The Lifeline", subtitle:"you are the delivery",
     brief:"The forward squadron is out of everything. There is no hauler left to send, so you are the hauler: grab each crate, fly it up to the green door, and let go. Take a hit and you will drop the load — it will hang there a moment before it starts to sink, so go back for it.",
     goal:"CARRY 4 crates to the green door",
     ferry:4,
@@ -657,7 +729,7 @@ const MISSIONS = [
     objectives: ["complete","delivered","kill80"],
   },
   {
-    id:11, name:"Sky Sentinel", subtitle:"Their flagship",
+    id:12, name:"Sky Sentinel", subtitle:"Their flagship",
     brief:"Everything they have in this sector, plus their giant flagship. You have got this.",
     goal:"BOSS! Knock its parts off",
     waves: [
@@ -721,7 +793,7 @@ const MISSIONS = [
    * objective even on the mission where you can't fire a shot.
    */
   {
-    id:12, name:"Silent Running", subtitle:"Guns down. Just fly.",
+    id:13, name:"Silent Running", subtitle:"Guns down. Just fly.",
     brief:"The Sentinel's last blast broke your guns! Sneak through the blockade while the crew fixes them - dodge everything, catch coins and drifting pilots.",
     goal:"Guns broken — just DODGE!",
     face:"swooper",                   // the thing you spend the level dodging
@@ -760,7 +832,7 @@ const MISSIONS = [
      combinations rather than introductions.
      ========================================================= */
   {
-    id:13, name:"The Wreck Line", subtitle:"Through the debris",
+    id:14, name:"The Wreck Line", subtitle:"Through the debris",
     brief:"The Sentinel left a whole field of scrap behind. Rocks do not shoot, and they do not move - but nothing they fire gets through one either. Put the scrap between you and their guns.",
     goal:"Fly the scrap — it stops their shots",
     cover:true,                       // the debris shelters as well as blocks
@@ -800,7 +872,7 @@ const MISSIONS = [
      * turrets patrolling a line, thieves you can cut off the short way. All
      * `sides` and `pincer`, so the fight lives at the edges.
      */
-    id:14, name:"The Ring", subtitle:"this sky has no edges",
+    id:15, name:"The Ring", subtitle:"this sky has no edges",
     brief:"Nobody has ever found the edge of this place. Fly out one side and you come straight back in the other, same height, still going. They cannot do it — their ships are built to hold a lane. You are not.",
     goal:"GO ROUND THE BACK — the sky joins up",
     wrap:true,
@@ -826,7 +898,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","roundTheBack"],
   },
   {
-    id:15, name:"The Rival", subtitle:"One of them is good",
+    id:16, name:"The Rival", subtitle:"One of them is good",
     brief:"One of their pilots has been shadowing us for weeks. She calls herself VESPER, she flies as well as you do, and today she is waiting. She copies whatever you do - so don't just chase her. Make her move, then shoot where she is GOING.",
     rival:true,
     face:"rival",
@@ -850,7 +922,7 @@ const MISSIONS = [
     goal:"VESPER copies you — trick her!",
   },
   {
-    id:16, name:"The Hatchery", subtitle:"It keeps growing",
+    id:17, name:"The Hatchery", subtitle:"It keeps growing",
     brief:"Hives spit out new ships forever. Kill the hive first and the rest stops coming.",
     goal:"Kill the big purple one first!",
     face:"hive",                      // kill the hive first - so show the hive
@@ -880,7 +952,7 @@ const MISSIONS = [
     objectives: ["complete","killAll","rescueAll"],
   },
   {
-    id:17, name:"The Warden", subtitle:"Their jailer",
+    id:18, name:"The Warden", subtitle:"Their jailer",
     brief:"This one lays mines instead of shooting. Blow the hatches off its sides and it runs out of them.",
     goal:"BOSS! Don't touch the mines",
     waves: [
@@ -914,7 +986,7 @@ const MISSIONS = [
    * one mission whose third star is greed itself.
    */
   {
-    id:18, name:"Their Treasury", subtitle:"Rob the robbers",
+    id:19, name:"Their Treasury", subtitle:"Rob the robbers",
     brief:"This is where they keep everything they stole - and a storm is tearing the vaults open! Chase every coin the wind throws loose, and watch the thieves who want them back.",
     // The weather remix: the Storm's gusts, six missions later, in a level
     // that's about CATCHING things - the wind blows the loot around, so the
@@ -957,7 +1029,7 @@ const MISSIONS = [
      * menders - nothing that asks you to prioritise a target, because the
      * level's whole cognitive load is your own ship handling badly.
      */
-    id:19, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
+    id:20, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
     brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
@@ -985,7 +1057,7 @@ const MISSIONS = [
     objectives: ["complete","shakenOff","rescueAll"],
   },
   {
-    id:20, name:"Cold Approach", subtitle:"Line up the shot",
+    id:21, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -1015,7 +1087,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","noDamage"],
   },
   {
-    id:21, name:"The Trench Run", subtitle:"Thread the walls",
+    id:22, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -1042,7 +1114,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:22, name:"All Hands", subtitle:"Everyone who is left",
+    id:23, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -1089,7 +1161,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:23, name:"The Bright Side", subtitle:"standing on their sun",
+    id:24, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -1117,7 +1189,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:24, name:"The Leviathan", subtitle:"The last one",
+    id:25, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -1156,7 +1228,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:25, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:26, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -1181,7 +1253,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","kill80"],
   },
   {
-    id:26, name:"The Long Dark", subtitle:"Something is out there",
+    id:27, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -1212,7 +1284,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:27, name:"The Devourer", subtitle:"The last star",
+    id:28, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -1237,7 +1309,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:28, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:29, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1280,7 +1352,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:29, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:30, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1312,7 +1384,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:30, name:"The Chorus", subtitle:"They fire on the beat",
+    id:31, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1354,7 +1426,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:31, name:"The Glass Sea", subtitle:"two of you",
+    id:32, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1385,7 +1457,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:32, name:"The Foundry", subtitle:"Stop the production line",
+    id:33, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1417,7 +1489,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:33, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:34, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1448,7 +1520,7 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:34, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:35, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
     goal:"The workshop is awake. Fly!",
     face:"rival",
@@ -1479,7 +1551,7 @@ const MISSIONS = [
      * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
      * owns the pencil veil, the last stroke and the squadron photo.
      */
-    id:35, name:"Sky 35", subtitle:"the one Papa never finished",
+    id:36, name:"Sky 36", subtitle:"the one Papa never finished",
     brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, coinRain:true,

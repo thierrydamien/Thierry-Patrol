@@ -567,7 +567,7 @@ function renderMenu(){
   for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
-  // The Wacky Sky opens once the basics are learned (mission 3 cleared).
+  // The Wacky Sky opens once the basics are learned - see wackyUnlocked.
   // Its sub is the score to beat - yours, or the leading brother's. The old
   // Daily Patrol bests carry straight over: same field, new party.
   {
@@ -575,7 +575,7 @@ function renderMenu(){
     $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("wackySub", !open ? "opens after Mission 3"
+    setSub("wackySub", !open ? "opens after Mission " + (WACKY_AFTER + 1)
       : rivals.length
         ? "beat " + (rivals[0].callsign || rivals[0].name) + "'s " +
           rivals[0].endlessBest.toLocaleString("en-US") + " pts"
@@ -586,7 +586,7 @@ function renderMenu(){
     const bosses = RUSH_IDS.filter(id => profile.missions && profile.missions[id] &&
                                          profile.missions[id].cleared).length;
     $("rushBtn").classList.toggle("locked", bosses === 0);
-    setSub("rushSub", bosses === 0 ? "beat the Mission 4 boss first"
+    setSub("rushSub", bosses === 0 ? "beat the Mission " + (RUSH_AFTER + 1) + " boss first"
       : bosses + " boss" + (bosses > 1 ? "es" : "") + " in the queue · best " +
         (profile.bossRushBest || 0) + " down");
   }
@@ -1152,6 +1152,7 @@ const FACE_KINDS = {
   coins:   { c0:"#ffc451", c1:"#6b4a09" },   // a coin run
   rescue:  { c0:"#4bd6a0", c1:"#0e4436" },   // pull everyone out
   rocks:   { c0:"#b09a86", c1:"#3a2e24" },   // debris fields, nothing shoots
+  anchor:  { c0:"#22d3ee", c1:"#0b3a44" },   // The Anchor: cables, and the gaps
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1275,6 +1276,11 @@ function missionFace(m){
              : m.convoy ? "escort"
              : m.blackout ? "dark"
              : (totalN > 0 && rockN/totalN >= 0.3) ? "rocks"
+             // A tether level is all grunts by design - the mechanic is the
+             // level, not the roster - so the heuristic would file it as a
+             // plain fight next to the two stops either side of it. The cable
+             // is what it is about, so the cable picks the colour.
+             : m.waves.some(wv => wv.tether) ? "anchor"
              : (obj.includes("rescueAll") && rescueCount(m) >= 4) ? "rescue"
              : "fight";
   return (faceCache[m.id] = Object.assign({ enemy, kind, elite: !!m.faceElite },
@@ -1358,36 +1364,42 @@ function campaignLayout(){
  * `at` is the first node index in the stretch; the last is the next entry's
  * `at` minus one (see sectorStats).
  */
+/*
+ * The stops are INDICES into MISSIONS, so inserting a level shifts every
+ * boundary after it. The Anchor went in at stop 3 and HOME PATROL grew to hold
+ * it, which is where it belongs anyway: "our own sky, and how to fly in it" is
+ * exactly what fly, then lead a moving one, then read the gap adds up to.
+ */
 const SECTORS = [
   { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
-    sub:"our own sky, and how to fly in it" },              // 1-2
-  { at:2,  name:"THE BELT",        hue:"#f5a623",
-    sub:"rocks, raiders and the first big one" },           // 3-5
-  { at:5,  name:"THE STORM",       hue:"#7cc4ff",
-    sub:"wild wind, and friends to get out" },              // 6-7
-  { at:7,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
-    sub:"guard the hauler, then carry the load yourself" }, // 8-11
-  { at:11, name:"ENEMY SPACE",     hue:"#f472b6",
-    sub:"behind their lines, where nobody is friendly" },   // 12-15
-  { at:15, name:"WARDEN'S REACH",  hue:"#34d399",
-    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 16-19
-  { at:19, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 20-22
+    sub:"our own sky, and how to fly in it" },              // 1-3
+  { at:3,  name:"THE BELT",        hue:"#f5a623",
+    sub:"rocks, raiders and the first big one" },           // 4-6
+  { at:6,  name:"THE STORM",       hue:"#7cc4ff",
+    sub:"wild wind, and friends to get out" },              // 7-8
+  { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
+    sub:"guard the hauler, then carry the load yourself" }, // 9-12
+  { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
+    sub:"behind their lines, where nobody is friendly" },   // 13-16
+  { at:16, name:"WARDEN'S REACH",  hue:"#34d399",
+    sub:"his nest, his ring, his money — and what crawled aboard after" }, // 17-20
+  { at:20, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 21-23
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:22, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 23-24
-  { at:24, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 25-27
-  { at:27, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 28-31
-  { at:31, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 32-34
-  { at:34, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 35
+  { at:23, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 24-25
+  { at:25, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 26-28
+  { at:28, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 29-32
+  { at:32, name:"THE WORKSHOP",    hue:"#22d3ee",
+    sub:"behind the sky, where skies get made" },           // 33-35
+  { at:35, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 36
 ];
 
 /*
@@ -4223,8 +4235,19 @@ function drawBriefHero(index){
     hull: profile.hull });
 }
 
+/*
+ * The Wacky Sky opens once the basics are taught: fly, lead a moving one, read
+ * a gap, and then be shot at. That is the fourth stop.
+ *
+ * Derived from the campaign rather than written as a number, for the reason
+ * the note on RUSH_IDS below already gives - the hand-kept copy drifts. Two
+ * levels have been inserted ahead of this gate over the game's life, and each
+ * time the literal "3" quietly came to mean a different mission.
+ */
+const WACKY_AFTER = 3;                       // stop four, by index
 function wackyUnlocked(p){
-  const rec = p && p.missions && p.missions[3];
+  const m = MISSIONS[WACKY_AFTER];
+  const rec = m && p && p.missions && p.missions[m.id];
   return !!(rec && rec.cleared);
 }
 
@@ -4232,8 +4255,11 @@ function wackyUnlocked(p){
 // not listed: the hand-kept copy had drifted to pre-Act-3 mission numbers, so
 // the menu was counting ordinary clears as bosses in the queue.
 const RUSH_IDS = MISSIONS.filter(m => m.boss && ["marauder","jailer","sentinel","warden","phantom","leviathan","devourer"].includes(m.boss)).map(m => m.id);
+/* Boss Rush opens on the campaign's FIRST boss, whichever stop that is. */
+const RUSH_AFTER = MISSIONS.findIndex(m => RUSH_IDS.indexOf(m.id) >= 0);
 function rushUnlocked(p){
-  const rec = p && p.missions && p.missions[4];
+  const m = MISSIONS[RUSH_AFTER];
+  const rec = m && p && p.missions && p.missions[m.id];
   return !!(rec && rec.cleared);
 }
 
