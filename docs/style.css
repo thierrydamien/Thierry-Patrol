@@ -1451,9 +1451,15 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .tune-row.two-col { grid-template-columns: repeat(2, 1fr); }
 .tune-card em.good { color:#4ade80; }
 .tune-card em.bad { color:#ff8a80; }
+/* The call to action sits on the card's bottom edge, not under the last bullet.
+   Cards in a row stretch to the tallest, and the Dart has two lines where the
+   Anvil has five - so "tap to fly" floated in the middle of its own card with
+   a thumb's worth of dead space beneath it, while the price on the card beside
+   it sat at the floor. `margin-top:auto` puts every one of them on the same
+   line, which is also the line a thumb goes looking for. */
 .tune-card u {
   text-decoration:none; font-size:10px; font-weight:700; letter-spacing:1px;
-  margin-top:4px; color: rgba(255,255,255,0.55);
+  margin-top:auto; padding-top:5px; color: rgba(255,255,255,0.55);
 }
 .tune-card.on u { color:#3fc9ff; }
 .tune-card.tlocked { opacity:0.5; }

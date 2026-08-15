@@ -114,12 +114,16 @@ function buildLoadout(profile, difficulty){
     callsign: m.callsign || m.name, color: m.shipColor, levels: SF.shipart.levelsOf(m),
     pilot: { name: m.name, avatar: m.avatar, shipColor: m.shipColor, badge: m.badge },
   }));
+  // The hull is the chassis; the tune is the engine map. They multiply.
+  const hull = SF.shipart.hullOf(profile.hull);
   return {
     crew,
-    lives: 3 + lv("life") + difficulty.bonusLives + tune.lives,
-    shieldMax: lv("shield"),
-    invulnTime: (1.7 + lv("armor")*0.6) * (tune.invuln || 1),
-    speedMult: (1 + lv("thrusters")*0.14) * tune.speed,
+    hull: hull.id,
+    hitR: hull.r,
+    lives: 3 + lv("life") + difficulty.bonusLives + tune.lives + hull.lives,
+    shieldMax: lv("shield") + hull.shield,
+    invulnTime: (1.7 + lv("armor")*0.6) * (tune.invuln || 1) * (hull.invuln || 1),
+    speedMult: (1 + lv("thrusters")*0.14) * tune.speed * hull.speed,
     fireInterval: 0.30 * SF.config.fireRateMult(lv("rapid")) * tune.fire,
     spreadLvl: lv("spread"),
     damage: 1 + lv("damage"),

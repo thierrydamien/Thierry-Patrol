@@ -526,7 +526,7 @@ function renderProfiles(){
     if(ctx){
       SF.shipart.drawShip(ctx, 66, 68, 108,
         { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false,
-          tune: p.tune, decal: p.decal });
+          tune: p.tune, hull: p.hull, decal: p.decal });
       // With an installed portrait, the pilot rides their card's corner.
       SF.pilotart.paint(ctx, 24, 24, 44, p);
     }
@@ -643,7 +643,7 @@ function drawMenuIcons(){
 
   paint("playBtn", c => {
     SF.shipart.drawShip(c, 38, 40, 58,
-      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0, tune: profile.tune });
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0, tune: profile.tune, hull: profile.hull });
   });
 
   paint("wackyBtn", c => {              // a tumbling die, mid-roll
@@ -2344,7 +2344,7 @@ function drawCampaign(){
   const side = here.x > 0.5 ? 1 : -1;
   const bob = Math.sin(t*1.4)*3;
   SF.shipart.drawShip(ctx, px(here) + side*84, py(here) + 30 + bob, 52, {
-    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t, tune: profile.tune,
+    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t, tune: profile.tune, hull: profile.hull,
     decal: profile.decal,
   });
   ctx.textAlign = "left";
@@ -2601,7 +2601,7 @@ function renderPaintTab(panel){
   mine.appendChild(mcv);
   const mc = mcv.getContext("2d");
   if(mc) SF.shipart.drawShip(mc, 60, 46, 66,
-    { color: profile.shipColor, levels, t: 0.6, tune: profile.tune,
+    { color: profile.shipColor, levels, t: 0.6, tune: profile.tune, hull: profile.hull,
       decal: profile.paintjob || null });
   const mnm = document.createElement("div");
   mnm.className = "paint-name"; mnm.textContent = "MY OWN PAINT";
@@ -2653,7 +2653,7 @@ function renderPaintTab(panel){
     card.appendChild(cv);
     const c = cv.getContext("2d");
     if(c) SF.shipart.drawShip(c, 60, 46, 66,
-      { color: hex, levels, t: 0.6, tune: profile.tune, decal: profile.decal });
+      { color: hex, levels, t: 0.6, tune: profile.tune, hull: profile.hull, decal: profile.decal });
     const nm = document.createElement("div");
     nm.className = "paint-name";
     nm.textContent = name;
@@ -2707,7 +2707,7 @@ function renderPaintTab(panel){
       const hue = Math.round(t * 360);
       SF.shipart.drawShip(c, 60, 46, 66,
         { color: "hsl(" + hue + " 90% 62%)", levels, t: 0.6,
-          tune: profile.tune, decal: profile.decal });
+          tune: profile.tune, hull: profile.hull, decal: profile.decal });
     }
     const nm = document.createElement("div");
     nm.className = "paint-name";
@@ -2798,7 +2798,7 @@ function renderPaintTab(panel){
     card.appendChild(cv);
     const c = cv.getContext("2d");
     if(c) SF.shipart.drawShip(c, 60, 46, 66,
-      { color: profile.shipColor, levels, t: 0.6, tune: profile.tune, decal: dc.id });
+      { color: profile.shipColor, levels, t: 0.6, tune: profile.tune, hull: profile.hull, decal: dc.id });
     const nm = document.createElement("div");
     nm.className = "paint-name"; nm.textContent = dc.name;
     card.appendChild(nm);
@@ -2914,7 +2914,7 @@ function openMixer(){
     c.clearRect(0, 0, cv.width, cv.height);
     SF.shipart.drawShip(c, cv.width/2, cv.height/2 + 6, 108,
       { color: inC.value, levels: SF.shipart.levelsOf(profile), t: 0.6,
-        tune: profile.tune, decal: profile.decal });
+        tune: profile.tune, hull: profile.hull, decal: profile.decal });
   };
   buy.textContent = "BUY IT — " + money(SF.config.MIX_COST);
   inC.oninput = draw;
@@ -3041,7 +3041,7 @@ function drawEasel(){
   ctx.clearRect(0, 0, W, H);
   // The pilot's real ship, zoomed to the band, held still under the grid.
   SF.shipart.drawShip(ctx, ox, oy, S, { color: profile.shipColor,
-    levels: SF.shipart.levelsOf(profile), t: 0.35, idle: false, tune: profile.tune });
+    levels: SF.shipart.levelsOf(profile), t: 0.35, idle: false, tune: profile.tune, hull: profile.hull });
   // Dim what isn't paintable, so the easel reads ship-shaped.
   ctx.fillStyle = "rgba(4,8,18,0.62)";
   for(let r = 0; r < PJ.ROWS; r++)
@@ -3065,7 +3065,7 @@ function drawEasel(){
     pc.clearRect(0, 0, pv.width, pv.height);
     SF.shipart.drawShip(pc, pv.width/2, pv.height/2 + 4, 52,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
-        t: 0.35, idle: false, tune: profile.tune, decal: str || null });
+        t: 0.35, idle: false, tune: profile.tune, hull: profile.hull, decal: str || null });
   }
 }
 
@@ -3084,7 +3084,66 @@ function tuneUnlocked(t){
     !!((profile.missions && profile.missions[t.unlockMission] || {}).cleared);
 }
 
+/*
+ * THE AIRFRAME SHELF.
+ *
+ * Chassis first, engine map second - that is the order they matter in, and
+ * they multiply. The Anvil is the first thing in the game that costs five
+ * figures, which is the point: it is what a family with a finished shop and
+ * a full wallet finally has something to save for.
+ */
+function renderHullShelf(panel){
+  const wrap = document.createElement("div");
+  wrap.className = "tune-wrap";
+  wrap.innerHTML = `<label class="panel-label">AIRFRAME</label>
+    <p class="tune-how">The ship itself. The chassis you fly and the tune you
+    fit are two different things, and they <b>stack</b>.</p>`;
+  const row = document.createElement("div");
+  row.className = "tune-row two-col";
+  SF.shipart.HULLS.forEach(h => {
+    const owns = (profile.hulls || ["dart"]).indexOf(h.id) >= 0;
+    const on = (profile.hull || "dart") === h.id;
+    const card = document.createElement("button");
+    card.className = "tune-card" + (on ? " on" : "") + (owns ? "" : " tlocked");
+    const lines =
+      h.pros.map(x => `<em class="good">▲ ${esc(x)}</em>`).join("") +
+      h.cons.map(x => `<em class="bad">▼ ${esc(x)}</em>`).join("");
+    card.innerHTML = `<canvas class="tc-ship" width="96" height="96"></canvas><b>${esc(h.name)}</b>
+      <span>${esc(h.blurb)}</span>${lines}
+      <u>${on ? "FLYING IT ✓" : owns ? "tap to fly" : money(h.cost)}</u>`;
+    fillGlyphs(card, null, "rgba(255,255,255,0.6)", 12);
+    // Your colour, your parts, your tune - on that airframe. The most honest
+    // preview there is, and the only way to see the difference before buying.
+    const hc = card.querySelector(".tc-ship").getContext("2d");
+    if(hc) SF.shipart.drawShip(hc, 48, 50, 72,
+      { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
+        t: 0.8, idle: false, tune: profile.tune, hull: h.id });
+    click(card, () => {
+      if(on) return;
+      if(!owns){
+        if(profile.money < h.cost){
+          queueToast({ glyph:"lock", label:"NOT YET",
+                       name:"Save " + money(h.cost - profile.money) + " more for " + h.name });
+          audio.play("error");
+          return;
+        }
+        profile.money -= h.cost;
+        profile.hulls = (profile.hulls || ["dart"]).concat([h.id]);
+        audio.play("uiBuy");
+      } else audio.play("uiClick");
+      profile.hull = h.id;
+      P.save(profile);
+      hangar.celebrate = performance.now();
+      renderArmory(); renderMenu();
+    });
+    row.appendChild(card);
+  });
+  wrap.appendChild(row);
+  panel.appendChild(wrap);
+}
+
 function renderPartsTab(panel){
+  renderHullShelf(panel);
   const wrap = document.createElement("div");
   wrap.className = "tune-wrap";
   wrap.innerHTML = `<label class="panel-label">FLIGHT TUNING</label>
@@ -3110,7 +3169,7 @@ function renderPartsTab(panel){
     const tc = card.querySelector(".tc-ship").getContext("2d");
     if(tc) SF.shipart.drawShip(tc, 48, 50, 72,
       { color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
-        t: 0.8, idle: false, tune: t.id });
+        t: 0.8, idle: false, tune: t.id, hull: profile.hull });
     click(card, () => {
       if(!open){
         queueToast({ glyph:"lock", name:"Beat Mission " + t.unlockMission + "'s boss to win " + t.name,
@@ -3653,7 +3712,7 @@ function drawHangar(dt){
     A.drawShip(ctx, W*0.28, cy, Math.min(W*0.27, H*0.54), {
       color: profile.shipColor, levels: {}, t: hangar.t });
     A.drawShip(ctx, W*0.72, cy, Math.min(W*0.27, H*0.54), {
-      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune,
+      color: profile.shipColor, levels, t: hangar.t, tune: profile.tune, hull: profile.hull,
       decal: profile.decal });
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
@@ -3670,7 +3729,7 @@ function drawHangar(dt){
       ? Math.sin((sh.t)*18)*1.5 - 4 : 0;
     padShadow(g2.x, g2.y + S*0.14, S*0.55);
     A.drawShip(ctx, g2.x, g2.y + strain, S, {
-      color: profile.shipColor, levels: wear, t: hangar.t, tune: profile.tune,
+      color: profile.shipColor, levels: wear, t: hangar.t, tune: profile.tune, hull: profile.hull,
       decal: profile.decal,
       ghost: next ? next.id : null,
       mateColor: (P.squadmates(profile.name)[0] || {}).shipColor,
@@ -3769,7 +3828,21 @@ function renderShipSpecs(){
   const now = SF.game.buildLoadout(profile, diff);
   const maxed = P.blank("__max");
   SF.config.UPGRADES.forEach(u => { maxed.upgrades[u.id] = u.max; });
-  const top = SF.game.buildLoadout(maxed, diff);
+  /*
+   * The ceiling is measured across every AIRFRAME, not just the Dart. The
+   * Anvil's extra life and shield put a fitted-out ship past a Dart-only
+   * maximum, and a bar already pinned at full cannot show the next purchase
+   * landing - which is the one job this panel has.
+   */
+  const tops = SF.shipart.HULLS.map(h =>
+    SF.game.buildLoadout(Object.assign({}, maxed, { hull: h.id }), diff));
+  const top = {
+    dps:          Math.max.apply(null, tops.map(t => t.dps)),
+    fireInterval: Math.min.apply(null, tops.map(t => t.fireInterval)),
+    speedMult:    Math.max.apply(null, tops.map(t => t.speedMult)),
+    lives:        Math.max.apply(null, tops.map(t => t.lives)),
+    shieldMax:    Math.max.apply(null, tops.map(t => t.shieldMax)),
+  };
 
   const rows = [
     // Each bar wears its own shelf's colour. They shared one blue-violet
@@ -4136,7 +4209,8 @@ function drawBriefHero(index){
   ctx.fillStyle = lift;
   ctx.fillRect(0, 0, W, H);
   SF.shipart.drawShip(ctx, W*0.75, H*0.56, 128, {
-    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0.7, idle:false });
+    color: profile.shipColor, levels: SF.shipart.levelsOf(profile), t: 0.7, idle:false,
+    hull: profile.hull });
 }
 
 function wackyUnlocked(p){
@@ -4386,11 +4460,13 @@ function renderLeaderboard(){
     if(c){
       if(SF.pilotart.has(p.name)){
         SF.shipart.drawShip(c, 48, 56, 74,
-          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false,
+            hull: p.hull });
         SF.pilotart.paint(c, 48, 18, 34, p);
       } else {
         SF.shipart.drawShip(c, 48, 50, 84,
-          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false });
+          { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false,
+            hull: p.hull });
       }
     }
     SF.insignia.mount(step.querySelector(".ps-badge"), P.badgeFor(p), p.shipColor, 26);

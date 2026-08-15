@@ -276,7 +276,11 @@ const MAX_FIELDS = ["highscore", "totalKills", "bossesDefeated", "maxCombo",
                     "lifetimeMoney", "rescues", "missionsCompleted",
                     "flawlessMissions", "powerupsCollected"];
 const OR_FIELDS  = ["vaultDone", "sky29Done"];
-const SET_FIELDS = ["achievements"];
+// Owned airframes live at the top level rather than under `cosmetics`, because
+// a hull is a chassis with stats and not a coat of paint - but it merges the
+// same way. Without this it rode the newest-wins default and a 30,000 hull
+// bought on the phone vanished the next time the tablet saved.
+const SET_FIELDS = ["achievements", "hulls"];
 const COSMETIC_SETS = ["paints", "trails", "decals", "fireworks", "customs"];
 
 function unionList(a, b){

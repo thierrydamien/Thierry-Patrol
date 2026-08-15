@@ -479,7 +479,7 @@ function drawPlayer(ctx, p, timeMs){
   // bought part bolted on and visible in combat.
   SF.shipart.drawShip(ctx, 0, 0, size, {
     color: p.color, levels: p.levels, t: timeMs/1000, idle: false, tune: p.tune,
-    decal: p.decal,
+    decal: p.decal, hull: p.hull,
   });
   ctx.restore();
 

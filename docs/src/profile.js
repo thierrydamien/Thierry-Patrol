@@ -135,6 +135,8 @@ function blank(name){
     stories: {},
     // Pre-flight kit: supply ids bought on the briefing, consumed at launch.
     kit: [],
+    // The airframe. Everyone starts on the one the family has always flown.
+    hull: "dart", hulls: ["dart"],
   };
 }
 
@@ -186,6 +188,9 @@ function migrate(p){
   if(!p.upgrades || typeof p.upgrades !== "object") p.upgrades = {};
   if(!p.missions || typeof p.missions !== "object") p.missions = {};
   if(!p.tune || !SF.config.TUNE_BY_ID[p.tune]) p.tune = "vanguard";
+  if(!Array.isArray(p.hulls) || !p.hulls.length) p.hulls = ["dart"];
+  // A hull you do not own cannot be flown - the same rule the tunes follow.
+  if(!p.hull || p.hulls.indexOf(p.hull) < 0) p.hull = "dart";
   // NOTE: the earned-tune check (a tune whose boss hasn't been beaten falls
   // back to vanguard) lives BELOW the mission-id shifts - it reads mission
   // records, so it must see them at their final ids.

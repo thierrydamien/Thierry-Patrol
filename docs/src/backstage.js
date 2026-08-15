@@ -986,6 +986,7 @@ function drawActors(ctx, timeMs){
       levels: SF.shipart.levelsOf(SF.game.profile),
       t: m.t, idle: false,
       tune: SF.game.profile && SF.game.profile.tune,
+      hull: SF.game.profile && SF.game.profile.hull,
     });
     ctx.restore();
     if(m.flash > 0){

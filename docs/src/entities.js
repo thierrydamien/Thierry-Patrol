@@ -333,7 +333,10 @@ class World {
     const p = {
       x: VW/2, y: VH - 120, vx: 0, vy: 0,
       targetX: VW/2, targetY: VH - 120,
-      r: 11, bank: 0,
+      // The airframe's own hitbox: the Anvil is a bigger thing to hit, and
+      // that single number is most of what the choice between hulls means.
+      r: loadout.hitR || 11, bank: 0,
+      hull: loadout.hull || "dart",
       alive: true,
       lives: loadout.lives, maxLives: loadout.lives,
       shield: loadout.shieldMax, shieldMax: loadout.shieldMax,

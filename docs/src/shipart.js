@@ -562,9 +562,9 @@ const TUNE_ART = {
  * tall is a big simple shape. Drawn last, over every bought part, and
  * clipped to the hull silhouette so paint never floats off the metal.
  */
-function hullClip(ctx, S){
+function hullClip(ctx, S, hullId){
   ctx.beginPath();
-  HULL_POLY.forEach(([x, y], i) => {
+  hullOf(hullId).outline.forEach(([x, y], i) => {
     if(i === 0) ctx.moveTo(x*S, y*S); else ctx.lineTo(x*S, y*S);
   });
   ctx.closePath();
@@ -577,8 +577,8 @@ const LIVERY_ART = {
    * disappeared into them at flight size. The border is what makes it read
    * on ANY paint colour.
    */
-  stripes(ctx, S){
-    ctx.save(); hullClip(ctx, S);
+  stripes(ctx, S, hullId){
+    ctx.save(); hullClip(ctx, S, hullId);
     // Moved OUT to leave a channel down the spine. They used to run
     // -0.145..0.145 with a 0.04 gap, which is narrower than the canopy - so
     // the one baked highlight on the hull, the thing that makes it read as a
@@ -594,8 +594,8 @@ const LIVERY_ART = {
   /** Flames licking up from the tail - orange over red over yellow.
    *  Widths reach the wingtips: the clip is the real hull now, so a narrow
    *  flame would stop visibly short of the edge it used to be eaten by. */
-  flames(ctx, S){
-    ctx.save(); hullClip(ctx, S);
+  flames(ctx, S, hullId){
+    ctx.save(); hullClip(ctx, S, hullId);
     const tongue = (col, w, h, dy) => {
       ctx.fillStyle = col;
       ctx.beginPath();
@@ -615,8 +615,8 @@ const LIVERY_ART = {
     ctx.restore();
   },
   /** One enormous lightning bolt across the entire hull. */
-  bolt(ctx, S){
-    ctx.save(); hullClip(ctx, S);
+  bolt(ctx, S, hullId){
+    ctx.save(); hullClip(ctx, S, hullId);
     ctx.fillStyle = "#ffd23f";
     ctx.strokeStyle = "rgba(90,50,0,0.75)";
     ctx.lineWidth = S*0.022;
@@ -633,8 +633,8 @@ const LIVERY_ART = {
     ctx.restore();
   },
   /** A chequered flag band right across the middle - wingtip to wingtip. */
-  checkers(ctx, S){
-    ctx.save(); hullClip(ctx, S);
+  checkers(ctx, S, hullId){
+    ctx.save(); hullClip(ctx, S, hullId);
     const cell = S*0.115, y0 = -S*0.12;
     for(let r = 0; r < 4; r++){
       for(let c = 0; c < 8; c++){
@@ -679,7 +679,7 @@ function drawShip(ctx, cx, cy, size, opts){
   const tuneArt = TUNE_ART[opts.tune];
   behind.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
   if(tuneArt && tuneArt.behind){ ctx.save(); tuneArt.behind(ctx, S, o); ctx.restore(); }
-  drawHull(ctx, S, o.color);
+  drawHull(ctx, S, o.color, opts.hull);
   front.forEach(p => { ctx.save(); p.draw(ctx, S, o); ctx.restore(); });
   if(tuneArt && tuneArt.front){ ctx.save(); tuneArt.front(ctx, S, o); ctx.restore(); }
   // The livery goes on over every bought part: paint you can't see under a
@@ -689,7 +689,7 @@ function drawShip(ctx, cx, cy, size, opts){
     if(SF.paintjob && SF.paintjob.isCustom(opts.decal)){
       SF.paintjob.paint(ctx, S, opts.decal);
     } else if(LIVERY_ART[opts.decal]){
-      ctx.save(); LIVERY_ART[opts.decal](ctx, S); ctx.restore();
+      ctx.save(); LIVERY_ART[opts.decal](ctx, S, opts.hull); ctx.restore();
     }
   }
 
@@ -735,6 +735,53 @@ const WING = [
 const FIN = [0.052, 0.245,  0.150, 0.420,  0.052, 0.360];
 
 /*
+ * THE SECOND AIRFRAME, AND WHY IT IS SHAPED THE WAY IT IS.
+ *
+ * Twenty-one parts bolt onto this ship, and every one of them has offsets
+ * hand-tuned to the silhouette above - Twin Barrels sit at 0.10, -0.54
+ * because that is where THIS nose is. Drop those parts onto a differently
+ * proportioned hull and the guns float off the front and the plating hangs
+ * in air.
+ *
+ * So the two hulls share a SKELETON. The nose tip, the wing roots, the
+ * wingtips and the tail sit at the same normalised coordinates on both, and
+ * only the shape BETWEEN those anchors changes: the Anvil has a broad slab
+ * fuselage where the Dart has a slim one, and a straight delta where the
+ * Dart is swept. Every part lands correctly on both with nothing re-tuned,
+ * and the two still read as different aircraft at a glance.
+ *
+ * The cost of that choice is honest: it constrains any future hull to the
+ * same anchors. A genuinely different layout - a twin-boom, say - would need
+ * the parts refactored onto named anchors first.
+ */
+const ANVIL_BODY = [
+   0.060,-0.500, 0.108,-0.470,
+   0.150,-0.395,  0.196,-0.300,  0.226,-0.200,  0.242,-0.100,
+   0.248,-0.005,  0.244, 0.100,  0.232, 0.205,  0.180, 0.305,  0.132, 0.360,
+  -0.132, 0.360, -0.180, 0.305, -0.232, 0.205, -0.244, 0.100, -0.248,-0.005,
+  -0.242,-0.100, -0.226,-0.200, -0.196,-0.300, -0.150,-0.395,
+  -0.108,-0.470, -0.060,-0.500,
+];
+// A straight delta: same tips, no sweep-back in the trailing edge.
+const ANVIL_WING = [
+   0,    -0.130,
+   0.190,-0.010,  0.460, 0.185,  0.415, 0.290,  0.236, 0.262,
+   0,     0.300,
+  -0.236, 0.262, -0.415, 0.290, -0.460, 0.185, -0.190,-0.010,
+];
+const ANVIL_FIN = [0.070, 0.245,  0.150, 0.420,  0.070, 0.372];
+const ANVIL_POLY = [
+  [0.060, -0.500], [0.108, -0.470],
+  [0.196, -0.300], [0.242, -0.100], [0.248, -0.005],
+  [0.460, 0.185], [0.415, 0.290], [0.236, 0.262],
+  [0.180, 0.305], [0.150, 0.420], [0.075, 0.400],
+  [-0.075, 0.400], [-0.150, 0.420], [-0.180, 0.305],
+  [-0.236, 0.262], [-0.415, 0.290], [-0.460, 0.185],
+  [-0.248, -0.005], [-0.242, -0.100], [-0.196, -0.300],
+  [-0.108, -0.470], [-0.060, -0.500],
+];
+
+/*
  * The outer silhouette - the union of BODY, WING and FIN above, traced once.
  * This is what liveries and the kid's own paint are clipped to, and what the
  * easel mask is built from (see paintjob.js). One polygon, two readers - they
@@ -749,6 +796,36 @@ const HULL_POLY = [
   [-0.120, 0.242], [-0.415, 0.290], [-0.460, 0.185],
   [-0.133, -0.022], [-0.128, -0.125], [-0.088, -0.325],
 ];
+
+/*
+ * HULLS. `id` is stored on the profile; everything else is art or stats.
+ * The stat block is read by buildLoadout - the hull is the chassis, the tune
+ * is the engine map, and they multiply.
+ *
+ * There is deliberately no damage stat here. Bullet damage is a small INTEGER
+ * - it picks the shot's art tier as well as its bite - so a chassis multiplier
+ * has nothing to round into at the bottom of the track: the Anvil's first
+ * draft advertised "+15% damage" and delivered exactly nothing until the
+ * cannon was three levels up. A card that lies for the first half of the game
+ * is worse than a card with one less line, so the Anvil trades in the currency
+ * it actually deals in - staying alive.
+ */
+const HULLS = [
+  { id:"dart", name:"THE DART", cost:0,
+    blurb:"The ship the family has always flown. Slim, quick, and a small thing to hit.",
+    pros:["small target","quickest hull"], cons:[],
+    body:BODY, wing:WING, fin:FIN, outline:HULL_POLY,
+    r:11, lives:0, shield:0, speed:1.00, invuln:1.00 },
+  { id:"anvil", name:"THE ANVIL", cost:30000,
+    blurb:"Twice the shoulders and a plate for a nose. Slower, and a much easier thing to hit - but it takes a beating and gets straight back up.",
+    pros:["+1 life","+1 shield","+30% recovery"], cons:["bigger target","-12% speed"],
+    body:ANVIL_BODY, wing:ANVIL_WING, fin:ANVIL_FIN, outline:ANVIL_POLY,
+    r:14, lives:1, shield:1, speed:0.88, invuln:1.30 },
+];
+const HULL_BY_ID = {};
+HULLS.forEach(h => { HULL_BY_ID[h.id] = h; });
+/** Whatever was asked for, or the one everybody already flies. */
+function hullOf(id){ return HULL_BY_ID[id] || HULLS[0]; }
 
 function poly(ctx, pts, S){
   ctx.beginPath();
@@ -810,7 +887,9 @@ function canopy(ctx, x, y, rx, ry){
 }
 
 /** Everything static about the hull, painted at size S. Bake-time only. */
-function paintHull(ctx, S, p, withText){
+function paintHull(ctx, S, p, withText, hullId){
+  const H = hullOf(hullId);
+  const BODY = H.body, WING = H.wing, FIN = H.fin;
   const paint = paintGrad(ctx, S, p);
   const metal = metalGrad(ctx, S);
 
@@ -921,11 +1000,11 @@ function paintHull(ctx, S, p, withText){
 const TEXT_MIN = 90;        // below this the wing lettering is only smudge
 const HULL_PAD = 0.10;      // fraction of S kept clear around the box
 const hullCache = new Map();
-function hullSprite(color, S){
+function hullSprite(color, S, hullId){
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const res = Math.max(24, Math.min(Math.round(S*dpr), 1024));
   const withText = S >= TEXT_MIN ? 1 : 0;
-  const key = color + "|" + res + "|" + withText;
+  const key = color + "|" + res + "|" + withText + "|" + (hullId || "dart");
   let cv = hullCache.get(key);
   if(cv) return cv;
   cv = document.createElement("canvas");
@@ -936,7 +1015,7 @@ function hullSprite(color, S){
   cv._scale = (res + pad*2)/res;
   c.translate(cv.width/2, cv.height/2);
   c.lineJoin = "round";
-  paintHull(c, res, paletteFor(color), withText);
+  paintHull(c, res, paletteFor(color), withText, hullId);
   // The wacky modes mint odd sizes; a runaway key set must not hoard canvases.
   if(hullCache.size >= 40) hullCache.clear();
   hullCache.set(key, cv);
@@ -944,8 +1023,8 @@ function hullSprite(color, S){
 }
 
 /** The hull itself - always drawn, no sprite, no Image, no load order. */
-function drawHull(ctx, S, color){
-  const cv = hullSprite(color, S);
+function drawHull(ctx, S, color, hullId){
+  const cv = hullSprite(color, S, hullId);
   if(cv){
     const w = S*cv._scale;
     ctx.drawImage(cv, -w/2, -w/2, w, w);
@@ -954,10 +1033,10 @@ function drawHull(ctx, S, color){
   // A context that can't mint offscreen canvases still gets the ship.
   ctx.save();
   ctx.lineJoin = "round";
-  paintHull(ctx, S, paletteFor(color), S >= TEXT_MIN ? 1 : 0);
+  paintHull(ctx, S, paletteFor(color), S >= TEXT_MIN ? 1 : 0, hullId);
   ctx.restore();
 }
 
 SF.shipart = { PARTS, PART_BY_ID, levelsOf, partList, nextPart, ownedCount, drawShip,
-               hullClip, HULL_POLY };
+               hullClip, HULL_POLY, HULLS, HULL_BY_ID, hullOf };
 })();

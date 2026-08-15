@@ -986,9 +986,35 @@ async function run(){
     SF.shipart.partList({}).length === SF.shipart.PARTS.length);
   check("a stock ship still has a next part to want",
     !!SF.shipart.nextPart({}));
-  check("MY SHIP is the tuning bay",
-    qa("#armoryPanel .tune-card").length === SF.config.TUNES.length &&
+  /*
+   * MY SHIP is two shelves now: the AIRFRAME you fly and the TUNE you fit,
+   * in that order, because the chassis and the engine map multiply. Both use
+   * the same card, so the count is both lists.
+   */
+  check("MY SHIP is the airframe bay and the tuning bay",
+    qa("#armoryPanel .tune-card").length === SF.config.TUNES.length + SF.shipart.HULLS.length &&
     qa("#armoryPanel .part-chip").length === 0);
+  /*
+   * Every line on an airframe's card, measured at ZERO upgrades - the state a
+   * brand-new buyer is actually in. The Anvil's first draft advertised "+15%
+   * damage", and because bullet damage is a small integer that also picks the
+   * shot's art tier, Math.round((1+0)*1.15) was 1: the headline stat did
+   * nothing at all until the cannon was three levels up. A 30,000 card is not
+   * allowed to promise what the maths rounds away.
+   */
+  check("a stock Anvil delivers every line on its card, and nothing else", (() => {
+    const d = SF.config.DIFFICULTY_BY_ID.pilot;
+    const stock = SF.profile.blank("__hullcard");
+    const of = h => SF.game.buildLoadout(Object.assign({}, stock, { hull: h }), d);
+    const dart = of("dart"), anvil = of("anvil");
+    return anvil.lives      === dart.lives + 1 &&
+           anvil.shieldMax  === dart.shieldMax + 1 &&
+           anvil.invulnTime >  dart.invulnTime * 1.25 &&   // "+30% recovery"
+           anvil.speedMult  <  dart.speedMult &&           // "-12% speed"
+           anvil.hitR       >  dart.hitR &&                // "bigger target"
+           // and nothing the card stays silent about moved behind the buyer's back
+           anvil.damage === dart.damage && anvil.fireInterval === dart.fireInterval;
+  })());
   clickEl(tabByName("PILOT"));
   check("pilot card shows gear progress", /Gear 0\/53/.test(id("pcGear").textContent));
   // Colour moved to the STYLE SHOP - two colour pickers was genuinely
@@ -3317,10 +3343,19 @@ async function run(){
       check("the easel is a 12x12 grid with a hull-shaped reach",
         PJ.COLS === 12 && PJ.ROWS === 12 &&
         PJ.usable(6, 6) && !PJ.usable(0, 0) && !PJ.usable(11, 0));
+      /*
+       * Still one silhouette, now that there are two airframes. A child's
+       * drawing is masked by HULL_POLY on the easel and clipped by hullClip
+       * when worn, and hullClip with no hull named resolves to the Dart -
+       * whose outline IS HULL_POLY, by identity, not by copy. The Anvil is
+       * wider everywhere, so the same drawing sits inside it with a margin
+       * rather than being cut off along an edge nobody can see.
+       */
       check("the easel mask and the worn clip share one hull polygon",
         Array.isArray(SF.shipart.HULL_POLY) && SF.shipart.HULL_POLY.length >= 6 &&
-        /HULL_POLY/.test(fs.readFileSync(path.join(__dirname, "src/paintjob.js"), "utf8")) &&
-        /HULL_POLY\.forEach/.test(fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8")));
+        SF.shipart.hullOf("dart").outline === SF.shipart.HULL_POLY &&
+        SF.shipart.hullOf(undefined).outline === SF.shipart.HULL_POLY &&
+        /HULL_POLY/.test(fs.readFileSync(path.join(__dirname, "src/paintjob.js"), "utf8")));
       check("a drawing survives the round trip and rubbish is refused", (() => {
         const cells = new Array(PJ.COLS*PJ.ROWS).fill(0);
         cells[6*PJ.COLS + 6] = 3; cells[7*PJ.COLS + 5] = 12;
@@ -4400,7 +4435,7 @@ async function run(){
       return SF.profile.load("Tuner").tune === "falcon";   // unchanged
     })());
     check("the confusing parts grid is gone from MY SHIP",
-      qa(".part-chip").length === 0 && qa(".tune-how").length === 1);
+      qa(".part-chip").length === 0 && qa(".tune-how").length === 2);
     clickEl(id("armoryBackBtn"));
 
     // Beating a boss mission for the first time flags the trophy moment -
@@ -4587,13 +4622,15 @@ async function run(){
       missions: { m12: { cleared:true, stars:{ pilot:3 }, best:{ pilot: 8000 } },
                   m1:  { cleared:true, stars:{ pilot:2 }, best:{ pilot: 1200 } } },
       totalKills: 900, highscore: 8000, cosmetics:{ paints:["solar"], trails:[], decals:[], fireworks:[] },
-      achievements:["firstBlood"], stories:{ ace:true } };
+      achievements:["firstBlood"], stories:{ ace:true },
+      hull:"anvil", hulls:["dart","anvil"] };
     const iPhone = { name:"Marc", callsign:"MARC", savedAt: 9000, money: 40,
       upgrades: { spread: 1, damage: 2 },
       missions: { m5:  { cleared:true, stars:{ pilot:3 }, best:{ pilot: 5000 } },
                   m1:  { cleared:true, stars:{ pilot:1 }, best:{ pilot: 300 } } },
       totalKills: 400, highscore: 5000, cosmetics:{ paints:[], trails:["rainbow"], decals:[], fireworks:[] },
-      achievements:["sharpshooter"], stories:{ silent:true } };
+      achievements:["sharpshooter"], stories:{ silent:true },
+      hull:"dart", hulls:["dart"] };
     const m = C.mergeRecord(iPad, iPhone);
     check("a merge keeps the stars won on BOTH devices",
       m.missions.m12.stars.pilot === 3 && m.missions.m5.stars.pilot === 3);
@@ -4608,6 +4645,15 @@ async function run(){
       m.achievements.length === 2 && m.stories.ace && m.stories.silent);
     check("the wallet is the one field that follows the newer save",
       m.money === 40);
+    /*
+     * The Anvil was bought on the iPad and the iPhone has never heard of it.
+     * `hulls` sat at the top level, outside every union, so it rode the
+     * newest-wins default and the next iPhone sync quietly repossessed a
+     * 30,000 airframe. Which one is FITTED still follows the newer save -
+     * that is a choice, not a possession.
+     */
+    check("an airframe bought on one device is still owned on the other",
+      m.hulls.indexOf("anvil") >= 0 && m.hulls.indexOf("dart") >= 0 && m.hull === "dart");
     check("the merge is symmetric",
       JSON.stringify(C.mergeRecord(iPhone, iPad)) === JSON.stringify(m));
     // And through the real door, not just the pure function.
