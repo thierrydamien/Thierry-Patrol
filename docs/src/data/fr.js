@@ -930,5 +930,47 @@ SF.i18n.register("fr", { name: "Français", s: {
 "That one got by. Clean sweep's gone, but finish the job, {you}.":
   "Celui-là est passé. Le sans-faute est perdu, mais termine le travail, {you}.",
 
+/* ---------------- the campaign map ----------------
+   Painted on a canvas, so none of this is reachable by the DOM sweep - the
+   map asks for each string itself. Numbers sit in named slots because the
+   counts move and French does not put them where English does. */
+"LOCKED": "VERROUILLÉ",
+"{done} / {total} STOPS": "{done} / {total} ÉTAPES",
+"SECTOR CLEARED": "SECTEUR TERMINÉ",
+"PERFECT  ★ {n}/{max}": "PARFAIT  ★ {n}/{max}",
+"SECTOR {n} · STOPS {a}-{b}": "SECTEUR {n} · ÉTAPES {a}-{b}",
+"★ {have} / {want} — EARN EVERY STAR": "★ {have} / {want} — GAGNE TOUTES LES ÉTOILES",
+"✓ PAINTED": "✓ PEINT",
+"READY TO PAINT": "PRÊT À PEINDRE",
+"? ? ? ? ?": "? ? ? ? ?",
+"{sky} — for the boys": "{sky} — pour les garçons",
+"never finished it": "ne l'a jamais fini",
+"their star": "leur étoile",
+"{n} more ★ to open {sky} — the sky Papa never finished": "encore {n} ★ pour ouvrir {sky} — le ciel que Papa n'a jamais fini",
+"Every star home, and {sky} painted. Nothing left but the flying.": "Toutes les étoiles sont rentrées, et {sky} est peint. Il ne reste plus qu'à voler.",
+"Every star is home — {sky} is open at the top of the map": "Toutes les étoiles sont rentrées — {sky} t'attend en haut de la carte",
+"✕ SHOW THE WHOLE MAP": "✕ VOIR TOUTE LA CARTE",
+"★ FIND MY STARS ({n})": "★ TROUVER MES ÉTOILES ({n})",
+"GRAB A STAR · {n}": "DÉCROCHER UNE ÉTOILE · {n}",
+"FLY MISSION {n}": "MISSION {n}",
+"{n} star left": "{n} étoile restante",
+"{n} stars left": "{n} étoiles restantes",
+"our own sky, and how to fly in it": "notre propre ciel, et comment y voler",
+"rocks, raiders and the first big one": "des rochers, des pillards et le premier gros morceau",
+"wild wind, and friends to get out": "un vent déchaîné, et des amis à sortir de là",
+"guard the hauler, then carry the load yourself": "protège le cargo, puis porte la charge toi-même",
+"behind their lines, where nobody is friendly": "derrière leurs lignes, où personne n'est ami",
+"his nest, his ring, his money — and what crawled aboard after": "son nid, son anneau, son argent — et ce qui a grimpé à bord ensuite",
+"straight down the middle of their fortress": "droit au cœur de leur forteresse",
+"over their sun, and the last big ship": "au-dessus de leur soleil, et le dernier gros vaisseau",
+"their star went out, and something ate it": "leur étoile s'est éteinte, et quelque chose l'a dévorée",
+"where space stops behaving itself": "là où l'espace cesse de se tenir correctement",
+"behind the sky, where skies get made": "derrière le ciel, là où l'on fabrique les ciels",
+
+"{n} / {want} ★ collected": "{n} / {want} ★ récoltées",
+"locked": "verrouillé",
+"✓ DEFEATED": "✓ VAINCU",
+"Sector {n}": "Secteur {n}",
+
 } });
 })();

@@ -17,31 +17,31 @@
  *     5634  src/data/story.js
  *     5731  src/data/i18nbind.js
  *     5790  src/data/fr.js
- *     6727  src/profile.js
- *     7348  src/cloud.js
- *     7953  src/fx.js
- *     9011  src/input.js
- *     9422  src/entities.js
- *    10634  src/bossart.js
- *    11393  src/bosses.js
- *    12143  src/bossintro.js
- *    12266  src/rewind.js
- *    12788  src/finale.js
- *    13109  src/papadeath.js
- *    13431  src/backstage.js
- *    14634  src/sky29.js
- *    14875  src/systems.js
- *    15494  src/render.js
- *    20050  src/enemyart.js
- *    20796  src/insignia.js
- *    21041  src/skygen.js
- *    23413  src/shipart.js
- *    24491  src/paintjob.js
- *    24653  src/pilotart.js
- *    24748  src/comms.js
- *    24869  src/game.js
- *    28322  src/workshop.js
- *    29019  src/ui.js
+ *     6769  src/profile.js
+ *     7390  src/cloud.js
+ *     7995  src/fx.js
+ *     9053  src/input.js
+ *     9464  src/entities.js
+ *    10676  src/bossart.js
+ *    11435  src/bosses.js
+ *    12185  src/bossintro.js
+ *    12308  src/rewind.js
+ *    12830  src/finale.js
+ *    13151  src/papadeath.js
+ *    13473  src/backstage.js
+ *    14676  src/sky29.js
+ *    14917  src/systems.js
+ *    15536  src/render.js
+ *    20092  src/enemyart.js
+ *    20838  src/insignia.js
+ *    21083  src/skygen.js
+ *    23455  src/shipart.js
+ *    24533  src/paintjob.js
+ *    24695  src/pilotart.js
+ *    24790  src/comms.js
+ *    24911  src/game.js
+ *    28364  src/workshop.js
+ *    29061  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6718,6 +6718,48 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Un nous a filé entre les doigts, {you} — pas de sans-faute cette fois.",
 "That one got by. Clean sweep's gone, but finish the job, {you}.":
   "Celui-là est passé. Le sans-faute est perdu, mais termine le travail, {you}.",
+
+/* ---------------- the campaign map ----------------
+   Painted on a canvas, so none of this is reachable by the DOM sweep - the
+   map asks for each string itself. Numbers sit in named slots because the
+   counts move and French does not put them where English does. */
+"LOCKED": "VERROUILLÉ",
+"{done} / {total} STOPS": "{done} / {total} ÉTAPES",
+"SECTOR CLEARED": "SECTEUR TERMINÉ",
+"PERFECT  ★ {n}/{max}": "PARFAIT  ★ {n}/{max}",
+"SECTOR {n} · STOPS {a}-{b}": "SECTEUR {n} · ÉTAPES {a}-{b}",
+"★ {have} / {want} — EARN EVERY STAR": "★ {have} / {want} — GAGNE TOUTES LES ÉTOILES",
+"✓ PAINTED": "✓ PEINT",
+"READY TO PAINT": "PRÊT À PEINDRE",
+"? ? ? ? ?": "? ? ? ? ?",
+"{sky} — for the boys": "{sky} — pour les garçons",
+"never finished it": "ne l'a jamais fini",
+"their star": "leur étoile",
+"{n} more ★ to open {sky} — the sky Papa never finished": "encore {n} ★ pour ouvrir {sky} — le ciel que Papa n'a jamais fini",
+"Every star home, and {sky} painted. Nothing left but the flying.": "Toutes les étoiles sont rentrées, et {sky} est peint. Il ne reste plus qu'à voler.",
+"Every star is home — {sky} is open at the top of the map": "Toutes les étoiles sont rentrées — {sky} t'attend en haut de la carte",
+"✕ SHOW THE WHOLE MAP": "✕ VOIR TOUTE LA CARTE",
+"★ FIND MY STARS ({n})": "★ TROUVER MES ÉTOILES ({n})",
+"GRAB A STAR · {n}": "DÉCROCHER UNE ÉTOILE · {n}",
+"FLY MISSION {n}": "MISSION {n}",
+"{n} star left": "{n} étoile restante",
+"{n} stars left": "{n} étoiles restantes",
+"our own sky, and how to fly in it": "notre propre ciel, et comment y voler",
+"rocks, raiders and the first big one": "des rochers, des pillards et le premier gros morceau",
+"wild wind, and friends to get out": "un vent déchaîné, et des amis à sortir de là",
+"guard the hauler, then carry the load yourself": "protège le cargo, puis porte la charge toi-même",
+"behind their lines, where nobody is friendly": "derrière leurs lignes, où personne n'est ami",
+"his nest, his ring, his money — and what crawled aboard after": "son nid, son anneau, son argent — et ce qui a grimpé à bord ensuite",
+"straight down the middle of their fortress": "droit au cœur de leur forteresse",
+"over their sun, and the last big ship": "au-dessus de leur soleil, et le dernier gros vaisseau",
+"their star went out, and something ate it": "leur étoile s'est éteinte, et quelque chose l'a dévorée",
+"where space stops behaving itself": "là où l'espace cesse de se tenir correctement",
+"behind the sky, where skies get made": "derrière le ciel, là où l'on fabrique les ciels",
+
+"{n} / {want} ★ collected": "{n} / {want} ★ récoltées",
+"locked": "verrouillé",
+"✓ DEFEATED": "✓ VAINCU",
+"Sector {n}": "Secteur {n}",
 
 } });
 })();
@@ -30057,11 +30099,11 @@ function buildSky(W, H){
   c.textAlign = "left";
   // Papa's own note names the sky, so it tracks the sky's name - lowercased,
   // because he wrote it in pencil and not in a stylesheet.
-  c.fillText(SF.missions.GIFT.name.toLowerCase() + " — for the boys", W*0.33, tearY*0.13);
+  c.fillText(T("{sky} — for the boys", { sky: SF.missions.GIFT.name.toLowerCase() }), W*0.33, tearY*0.13);
   c.fillStyle = "rgba(174,195,239,0.32)";
   c.font = "italic 12px Rajdhani, Arial, sans-serif";
-  c.fillText("never finished it", W*0.33, tearY*0.13 + 19);
-  c.fillText("their star", gx - gr*0.35, gy + gr + 16);
+  c.fillText(T("never finished it"), W*0.33, tearY*0.13 + 19);
+  c.fillText(T("their star"), gx - gr*0.35, gy + gr + 16);
   c.restore();
 
   // The lip: a dark under-edge with a pale paper edge riding on it. Two
@@ -30417,6 +30459,13 @@ function campaignLayout(){
  * it, which is where it belongs anyway: "our own sky, and how to fly in it" is
  * exactly what fly, then lead a moving one, then read the gap adds up to.
  */
+/*
+ * Canvas text is invisible to the DOM sweep - a <canvas> has no text nodes -
+ * so the campaign map has to ask for its own translations. Everything drawn
+ * with fillText below goes through T, and the sector table is bound so the
+ * painted band and the DOM rail beside it always say the same thing.
+ */
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const SECTORS = [
   { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
     sub:"our own sky, and how to fly in it" },              // 1-3
@@ -30448,6 +30497,8 @@ const SECTORS = [
   { at:39, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
+
+if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
 
 /*
  * STAR HUNT.
@@ -30485,7 +30536,7 @@ function debtLabel(d){
     return (def ? def.label : d.missing[0]) + extra;
   }
   const n = d.total - d.earned;
-  return n + " star" + (n > 1 ? "s" : "") + " left";
+  return T(n > 1 ? "{n} stars left" : "{n} star left", { n });
 }
 
 /*
@@ -30522,7 +30573,7 @@ function renderMissions(){
   const stars = P.totalStars(profile), want = P.maxStars();
   // The second half explains the little initial chips on the stops - they
   // were the one mark on the map the map never explained.
-  $("missionStars").innerHTML = stars + " / " + want + " ★ collected";
+  $("missionStars").innerHTML = esc(T("{n} / {want} ★ collected", { n: stars, want }));
 
   /*
    * The header states the goal. A bare tally tells a kid nothing about what
@@ -30538,9 +30589,12 @@ function renderMissions(){
     const giftDone = giftIdx >= 0 && profile.missions[MISSIONS[giftIdx].id] &&
                      profile.missions[MISSIONS[giftIdx].id].cleared;
     goal.textContent = left > 0
-      ? left + " more ★ to open " + SF.missions.giftName() + " — the sky Papa never finished"
-      : giftDone ? "Every star home, and " + SF.missions.GIFT.name + " painted. Nothing left but the flying."
-                 : "Every star is home — " + SF.missions.giftName() + " is open at the top of the map";
+      ? T("{n} more ★ to open {sky} — the sky Papa never finished",
+          { n: left, sky: SF.missions.giftName() })
+      : giftDone ? T("Every star home, and {sky} painted. Nothing left but the flying.",
+                     { sky: SF.missions.GIFT.name })
+                 : T("Every star is home — {sky} is open at the top of the map",
+                     { sky: SF.missions.giftName() });
     goal.classList.toggle("camp-goal-done", left <= 0);
   }
   const debts = starDebts();
@@ -30551,8 +30605,8 @@ function renderMissions(){
     else {
       hunt.classList.remove("hidden");
       hunt.classList.toggle("on", starHunt);
-      hunt.textContent = starHunt ? "✕ SHOW THE WHOLE MAP"
-                                  : "★ FIND MY STARS (" + debts.length + ")";
+      hunt.textContent = starHunt ? T("✕ SHOW THE WHOLE MAP")
+                                  : T("★ FIND MY STARS ({n})", { n: debts.length });
     }
   }
   renderSectorRail();
@@ -30643,9 +30697,9 @@ function renderMissions(){
   if(nextBtn){
     const nm = MISSIONS[target];
     nextBtn.innerHTML = chase
-      ? `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>GRAB A STAR · ${nm.id}</b>` +
+      ? `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>${esc(T("GRAB A STAR · {n}", { n: nm.id }))}</b>` +
         `<span>${esc(debtLabel(chase))}</span>`
-      : `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>FLY MISSION ${nm.id}</b>` +
+      : `<b><canvas class="btn-ico" data-glyph="play" width="22" height="22"></canvas>${esc(T("FLY MISSION {n}", { n: nm.id }))}</b>` +
         `<span>${esc(nm.name)}</span>`;
     const ico = nextBtn.querySelector(".btn-ico");
     if(ico){
@@ -30690,12 +30744,12 @@ function renderSectorRail(){
     // A number, the name, and how much of it is done: a table of contents
     // with a score on each line, which is also what teaches a kid that a
     // sector is a THING CONTAINING STOPS rather than a label near a dot.
-    const score = !st.reached ? "locked"
+    const score = !st.reached ? T("locked")
                 : st.perfect  ? "★ " + st.stars + "/" + st.starMax
                 : st.done + "/" + st.total;
     b.innerHTML = `<i></i><span><b>${si+1}</b>${esc(sec.name)}</span>` +
                   `<em>${esc(score)}</em>`;
-    b.setAttribute("aria-label", "Sector " + (si+1) + ", " + sec.name + ": " + sec.sub);
+    b.setAttribute("aria-label", T("Sector {n}", { n: si+1 }) + ", " + sec.name + ": " + sec.sub);
     b.title = sec.sub;
     click(b, () => scrollToNextStop(sec.at));
     rail.insertBefore(b, rail.firstChild);   // top of the rail is the END of the route
@@ -30972,10 +31026,10 @@ function drawCampaign(){
     // The sector's own colour carries the name; state only decides how bright
     // it is and what the line underneath says. Two jobs, two channels.
     const tint = state === "locked" ? "#8e96b8" : sec.hue;
-    const note = { locked:"LOCKED",
-                   open: st.done + " / " + st.total + " STOPS",
-                   cleared:"SECTOR CLEARED",
-                   perfect:"PERFECT  ★ " + st.stars + "/" + st.starMax }[state];
+    const note = { locked: T("LOCKED"),
+                   open: T("{done} / {total} STOPS", { done: st.done, total: st.total }),
+                   cleared: T("SECTOR CLEARED"),
+                   perfect: T("PERFECT  ★ {n}/{max}", { n: st.stars, max: st.starMax }) }[state];
     ctx.save();
     ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
     /*
@@ -31014,7 +31068,7 @@ function drawCampaign(){
     ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "1.5px";
     ctx.globalAlpha *= 0.8;
-    ctx.fillText("SECTOR " + (si+1) + " · STOPS " + (st.from+1) + "-" + (st.to+1), lx, ly - 15);
+    ctx.fillText(T("SECTOR {n} · STOPS {a}-{b}", { n: si+1, a: st.from+1, b: st.to+1 }), lx, ly - 15);
     ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
 
     if(state === "perfect"){                 // a mastered stretch gets a glow
@@ -31099,7 +31153,7 @@ function drawCampaign(){
         const have = P.totalStars(profile), want = P.maxStars();
         ctx.fillStyle = "rgba(255,210,63,0.85)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
-        ctx.fillText("★ " + have + " / " + want + " — EARN EVERY STAR", x, y - R - 29);
+        ctx.fillText(T("★ {have} / {want} — EARN EVERY STAR", { have, want }), x, y - R - 29);
         ctx.restore();
       } else {
         // Painted (or ready to be): the disc wears the dawn itself.
@@ -31130,7 +31184,7 @@ function drawCampaign(){
         ctx.fillStyle = painted ? "rgba(150,255,205,0.9)" : "rgba(255,210,63,0.95)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(painted ? "✓ PAINTED" : "READY TO PAINT", x, y - R - 29);
+        ctx.fillText(painted ? T("✓ PAINTED") : T("READY TO PAINT"), x, y - R - 29);
       }
       if(starHunt) ctx.restore();        // the hunt's dimming, balanced
       return;                            // fully bespoke - skip the shared node kit
@@ -31326,7 +31380,7 @@ function drawCampaign(){
       ctx.save();
       // The skull is drawn, not typed - a font ☠ wears a different face on
       // every device and sat off-baseline in all of them.
-      const label = beaten ? "✓ DEFEATED" : "BOSS", padX = 9, h = 19;
+      const label = beaten ? T("✓ DEFEATED") : T("BOSS"), padX = 9, h = 19;
       const skullW = beaten ? 0 : 13;
       ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
       const w = ctx.measureText(label).width + padX*2 + skullW;
@@ -31362,7 +31416,7 @@ function drawCampaign(){
     ctx.fillStyle = unlocked ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
     ctx.font = "bold " + (unlocked ? 13 : 11) + "px Rajdhani, Arial, sans-serif";
     // A locked boss keeps its name to itself - the silhouette is the tease.
-    ctx.fillText(boss && !unlocked ? "? ? ? ? ?" : node.mission.name.toUpperCase(),
+    ctx.fillText(boss && !unlocked ? T("? ? ? ? ?") : node.mission.name.toUpperCase(),
                  x, y + R + (hull && unlocked ? 44 : 20));
     ctx.restore();
 

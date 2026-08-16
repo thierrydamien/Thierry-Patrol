@@ -1930,10 +1930,20 @@ async function run(){
              chips.every(c => !!c.style.getPropertyValue("--sec")) &&
              /12/.test(easel.querySelector("span b").textContent);
     })());
+    /*
+     * The band label and its one-line description. Both now go through T:
+     * canvas text has no text nodes, so the DOM sweep cannot reach a word of
+     * this map - it has to ask for its own translations, and the customer
+     * found the whole thing still in English when it did not.
+     */
     check("the map paints each sector as a band, not just a caption",
       (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
-               return /SECTOR \" \+ \(si\+1\) \+ \" · STOPS \"/.test(u) &&
+               return /T\("SECTOR \{n\} · STOPS \{a\}-\{b\}"/.test(u) &&
                       /ctx\.fillText\(sec\.sub/.test(u); })());
+    check("the map asks for its own translations, since no sweep can reach it",
+      (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+               return /SECTORS\.forEach\(sec => SF\.i18n\.bind\(sec, \["name", "sub"\]\)\)/.test(u) &&
+                      /T\("✓ DEFEATED"\)/.test(u) && /T\("READY TO PAINT"\)/.test(u); })());
 
     // A pilot with every star gets neither a hunt button nor a star to chase.
     SF.missions.MISSIONS.forEach(m => {
@@ -2066,7 +2076,7 @@ async function run(){
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /function mapTearY/.test(u) &&
                     /THE EDGE OF THE MAP/.test(u) &&
-                    /" — for the boys"/.test(u); })());
+                    /— for the boys/.test(u); })());
   /*
    * The gift stop's NAME is one fact, not a dozen string literals. It used to
    * be written out by hand in the map caption, the star-hunt line, both node
