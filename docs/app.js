@@ -34,14 +34,14 @@
  *    20238  src/enemyart.js
  *    21156  src/insignia.js
  *    21401  src/skygen.js
- *    23773  src/shipart.js
- *    24973  src/paintjob.js
- *    25135  src/pilotart.js
- *    25230  src/comms.js
- *    25351  src/game.js
- *    28804  src/workshop.js
- *    29501  src/data/i18nbind.js
- *    29568  src/ui.js
+ *    23805  src/shipart.js
+ *    25005  src/paintjob.js
+ *    25167  src/pilotart.js
+ *    25262  src/comms.js
+ *    25383  src/game.js
+ *    28836  src/workshop.js
+ *    29533  src/data/i18nbind.js
+ *    29600  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -23496,6 +23496,26 @@ function paint(sky, seed, W, H, dpr, wrap){
    * at 0.12 - stay empty and keep working as a contrast beat.
    */
   const areaK = (W*H) / (390*620);
+  /*
+   * TWO WAYS FOR A SKY TO GROW.
+   *
+   * Every star class used to be multiplied by areaK, which is right for dust
+   * and wrong for feature stars. Dust IS a field: twice the sky, twice the
+   * grains, or the big screen looks thin. But the handful of bright spiked
+   * stars are COMPOSITION - they are the ones the eye picks out - and scaling
+   * those with area turns a picture into confetti.
+   *
+   * Measured on the menu sky, which is the only one composed against the real
+   * window: areaK is 1.4 on a phone and 8.6 on a 1920x1080 desktop. At 4 per
+   * areaK that is 5 spiked stars on the phone, which is what the composition
+   * was tuned for, and 34 on the desktop, which is what it actually looked
+   * like. Under a square root the phone keeps its 5 and the desktop gets 12 -
+   * a wider sky, not a busier one.
+   *
+   * The campaign skies build against the portrait playfield, so their areaK
+   * barely moves and this changes them by about one star.
+   */
+  const featureK = Math.sqrt(areaK);
   const micro = Math.round(1400 * sky.stars * areaK);
   for(let i=0;i<micro;i++){
     ctx.globalAlpha = 0.05 + rand()*0.13;
@@ -23553,7 +23573,7 @@ function paint(sky, seed, W, H, dpr, wrap){
     ctx.moveTo(-len, 0); ctx.lineTo(0, -wide); ctx.lineTo(len, 0); ctx.lineTo(0, wide);
     ctx.closePath(); ctx.fill();
   };
-  for(let i=0;i<Math.round(sky.bright * areaK);i++){
+  for(let i=0;i<Math.round(sky.bright * featureK);i++){
     const x = rand()*W, y = rand()*H;
     const r = 1.6 + rand()*1.6, reach = r*(5 + rand()*4);
     tiled(ctx, H, y, yy => {
@@ -23729,10 +23749,22 @@ function buildTitle(W, H, dpr = 1, topH = 0){
     // Depth first: a galaxy high on the left, so the corner the wordmark sits
     // over has something behind it other than black.
     { k:"galaxy", x:0.17, y:(0.20*vh)/H, r:rx(0.34) },
-    // The world below - an amber giant off the bottom of the whole scroll, so
-    // the LAST buttons sit on a lit planet limb rather than on page ground.
+    /*
+     * The world below - an amber giant off the bottom of the whole scroll, so
+     * the LAST buttons sit on a lit planet limb rather than on page ground.
+     *
+     * Hazed back from #d9a441/#33200a. Its tone was never extreme - 169
+     * against the little moon's 178 - but it is drawn at r=0.55 where the
+     * moon is r=0.055, so it covers a HUNDRED times the area, and what pulls
+     * an eye across a frame is brightness times area. It was the brightest
+     * thing on the menu after the wordmark, sitting in a corner where nothing
+     * happens. Mixed 30% toward the sky's own deep tone, which drops it to
+     * 120 - just under the ringed planet, which is the right order for the
+     * furthest thing in the picture - and cools it slightly on the way, so
+     * the distance reads as distance rather than as dimming.
+     */
     { k:"planet", x:0.12, y:(H + 0.31*u)/H, r:rx(0.55),
-      lit:"#d9a441", dark:"#33200a" },
+      lit:"#997535", dark:"#25180f" },
     // A ringed neighbour, small and high right: the "designed" note that says
     // somebody chose this view.
     { k:"planet", x:0.87, y:(0.21*vh)/H, r:rx(0.10),

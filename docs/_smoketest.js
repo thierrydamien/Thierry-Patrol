@@ -389,6 +389,37 @@ async function run(){
     return !!cv && cv.width === 400 && cv.height === 700 &&
            !SF.skygen.SKIES.some(s => s.name === "The Home Sky");
   })());
+  /*
+   * DUST SCALES WITH AREA, COMPOSITION DOES NOT.
+   *
+   * Every star class was multiplied by areaK = W*H/(390*620). That is right
+   * for dust - twice the sky wants twice the grains or the big screen looks
+   * thin - and wrong for the few bright spiked stars, which are the ones the
+   * eye picks out. Measured on the menu sky, the only one composed against
+   * the real window: areaK is 1.4 on a phone and 8.6 at 1920x1080, so the 4
+   * spiked stars the composition was tuned for became 34, and the desktop
+   * menu read as confetti rather than as a sky.
+   */
+  check("a wider sky gets more dust but not more spiked stars", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    return /const featureK = Math\.sqrt\(areaK\)/.test(s) &&
+           /sky\.bright \* featureK/.test(s) &&      // composition: sub-linear
+           /1400 \* sky\.stars \* areaK/.test(s);    // dust: still per area
+  })());
+  /*
+   * And the thing furthest away must not be the brightest thing in frame.
+   * The amber giant is drawn at r=0.55 where the little moon is r=0.055 - a
+   * hundred times the area - so at #d9a441 it was the loudest object on the
+   * menu after the wordmark, in a corner where nothing happens.
+   */
+  check("the menu's distant giant is dimmer than the planet in front of it", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const lum = h => { const v = parseInt(h.slice(1), 16);
+      return 0.299*((v>>16)&255) + 0.587*((v>>8)&255) + 0.114*(v&255); };
+    const giant = /r:rx\(0\.55\),\s*\n\s*lit:"(#[0-9a-f]{6})"/.exec(s);
+    const ringed = /lit:"(#[0-9a-f]{6})", dark:"#241245", rings:true/.exec(s);
+    return !!giant && !!ringed && lum(giant[1]) < lum(ringed[1]);
+  })());
   check("the loading screen is the title card, not a bare LOADING",
     (() => { const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
              return /loading-title/.test(h) && /A FAMILY SQUADRON/.test(
