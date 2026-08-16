@@ -36,6 +36,12 @@ function mix(c, target, k){
                   Math.round(c.g + (target - c.g)*k) + "," +
                   Math.round(c.b + (target - c.b)*k) + ")";
 }
+/** Mix toward an {r,g,b} colour rather than a grey - how shadows go cool. */
+function mixTo(c, t, k){
+  return "rgb(" + Math.round(c.r + (t.r - c.r)*k) + "," +
+                  Math.round(c.g + (t.g - c.g)*k) + "," +
+                  Math.round(c.b + (t.b - c.b)*k) + ")";
+}
 function paletteFor(tint, elite){
   const c = hexToRgb(tint || "#c0392b");
   return {
@@ -47,9 +53,17 @@ function paletteFor(tint, elite){
      * the background here, so the dark side of a hull has to stay a colour
      * rather than becoming a hole.
      */
-    shade:  mix(c, 0,   0.34),
-    deep:   mix(c, 0,   0.58),
-    line:   "rgba(10,12,20,0.85)",
+    /*
+     * Shadows COOL as they darken instead of just dimming - mixed toward a
+     * deep space navy, not black. Shadows that keep the hue are the single
+     * clearest "flat drawing" tell; shadows that drift cold read as light.
+     */
+    shade:  mixTo(c, {r:22, g:30, b:56}, 0.44),
+    deep:   mixTo(c, {r:14, g:20, b:42}, 0.66),
+    // Half the old ink. The line's job passed to the light: lightBake()
+    // draws the lit and shaded edges, and a heavy outline over that reads
+    // as a sticker border again.
+    line:   "rgba(8,10,18,0.55)",
     metal:  "#8c96a8",
     metalD: "#4a5262",
     glass:  elite ? "#fff2c0" : "#bde9ff",
@@ -196,10 +210,14 @@ function thruster(ctx, x, y, w, len, p){
   const cy = y - len*0.34;
   ctx.save();
   ctx.translate(x, cy); ctx.scale(w*1.25/(len*0.8), 1);
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len*0.8);
-  g.addColorStop(0, "rgba(255,240,206,0.95)");
-  g.addColorStop(0.32, "rgba(255,172,92,0.5)");
-  g.addColorStop(1, "rgba(255,120,60,0)");
+  // Tighter and hotter than the first bake: at roster sizes the old wide
+  // warm bloom read as a brown mushroom growing off the tail. Most of the
+  // energy now sits in a white-hot first third and the tail genuinely dies.
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len*0.62);
+  g.addColorStop(0, "rgba(255,248,224,0.95)");
+  g.addColorStop(0.22, "rgba(255,196,110,0.55)");
+  g.addColorStop(0.6, "rgba(255,130,64,0.16)");
+  g.addColorStop(1, "rgba(255,110,50,0)");
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(0, 0, len*0.8, 0, TAU); ctx.fill();
   ctx.restore();
@@ -713,6 +731,97 @@ function eliteCarapace(ctx, S, p){
   }
 }
 
+/*
+ * THE LIGHT PASS - what turns a coloured drawing into a lit object, applied
+ * to the finished bake as three composites on the sprite's own alpha:
+ *
+ *  1. A warm rim along every top-left edge: the sprite minus itself shifted
+ *     toward the light leaves a crescent exactly one shift wide on the lit
+ *     side of the silhouette, tinted near-white and added.
+ *  2. A cool falloff along every bottom-right edge, same trick mirrored,
+ *     laid over as deep navy - the shadow side turns cold, never black.
+ *  3. One soft sheen across the whole hull from the key light's corner, so
+ *     nineteen separately-drawn parts sit under ONE sun.
+ *
+ * Bake-time only: the game still blits one cached canvas per enemy. This is
+ * also what shipart runs over the player's hull - one sun for everyone.
+ */
+function lightBake(cv, k){
+  const w = cv.width, h = cv.height;
+  const c = cv.getContext("2d");
+  if(!c || !w) return;
+  const K = k == null ? 1 : k;
+  const d = Math.max(1.25, w*0.016);
+  const crescent = (dx, dy, tint) => {
+    const t = document.createElement("canvas");
+    t.width = w; t.height = h;
+    const tc = t.getContext("2d");
+    if(!tc) return null;
+    tc.drawImage(cv, 0, 0);
+    tc.globalCompositeOperation = "destination-out";
+    tc.drawImage(cv, dx, dy);
+    tc.globalCompositeOperation = "source-in";
+    tc.fillStyle = tint;
+    tc.fillRect(0, 0, w, h);
+    return t;
+  };
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  const lit = crescent(d, d, "rgba(255,248,230,1)");
+  if(lit){
+    c.globalCompositeOperation = "lighter";
+    c.globalAlpha = 0.40*K;
+    c.drawImage(lit, 0, 0);
+  }
+  const dark = crescent(-d*0.9, -d*0.9, "rgb(12,17,36)");
+  if(dark){
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 0.48*K;
+    c.drawImage(dark, 0, 0);
+  }
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = "source-atop";
+  const sheen = c.createRadialGradient(w*0.30, h*0.26, 0, w*0.30, h*0.26, w*0.95);
+  sheen.addColorStop(0, "rgba(255,252,240," + (0.10*K).toFixed(3) + ")");
+  sheen.addColorStop(0.45, "rgba(255,252,240,0)");
+  sheen.addColorStop(0.8, "rgba(10,16,34," + (0.12*K).toFixed(3) + ")");
+  c.fillStyle = sheen;
+  c.fillRect(0, 0, w, h);
+  c.restore();
+}
+
+/*
+ * SURFACE GREEBLES - two or three small service details per archetype, on a
+ * deterministic side per type so the fleet stops being perfectly symmetric
+ * badges. source-atop, so they sit ON the hull and never break a silhouette
+ * the player has already learned.
+ */
+function greebles(ctx, S, typeId, p){
+  let hsh = 0;
+  for(let i = 0; i < typeId.length; i++) hsh = (hsh*31 + typeId.charCodeAt(i)) >>> 0;
+  /*
+   * QUIET, AND OFF THE FURNITURE. The first cut put a chunky panel and a
+   * vent row anywhere on the hull, and on ships whose middle is a symbol
+   * (the Mender's cross, the Carrier's windows) they read as scratches
+   * across the emblem, not service detail. So: one shoulder only, well off
+   * the centreline, at whisper alpha - shading, not marks - and everything
+   * scales with the hull.
+   */
+  ctx.save();
+  ctx.globalCompositeOperation = "source-atop";
+  const side = (hsh & 1) ? 1 : -1;
+  const gx = side * S*(0.17 + ((hsh>>3) % 4)*0.012);
+  const gy = S*(0.04 + ((hsh>>6) % 4)*0.024);
+  ctx.fillStyle = "rgba(10,14,26,0.18)";
+  ctx.fillRect(gx - S*0.036, gy, S*0.072, S*0.042);
+  ctx.fillStyle = "rgba(255,248,230,0.09)";
+  ctx.fillRect(gx - S*0.036, gy + S*0.042, S*0.072, S*0.008);
+  ctx.fillStyle = "rgba(10,14,26,0.20)";
+  for(let i = 0; i < 2; i++)
+    ctx.fillRect(gx - S*0.028, gy - S*0.024 - i*S*0.020, S*0.056, S*0.008);
+  ctx.restore();
+}
+
 function spriteFor(typeId, tint, elite){
   const key = typeId + "|" + tint + "|" + (elite ? 1 : 0);
   if(cache[key]) return cache[key];
@@ -731,6 +840,10 @@ function spriteFor(typeId, tint, elite){
     // archetype underneath stays exactly as readable as its ordinary twin.
     if(elite) eliteCarapace(ctx, RES, p);
     shape(ctx, RES, p);
+    // Service details, then the sun: greebles are hull surface, so they get
+    // lit like the rest of it.
+    greebles(ctx, RES, typeId, p);
+    lightBake(cv, elite ? 0.85 : 1);   // the carapace glow carries an elite
   } catch(e){ return null; }
   cache[key] = cv;
   return cv;
@@ -739,5 +852,5 @@ function spriteFor(typeId, tint, elite){
 /** True if this archetype has drawn art (everything except rocks and mines). */
 function has(typeId){ return !!SHAPES[typeId]; }
 
-SF.enemyArt = { spriteFor, has, SHAPES, paletteFor };
+SF.enemyArt = { spriteFor, has, SHAPES, paletteFor, lightBake };
 })();

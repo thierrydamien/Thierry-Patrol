@@ -32,16 +32,16 @@
  *    14916  src/systems.js
  *    15535  src/render.js
  *    20100  src/enemyart.js
- *    20846  src/insignia.js
- *    21091  src/skygen.js
- *    23463  src/shipart.js
- *    24541  src/paintjob.js
- *    24703  src/pilotart.js
- *    24798  src/comms.js
- *    24919  src/game.js
- *    28372  src/workshop.js
- *    29069  src/data/i18nbind.js
- *    29136  src/ui.js
+ *    20959  src/insignia.js
+ *    21204  src/skygen.js
+ *    23576  src/shipart.js
+ *    24776  src/paintjob.js
+ *    24938  src/pilotart.js
+ *    25033  src/comms.js
+ *    25154  src/game.js
+ *    28607  src/workshop.js
+ *    29304  src/data/i18nbind.js
+ *    29371  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -20135,6 +20135,12 @@ function mix(c, target, k){
                   Math.round(c.g + (target - c.g)*k) + "," +
                   Math.round(c.b + (target - c.b)*k) + ")";
 }
+/** Mix toward an {r,g,b} colour rather than a grey - how shadows go cool. */
+function mixTo(c, t, k){
+  return "rgb(" + Math.round(c.r + (t.r - c.r)*k) + "," +
+                  Math.round(c.g + (t.g - c.g)*k) + "," +
+                  Math.round(c.b + (t.b - c.b)*k) + ")";
+}
 function paletteFor(tint, elite){
   const c = hexToRgb(tint || "#c0392b");
   return {
@@ -20146,9 +20152,17 @@ function paletteFor(tint, elite){
      * the background here, so the dark side of a hull has to stay a colour
      * rather than becoming a hole.
      */
-    shade:  mix(c, 0,   0.34),
-    deep:   mix(c, 0,   0.58),
-    line:   "rgba(10,12,20,0.85)",
+    /*
+     * Shadows COOL as they darken instead of just dimming - mixed toward a
+     * deep space navy, not black. Shadows that keep the hue are the single
+     * clearest "flat drawing" tell; shadows that drift cold read as light.
+     */
+    shade:  mixTo(c, {r:22, g:30, b:56}, 0.44),
+    deep:   mixTo(c, {r:14, g:20, b:42}, 0.66),
+    // Half the old ink. The line's job passed to the light: lightBake()
+    // draws the lit and shaded edges, and a heavy outline over that reads
+    // as a sticker border again.
+    line:   "rgba(8,10,18,0.55)",
     metal:  "#8c96a8",
     metalD: "#4a5262",
     glass:  elite ? "#fff2c0" : "#bde9ff",
@@ -20295,10 +20309,14 @@ function thruster(ctx, x, y, w, len, p){
   const cy = y - len*0.34;
   ctx.save();
   ctx.translate(x, cy); ctx.scale(w*1.25/(len*0.8), 1);
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len*0.8);
-  g.addColorStop(0, "rgba(255,240,206,0.95)");
-  g.addColorStop(0.32, "rgba(255,172,92,0.5)");
-  g.addColorStop(1, "rgba(255,120,60,0)");
+  // Tighter and hotter than the first bake: at roster sizes the old wide
+  // warm bloom read as a brown mushroom growing off the tail. Most of the
+  // energy now sits in a white-hot first third and the tail genuinely dies.
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len*0.62);
+  g.addColorStop(0, "rgba(255,248,224,0.95)");
+  g.addColorStop(0.22, "rgba(255,196,110,0.55)");
+  g.addColorStop(0.6, "rgba(255,130,64,0.16)");
+  g.addColorStop(1, "rgba(255,110,50,0)");
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(0, 0, len*0.8, 0, TAU); ctx.fill();
   ctx.restore();
@@ -20812,6 +20830,97 @@ function eliteCarapace(ctx, S, p){
   }
 }
 
+/*
+ * THE LIGHT PASS - what turns a coloured drawing into a lit object, applied
+ * to the finished bake as three composites on the sprite's own alpha:
+ *
+ *  1. A warm rim along every top-left edge: the sprite minus itself shifted
+ *     toward the light leaves a crescent exactly one shift wide on the lit
+ *     side of the silhouette, tinted near-white and added.
+ *  2. A cool falloff along every bottom-right edge, same trick mirrored,
+ *     laid over as deep navy - the shadow side turns cold, never black.
+ *  3. One soft sheen across the whole hull from the key light's corner, so
+ *     nineteen separately-drawn parts sit under ONE sun.
+ *
+ * Bake-time only: the game still blits one cached canvas per enemy. This is
+ * also what shipart runs over the player's hull - one sun for everyone.
+ */
+function lightBake(cv, k){
+  const w = cv.width, h = cv.height;
+  const c = cv.getContext("2d");
+  if(!c || !w) return;
+  const K = k == null ? 1 : k;
+  const d = Math.max(1.25, w*0.016);
+  const crescent = (dx, dy, tint) => {
+    const t = document.createElement("canvas");
+    t.width = w; t.height = h;
+    const tc = t.getContext("2d");
+    if(!tc) return null;
+    tc.drawImage(cv, 0, 0);
+    tc.globalCompositeOperation = "destination-out";
+    tc.drawImage(cv, dx, dy);
+    tc.globalCompositeOperation = "source-in";
+    tc.fillStyle = tint;
+    tc.fillRect(0, 0, w, h);
+    return t;
+  };
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  const lit = crescent(d, d, "rgba(255,248,230,1)");
+  if(lit){
+    c.globalCompositeOperation = "lighter";
+    c.globalAlpha = 0.40*K;
+    c.drawImage(lit, 0, 0);
+  }
+  const dark = crescent(-d*0.9, -d*0.9, "rgb(12,17,36)");
+  if(dark){
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 0.48*K;
+    c.drawImage(dark, 0, 0);
+  }
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = "source-atop";
+  const sheen = c.createRadialGradient(w*0.30, h*0.26, 0, w*0.30, h*0.26, w*0.95);
+  sheen.addColorStop(0, "rgba(255,252,240," + (0.10*K).toFixed(3) + ")");
+  sheen.addColorStop(0.45, "rgba(255,252,240,0)");
+  sheen.addColorStop(0.8, "rgba(10,16,34," + (0.12*K).toFixed(3) + ")");
+  c.fillStyle = sheen;
+  c.fillRect(0, 0, w, h);
+  c.restore();
+}
+
+/*
+ * SURFACE GREEBLES - two or three small service details per archetype, on a
+ * deterministic side per type so the fleet stops being perfectly symmetric
+ * badges. source-atop, so they sit ON the hull and never break a silhouette
+ * the player has already learned.
+ */
+function greebles(ctx, S, typeId, p){
+  let hsh = 0;
+  for(let i = 0; i < typeId.length; i++) hsh = (hsh*31 + typeId.charCodeAt(i)) >>> 0;
+  /*
+   * QUIET, AND OFF THE FURNITURE. The first cut put a chunky panel and a
+   * vent row anywhere on the hull, and on ships whose middle is a symbol
+   * (the Mender's cross, the Carrier's windows) they read as scratches
+   * across the emblem, not service detail. So: one shoulder only, well off
+   * the centreline, at whisper alpha - shading, not marks - and everything
+   * scales with the hull.
+   */
+  ctx.save();
+  ctx.globalCompositeOperation = "source-atop";
+  const side = (hsh & 1) ? 1 : -1;
+  const gx = side * S*(0.17 + ((hsh>>3) % 4)*0.012);
+  const gy = S*(0.04 + ((hsh>>6) % 4)*0.024);
+  ctx.fillStyle = "rgba(10,14,26,0.18)";
+  ctx.fillRect(gx - S*0.036, gy, S*0.072, S*0.042);
+  ctx.fillStyle = "rgba(255,248,230,0.09)";
+  ctx.fillRect(gx - S*0.036, gy + S*0.042, S*0.072, S*0.008);
+  ctx.fillStyle = "rgba(10,14,26,0.20)";
+  for(let i = 0; i < 2; i++)
+    ctx.fillRect(gx - S*0.028, gy - S*0.024 - i*S*0.020, S*0.056, S*0.008);
+  ctx.restore();
+}
+
 function spriteFor(typeId, tint, elite){
   const key = typeId + "|" + tint + "|" + (elite ? 1 : 0);
   if(cache[key]) return cache[key];
@@ -20830,6 +20939,10 @@ function spriteFor(typeId, tint, elite){
     // archetype underneath stays exactly as readable as its ordinary twin.
     if(elite) eliteCarapace(ctx, RES, p);
     shape(ctx, RES, p);
+    // Service details, then the sun: greebles are hull surface, so they get
+    // lit like the rest of it.
+    greebles(ctx, RES, typeId, p);
+    lightBake(cv, elite ? 0.85 : 1);   // the carapace glow carries an elite
   } catch(e){ return null; }
   cache[key] = cv;
   return cv;
@@ -20838,7 +20951,7 @@ function spriteFor(typeId, tint, elite){
 /** True if this archetype has drawn art (everything except rocks and mines). */
 function has(typeId){ return !!SHAPES[typeId]; }
 
-SF.enemyArt = { spriteFor, has, SHAPES, paletteFor };
+SF.enemyArt = { spriteFor, has, SHAPES, paletteFor, lightBake };
 })();
 
 
@@ -23489,9 +23602,17 @@ const { TAU } = SF.core;
    way of an import. One tint in, one small set of shades out.
    --------------------------------------------------------- */
 const LINE    = "rgba(10,12,20,0.85)";
+/*
+ * The seam line for large panels. The old ink outlined EVERY piece at full
+ * strength, which is the single loudest "sticker" tell there is - a real
+ * render's parts are separated by light and occlusion, and the line only
+ * whispers. LINE survives for small deep details (nozzle mouths, vents)
+ * where a genuine hard shadow would sit.
+ */
+const EDGE    = "rgba(8,10,18,0.45)";
 const METAL   = "#8c96a8";
 const METAL_L = "#aeb8ca";
-const METAL_D = "#4a5262";
+const METAL_D = "#3d4761";           // the dark side of gunmetal leans blue
 const GLASS   = "#bde9ff";
 const GLASS_RGB = "150,225,255";     // the fleet's cockpit ice - also the
                                      // ONE cool accent energy parts share
@@ -23506,6 +23627,12 @@ function mix(c, target, k){
                   Math.round(c.g + (target - c.g)*k) + "," +
                   Math.round(c.b + (target - c.b)*k) + ")";
 }
+/** Mix toward an {r,g,b} colour rather than a grey - how shadows go cool. */
+function mixTo(c, t, k){
+  return "rgb(" + Math.round(c.r + (t.r - c.r)*k) + "," +
+                  Math.round(c.g + (t.g - c.g)*k) + "," +
+                  Math.round(c.b + (t.b - c.b)*k) + ")";
+}
 const palettes = {};
 function paletteFor(tint){
   let p = palettes[tint];
@@ -23515,8 +23642,11 @@ function paletteFor(tint){
     lit:   mix(c, 255, 0.42),
     base:  mix(c, 255, 0.06),
     // Dark side stays a colour, never a hole - space IS the background here.
-    shade: mix(c, 0,   0.34),
-    deep:  mix(c, 0,   0.58),
+    // And it goes COOL as it darkens (deep navy, not black): hue-shifted
+    // shadows are the clearest single difference between a drawing that is
+    // coloured and one that is lit.
+    shade: mixTo(c, {r:22, g:30, b:56}, 0.44),
+    deep:  mixTo(c, {r:14, g:20, b:42}, 0.66),
     trim:  mix(c, 255, 0.72),
     glow:  tint || "#ff8a3d",
     rim:     "rgba(255,250,238,0.82)",
@@ -23541,8 +23671,8 @@ function noGlow(ctx){ ctx.shadowBlur = 0; }
  *  bolted-on hardware reads as solid metal and not a UI sticker. */
 function fillEdge(ctx, S){
   ctx.fill();
-  ctx.strokeStyle = LINE;
-  ctx.lineWidth = Math.max(S*0.018, 1);   // never sub-pixel at flight size
+  ctx.strokeStyle = EDGE;
+  ctx.lineWidth = Math.max(S*0.011, 1);   // never sub-pixel at flight size
   ctx.stroke();
 }
 /*
@@ -24354,7 +24484,9 @@ function rimLight(ctx, pts, p, S){
 function hullPiece(ctx, pts, p, S, grad){
   poly(ctx, pts, S);
   ctx.fillStyle = grad; ctx.fill();
-  ctx.strokeStyle = LINE; ctx.lineWidth = S*0.026; ctx.stroke();
+  // Half the width, half the ink: the rim pass below is what holds the
+  // silhouette now, and the seam only keeps panels apart at 40px.
+  ctx.strokeStyle = EDGE; ctx.lineWidth = S*0.013; ctx.stroke();
   rimLight(ctx, pts, p, S);
 }
 /*
@@ -24371,13 +24503,31 @@ function canopy(ctx, x, y, rx, ry){
   halo.addColorStop(1, "rgba(" + GLASS_RGB + ",0)");
   ctx.fillStyle = halo;
   ctx.beginPath(); ctx.arc(0, 0, rx*2.4, 0, TAU); ctx.fill();
-  ctx.fillStyle = GLASS;
+  /*
+   * Glass, not paint: deep at the top where it faces away, brightening down
+   * the bowl where it catches the sky - then ONE hard specular streak. A
+   * flat fill with a white dot read as a button; a gradient with a streak
+   * reads as a material.
+   */
+  const glass = ctx.createLinearGradient(0, -rx, 0, rx);
+  glass.addColorStop(0, "#12283e");
+  glass.addColorStop(0.5, "#2e6a94");
+  glass.addColorStop(1, "#bde9ff");
+  ctx.fillStyle = glass;
   ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
-  ctx.strokeStyle = LINE; ctx.lineWidth = rx*0.14; ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.beginPath(); ctx.arc(-rx*0.28, -rx*0.3, rx*0.42, 0, TAU); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.beginPath(); ctx.arc(0, 0, rx*0.34, 0, TAU); ctx.fill();
+  // The frame occludes: darkest where the glass meets the hull.
+  ctx.strokeStyle = "rgba(8,10,18,0.6)"; ctx.lineWidth = rx*0.10; ctx.stroke();
+  // Specular streak, angled with the key light; a small echo below it.
+  ctx.save();
+  ctx.rotate(-0.62);
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.beginPath(); ctx.ellipse(-rx*0.22, -rx*0.34, rx*0.5, rx*0.14, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.beginPath(); ctx.ellipse(-rx*0.05, rx*0.06, rx*0.26, rx*0.07, 0, 0, TAU); ctx.fill();
+  ctx.restore();
+  // Reflected sky along the lower limb - glass is lit from both sides.
+  ctx.strokeStyle = "rgba(" + GLASS_RGB + ",0.55)"; ctx.lineWidth = rx*0.10;
+  ctx.beginPath(); ctx.arc(0, 0, rx*0.82, Math.PI*0.22, Math.PI*0.78); ctx.stroke();
   ctx.restore();
 }
 
@@ -24390,6 +24540,23 @@ function paintHull(ctx, S, p, withText, hullId){
 
   // Wings - painted panels, so they take the pilot's colour.
   hullPiece(ctx, WING, p, S, paint);
+  /*
+   * FORM, not fill. One diagonal gradient shared by every part is the other
+   * half of the sticker look - both wings sampled it identically, so the
+   * ship had "a gradient" rather than "a light". The span now shades across
+   * itself: port wing toward the key light stays lit, starboard falls off
+   * cool, and the falloff is drawn INSIDE the wing silhouette only.
+   */
+  ctx.save();
+  poly(ctx, WING, S); ctx.clip();
+  const span = ctx.createLinearGradient(-S*0.46, 0, S*0.46, S*0.10);
+  span.addColorStop(0,    "rgba(255,250,238,0.14)");
+  span.addColorStop(0.42, "rgba(255,250,238,0)");
+  span.addColorStop(0.62, "rgba(12,17,36,0)");
+  span.addColorStop(1,    "rgba(12,17,36,0.22)");
+  ctx.fillStyle = span;
+  ctx.fillRect(-S*0.5, -S*0.2, S, S*0.55);
+  ctx.restore();
 
   // Painted trim along the leading edges, and wingtip lights.
   ctx.strokeStyle = p.trim; ctx.lineWidth = S*0.012;
@@ -24453,8 +24620,42 @@ function paintHull(ctx, S, p, withText, hullId){
   ctx.fillStyle = core;
   ctx.beginPath(); ctx.arc(0, S*0.376, S*0.035, 0, TAU); ctx.fill();
 
+  /*
+   * Contact shadow FIRST, fuselage second: the body sits on the wings, and
+   * the soft dark it casts either side is what makes them two stacked parts
+   * instead of two shapes in the same plane. Clipped to the wings so the
+   * shadow never leaks onto the sky.
+   */
+  ctx.save();
+  poly(ctx, WING, S); ctx.clip();
+  [-1, 1].forEach(sg => {
+    const ao = ctx.createLinearGradient(sg*S*0.125, 0, sg*S*0.26, 0);
+    ao.addColorStop(0, "rgba(8,12,26,0.30)");
+    ao.addColorStop(1, "rgba(8,12,26,0)");
+    ctx.fillStyle = ao;
+    ctx.fillRect(sg > 0 ? S*0.125 : -S*0.26, -S*0.10, S*0.135, S*0.48);
+  });
+  ctx.restore();
+
   // Fuselage over the wings - the other painted panel.
   hullPiece(ctx, BODY, p, S, paint);
+  /*
+   * ...and the fuselage is a CYLINDER: a specular band runs up the spine
+   * just off-centre toward the light, and the far side rolls away cool.
+   * This is the one stroke that most separates "rendered" from "coloured".
+   */
+  ctx.save();
+  poly(ctx, BODY, S); ctx.clip();
+  const barrel = ctx.createLinearGradient(-S*0.136, 0, S*0.136, 0);
+  barrel.addColorStop(0,    "rgba(12,17,36,0.16)");
+  barrel.addColorStop(0.18, "rgba(255,252,242,0)");
+  barrel.addColorStop(0.34, "rgba(255,252,242,0.26)");
+  barrel.addColorStop(0.52, "rgba(255,252,242,0.04)");
+  barrel.addColorStop(0.75, "rgba(12,17,36,0)");
+  barrel.addColorStop(1,    "rgba(12,17,36,0.30)");
+  ctx.fillStyle = barrel;
+  ctx.fillRect(-S*0.15, -S*0.52, S*0.30, S*0.92);
+  ctx.restore();
 
   // Deep spine channel and panel seams: the greebles that make 300px rich
   // and vanish harmlessly at 40.
@@ -24480,6 +24681,33 @@ function paintHull(ctx, S, p, withText, hullId){
   poly(ctx, [0,-0.50, 0.046,-0.385, -0.046,-0.385], S);
   ctx.fill();
   ctx.strokeStyle = LINE; ctx.lineWidth = S*0.016; ctx.stroke();
+
+  /*
+   * Close-up detail, hangar sizes only. Each seam is a dark line with a lit
+   * lip one step below - the two-line groove that reads as machined metal -
+   * and the rivets follow the leading edges. Below 180px this is smudge, so
+   * it simply isn't drawn there; the philosophy of the spine seams, kept.
+   */
+  if(S >= 180){
+    ctx.save();
+    poly(ctx, WING, S); ctx.clip();
+    [-1, 1].forEach(sg => {
+      ctx.strokeStyle = "rgba(10,14,26,0.38)"; ctx.lineWidth = S*0.006;
+      ctx.beginPath();
+      ctx.moveTo(sg*S*0.17, S*0.065); ctx.lineTo(sg*S*0.40, S*0.212); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,250,238,0.10)";
+      ctx.beginPath();
+      ctx.moveTo(sg*S*0.17, S*0.065 + S*0.008); ctx.lineTo(sg*S*0.40, S*0.212 + S*0.008); ctx.stroke();
+      ctx.fillStyle = "rgba(10,14,26,0.45)";
+      for(let i = 0; i < 5; i++){
+        const t = 0.25 + i*0.15;
+        ctx.beginPath();
+        ctx.arc(sg*S*(0.14 + 0.28*t), S*(0.005 + 0.20*t) + S*0.024, S*0.0055, 0, TAU);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
 
   // Glass last, over everything: the one small bright thing on the hull.
   canopy(ctx, 0, -S*0.175, S*0.066, S*0.115);
@@ -24511,6 +24739,13 @@ function hullSprite(color, S, hullId){
   c.translate(cv.width/2, cv.height/2);
   c.lineJoin = "round";
   paintHull(c, res, paletteFor(color), withText, hullId);
+  // One sun for everyone: the same whole-sprite light pass the enemy bakes
+  // get (outer rim, cool falloff, one sheen), so the player's hull and the
+  // fleet's read as products of the same renderer. Guarded: the suite's
+  // stub canvases can't composite, and the ship must still bake there.
+  if(SF.enemyArt && SF.enemyArt.lightBake){
+    try { SF.enemyArt.lightBake(cv, 0.9); } catch(e){}
+  }
   // The wacky modes mint odd sizes; a runaway key set must not hoard canvases.
   if(hullCache.size >= 40) hullCache.clear();
   hullCache.set(key, cv);

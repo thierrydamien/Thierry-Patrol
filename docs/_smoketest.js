@@ -7633,6 +7633,82 @@ async function run(){
     I.setLang("en");
   }
 
+  /* ---------- the fleet is lit, not inked ---------- */
+  {
+    /*
+     * The ships read as stickers because every part wore the same heavy
+     * outline and one shared diagonal gradient. The fix is light: a warm
+     * rim on every top-left edge, a cool falloff on every bottom-right one,
+     * cool-navy shadows, and one sheen over the whole bake. These pins hold
+     * the pieces of that in place.
+     */
+    check("the hull's ink went on a diet", (() => {
+      const a = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      const piece = a.slice(a.indexOf("function hullPiece"), a.indexOf("function canopy"));
+      return /const EDGE/.test(a) && /strokeStyle = EDGE/.test(piece) &&
+             !/lineWidth = S\*0\.026/.test(piece);
+    })());
+    check("shadows go cool, on both sides of the war", (() => {
+      const a = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      const b = fs.readFileSync(path.join(__dirname, "src/enemyart.js"), "utf8");
+      return /mixTo\(c, \{r:22, g:30, b:56\}/.test(a) && /mixTo\(c, \{r:22, g:30, b:56\}/.test(b);
+    })());
+    check("one sun lights the player and the fleet alike", (() => {
+      const a = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      const b = fs.readFileSync(path.join(__dirname, "src/enemyart.js"), "utf8");
+      return /function lightBake/.test(b) && /lightBake\(cv, elite/.test(b) &&
+             /SF\.enemyArt\.lightBake\(cv, 0\.9\)/.test(a);
+    })());
+    check("the fuselage is a cylinder and the canopy is glass", (() => {
+      const a = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      return /barrel\.addColorStop/.test(a) && /Specular streak/.test(a) &&
+             /createLinearGradient\(0, -rx, 0, rx\)/.test(a);
+    })());
+
+    /*
+     * And the proof in pixels, private node-canvas instance like the rocks:
+     * bake a real Grunt and measure the silhouette's edges. The band of
+     * opaque pixels whose up-left neighbour is sky must come out brighter
+     * than the band whose down-right neighbour is sky - that is what "lit
+     * from the top-left" measurably means. Thresholds calibrated against
+     * the real bake; the sabotage check was run by disabling lightBake,
+     * which drops the ratio below the bar.
+     */
+    let EA = null;
+    try {
+      const NC4 = require("canvas");
+      const src = fs.readFileSync(path.join(__dirname, "src/enemyart.js"), "utf8");
+      const w4 = { SF: { core: { TAU: Math.PI*2 } } };
+      const d4 = { createElement: () => NC4.createCanvas(1, 1) };
+      new Function("window", "document", src)(w4, d4);
+      EA = w4.SF.enemyArt;
+    } catch(e){ EA = null; }
+    check("a grunt's lit edge is brighter than its shaded edge", !EA || (() => {
+      const cv = EA.spriteFor("grunt", "#c0392b", false);
+      if(!cv) return false;
+      const W = cv.width, H = cv.height;
+      const d = cv.getContext("2d").getImageData(0, 0, W, H).data;
+      const A = (x,y) => d[((y|0)*W + (x|0))*4 + 3];
+      const L = (x,y) => { const i = ((y|0)*W + (x|0))*4;
+        return 0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2]; };
+      let lit = 0, ln = 0, sh = 0, sn = 0;
+      const off = 4;
+      for(let y = off; y < H-off; y++) for(let x = off; x < W-off; x++){
+        if(A(x,y) < 220) continue;
+        if(A(x-off,y-off) < 30){ lit += L(x,y); ln++; }
+        if(A(x+off,y+off) < 30){ sh += L(x,y); sn++; }
+      }
+      if(ln < 40 || sn < 40) return false;
+      /*
+       * MEASURED, both ways: 2.05 with the light pass, 1.41 with it
+       * sabotaged out (the shapes' own rim strokes provide that much on
+       * their own). 1.7 sits between, so the pin genuinely requires the
+       * whole-sprite pass and not just the per-piece rims.
+       */
+      return (lit/ln) > (sh/sn)*1.7;
+    })());
+  }
+
   /* ---------- a coin is a coin, and a sun is a flare ---------- */
   {
     /* Same escape as the rocks: the shared canvas stub reads back zeros, so
