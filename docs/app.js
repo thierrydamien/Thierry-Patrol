@@ -4,41 +4,44 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       44  src/core.js
- *      214  src/icons.js
- *      778  src/haptics.js
- *      957  src/audio.js
- *     1655  src/data/config.js
- *     2117  src/data/enemies.js
- *     2976  src/data/missions.js
- *     4845  src/wacky.js
- *     5061  src/data/comms.js
- *     5425  src/data/story.js
- *     5522  src/profile.js
- *     6143  src/cloud.js
- *     6748  src/fx.js
- *     7806  src/input.js
- *     8217  src/entities.js
- *     9429  src/bossart.js
- *    10188  src/bosses.js
- *    10938  src/bossintro.js
- *    11061  src/rewind.js
- *    11583  src/finale.js
- *    11904  src/papadeath.js
- *    12226  src/backstage.js
- *    13429  src/sky29.js
- *    13670  src/systems.js
- *    14289  src/render.js
- *    18845  src/enemyart.js
- *    19591  src/insignia.js
- *    19836  src/skygen.js
- *    22208  src/shipart.js
- *    23286  src/paintjob.js
- *    23448  src/pilotart.js
- *    23543  src/comms.js
- *    23664  src/game.js
- *    27117  src/workshop.js
- *    27814  src/ui.js
+ *       47  src/core.js
+ *      217  src/i18n.js
+ *      416  src/icons.js
+ *      980  src/haptics.js
+ *     1159  src/audio.js
+ *     1857  src/data/config.js
+ *     2319  src/data/enemies.js
+ *     3178  src/data/missions.js
+ *     5047  src/wacky.js
+ *     5263  src/data/comms.js
+ *     5627  src/data/story.js
+ *     5724  src/data/i18nbind.js
+ *     5783  src/data/fr.js
+ *     6209  src/profile.js
+ *     6830  src/cloud.js
+ *     7435  src/fx.js
+ *     8493  src/input.js
+ *     8904  src/entities.js
+ *    10116  src/bossart.js
+ *    10875  src/bosses.js
+ *    11625  src/bossintro.js
+ *    11748  src/rewind.js
+ *    12270  src/finale.js
+ *    12591  src/papadeath.js
+ *    12913  src/backstage.js
+ *    14116  src/sky29.js
+ *    14357  src/systems.js
+ *    14976  src/render.js
+ *    19532  src/enemyart.js
+ *    20278  src/insignia.js
+ *    20523  src/skygen.js
+ *    22895  src/shipart.js
+ *    23973  src/paintjob.js
+ *    24135  src/pilotart.js
+ *    24230  src/comms.js
+ *    24351  src/game.js
+ *    27804  src/workshop.js
+ *    28501  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -207,6 +210,205 @@ class SpatialGrid {
 }
 
 SF.core = { TAU, clamp, lerp, damp, dist2, len, rand, randInt, pick, chance, seedSim, easeOutCubic, mulberry32, Pool, SpatialGrid };
+})();
+
+
+;/* ===== src/i18n.js ===== */
+/*
+ * LANGUAGE.
+ *
+ * The family is French. The game was written in English, and every one of
+ * roughly nineteen hundred player-facing strings lives inline in the module
+ * that uses it - which is the right way to write a game and the wrong way to
+ * translate one. So this adds a language layer that does not ask the rest of
+ * the codebase to change shape.
+ *
+ * Three mechanisms, because the text lives in three different shapes:
+ *
+ *  1. ENGLISH IS THE KEY. `t("Fly a mission")` looks the English up in the
+ *     active pack and hands back the English itself if there is no entry.
+ *     No key invented, no key to keep in sync, and a missing translation
+ *     shows English rather than a blank or a raw identifier - which matters
+ *     for a game a seven-year-old is holding.
+ *
+ *  2. THE DOM SWEEP. index.html carries a hundred-odd fixed labels. Rather
+ *     than tag every one with data-i18n, the sweep walks text nodes and
+ *     translates the ones the pack knows. Untouched markup, and adding a
+ *     language never means editing HTML again.
+ *
+ *  3. THE DATA TABLES. Missions, comms, enemies, bosses, upgrades and ranks
+ *     are static objects read by dozens of call sites (`m.name`, `def.blurb`).
+ *     Rewriting those call sites would be an enormous diff for no gain, so
+ *     the fields are rewritten IN PLACE, with the English captured first so
+ *     switching back is exact. Everything downstream just works.
+ *
+ * Adding a third language is one more pack object and nothing else.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const KEY = "patrol_lang";
+
+const packs = { en: null };            // en is the identity: no lookup needed
+let lang = "en";
+const listeners = [];
+
+/* What the device would like, used only when nothing has been chosen yet. */
+function preferred(){
+  try {
+    const saved = window.localStorage.getItem(KEY);
+    if(saved && (saved === "en" || packs[saved])) return saved;
+    const nav = (window.navigator && (navigator.language || navigator.userLanguage)) || "";
+    return nav.slice(0,2).toLowerCase() === "fr" ? "fr" : "en";
+  } catch(e){ return "en"; }
+}
+
+/** Registers a pack. `strings` is English -> translation. */
+function register(code, pack){ packs[code] = pack || {}; }
+
+/**
+ * The translator. `t("Ready, {name}?", {name:"Marc"})`.
+ * Interpolation happens AFTER lookup, so a pack may reorder placeholders -
+ * which French needs constantly, since it puts things in a different order.
+ */
+function t(en, vars){
+  const pack = packs[lang];
+  let out = en;
+  if(pack && pack.s && Object.prototype.hasOwnProperty.call(pack.s, en)) out = pack.s[en];
+  if(vars) out = String(out).replace(/\{(\w+)\}/g, (m, k) =>
+    Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m);
+  return out;
+}
+
+/* ---------------------------------------------------------
+   THE DATA TABLES
+   --------------------------------------------------------- */
+/*
+ * Every table this touches is registered as a list of {obj, fields}. The
+ * English is snapshotted the first time we localize, never after - so a
+ * second switch reads the original and not a translation of a translation.
+ */
+const bound = [];
+let snapped = false;
+function bind(obj, fields, keyer){
+  if(obj) bound.push({ obj, fields, keyer });
+}
+function snapshot(){
+  if(snapped) return;
+  bound.forEach(b => {
+    b.en = {};
+    b.fields.forEach(f => { if(typeof b.obj[f] === "string") b.en[f] = b.obj[f]; });
+  });
+  snapped = true;
+}
+function applyData(){
+  snapshot();
+  const pack = packs[lang];
+  bound.forEach(b => {
+    b.fields.forEach(f => {
+      const en = b.en[f];
+      if(en === undefined) return;
+      let out = en;
+      if(pack && pack.s && Object.prototype.hasOwnProperty.call(pack.s, en)) out = pack.s[en];
+      b.obj[f] = out;
+    });
+  });
+}
+
+/* Arrays of plain strings (comms lines, story beats) get their own pass. */
+const boundLists = [];
+function bindList(arr){ if(Array.isArray(arr)) boundLists.push({ arr, en: arr.slice() }); }
+function applyLists(){
+  const pack = packs[lang];
+  boundLists.forEach(b => {
+    for(let i=0;i<b.arr.length;i++){
+      const en = b.en[i];
+      if(typeof en !== "string") continue;
+      b.arr[i] = (pack && pack.s && Object.prototype.hasOwnProperty.call(pack.s, en))
+        ? pack.s[en] : en;
+    }
+  });
+}
+
+/* ---------------------------------------------------------
+   THE DOM SWEEP
+   --------------------------------------------------------- */
+/*
+ * Text nodes only, plus placeholders and aria-labels. Deliberately exact-
+ * match: anything the pack does not know is left exactly as it was, so a
+ * partial pack degrades to a partly-English game rather than a broken one.
+ *
+ * Numbers and score readouts are rewritten constantly by the UI and will
+ * never match a pack entry, so they are safe by construction.
+ */
+function sweep(root){
+  const scope = root || document.body;
+  if(!scope || !document.createTreeWalker) return;
+  const pack = packs[lang];
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+  const jobs = [];
+  let n;
+  while((n = walker.nextNode())){
+    const raw = n.nodeValue;
+    if(!raw) continue;
+    const key = raw.trim();
+    if(key.length < 2) continue;
+    if(!n.__enText) n.__enText = key;              // remember the original
+    const src = n.__enText;
+    const to = (pack && pack.s && Object.prototype.hasOwnProperty.call(pack.s, src))
+      ? pack.s[src] : src;
+    if(to !== key) jobs.push([n, raw.replace(key, to)]);
+  }
+  jobs.forEach(([node, v]) => { node.nodeValue = v; });
+
+  ["placeholder", "aria-label", "title"].forEach(attr => {
+    const els = scope.querySelectorAll("[" + attr + "]");
+    for(let i=0;i<els.length;i++){
+      const el = els[i];
+      const store = "__en_" + attr;
+      if(!el[store]) el[store] = el.getAttribute(attr);
+      const src = el[store];
+      const to = (pack && pack.s && Object.prototype.hasOwnProperty.call(pack.s, src))
+        ? pack.s[src] : src;
+      if(el.getAttribute(attr) !== to) el.setAttribute(attr, to);
+    }
+  });
+}
+
+/* ---------------------------------------------------------
+   PUBLIC
+   --------------------------------------------------------- */
+function apply(){
+  applyData();
+  applyLists();
+  sweep();
+  try { document.documentElement.setAttribute("lang", lang); } catch(e){}
+}
+function setLang(code){
+  if(code !== "en" && !packs[code]) return false;
+  if(code === lang) return true;
+  lang = code;
+  try { window.localStorage.setItem(KEY, code); } catch(e){}
+  apply();
+  listeners.forEach(fn => { try { fn(code); } catch(e){} });
+  return true;
+}
+/** Runs once everything else has loaded and the tables exist. */
+function boot(){
+  lang = preferred();
+  try { window.localStorage.setItem(KEY, lang); } catch(e){}
+  apply();
+}
+function onChange(fn){ if(typeof fn === "function") listeners.push(fn); }
+
+SF.i18n = {
+  t, register, setLang, boot, apply, sweep, onChange,
+  bind, bindList,
+  lang: () => lang,
+  available: () => ["en"].concat(Object.keys(packs).filter(k => k !== "en")),
+  // The suite reads these to prove coverage rather than infer it.
+  _packs: packs, _bound: bound, _lists: boundLists,
+};
 })();
 
 
@@ -5515,6 +5717,491 @@ const STORY = {
 };
 
 SF.storyData = { STORY };
+})();
+
+
+;/* ===== src/data/i18nbind.js ===== */
+/*
+ * WHAT GETS LOCALIZED, AND WHERE IT LIVES.
+ *
+ * The tables are read by dozens of call sites as plain fields - `m.name`,
+ * `def.blurb`, `rank.name`. Rewriting every one of those to go through a
+ * translator would be a huge diff for no benefit, so instead this registers
+ * the fields with i18n.js, which rewrites them in place and keeps the
+ * English so switching back is exact.
+ *
+ * Separate from fr.js on purpose: this file says WHICH text is player-facing,
+ * which is a fact about the game and not about French. A second language adds
+ * a pack and touches nothing here.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const I = SF.i18n;
+if(!I) return;
+
+const C = SF.config || {};
+const M = SF.missions || {};
+
+/* Missions: everything the briefing, the map and the pause card show. */
+(M.MISSIONS || []).forEach(m => I.bind(m, ["name", "subtitle", "brief", "goal"]));
+/* ...and the boss cards, which the arrival cutscene names in full. */
+Object.keys(M.BOSSES || {}).forEach(k => I.bind(M.BOSSES[k], ["name", "epithet"]));
+/* Star objectives: the three lines on the briefing and the pause overlay. */
+Object.keys(M.OBJECTIVES || {}).forEach(k => I.bind(M.OBJECTIVES[k], ["label"]));
+
+/* The shop: categories, parts, hulls, paints, trails and their blurbs. */
+(C.UPGRADES || []).forEach(u => I.bind(u, ["name", "blurb", "cat"]));
+(C.SHIP_COLORS || []).forEach(c => I.bind(c, ["name"]));
+(C.RANKS || []).forEach(r => I.bind(r, ["name"]));
+(C.DIFFICULTIES || []).forEach(d => I.bind(d, ["name", "word", "blurb"]));
+(C.ACHIEVEMENTS || []).forEach(a => I.bind(a, ["name", "blurb", "hint"]));
+(C.CATEGORIES || []).forEach(c => I.bind(c, ["name"]));
+if(SF.shipart && SF.shipart.HULLS)
+  SF.shipart.HULLS.forEach(h => I.bind(h, ["name", "blurb"]));
+if(SF.shipart && SF.shipart.TUNES)
+  SF.shipart.TUNES.forEach(t => I.bind(t, ["name", "blurb"]));
+
+/* Every enemy the roster panel names. */
+const ET = (SF.enemyData && SF.enemyData.ENEMY_TYPES) || {};
+Object.keys(ET).forEach(k => I.bind(ET[k], ["name"]));
+
+/* Comms are arrays of interchangeable lines; the story beats are prose. */
+const CD = (SF.commsData && SF.commsData.COMMS) || {};
+Object.keys(CD).forEach(k => { if(CD[k] && CD[k].lines) I.bindList(CD[k].lines); });
+const ST = (SF.storyData && SF.storyData.STORY) || {};
+Object.keys(ST).forEach(k => {
+  const b = ST[k];
+  if(!b) return;
+  I.bind(b, ["title", "text", "sub"]);
+  if(Array.isArray(b.lines)) I.bindList(b.lines);
+});
+})();
+
+
+;/* ===== src/data/fr.js ===== */
+/*
+ * FRANÇAIS.
+ *
+ * One flat map, English on the left. The three mechanisms in i18n.js - the
+ * t() helper, the DOM sweep and the data-table rewrite - all read this same
+ * object, so a string translated once is translated everywhere it appears.
+ *
+ * House style, kept deliberately consistent:
+ *  - The game speaks TO the pilot, in the "tu" form. These are two boys and
+ *    their dad; "vous" would put a uniform on a family game.
+ *  - Terminology is fixed: mission, étoile, pièce, vaisseau, Arsenal,
+ *    Surrégime, Bouclier, Crampon. Never a synonym for variety's sake - a
+ *    seven-year-old is learning these words as game vocabulary.
+ *  - French typographic spacing (espace insécable before ! ? : and inside
+ *    guillemets) is used where the text is prose. UI chrome that has to fit
+ *    a chip or a pill is kept short first and pretty second.
+ *  - Where English is punchier than French can be at the same length, the
+ *    line is rewritten rather than padded. "LAUNCH" is DÉCOLLAGE, not
+ *    "LANCER LA MISSION".
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+if(!SF.i18n) return;
+
+SF.i18n.register("fr", { name: "Français", s: {
+
+/* ---------------- shell, menus, buttons ---------------- */
+"A FAMILY SQUADRON": "UN ESCADRON DE FAMILLE",
+"Who's flying today?": "Qui vole aujourd'hui ?",
+"+ Add Pilot": "+ Ajouter un pilote",
+"Settings": "Réglages",
+"SETTINGS": "RÉGLAGES",
+"FLY A MISSION": "EN MISSION",
+"WACKY SKY": "CIEL FARFELU",
+"BOSS RUSH": "MARATHON DE BOSS",
+"DRAWING BOARD": "ATELIER DE DESSIN",
+"ARMORY": "ARSENAL",
+"MEDALS": "MÉDAILLES",
+"CHAMPIONSHIP": "CHAMPIONNAT",
+"Switch Pilot": "Changer de pilote",
+"Fullscreen": "Plein écran",
+"MENU": "MENU",
+"THE CAMPAIGN": "LA CAMPAGNE",
+"★ FIND MY STARS": "★ TROUVER MES ÉTOILES",
+"Back to Menu": "Retour au menu",
+"Back to Missions": "Retour aux missions",
+"MISSION": "MISSION",
+"BOSS": "BOSS",
+"STAR OBJECTIVES": "OBJECTIFS ÉTOILES",
+"WHAT'S OUT THERE": "CE QUI T'ATTEND",
+"CHOOSE DIFFICULTY": "DIFFICULTÉ",
+"PRE-FLIGHT KIT": "ÉQUIPEMENT",
+"LAUNCH": "DÉCOLLAGE",
+"PAUSED": "PAUSE",
+"RESUME": "REPRENDRE",
+"Restart Mission": "Recommencer la mission",
+"Quit to Menu": "Quitter",
+"MISSION COMPLETE": "MISSION RÉUSSIE",
+"NEXT MISSION": "MISSION SUIVANTE",
+"TRY ON ROOKIE": "ESSAYER EN RECRUE",
+"RETRY": "RÉESSAYER",
+"LOADING": "CHARGEMENT",
+"CONTINUE": "CONTINUER",
+"Close": "Fermer",
+"Cancel": "Annuler",
+"OK": "OK",
+"TURN YOUR PHONE": "TOURNE TON TÉLÉPHONE",
+"Patrol flies the tall way up": "Patrol se joue à la verticale",
+"MEDAL UNLOCKED": "MÉDAILLE DÉBLOQUÉE",
+"Made with ❤ for Marc & Charles": "Fait avec ❤ pour Marc et Charles",
+
+/* ---------------- settings ---------------- */
+"All sound": "Tous les sons",
+"Music": "Musique",
+"Sound effects": "Effets sonores",
+"Screen shake": "Secousses de l'écran",
+"Calmer visuals": "Visuels apaisés",
+"Glow": "Halo lumineux",
+"Rumble": "Vibrations",
+"Language": "Langue",
+"ON": "OUI",
+"OFF": "NON",
+"Off": "Désactivée",
+"Squad Sync": "Synchro Escadron",
+"SQUAD SYNC": "SYNCHRO ESCADRON",
+"Reset this pilot": "Réinitialiser ce pilote",
+"SYNC NOW": "SYNCHRONISER",
+"Copy code": "Copier le code",
+"Restore backup": "Restaurer une sauvegarde",
+"Join another squad": "Rejoindre un autre escadron",
+"Rumble needs an Android phone or tablet. iPhones and iPads don't let a web app buzz — that's Apple's rule, not the game's.":
+  "Les vibrations demandent un téléphone ou une tablette Android. Les iPhone et les iPad n'autorisent pas une appli web à vibrer — c'est la règle d'Apple, pas celle du jeu.",
+"Glow is on, but this device couldn't draw it and keep a smooth 60 frames a second, so the game switched it off to stay fast. Turn Glow off and on again to try once more.":
+  "Le halo est activé, mais cet appareil n'arrivait pas à l'afficher tout en gardant 60 images par seconde : le jeu l'a donc coupé pour rester fluide. Désactive puis réactive le halo pour réessayer.",
+
+/* ---------------- armory, paint, championship, easel ---------------- */
+"MIX YOUR OWN": "MÉLANGE MAISON",
+"COLOUR": "COULEUR",
+"NAME IT": "DONNE-LUI UN NOM",
+"STOCK": "D'ORIGINE",
+"YOURS": "LE TIEN",
+"COMPARE": "COMPARER",
+"TEST RANGE": "BANC D'ESSAI",
+"CALLSIGN": "INDICATIF",
+"SAVE": "ENREGISTRER",
+"YOUR BADGE": "TON INSIGNE",
+"PAINT YOUR SHIP": "PEINS TON VAISSEAU",
+"UNDO": "ANNULER",
+"WIPE IT": "TOUT EFFACER",
+"CANCEL": "QUITTER",
+"PUT IT ON MY SHIP": "SUR MON VAISSEAU !",
+"THE CHAMPIONSHIP": "LE CHAMPIONNAT",
+"most ★ across all missions wins": "le plus d'★ toutes missions confondues l'emporte",
+"WHO HOLDS WHAT": "QUI DÉTIENT QUOI",
+"draw a sky — the family flies it": "dessine un ciel — la famille le survole",
+"MY SKY": "MON CIEL",
+"RENAME": "RENOMMER",
+"YOUR SKY, BOTTOM TO TOP": "TON CIEL, DE BAS EN HAUT",
+"THE SKY": "LE CIEL",
+"HOUSE RULE": "RÈGLE MAISON",
+"THE SILLY BITS": "LES TRUCS RIGOLOS",
+"THE WAVES": "LES VAGUES",
+"THE BOSS": "LE BOSS",
+"▶ TEST FLY IT": "▶ L'ESSAYER",
+"PIN IT TO THE FAMILY BOARD": "L'AFFICHER SUR LE TABLEAU DE FAMILLE",
+"THE FAMILY'S SKIES": "LES CIELS DE LA FAMILLE",
+
+/* ---------------- ranks ----------------
+   Short on purpose: these sit under a name on a pilot card and in the menu
+   header, where the English they replace is 12-14 characters. */
+"ROOKIE CADET": "RECRUE",
+"WING CADET": "CADET",
+"SQUADRON PILOT": "PILOTE",
+"FLIGHT LEADER": "CHEF DE VOL",
+"STAR ACE": "AS DES ÉTOILES",
+"WING COMMANDER": "COMMANDANT",
+"SPACE LEGEND": "LÉGENDE SPATIALE",
+"THIERRY LEGEND": "LÉGENDE THIERRY",
+
+/* ---------------- difficulty ---------------- */
+"ROOKIE": "RECRUE",
+"PILOT": "PILOTE",
+"ACE": "AS",
+"VETERAN": "VÉTÉRAN",
+"NIGHTMARE": "CAUCHEMAR",
+"Easy": "Facile",
+"Normal": "Normal",
+"Hard": "Difficile",
+"Brutal": "Brutal",
+"Insane": "Dément",
+"Slow enemies, hardly any shooting, and a free extra life.":
+  "Des ennemis lents, presque aucun tir, et une vie offerte.",
+"The normal mission. Fair fight, normal pay.":
+  "La mission normale. Combat équitable, paie normale.",
+"Tougher enemies that aim right at you. Pays 1.8x.":
+  "Des ennemis plus coriaces qui te visent droit dessus. Paie x1,8.",
+"Thick armour, clever attackers, bullets everywhere. Pays 2.8x.":
+  "Blindage épais, assaillants malins, des tirs partout. Paie x2,8.",
+"All of it at once. Bring your very best gear. Pays 4.5x.":
+  "Tout ça d'un coup. Amène ton meilleur équipement. Paie x4,5.",
+
+/* ---------------- shop categories, hulls, paints ---------------- */
+"GUNS": "ARMES",
+"STAYING ALIVE": "SURVIE",
+"SHIP": "VAISSEAU",
+"SPECIALS": "SPÉCIAUX",
+"THE DART": "LA FLÈCHE",
+"THE ANVIL": "L'ENCLUME",
+"The ship the family has always flown. Slim, quick, and a small thing to hit.":
+  "Le vaisseau que la famille a toujours piloté. Fin, rapide, et tout petit à toucher.",
+"Twice the shoulders and a plate for a nose. Slower, and a much easier thing to hit - but it takes a beating and gets straight back up.":
+  "Deux fois plus large, avec une plaque en guise de nez. Plus lent et bien plus facile à toucher — mais il encaisse et repart aussitôt.",
+"HOT PINK": "ROSE VIF",
+"ICE WHITE": "BLANC GIVRE",
+"LASER LIME": "VERT LASER",
+"DEEP AQUA": "BLEU LAGON",
+"TANGERINE": "MANDARINE",
+"ULTRAVIOLET": "ULTRAVIOLET",
+"MIDNIGHT": "MINUIT",
+"MINT": "MENTHE",
+"SOLAR GOLD": "OR SOLAIRE",
+"EMBER TRAIL": "TRAÎNÉE DE BRAISE",
+"ION STREAM": "FLUX D'IONS",
+"STARDUST": "POUSSIÈRE D'ÉTOILES",
+"RAINBOW BURN": "ARC-EN-CIEL",
+"RACING STRIPES": "BANDES DE COURSE",
+"FLAME JOB": "FLAMMES",
+"LIGHTNING": "ÉCLAIRS",
+"CHEQUERED": "DAMIER",
+"CLASSIC": "CLASSIQUE",
+"GOLD RAIN": "PLUIE D'OR",
+"EMERALD SKY": "CIEL ÉMERAUDE",
+"RAINBOW SALUTE": "SALUT ARC-EN-CIEL",
+
+/* ---------------- enemies ---------------- */
+"Grunt": "Sbire",
+"Weaver": "Slalomeur",
+"Striker": "Frappeur",
+"Swooper": "Piqueur",
+"Kamikaze": "Kamikaze",
+"Gun Platform": "Tourelle",
+"Brute": "Brute",
+"Prison Hauler": "Fourgon",
+"Guardian": "Gardien",
+"Splitter": "Diviseur",
+"Shard": "Éclat",
+"Coin Thief": "Pickpocket",
+"Asteroid": "Astéroïde",
+"Marksman": "Tireur d'élite",
+"Interceptor": "Intercepteur",
+"Minelayer": "Poseur de mines",
+"Mine": "Mine",
+"Hive": "Ruche",
+"Mender": "Réparateur",
+"Boulder": "Rocher",
+"Tithe Serpent": "Serpent à Dîme",
+"Serpent Ring": "Anneau du Serpent",
+"Ship Part": "Pièce de vaisseau",
+"Limpet": "Crampon",
+"Sky Ox": "Bœuf du Ciel",
+
+/* ---------------- star objectives ---------------- */
+"Complete the mission": "Terminer la mission",
+"Destroy 80% of enemies": "Détruire 80 % des ennemis",
+"Destroy every enemy": "Détruire tous les ennemis",
+"Rescue every stranded pilot": "Sauver tous les pilotes en perdition",
+"Take no damage at all": "Ne subir aucun dégât",
+"Grab 60 coins": "Ramasser 60 pièces",
+"Bag 10 WANTED ships": "Abattre 10 vaisseaux RECHERCHÉS",
+"Cut 20 near misses": "Frôler 20 ennemis",
+"Destroy 15 unseen": "Détruire 15 ennemis sans être vu",
+"Destroy 10 in the squeeze": "Détruire 10 ennemis dans le goulet",
+"Destroy 20 after dark": "Détruire 20 ennemis dans le noir",
+"Cut 6 ropes": "Couper 6 câbles",
+"Destroy 8 elites": "Détruire 8 élites",
+"Shoot off every weak point": "Détruire tous les points faibles",
+"Don't lose a single life": "Ne perdre aucune vie",
+"Bring the hauler home": "Ramener le cargo à bon port",
+"Deliver all 4 crates": "Livrer les 4 caisses",
+"Go round the back 6 times": "Faire 6 fois le tour",
+"Shake off 10 limpets": "Décrocher 10 crampons",
+"Never get caught by the flare": "Ne jamais se faire brûler par l'éruption",
+"Flatten 15 ships with the herd": "Écraser 15 vaisseaux avec le troupeau",
+"Let your reflection get 100 kills": "Laisser ton reflet faire 100 victimes",
+"Stop 10 parts on the belts": "Bloquer 10 pièces sur les tapis",
+"Slay the Tithe Serpent": "Terrasser le Serpent à Dîme",
+"Paint 6 sketches to your side": "Rallier 6 croquis à ta cause",
+
+/* ---------------- sectors ---------------- */
+"HOME PATROL": "PATROUILLE LOCALE",
+"THE BELT": "LA CEINTURE",
+"THE STORM": "LA TEMPÊTE",
+"THE SUPPLY ROAD": "LA ROUTE DU RAVITAILLEMENT",
+"ENEMY SPACE": "TERRITOIRE ENNEMI",
+"WARDEN'S REACH": "LE DOMAINE DU GEÔLIER",
+"THE TRENCHES": "LES TRANCHÉES",
+"THEIR STAR": "LEUR ÉTOILE",
+"THE DARK": "LES TÉNÈBRES",
+"THE CRACK": "LA FAILLE",
+"THE WORKSHOP": "L'ATELIER",
+"THE EASEL": "LE CHEVALET",
+
+/* ---------------- mission names ---------------- */
+"First Patrol": "Première Patrouille",
+"Weaving Through": "Slalom",
+"The Anchor": "L'Ancre",
+"Return Fire": "Riposte",
+"Heavy Metal": "Grosse Ferraille",
+"Kamikaze Run": "Vol Kamikaze",
+"The Storm": "La Tempête",
+"Prison Break": "Évasion",
+"The Gauntlet": "Le Gant de Fer",
+"The Convoy": "Le Convoi",
+"The Lifeline": "Le Cordon",
+"Sky Sentinel": "Sentinelle du Ciel",
+"Silent Running": "Silence Radio",
+"Spotlight": "Projecteur",
+"The Wreck Line": "Le Cimetière d'Épaves",
+"The Ring": "L'Anneau",
+"The Rival": "La Rivale",
+"The Hatchery": "La Couveuse",
+"The Warden": "Le Geôlier",
+"Their Treasury": "Leur Trésor",
+"Shake Them Off": "Décroche-les !",
+"Cold Approach": "Approche Glacée",
+"The Narrows": "Le Goulet",
+"The Trench Run": "La Tranchée",
+"All Hands": "Tout le Monde sur le Pont",
+"The Bright Side": "Le Côté Éclairé",
+"The Leviathan": "Le Léviathan",
+"The Searchlight": "Le Phare",
+"Nightfall": "Tombée de la Nuit",
+"The Long Dark": "La Longue Nuit",
+"The Devourer": "Le Dévoreur",
+"The Sky River": "Le Fleuve Céleste",
+"The Undertow": "Le Ressac",
+"The Stampede": "La Ruée",
+"The Chorus": "Le Chœur",
+"The Glass Sea": "La Mer de Verre",
+"The Foundry": "La Fonderie",
+"The Serpent's Garden": "Le Jardin du Serpent",
+"Behind the Sky": "Derrière le Ciel",
+"Sky 40": "Ciel 40",
+"SKY 40": "CIEL 40",
+
+/* ---------------- mission subtitles ---------------- */
+"Learn the ropes": "Prise en main",
+"Moving targets": "Cibles mouvantes",
+"Mind the gap": "Attention à l'écart",
+"They shoot back": "Ils ripostent",
+"First boss": "Premier boss",
+"Dodge or die": "Esquive ou meurs",
+"Fly the wind": "Dompte le vent",
+"Rescue mission": "Mission de sauvetage",
+"Elites inbound": "Élites en approche",
+"Bring them home": "Ramène-les à la maison",
+"you are the delivery": "c'est toi, la livraison",
+"Their flagship": "Leur vaisseau amiral",
+"Guns down. Just fly.": "Canons éteints. Vole, c'est tout.",
+"Don't be seen": "Ne te fais pas repérer",
+"Through the debris": "À travers les débris",
+"this sky has no edges": "ce ciel n'a pas de bords",
+"One of them is good": "L'une d'elles est douée",
+"It keeps growing": "Ça n'arrête pas de grossir",
+"Their jailer": "Leur gardien de prison",
+"Rob the robbers": "Vole les voleurs",
+"they don't shoot — they cling": "ils ne tirent pas — ils s'accrochent",
+"Line up the shot": "Aligne ton tir",
+"Under their guns": "Sous leurs canons",
+"Thread the walls": "Faufile-toi entre les murs",
+"Everyone who is left": "Tous ceux qui restent",
+"standing on their sun": "debout sur leur soleil",
+"The last one": "Le dernier",
+"Your glow is the only light": "Ta lueur est la seule lumière",
+"While the light lasts": "Tant qu'il fait jour",
+"Something is out there": "Quelque chose rôde",
+"The last star": "La dernière étoile",
+"The sky is draining": "Le ciel se vide",
+"Gravity gone wrong": "La gravité déraille",
+"you can't shoot them — push them": "ne leur tire pas dessus — pousse-les",
+"They fire on the beat": "Ils tirent en rythme",
+"two of you": "vous êtes deux",
+"Stop the production line": "Arrête la chaîne",
+"It eats your coins": "Il mange tes pièces",
+"Where the game is made": "Là où le jeu se fabrique",
+"the one Papa never finished": "celui que Papa n'a jamais fini",
+
+/* ---------------- in-flight goal banners ----------------
+   These flash over the playfield for a couple of seconds, so they are short,
+   imperative and front-load the verb the way the English does. */
+"Fly with your finger. Shoot!": "Vole avec ton doigt. Tire !",
+"Ringed one pays x5 — hunt it down!": "Le cerclé rapporte x5 — à la chasse !",
+"Fly the gaps — or cut the rope!": "Passe dans les trous — ou coupe le câble !",
+"They shoot back — hide behind rocks!": "Ils ripostent — cache-toi derrière les rochers !",
+"BOSS! Shoot the guns off its arms": "BOSS ! Arrache-lui les canons",
+"Cut it fine — near misses pay!": "Frôle-les — ça rapporte !",
+"WIND! Watch the streaks, then lean": "VENT ! Regarde les traînées, puis penche-toi",
+"Free our friends from the ships!": "Libère nos amis de leurs vaisseaux !",
+"Gold ones are tough — and rich!": "Les dorés sont coriaces — et généreux !",
+"GUARD our hauler — keep it alive!": "PROTÈGE notre cargo — garde-le en vie !",
+"CARRY 4 crates to the green door": "PORTE 4 caisses jusqu'à la porte verte",
+"BOSS! Knock its parts off": "BOSS ! Fais-lui sauter les pièces",
+"Guns broken — just DODGE!": "Canons en panne — ESQUIVE !",
+"Only the beam shows the sky": "Seul le faisceau éclaire le ciel",
+"Fly the scrap — it stops their shots": "Utilise la ferraille — elle arrête leurs tirs",
+"GO ROUND THE BACK — the sky joins up": "FAIS LE TOUR — le ciel se referme",
+"VESPER copies you — trick her!": "VESPER te copie — piège-la !",
+"Kill the big purple one first!": "Détruis le gros violet en premier !",
+"BOSS! Don't touch the mines": "BOSS ! Ne touche pas aux mines",
+"Coins in the WIND — catch them!": "Des pièces dans le VENT — attrape-les !",
+"WAGGLE hard to shake them off": "SECOUE fort pour les décrocher",
+"BOSS! It goes invisible — watch": "BOSS ! Il devient invisible — observe",
+"The canyon SQUEEZES — fly the middle": "Le canyon SE RESSERRE — reste au milieu",
+"WALLS! Find the gap and fly through": "DES MURS ! Trouve le trou et passe",
+"Save every last pilot!": "Sauve-les tous jusqu'au dernier !",
+"CLIMB when the star flares": "MONTE quand l'étoile s'embrase",
+"BOSS! Break off all four parts": "BOSS ! Casse les quatre pièces",
+"DARK! Find the lost pilots": "NOIR ! Retrouve les pilotes perdus",
+"It gets DARKER. Learn them early": "Il fait de plus en plus SOMBRE. Apprends vite",
+"Something is out there. Watch out!": "Quelque chose rôde. Méfie-toi !",
+"THE LAST BOSS. Everything you have!": "LE DERNIER BOSS. Donne tout !",
+"The sky is DRAINING — ride it!": "Le ciel SE VIDE — laisse-toi porter !",
+"Whirlpools bend your shots!": "Les tourbillons courbent tes tirs !",
+"STEER the herd into their ships": "DIRIGE le troupeau sur leurs vaisseaux",
+"They fire ON THE BEAT — weave!": "Ils tirent EN RYTHME — slalome !",
+"USE your reflection — it shoots too": "SERS-TOI de ton reflet — il tire aussi",
+"Shoot the parts on the belts!": "Détruis les pièces sur les tapis !",
+"It EATS coins — hit the glow ring!": "Il MANGE les pièces — vise l'anneau lumineux !",
+"The workshop is awake. Fly!": "L'atelier s'est réveillé. Vole !",
+"Paint Papa's last sky!": "Peins le dernier ciel de Papa !",
+
+/* ---------------- comms: the voices over the shoulder ----------------
+   Control is the grown-up on the radio; your mate is the sibling in the next
+   seat. {you} is the pilot's own name and must survive the translation. */
+"Marksman locking on - get out of that line!": "Tireur d'élite en approche — sors de sa ligne !",
+"See the pink line? Don't be standing in it.": "Tu vois le trait rose ? Ne reste pas dedans.",
+"Rocks ahead - fly around them or break them up.": "Des rochers droit devant — contourne-les ou casse-les.",
+"Asteroid field, {you}. Mind the big ones.": "Champ d'astéroïdes, {you}. Méfie-toi des gros.",
+
+/* ---------------- navigation, kit, difficulty detail ---------------- */
+"CAMPAIGN": "CAMPAGNE",
+"MY SHIP": "MON VAISSEAU",
+"SMART BOMB +1": "BOMBE +1",
+"OVERDRIVE +1": "SURRÉGIME +1",
+"SHIELDS FULL": "BOUCLIERS PLEINS",
+"EXTRA LIFE": "VIE EN PLUS",
+"a thinner crowd": "moins de monde",
+"the normal crowd": "foule normale",
+"twice the enemies": "deux fois plus d'ennemis",
+"almost three times the enemies": "presque trois fois plus d'ennemis",
+"a sky full of enemies": "un ciel plein d'ennemis",
+"paper armour": "blindage en papier",
+"normal armour": "blindage normal",
+"tougher armour": "blindage renforcé",
+"much tougher armour": "blindage très renforcé",
+"monster armour": "blindage monstrueux",
+"normal pay": "paie normale",
+"smaller pay": "paie réduite",
+"pays {n}× the money": "rapporte {n}× plus",
+
+} });
 })();
 
 
@@ -27953,6 +28640,14 @@ function syncWayBack(id){
     if(!last) el.addEventListener("click", () => (i === 0 ? goHome() : navBack()));
     nav.appendChild(el);
   });
+  /*
+   * Every screen is built from English source text and translated afterwards,
+   * so the sweep has to follow the build - not just a language change. Found
+   * the hard way: switching to French on the menu and then walking into the
+   * campaign showed a fully French menu and an English sector rail, because
+   * the rail had not existed yet when the last sweep ran.
+   */
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -28351,6 +29046,7 @@ function renderProfiles(){
     }
     SF.insignia.mount(card.querySelector(".pc-patch"), P.badgeFor(p), p.shipColor, 34);
   });
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 function selectProfile(name){
@@ -28428,6 +29124,7 @@ function renderMenu(){
     ? (rows[0].callsign || rows[0].name) + " leads with " + P.totalStars(rows[0]) + " ★"
     : "No one to race yet");
   drawMenuIcons();
+  if(SF.i18n) SF.i18n.sweep();
 }
 function setSub(id, text){ const el = $(id); if(el) el.textContent = text; }
 
@@ -29442,6 +30139,7 @@ function renderMissions(){
 
   startCampaignLoop();
   scrollToNextStop(target);
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -30273,6 +30971,7 @@ function renderArmory(){
   else renderShelf(panel, armoryTab);
 
   startHangarLoop();
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -31963,19 +32662,23 @@ function renderBriefTiers(index){
   // The detail line speaks the reader's language, not the tuning table's:
   // "205% as many enemies · 2.6x health" is for the balance sheet, and the
   // reader is seven. Pay keeps its number - the money is the hook.
-  const crowd = d.density <= 0.8 ? "a thinner crowd"
+  const T = SF.i18n.t;
+  const crowd = T(d.density <= 0.8 ? "a thinner crowd"
               : d.density <= 1.2 ? "the normal crowd"
               : d.density <= 2.2 ? "twice the enemies"
               : d.density <= 3.0 ? "almost three times the enemies"
-              : "a sky full of enemies";
-  const armour = d.hpMult <= 0.9 ? "paper armour"
+              : "a sky full of enemies");
+  const armour = T(d.hpMult <= 0.9 ? "paper armour"
                : d.hpMult <= 1.2 ? "normal armour"
                : d.hpMult <= 3.0 ? "tougher armour"
                : d.hpMult <= 5.0 ? "much tougher armour"
-               : "monster armour";
-  const payLine = d.pay === 1 ? "normal pay"
-                : d.pay < 1 ? "smaller pay"
-                : `pays ${d.pay}× the money`;
+               : "monster armour");
+  // The pay line carries a number, so it is a template rather than a phrase -
+  // French puts the multiplier in a different place, which is exactly what
+  // the placeholder is for.
+  const payLine = d.pay === 1 ? T("normal pay")
+                : d.pay < 1 ? T("smaller pay")
+                : T("pays {n}× the money", { n: d.pay });
   $("briefDiffDetail").innerHTML =
     `<b style="color:${d.color}">${d.name}</b><em>${esc(d.blurb)}</em>` +
     `<span>${crowd} · ${armour} · ${payLine}</span>`;
@@ -32949,9 +33652,20 @@ function renderSettings(){
    * nothing happens reads as a bug, and an explanation beats an absence.
    */
   $("glowNote").classList.toggle("hidden", !SF.fx.glowShed());
+  /*
+   * The language pill names the language in ITS OWN language, so a French
+   * reader who cannot parse the English row label can still find the switch.
+   */
+  const langBtn = $("setLang");
+  if(langBtn){
+    const cur = SF.i18n.lang();
+    langBtn.querySelector(".set-pill").textContent =
+      cur === "fr" ? "Français" : "English";
+  }
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
+  if(SF.i18n) SF.i18n.sweep();
 }
 function openSettings(){
   renderSettings();
@@ -32995,6 +33709,15 @@ click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSetti
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
 click($("setCalm"), () => { SF.fx.setCalmEnabled(!SF.fx.calmEnabled()); renderSettings(); });
 click($("setGlow"), () => { SF.fx.setGlowEnabled(!SF.fx.glowEnabled()); renderSettings(); });
+/*
+ * Two languages, so the row is a toggle rather than a list - one tap, no
+ * menu to get lost in. When there is a third this becomes a picker; until
+ * then a picker would be three taps to do one thing.
+ */
+click($("setLang"), () => {
+  SF.i18n.setLang(SF.i18n.lang() === "fr" ? "en" : "fr");
+  audio.play("uiClick");
+});
 click($("setRumble"), () => {
   if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());
@@ -33290,6 +34013,33 @@ qa(".btn-ico[data-glyph], .back-ico[data-glyph]").forEach(cv => {
   });
   paintState();
 })();
+/*
+ * LANGUAGE, LAST. i18n.boot() picks the saved choice (or the device's, on a
+ * first run), rewrites the data tables and sweeps the markup - so it has to
+ * happen before the first render, or the pilot picker paints English and
+ * then flickers.
+ *
+ * On a later switch the whole visible surface is rebuilt rather than patched:
+ * the sweep alone would catch the fixed markup but not a mission name already
+ * written into a card. Rebuilding the screen you are standing on is cheap and
+ * cannot leave half a language behind.
+ */
+SF.i18n.boot();
+SF.i18n.onChange(() => {
+  const live = document.querySelector(".screen.active");
+  const id = live ? live.id : "screen-profiles";
+  renderProfiles();
+  if(profile){
+    renderMenu();
+    if(id === "screen-missions") renderMissions();
+    if(id === "screen-armory")   renderArmory();
+    if(id === "screen-briefing" && MISSIONS[selectedMissionIndex])
+      openBriefing(selectedMissionIndex);
+  }
+  if(!$("settingsOverlay").classList.contains("hidden")) renderSettings();
+  // Anything rebuilt above is fresh English markup until it is swept again.
+  SF.i18n.sweep();
+});
 renderProfiles();
 startTitleLoop();
 SF.game.resize();

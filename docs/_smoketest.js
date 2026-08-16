@@ -7494,6 +7494,73 @@ async function run(){
            /for\(let i = 0; i < 4; i\+\+\)/.test(fn);
   })());
 
+  /* ---------- two languages, one game ---------- */
+  {
+    const I = SF.i18n;
+    check("there is a French pack and English is the fallback", !!I &&
+      I.available().indexOf("fr") >= 0 && I.lang() === "en");
+
+    /*
+     * ENGLISH IS THE KEY, and a miss returns the English rather than a blank
+     * or a raw identifier. That is the property that makes a partial pack
+     * safe to ship: an untranslated string is merely untranslated.
+     */
+    check("a missing translation falls back to English, never to nothing",
+      I.t("__nothing will ever translate this__") === "__nothing will ever translate this__");
+
+    check("switching language rewrites the data tables", (() => {
+      const m = SF.missions.MISSIONS[0];
+      const en = m.name;
+      I.setLang("fr");
+      const fr = m.name;
+      I.setLang("en");
+      return en === "First Patrol" && fr === "Première Patrouille" && m.name === en;
+    })());
+
+    /* Switching back must restore the ORIGINAL English, not a translation of
+       a translation - which is why the English is snapshotted once. */
+    check("switching back and forth is lossless", (() => {
+      const m = SF.missions.MISSIONS[0], o = SF.missions.OBJECTIVES.complete;
+      const a = [m.name, m.goal, o.label].join("|");
+      I.setLang("fr"); I.setLang("en"); I.setLang("fr"); I.setLang("en");
+      return [m.name, m.goal, o.label].join("|") === a;
+    })());
+
+    /* Placeholders carry data through the translation. French reorders
+       sentences constantly, so they must survive as names, not positions. */
+    check("placeholders survive translation", (() => {
+      I.setLang("fr");
+      const out = I.t("pays {n}× the money", { n: 2.8 });
+      I.setLang("en");
+      return out.indexOf("2.8") >= 0 && out.indexOf("{n}") < 0;
+    })());
+
+    /* The choice has to outlive the app being closed. */
+    check("the chosen language is remembered", (() => {
+      I.setLang("fr");
+      const stored = window.localStorage.getItem("patrol_lang");
+      I.setLang("en");
+      return stored === "fr";
+    })());
+
+    /* Every player-facing table is registered. A new table that nobody binds
+       is a screen that silently stays English forever. */
+    check("the mission, objective and enemy tables are all bound", (() => {
+      const bound = new Set(I._bound.map(b => b.obj));
+      return SF.missions.MISSIONS.every(m => bound.has(m)) &&
+             Object.keys(SF.missions.OBJECTIVES).every(k => bound.has(SF.missions.OBJECTIVES[k])) &&
+             Object.keys(SF.enemyData.ENEMY_TYPES).every(k => bound.has(SF.enemyData.ENEMY_TYPES[k]));
+    })());
+
+    /* Nothing may be translated to empty - a blank button is worse than an
+       English one, and it is the failure mode a bad merge produces. */
+    check("no translation is blank", (() => {
+      const s2 = I._packs.fr.s;
+      return Object.keys(s2).every(k => typeof s2[k] === "string" && s2[k].trim().length > 0);
+    })());
+    I.setLang("en");
+  }
+
   /* ---------- a coin is a coin, and a sun is a flare ---------- */
   {
     /* Same escape as the rocks: the shared canvas stub reads back zeros, so

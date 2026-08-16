@@ -2,6 +2,7 @@
   "note": "Load order. The one list: index.html builds from it, the concatenator builds from it, and the smoke test loads from it.",
   "files": [
     "src/core.js",
+    "src/i18n.js",
     "src/icons.js",
     "src/haptics.js",
     "src/audio.js",
@@ -11,6 +12,8 @@
     "src/wacky.js",
     "src/data/comms.js",
     "src/data/story.js",
+    "src/data/i18nbind.js",
+    "src/data/fr.js",
     "src/profile.js",
     "src/cloud.js",
     "src/fx.js",

@@ -140,6 +140,14 @@ function syncWayBack(id){
     if(!last) el.addEventListener("click", () => (i === 0 ? goHome() : navBack()));
     nav.appendChild(el);
   });
+  /*
+   * Every screen is built from English source text and translated afterwards,
+   * so the sweep has to follow the build - not just a language change. Found
+   * the hard way: switching to French on the menu and then walking into the
+   * campaign showed a fully French menu and an English sector rail, because
+   * the rail had not existed yet when the last sweep ran.
+   */
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -538,6 +546,7 @@ function renderProfiles(){
     }
     SF.insignia.mount(card.querySelector(".pc-patch"), P.badgeFor(p), p.shipColor, 34);
   });
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 function selectProfile(name){
@@ -615,6 +624,7 @@ function renderMenu(){
     ? (rows[0].callsign || rows[0].name) + " leads with " + P.totalStars(rows[0]) + " ★"
     : "No one to race yet");
   drawMenuIcons();
+  if(SF.i18n) SF.i18n.sweep();
 }
 function setSub(id, text){ const el = $(id); if(el) el.textContent = text; }
 
@@ -1629,6 +1639,7 @@ function renderMissions(){
 
   startCampaignLoop();
   scrollToNextStop(target);
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -2460,6 +2471,7 @@ function renderArmory(){
   else renderShelf(panel, armoryTab);
 
   startHangarLoop();
+  if(SF.i18n) SF.i18n.sweep();
 }
 
 /*
@@ -4150,19 +4162,23 @@ function renderBriefTiers(index){
   // The detail line speaks the reader's language, not the tuning table's:
   // "205% as many enemies · 2.6x health" is for the balance sheet, and the
   // reader is seven. Pay keeps its number - the money is the hook.
-  const crowd = d.density <= 0.8 ? "a thinner crowd"
+  const T = SF.i18n.t;
+  const crowd = T(d.density <= 0.8 ? "a thinner crowd"
               : d.density <= 1.2 ? "the normal crowd"
               : d.density <= 2.2 ? "twice the enemies"
               : d.density <= 3.0 ? "almost three times the enemies"
-              : "a sky full of enemies";
-  const armour = d.hpMult <= 0.9 ? "paper armour"
+              : "a sky full of enemies");
+  const armour = T(d.hpMult <= 0.9 ? "paper armour"
                : d.hpMult <= 1.2 ? "normal armour"
                : d.hpMult <= 3.0 ? "tougher armour"
                : d.hpMult <= 5.0 ? "much tougher armour"
-               : "monster armour";
-  const payLine = d.pay === 1 ? "normal pay"
-                : d.pay < 1 ? "smaller pay"
-                : `pays ${d.pay}× the money`;
+               : "monster armour");
+  // The pay line carries a number, so it is a template rather than a phrase -
+  // French puts the multiplier in a different place, which is exactly what
+  // the placeholder is for.
+  const payLine = d.pay === 1 ? T("normal pay")
+                : d.pay < 1 ? T("smaller pay")
+                : T("pays {n}× the money", { n: d.pay });
   $("briefDiffDetail").innerHTML =
     `<b style="color:${d.color}">${d.name}</b><em>${esc(d.blurb)}</em>` +
     `<span>${crowd} · ${armour} · ${payLine}</span>`;
@@ -5136,9 +5152,20 @@ function renderSettings(){
    * nothing happens reads as a bug, and an explanation beats an absence.
    */
   $("glowNote").classList.toggle("hidden", !SF.fx.glowShed());
+  /*
+   * The language pill names the language in ITS OWN language, so a French
+   * reader who cannot parse the English row label can still find the switch.
+   */
+  const langBtn = $("setLang");
+  if(langBtn){
+    const cur = SF.i18n.lang();
+    langBtn.querySelector(".set-pill").textContent =
+      cur === "fr" ? "Français" : "English";
+  }
   const resetBtn = $("setReset");
   resetBtn.classList.toggle("hidden", !profile);
   if(profile) resetBtn.querySelector("span").textContent = "Reset " + profile.name;
+  if(SF.i18n) SF.i18n.sweep();
 }
 function openSettings(){
   renderSettings();
@@ -5182,6 +5209,15 @@ click($("setSfx"), () => { audio.setSfxEnabled(!audio.sfxEnabled()); renderSetti
 click($("setShake"), () => { SF.fx.setShakeEnabled(!SF.fx.shakeEnabled()); renderSettings(); });
 click($("setCalm"), () => { SF.fx.setCalmEnabled(!SF.fx.calmEnabled()); renderSettings(); });
 click($("setGlow"), () => { SF.fx.setGlowEnabled(!SF.fx.glowEnabled()); renderSettings(); });
+/*
+ * Two languages, so the row is a toggle rather than a list - one tap, no
+ * menu to get lost in. When there is a third this becomes a picker; until
+ * then a picker would be three taps to do one thing.
+ */
+click($("setLang"), () => {
+  SF.i18n.setLang(SF.i18n.lang() === "fr" ? "en" : "fr");
+  audio.play("uiClick");
+});
 click($("setRumble"), () => {
   if(!SF.haptics.supported()) return;
   SF.haptics.setEnabled(!SF.haptics.isEnabled());
@@ -5477,6 +5513,33 @@ qa(".btn-ico[data-glyph], .back-ico[data-glyph]").forEach(cv => {
   });
   paintState();
 })();
+/*
+ * LANGUAGE, LAST. i18n.boot() picks the saved choice (or the device's, on a
+ * first run), rewrites the data tables and sweeps the markup - so it has to
+ * happen before the first render, or the pilot picker paints English and
+ * then flickers.
+ *
+ * On a later switch the whole visible surface is rebuilt rather than patched:
+ * the sweep alone would catch the fixed markup but not a mission name already
+ * written into a card. Rebuilding the screen you are standing on is cheap and
+ * cannot leave half a language behind.
+ */
+SF.i18n.boot();
+SF.i18n.onChange(() => {
+  const live = document.querySelector(".screen.active");
+  const id = live ? live.id : "screen-profiles";
+  renderProfiles();
+  if(profile){
+    renderMenu();
+    if(id === "screen-missions") renderMissions();
+    if(id === "screen-armory")   renderArmory();
+    if(id === "screen-briefing" && MISSIONS[selectedMissionIndex])
+      openBriefing(selectedMissionIndex);
+  }
+  if(!$("settingsOverlay").classList.contains("hidden")) renderSettings();
+  // Anything rebuilt above is fresh English markup until it is swept again.
+  SF.i18n.sweep();
+});
 renderProfiles();
 startTitleLoop();
 SF.game.resize();
