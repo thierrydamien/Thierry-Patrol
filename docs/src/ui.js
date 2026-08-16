@@ -214,7 +214,22 @@ function numLocale(){ return SF.i18n && SF.i18n.lang() === "fr" ? "fr-FR" : "en-
 function num(n){ return Number(n).toLocaleString(numLocale()); }
 function money(n){
   const v = Math.round(n).toLocaleString(numLocale());
-  return numLocale() === "fr-FR" ? v + "\u00a0£" : "£" + v;
+  // French money is euros, not pounds - the family's own currency, not
+  // a literal translation of the English prop. Symbol after the amount
+  // with a non-breaking space, the normal French order ("163\u00a0€",
+  // never "€163").
+  return numLocale() === "fr-FR" ? v + "\u00a0€" : "£" + v;
+}
+/**
+ * The data-prefix/data-suffix pair a count-up span needs, for a given SIGN
+ * ("+" or ""). English puts £ before the sign+number; French puts the whole
+ * "sign+number" first and € after - the same rule money() already applies,
+ * just split so the count-up can animate the digits in between.
+ */
+function moneyDataAttrs(sign){
+  return numLocale() === "fr-FR"
+    ? ` data-prefix="${esc(sign)}" data-suffix="${esc("\u00a0€")}"`
+    : ` data-prefix="${esc(sign + "£")}"`;
 }
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -630,7 +645,7 @@ function renderMenu(){
   {
     const owed = P.unclaimedMedals(profile);
     setSub("medalsSub", owed.length
-      ? T("Collect £{n}!", { n: owed.reduce((n,a)=>n+a.pay,0).toLocaleString(numLocale()) })
+      ? T("Collect {money}!", { money: money(owed.reduce((n,a)=>n+a.pay,0)) })
       : T("{n} of {total} earned", { n: profile.achievements.length, total: ACHIEVEMENTS.length }));
   }
   const rows = P.listNames().map(P.load)
@@ -4491,7 +4506,7 @@ function renderAchievements(){
       const paid = P.claimMedal(profile, btn.dataset.medal);
       if(paid > 0){
         audio.play("buy");
-        queueToast({ name: "+£" + paid.toLocaleString(numLocale()) + " collected", label:"MEDAL PAID" });
+        queueToast({ name: "+" + money(paid) + " collected", label:"MEDAL PAID" });
         renderAchievements();
         renderMenu();
       }
@@ -4794,7 +4809,7 @@ function showResults(result){
   const s = run.stats;
   $("resultLines").innerHTML = `
     <div class="rl"><span>Score</span><b data-countup="${run.score}">0</b></div>
-    <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}" data-prefix="+£">+£0</b></div>
+    <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}"${moneyDataAttrs("+")}>${esc("+" + money(0))}</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
@@ -4803,7 +4818,7 @@ function showResults(result){
     ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
     ${freshGearLine(run)}
     ${crewLine()}
-    <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}" data-prefix="£">£0</b></div>
+    <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}"${moneyDataAttrs("")}>${esc(money(0))}</b></div>
     ${medalLines(unlocked)}
     ${endless ? wackyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
@@ -4928,7 +4943,7 @@ function freshGearLine(run){
   let proof = "";
   if(fg.cat === "guns")
     proof = s.kills + (s.kills === 1 ? " enemy destroyed" : " enemies destroyed");
-  else if(fg.id === "fortune")  proof = "£" + Math.round(run.money) + " banked";
+  else if(fg.id === "fortune")  proof = money(Math.round(run.money)) + " banked";
   else if(fg.id === "magnet")   proof = (s.coins || 0) + " coins grabbed";
   else if(fg.id === "thrusters")proof = "a faster ship all flight";
   else if(fg.id === "wingman")  proof = "your drones flew with you";
@@ -4964,7 +4979,10 @@ function runCountUps(root){
     const k = 1 - Math.pow(1 - t, 3);
     els.forEach(el => {
       const v = Math.round(Number(el.dataset.countup) * k);
-      el.textContent = (el.dataset.prefix || "") + v.toLocaleString(numLocale());
+      // A suffix, not just a prefix: French puts its currency symbol AFTER
+      // the amount, so a fixed prefix-only shape could never show it right.
+      el.textContent = (el.dataset.prefix || "") + v.toLocaleString(numLocale()) +
+                        (el.dataset.suffix || "");
     });
     if(t < 1) requestAnimationFrame(step);
   };
@@ -5627,5 +5645,9 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           // ...and the map's boss painter, so the board's preview can show the
           // monster you picked instead of writing its name on a chip.
           bossHullReady: mapHullReady,
-          drawBossHull: drawMapHull };
+          drawBossHull: drawMapHull,
+          // Money is a language too - other modules draw a live £/€ figure
+          // straight onto the HUD and the world (game.js, render.js), and
+          // they need the same symbol, grouping and side that Settings uses.
+          money, num, numLocale };
 })();

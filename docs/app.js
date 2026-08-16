@@ -7,41 +7,41 @@
  *       47  src/core.js
  *      217  src/i18n.js
  *      416  src/icons.js
- *      980  src/haptics.js
- *     1159  src/audio.js
- *     1857  src/data/config.js
- *     2326  src/data/enemies.js
- *     3185  src/data/missions.js
- *     5054  src/wacky.js
- *     5270  src/data/comms.js
- *     5634  src/data/story.js
- *     5731  src/data/fr.js
- *     6757  src/profile.js
- *     7378  src/cloud.js
- *     7983  src/fx.js
- *     9041  src/input.js
- *     9452  src/entities.js
- *    10664  src/bossart.js
- *    11423  src/bosses.js
- *    12173  src/bossintro.js
- *    12296  src/rewind.js
- *    12818  src/finale.js
- *    13139  src/papadeath.js
- *    13461  src/backstage.js
- *    14664  src/sky29.js
- *    14905  src/systems.js
- *    15524  src/render.js
- *    20080  src/enemyart.js
- *    20826  src/insignia.js
- *    21071  src/skygen.js
- *    23443  src/shipart.js
- *    24521  src/paintjob.js
- *    24683  src/pilotart.js
- *    24778  src/comms.js
- *    24899  src/game.js
- *    28352  src/workshop.js
- *    29049  src/data/i18nbind.js
- *    29116  src/ui.js
+ *      982  src/haptics.js
+ *     1161  src/audio.js
+ *     1859  src/data/config.js
+ *     2328  src/data/enemies.js
+ *     3187  src/data/missions.js
+ *     5065  src/wacky.js
+ *     5281  src/data/comms.js
+ *     5645  src/data/story.js
+ *     5742  src/data/fr.js
+ *     6768  src/profile.js
+ *     7389  src/cloud.js
+ *     7994  src/fx.js
+ *     9052  src/input.js
+ *     9463  src/entities.js
+ *    10675  src/bossart.js
+ *    11434  src/bosses.js
+ *    12184  src/bossintro.js
+ *    12307  src/rewind.js
+ *    12829  src/finale.js
+ *    13150  src/papadeath.js
+ *    13472  src/backstage.js
+ *    14675  src/sky29.js
+ *    14916  src/systems.js
+ *    15535  src/render.js
+ *    20100  src/enemyart.js
+ *    20846  src/insignia.js
+ *    21091  src/skygen.js
+ *    23463  src/shipart.js
+ *    24541  src/paintjob.js
+ *    24703  src/pilotart.js
+ *    24798  src/comms.js
+ *    24919  src/game.js
+ *    28372  src/workshop.js
+ *    29069  src/data/i18nbind.js
+ *    29136  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -563,7 +563,9 @@ const P = {
     c.beginPath(); c.arc(20, 20, 13, 0, TAU); c.stroke();
     c.font = "bold 15px Rajdhani, Arial, sans-serif";
     c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText("£", 20, 21);
+    // Redrawn fresh on every call (not baked), so it just reads the current
+    // language - no cache to invalidate, unlike the coin sprite in render.js.
+    c.fillText(SF.i18n && SF.i18n.lang() === "fr" ? "€" : "£", 20, 21);
   },
   wingman(c){       // little drone: body + wings
     c.beginPath(); c.arc(20, 18, 5, 0, TAU); c.fill();
@@ -4348,7 +4350,16 @@ const MISSIONS = [
       w(112, "bomber",      4, "sides"),
       w(118, "grunt",      12, "wall"),
     ],
-    objectives: ["complete","shakenOff","rescueAll"],
+    /*
+     * The star used to be "shake off 10 limpets" - which asked for mastery of
+     * the level's one gimmick even after the limpets were made unshootable
+     * on approach (see enemies.js). Reported as still impossible for some
+     * players, and a star that some pilots genuinely cannot pass is worse
+     * than a plainer one everybody can. 76 countable spawns here (rocks are
+     * hazards and excluded), 80% is 61 - reachable without ever landing a
+     * clean waggle, since the limpets you DO manage to shed still count.
+     */
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:22, name:"Cold Approach", subtitle:"Line up the shot",
@@ -5341,8 +5352,8 @@ const COMMS = {
   // Pounds, like every other number in this game. This bucket said "$120"
   // while the banner two inches above it said "£120".
   thiefEscaped: { speaker:"mate", cooldown:8, lines:[
-    "It got away with £{n}! Get the next one.",
-    "There goes £{n}. Faster next time, {you}.",
+    "It got away with {money}! Get the next one.",
+    "There goes {money}. Faster next time, {you}.",
   ]},
   sniper: { speaker:"control", cooldown:22, lines:[
     "Marksman locking on - get out of that line!",
@@ -6249,8 +6260,8 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Finish a mission without a scratch": "Termine une mission sans une égratignure",
 "Destroy 100 enemies (lifetime)": "Détruis 100 ennemis (au total)",
 "Destroy 1000 enemies (lifetime)": "Détruis 1000 ennemis (au total)",
-"Earn £1,000 (lifetime)": "Gagne 1 000 £ (au total)",
-"Earn £25,000 (lifetime)": "Gagne 25 000 £ (au total)",
+"Earn £1,000 (lifetime)": "Gagne 1 000 € (au total)",
+"Earn £25,000 (lifetime)": "Gagne 25 000 € (au total)",
 "Buy your first Armory upgrade": "Achète ta première amélioration à l'Arsenal",
 "Max out any single upgrade": "Pousse une amélioration au maximum",
 "Buy 20 upgrade levels in total": "Achète 20 niveaux d'amélioration en tout",
@@ -6419,10 +6430,10 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Argent récupéré.",
 "Cash recovered, {you}.":
   "Magot récupéré, {you}.",
-"It got away with £{n}! Get the next one.":
-  "Il s'est enfui avec {n} £ ! Attrape le suivant.",
-"There goes £{n}. Faster next time, {you}.":
-  "Adieu {n} £. Plus vite la prochaine fois, {you}.",
+"It got away with {money}! Get the next one.":
+  "Il s'est enfui avec {money} ! Attrape le suivant.",
+"There goes {money}. Faster next time, {you}.":
+  "Adieu {money}. Plus vite la prochaine fois, {you}.",
 "Marksman locking on - get out of that line!":
   "Tireur d'élite en approche — sors de sa ligne !",
 "See the pink line? Don't be standing in it.":
@@ -6720,7 +6731,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "draw a sky, dare the family": "dessine un ciel, défie la famille",
 "Next part: {part}": "Prochaine pièce : {part}",
 "Every part fitted": "Toutes les pièces montées",
-"Collect £{n}!": "Encaisse {n} £ !",
+"Collect {money}!": "Encaisse {money} !",
 "{n} of {total} earned": "{n} sur {total} obtenues",
 "{who} leads with {n} ★": "{who} mène avec {n} ★",
 "No one to race yet": "Personne à défier pour l'instant",
@@ -16334,7 +16345,7 @@ function drawEnemies(ctx, world, timeMs){
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 7, 0, TAU); ctx.stroke();
     }
     if(e.loot > 0)                                // what this thief is carrying
-      label(ctx, "£" + e.loot, e.x, e.y - e.r - 8, "#ffd23f", 12);
+      label(ctx, SF.ui.money(e.loot), e.x, e.y - e.r - 8, "#ffd23f", 12);
     if(e.maxHp > 1 && e.hp < e.maxHp){            // health pip for armoured enemies
       const w = size*0.8, pct = clamp(e.hp/e.maxHp, 0, 1);
       ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -16976,6 +16987,14 @@ function drawBullets(ctx, world){
  */
 const coinPhases = [];
 const COIN_BOX = 32;                       // sprite box; face radius stays ~9
+/*
+ * The stamp is a currency symbol, so it is language too - a coin baked in
+ * English keeps its \u00a3 forever otherwise, since coinPhases is built once
+ * and cached. Clearing the cache on a language switch is enough: the next
+ * spin rebakes all eight frames with whichever symbol is now current.
+ */
+function coinGlyph(){ return SF.i18n && SF.i18n.lang() === "fr" ? "\u20ac" : "\u00a3"; }
+if(SF.i18n) SF.i18n.onChange(() => { coinPhases.length = 0; });
 function coinSprite(phase){
   if(!coinPhases.length){
     for(let ph=0;ph<8;ph++){
@@ -17041,10 +17060,11 @@ function coinSprite(phase){
         c.scale(squash, 1);
         c.font = "700 11px Rajdhani, Arial, sans-serif";
         c.textAlign = "center"; c.textBaseline = "middle";
+        const glyph = coinGlyph();
         c.fillStyle = "rgba(122,78,6,0.78)";
-        c.fillText("£", 0, 1.6);                   // relief: shadow first...
+        c.fillText(glyph, 0, 1.6);                   // relief: shadow first...
         c.fillStyle = "rgba(255,240,170,0.85)";
-        c.fillText("£", 0, 0.7);                   // ...then the lit face
+        c.fillText(glyph, 0, 0.7);                   // ...then the lit face
         c.restore();
       }
 
@@ -19570,7 +19590,7 @@ function drawHud(ctx, game){
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
-  glowText(ctx, "£" + run.money, VW-PAD-CLEAR, 19,
+  glowText(ctx, SF.ui.money(run.money), VW-PAD-CLEAR, 19,
            "700 20px " + FONT, "#ffd23f", "rgba(255,180,40,0.5)", 8, "right");
   ctx.textAlign = "left";
 
@@ -25851,7 +25871,7 @@ const callbacks = {
     // so it pays back visibly rather than silently.
     if(e.loot > 0){
       game.world.dropCoins(e.x, e.y, e.loot);
-      fx.text(e.x, e.y - 26, "+£" + e.loot + " BACK!", "#ffd23f", 18, true);
+      fx.text(e.x, e.y - 26, "+" + SF.ui.money(e.loot) + " BACK!", "#ffd23f", 18, true);
       SF.comms.say("thiefDown");
     }
 
@@ -25877,7 +25897,7 @@ const callbacks = {
       const back = Math.max(60, run.serpent.eatenValue);
       game.world.dropCoins(e.x, e.y, back);
       run.bannerText = "EVERY PENNY BACK!";
-      run.bannerSub = "the serpent coughs up £" + back;
+      run.bannerSub = "the serpent coughs up " + SF.ui.money(back);
       run.bannerColor = "#2fbf9a";
       run.bannerUntil = simMs + 3000;
       fx.explosion(e.x, e.y, 110, "#2fbf9a", true);
@@ -25954,7 +25974,7 @@ const callbacks = {
       coin *= 5;
       run.stats.bounties = (run.stats.bounties || 0) + 1;
       fx.ring(e.x, e.y, 46, "#ffd23f", 4, 0.4);
-      fx.text(e.x, e.y - 30, "WANTED! +£" + coin, "#ffd23f", 19, true);
+      fx.text(e.x, e.y - 30, "WANTED! +" + SF.ui.money(coin), "#ffd23f", 19, true);
       audio.play("coin", true, e.x);
     }
     game.world.dropCoins(e.x, e.y, coin);
@@ -26071,8 +26091,8 @@ const callbacks = {
     const run = game.run;
     if(e.fromBoss) return;
     if(e.loot > 0){
-      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH £" + e.loot, "#ff5d73", 19, true);
-      SF.comms.say("thiefEscaped", { n: e.loot });
+      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH " + SF.ui.money(e.loot), "#ff5d73", 19, true);
+      SF.comms.say("thiefEscaped", { money: SF.ui.money(e.loot) });
     }
     if(!e.counted) return;
     run.stats.escaped++;
@@ -26824,7 +26844,7 @@ function update(dt, timeMs){
     const bonus = Math.round(60 * run.difficulty.pay * game.world.player.moneyMult);
     run.money += bonus;
     run.bannerText = "HALFWAY";
-    run.bannerSub = "+£" + bonus + " · keep going, " + pilotName() + "!";
+    run.bannerSub = "+" + SF.ui.money(bonus) + " · keep going, " + pilotName() + "!";
     run.bannerColor = "#4ade80";
     run.bannerUntil = timeMs + 2000;
     audio.play("waveClear");
@@ -27795,7 +27815,7 @@ function update(dt, timeMs){
           if(run.time >= sp.fleeAt){
             head.fleeing = true;
             run.bannerText = "IT MAKES FOR HOME!";
-            run.bannerSub = sp.eatenValue > 0 ? ("with £" + sp.eatenValue + " of yours") : "stop it!";
+            run.bannerSub = sp.eatenValue > 0 ? ("with " + SF.ui.money(sp.eatenValue) + " of yours") : "stop it!";
             run.bannerColor = "#ff5d73";
             run.bannerUntil = simMs + 2600;
             audio.play("alarm");
@@ -29329,7 +29349,22 @@ function numLocale(){ return SF.i18n && SF.i18n.lang() === "fr" ? "fr-FR" : "en-
 function num(n){ return Number(n).toLocaleString(numLocale()); }
 function money(n){
   const v = Math.round(n).toLocaleString(numLocale());
-  return numLocale() === "fr-FR" ? v + "\u00a0£" : "£" + v;
+  // French money is euros, not pounds - the family's own currency, not
+  // a literal translation of the English prop. Symbol after the amount
+  // with a non-breaking space, the normal French order ("163\u00a0€",
+  // never "€163").
+  return numLocale() === "fr-FR" ? v + "\u00a0€" : "£" + v;
+}
+/**
+ * The data-prefix/data-suffix pair a count-up span needs, for a given SIGN
+ * ("+" or ""). English puts £ before the sign+number; French puts the whole
+ * "sign+number" first and € after - the same rule money() already applies,
+ * just split so the count-up can animate the digits in between.
+ */
+function moneyDataAttrs(sign){
+  return numLocale() === "fr-FR"
+    ? ` data-prefix="${esc(sign)}" data-suffix="${esc("\u00a0€")}"`
+    : ` data-prefix="${esc(sign + "£")}"`;
 }
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -29745,7 +29780,7 @@ function renderMenu(){
   {
     const owed = P.unclaimedMedals(profile);
     setSub("medalsSub", owed.length
-      ? T("Collect £{n}!", { n: owed.reduce((n,a)=>n+a.pay,0).toLocaleString(numLocale()) })
+      ? T("Collect {money}!", { money: money(owed.reduce((n,a)=>n+a.pay,0)) })
       : T("{n} of {total} earned", { n: profile.achievements.length, total: ACHIEVEMENTS.length }));
   }
   const rows = P.listNames().map(P.load)
@@ -33606,7 +33641,7 @@ function renderAchievements(){
       const paid = P.claimMedal(profile, btn.dataset.medal);
       if(paid > 0){
         audio.play("buy");
-        queueToast({ name: "+£" + paid.toLocaleString(numLocale()) + " collected", label:"MEDAL PAID" });
+        queueToast({ name: "+" + money(paid) + " collected", label:"MEDAL PAID" });
         renderAchievements();
         renderMenu();
       }
@@ -33909,7 +33944,7 @@ function showResults(result){
   const s = run.stats;
   $("resultLines").innerHTML = `
     <div class="rl"><span>Score</span><b data-countup="${run.score}">0</b></div>
-    <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}" data-prefix="+£">+£0</b></div>
+    <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}"${moneyDataAttrs("+")}>${esc("+" + money(0))}</b></div>
     ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
@@ -33918,7 +33953,7 @@ function showResults(result){
     ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
     ${freshGearLine(run)}
     ${crewLine()}
-    <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}" data-prefix="£">£0</b></div>
+    <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}"${moneyDataAttrs("")}>${esc(money(0))}</b></div>
     ${medalLines(unlocked)}
     ${endless ? wackyRecordLine() : rush ? rushRecordLine() : recordLine(run, prevFamilyBest)}`;
 
@@ -34043,7 +34078,7 @@ function freshGearLine(run){
   let proof = "";
   if(fg.cat === "guns")
     proof = s.kills + (s.kills === 1 ? " enemy destroyed" : " enemies destroyed");
-  else if(fg.id === "fortune")  proof = "£" + Math.round(run.money) + " banked";
+  else if(fg.id === "fortune")  proof = money(Math.round(run.money)) + " banked";
   else if(fg.id === "magnet")   proof = (s.coins || 0) + " coins grabbed";
   else if(fg.id === "thrusters")proof = "a faster ship all flight";
   else if(fg.id === "wingman")  proof = "your drones flew with you";
@@ -34079,7 +34114,10 @@ function runCountUps(root){
     const k = 1 - Math.pow(1 - t, 3);
     els.forEach(el => {
       const v = Math.round(Number(el.dataset.countup) * k);
-      el.textContent = (el.dataset.prefix || "") + v.toLocaleString(numLocale());
+      // A suffix, not just a prefix: French puts its currency symbol AFTER
+      // the amount, so a fixed prefix-only shape could never show it right.
+      el.textContent = (el.dataset.prefix || "") + v.toLocaleString(numLocale()) +
+                        (el.dataset.suffix || "");
     });
     if(t < 1) requestAnimationFrame(step);
   };
@@ -34742,5 +34780,9 @@ SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, r
           // ...and the map's boss painter, so the board's preview can show the
           // monster you picked instead of writing its name on a chip.
           bossHullReady: mapHullReady,
-          drawBossHull: drawMapHull };
+          drawBossHull: drawMapHull,
+          // Money is a language too - other modules draw a live £/€ figure
+          // straight onto the HUD and the world (game.js, render.js), and
+          // they need the same symbol, grouping and side that Settings uses.
+          money, num, numLocale };
 })();

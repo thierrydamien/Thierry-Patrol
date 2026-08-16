@@ -953,7 +953,7 @@ const callbacks = {
     // so it pays back visibly rather than silently.
     if(e.loot > 0){
       game.world.dropCoins(e.x, e.y, e.loot);
-      fx.text(e.x, e.y - 26, "+£" + e.loot + " BACK!", "#ffd23f", 18, true);
+      fx.text(e.x, e.y - 26, "+" + SF.ui.money(e.loot) + " BACK!", "#ffd23f", 18, true);
       SF.comms.say("thiefDown");
     }
 
@@ -979,7 +979,7 @@ const callbacks = {
       const back = Math.max(60, run.serpent.eatenValue);
       game.world.dropCoins(e.x, e.y, back);
       run.bannerText = "EVERY PENNY BACK!";
-      run.bannerSub = "the serpent coughs up £" + back;
+      run.bannerSub = "the serpent coughs up " + SF.ui.money(back);
       run.bannerColor = "#2fbf9a";
       run.bannerUntil = simMs + 3000;
       fx.explosion(e.x, e.y, 110, "#2fbf9a", true);
@@ -1056,7 +1056,7 @@ const callbacks = {
       coin *= 5;
       run.stats.bounties = (run.stats.bounties || 0) + 1;
       fx.ring(e.x, e.y, 46, "#ffd23f", 4, 0.4);
-      fx.text(e.x, e.y - 30, "WANTED! +£" + coin, "#ffd23f", 19, true);
+      fx.text(e.x, e.y - 30, "WANTED! +" + SF.ui.money(coin), "#ffd23f", 19, true);
       audio.play("coin", true, e.x);
     }
     game.world.dropCoins(e.x, e.y, coin);
@@ -1173,8 +1173,8 @@ const callbacks = {
     const run = game.run;
     if(e.fromBoss) return;
     if(e.loot > 0){
-      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH £" + e.loot, "#ff5d73", 19, true);
-      SF.comms.say("thiefEscaped", { n: e.loot });
+      fx.text(VW/2, VH*0.42, "THIEF GOT AWAY WITH " + SF.ui.money(e.loot), "#ff5d73", 19, true);
+      SF.comms.say("thiefEscaped", { money: SF.ui.money(e.loot) });
     }
     if(!e.counted) return;
     run.stats.escaped++;
@@ -1926,7 +1926,7 @@ function update(dt, timeMs){
     const bonus = Math.round(60 * run.difficulty.pay * game.world.player.moneyMult);
     run.money += bonus;
     run.bannerText = "HALFWAY";
-    run.bannerSub = "+£" + bonus + " · keep going, " + pilotName() + "!";
+    run.bannerSub = "+" + SF.ui.money(bonus) + " · keep going, " + pilotName() + "!";
     run.bannerColor = "#4ade80";
     run.bannerUntil = timeMs + 2000;
     audio.play("waveClear");
@@ -2897,7 +2897,7 @@ function update(dt, timeMs){
           if(run.time >= sp.fleeAt){
             head.fleeing = true;
             run.bannerText = "IT MAKES FOR HOME!";
-            run.bannerSub = sp.eatenValue > 0 ? ("with £" + sp.eatenValue + " of yours") : "stop it!";
+            run.bannerSub = sp.eatenValue > 0 ? ("with " + SF.ui.money(sp.eatenValue) + " of yours") : "stop it!";
             run.bannerColor = "#ff5d73";
             run.bannerUntil = simMs + 2600;
             audio.play("alarm");

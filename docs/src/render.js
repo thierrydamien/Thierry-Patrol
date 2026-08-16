@@ -811,7 +811,7 @@ function drawEnemies(ctx, world, timeMs){
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 7, 0, TAU); ctx.stroke();
     }
     if(e.loot > 0)                                // what this thief is carrying
-      label(ctx, "£" + e.loot, e.x, e.y - e.r - 8, "#ffd23f", 12);
+      label(ctx, SF.ui.money(e.loot), e.x, e.y - e.r - 8, "#ffd23f", 12);
     if(e.maxHp > 1 && e.hp < e.maxHp){            // health pip for armoured enemies
       const w = size*0.8, pct = clamp(e.hp/e.maxHp, 0, 1);
       ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -1453,6 +1453,14 @@ function drawBullets(ctx, world){
  */
 const coinPhases = [];
 const COIN_BOX = 32;                       // sprite box; face radius stays ~9
+/*
+ * The stamp is a currency symbol, so it is language too - a coin baked in
+ * English keeps its \u00a3 forever otherwise, since coinPhases is built once
+ * and cached. Clearing the cache on a language switch is enough: the next
+ * spin rebakes all eight frames with whichever symbol is now current.
+ */
+function coinGlyph(){ return SF.i18n && SF.i18n.lang() === "fr" ? "\u20ac" : "\u00a3"; }
+if(SF.i18n) SF.i18n.onChange(() => { coinPhases.length = 0; });
 function coinSprite(phase){
   if(!coinPhases.length){
     for(let ph=0;ph<8;ph++){
@@ -1518,10 +1526,11 @@ function coinSprite(phase){
         c.scale(squash, 1);
         c.font = "700 11px Rajdhani, Arial, sans-serif";
         c.textAlign = "center"; c.textBaseline = "middle";
+        const glyph = coinGlyph();
         c.fillStyle = "rgba(122,78,6,0.78)";
-        c.fillText("£", 0, 1.6);                   // relief: shadow first...
+        c.fillText(glyph, 0, 1.6);                   // relief: shadow first...
         c.fillStyle = "rgba(255,240,170,0.85)";
-        c.fillText("£", 0, 0.7);                   // ...then the lit face
+        c.fillText(glyph, 0, 0.7);                   // ...then the lit face
         c.restore();
       }
 
@@ -4047,7 +4056,7 @@ function drawHud(ctx, game){
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
   ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
-  glowText(ctx, "£" + run.money, VW-PAD-CLEAR, 19,
+  glowText(ctx, SF.ui.money(run.money), VW-PAD-CLEAR, 19,
            "700 20px " + FONT, "#ffd23f", "rgba(255,180,40,0.5)", 8, "right");
   ctx.textAlign = "left";
 

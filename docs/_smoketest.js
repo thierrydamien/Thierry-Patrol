@@ -811,7 +811,17 @@ async function run(){
    * free everyone - INCLUDING the first six missions in a row, so a child
    * could reach act two without ever learning that the third star is where a
    * level says what it is about. Four of them now ask for their own brief's
-   * promise instead. This is the ratchet: the number may fall, never rise.
+   * promise instead. This is the ratchet: the number may fall, never rise -
+   * with ONE counted exception, immediately below.
+   *
+   * Mission 21's "shake off 10 limpets" star was reported as still
+   * impossible in real play even after limpets were made unshootable on
+   * approach (see enemies.js) - some players simply could not land the
+   * waggle reliably enough to reach ten. A star some pilots genuinely cannot
+   * pass is worse than a duplicate one, so it was swapped for the campaign's
+   * single most common, always-reachable trio. That is one deliberate
+   * exception, spent on a fairness problem a real player hit - not a general
+   * loosening, and the cap moves by exactly the one mission it costs.
    */
   check("no single trio of stars covers a third of the campaign", (() => {
     const tally = {};
@@ -820,7 +830,7 @@ async function run(){
       tally[k] = (tally[k] || 0) + 1;
     });
     const worst = Math.max.apply(null, Object.keys(tally).map(k => tally[k]));
-    return worst <= 11 && worst < SF.missions.MISSIONS.length / 3;
+    return worst <= 12 && worst < SF.missions.MISSIONS.length / 3;
   })());
   /*
    * Each of the four new stars asks for a thing that only happens when the
@@ -7585,9 +7595,33 @@ async function run(){
        currency symbol after the amount. */
     check("numbers and money follow the language", (() => {
       const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      // French money is euros, not a literal translation of the English
+      // pound - the family's own currency, after the amount with a
+      // non-breaking space.
       return /function numLocale\(\)/.test(u) &&
              !/toLocaleString\("en-/.test(u) &&
-             /numLocale\(\) === "fr-FR" \? v \+ "\\u00a0£" : "£" \+ v/.test(u);
+             /numLocale\(\) === "fr-FR" \? v \+ "\\u00a0€" : "£" \+ v/.test(u);
+    })());
+    /*
+     * The euro follows everywhere the pound could actually be SEEN in
+     * French play, not just in Settings: the live HUD counter and floating
+     * loot text (game.js, render.js) now call SF.ui.money() instead of
+     * hand-writing "£"; the coin's own baked stamp rebuilds itself on a
+     * language switch instead of keeping whatever symbol it was born with;
+     * and the fortune icon glyph is drawn fresh every time, so it never
+     * needed a cache to begin with.
+     */
+    check("the euro shows up everywhere the pound could be seen", (() => {
+      const game = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const rndr = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const ico  = fs.readFileSync(path.join(__dirname, "src/icons.js"), "utf8");
+      const usesMoney = /SF\.ui\.money\(e\.loot\)/.test(game) && /SF\.ui\.money\(coin\)/.test(game) &&
+                        /SF\.ui\.money\(e\.loot\)/.test(rndr) && /SF\.ui\.money\(run\.money\)/.test(rndr);
+      const coinLocalized = /function coinGlyph\(\)/.test(rndr) &&
+                            /if\(SF\.i18n\) SF\.i18n\.onChange\(\(\) => \{ coinPhases\.length = 0/.test(rndr) &&
+                            /fillText\(glyph,/.test(rndr);
+      const iconLocalized = /SF\.i18n && SF\.i18n\.lang\(\) === "fr" \? "€" : "£"/.test(ico);
+      return usesMoney && coinLocalized && iconLocalized;
     })());
 
     /* Nothing may be translated to empty - a blank button is worse than an
@@ -7649,7 +7683,11 @@ async function run(){
     check("the coin is stamped and its edge is milled", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
       const fn = r.slice(r.indexOf("const coinPhases = [];"), r.indexOf("let podSprite"));
-      return /fillText\("£"/.test(fn) && /Reeding/.test(fn) && /squash < 0\.6/.test(fn);
+      // The stamp is a currency symbol drawn through coinGlyph(), not a bare
+      // "£" - it has to read the current language, not the one the coin was
+      // first baked under.
+      return /fillText\(glyph,/.test(fn) && /function coinGlyph\(\)/.test(fn) &&
+             /Reeding/.test(fn) && /squash < 0\.6/.test(fn);
     })());
 
     /*

@@ -148,7 +148,9 @@ const P = {
     c.beginPath(); c.arc(20, 20, 13, 0, TAU); c.stroke();
     c.font = "bold 15px Rajdhani, Arial, sans-serif";
     c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText("£", 20, 21);
+    // Redrawn fresh on every call (not baked), so it just reads the current
+    // language - no cache to invalidate, unlike the coin sprite in render.js.
+    c.fillText(SF.i18n && SF.i18n.lang() === "fr" ? "€" : "£", 20, 21);
   },
   wingman(c){       // little drone: body + wings
     c.beginPath(); c.arc(20, 18, 5, 0, TAU); c.fill();

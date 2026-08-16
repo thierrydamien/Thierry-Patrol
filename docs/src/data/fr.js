@@ -519,8 +519,8 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Finish a mission without a scratch": "Termine une mission sans une égratignure",
 "Destroy 100 enemies (lifetime)": "Détruis 100 ennemis (au total)",
 "Destroy 1000 enemies (lifetime)": "Détruis 1000 ennemis (au total)",
-"Earn £1,000 (lifetime)": "Gagne 1 000 £ (au total)",
-"Earn £25,000 (lifetime)": "Gagne 25 000 £ (au total)",
+"Earn £1,000 (lifetime)": "Gagne 1 000 € (au total)",
+"Earn £25,000 (lifetime)": "Gagne 25 000 € (au total)",
 "Buy your first Armory upgrade": "Achète ta première amélioration à l'Arsenal",
 "Max out any single upgrade": "Pousse une amélioration au maximum",
 "Buy 20 upgrade levels in total": "Achète 20 niveaux d'amélioration en tout",
@@ -689,10 +689,10 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Argent récupéré.",
 "Cash recovered, {you}.":
   "Magot récupéré, {you}.",
-"It got away with £{n}! Get the next one.":
-  "Il s'est enfui avec {n} £ ! Attrape le suivant.",
-"There goes £{n}. Faster next time, {you}.":
-  "Adieu {n} £. Plus vite la prochaine fois, {you}.",
+"It got away with {money}! Get the next one.":
+  "Il s'est enfui avec {money} ! Attrape le suivant.",
+"There goes {money}. Faster next time, {you}.":
+  "Adieu {money}. Plus vite la prochaine fois, {you}.",
 "Marksman locking on - get out of that line!":
   "Tireur d'élite en approche — sors de sa ligne !",
 "See the pink line? Don't be standing in it.":
@@ -990,7 +990,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "draw a sky, dare the family": "dessine un ciel, défie la famille",
 "Next part: {part}": "Prochaine pièce : {part}",
 "Every part fitted": "Toutes les pièces montées",
-"Collect £{n}!": "Encaisse {n} £ !",
+"Collect {money}!": "Encaisse {money} !",
 "{n} of {total} earned": "{n} sur {total} obtenues",
 "{who} leads with {n} ★": "{who} mène avec {n} ★",
 "No one to race yet": "Personne à défier pour l'instant",

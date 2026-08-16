@@ -1164,7 +1164,16 @@ const MISSIONS = [
       w(112, "bomber",      4, "sides"),
       w(118, "grunt",      12, "wall"),
     ],
-    objectives: ["complete","shakenOff","rescueAll"],
+    /*
+     * The star used to be "shake off 10 limpets" - which asked for mastery of
+     * the level's one gimmick even after the limpets were made unshootable
+     * on approach (see enemies.js). Reported as still impossible for some
+     * players, and a star that some pilots genuinely cannot pass is worse
+     * than a plainer one everybody can. 76 countable spawns here (rocks are
+     * hazards and excluded), 80% is 61 - reachable without ever landing a
+     * clean waggle, since the limpets you DO manage to shed still count.
+     */
+    objectives: ["complete","kill80","rescueAll"],
   },
   {
     id:22, name:"Cold Approach", subtitle:"Line up the shot",

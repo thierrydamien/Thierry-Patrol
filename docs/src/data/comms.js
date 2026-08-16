@@ -72,8 +72,8 @@ const COMMS = {
   // Pounds, like every other number in this game. This bucket said "$120"
   // while the banner two inches above it said "£120".
   thiefEscaped: { speaker:"mate", cooldown:8, lines:[
-    "It got away with £{n}! Get the next one.",
-    "There goes £{n}. Faster next time, {you}.",
+    "It got away with {money}! Get the next one.",
+    "There goes {money}. Faster next time, {you}.",
   ]},
   sniper: { speaker:"control", cooldown:22, lines:[
     "Marksman locking on - get out of that line!",
