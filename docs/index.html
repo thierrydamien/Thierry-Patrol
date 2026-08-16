@@ -85,11 +85,16 @@
       <button id="leaderboardBtn" class="menu-btn mb-champ">
         <canvas class="mb-icon" width="76" height="76"></canvas>
         <span class="mb-text"><b>CHAMPIONSHIP</b><span id="champSub"></span></span></button>
-      <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
-      <button id="settingsBtnMenu" class="ghost-btn btn-with-glyph">Settings</button>
-      <!-- Desktop only: hidden wherever the Fullscreen API is missing (iOS)
-           or the app already runs standalone from the home screen. -->
-      <button id="fullscreenBtn" class="ghost-btn btn-with-glyph hidden">Fullscreen</button>
+      <!-- The three utilities share ONE line. Stacked, they added ~170px to
+           the bottom of the menu and pushed Fullscreen below the fold on the
+           very desktops that are the only place it works at all. -->
+      <div class="menu-utils">
+        <button id="switchBtn" class="ghost-btn">Switch Pilot</button>
+        <button id="settingsBtnMenu" class="ghost-btn btn-with-glyph">Settings</button>
+        <!-- Desktop only: hidden wherever the Fullscreen API is missing (iOS)
+             or the app already runs standalone from the home screen. -->
+        <button id="fullscreenBtn" class="ghost-btn btn-with-glyph hidden">Fullscreen</button>
+      </div>
     </div>
   </section>
 
@@ -151,12 +156,21 @@
       </div>
     </div>
 
-    <label class="panel-label brief-label">CHOOSE DIFFICULTY</label>
-    <div id="briefDifficulties" class="difficulty-list"></div>
-    <div id="briefDiffDetail" class="diff-detail"></div>
-
-    <label class="panel-label brief-label">PRE-FLIGHT KIT <span id="kitSlots" class="kit-slots"></span></label>
-    <div id="briefKit" class="kit-list"></div>
+    <!-- The two things you SET before flying, side by side wherever there is
+         room. Stacked, the kit sat below the fold on every desktop and most
+         players never learned it existed - the briefing was a column of
+         sections in a window with half its width empty. -->
+    <div class="brief-setup">
+      <div class="brief-setup-col">
+        <label class="panel-label brief-label">CHOOSE DIFFICULTY</label>
+        <div id="briefDifficulties" class="difficulty-list"></div>
+        <div id="briefDiffDetail" class="diff-detail"></div>
+      </div>
+      <div class="brief-setup-col">
+        <label class="panel-label brief-label">PRE-FLIGHT KIT <span id="kitSlots" class="kit-slots"></span></label>
+        <div id="briefKit" class="kit-list"></div>
+      </div>
+    </div>
 
     <!-- Pinned to the bottom of the scroll box. Cutting content shortened this
          screen but could never guarantee it fits - the roster grows with the

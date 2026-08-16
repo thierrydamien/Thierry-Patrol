@@ -7118,6 +7118,54 @@ async function run(){
     SF.fx.reset();
   }
 
+  /* ---------- the briefing shows what it asks you to choose ---------- */
+  {
+    const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    const css  = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+
+    /* Difficulty and kit are ONE row wherever there is width. Stacked, the
+       kit sat below the fold on every desktop and players never found it. */
+    check("difficulty and the kit share a row", (() => {
+      const setup = html.slice(html.indexOf('<div class="brief-setup">'),
+                               html.indexOf('<div class="brief-actions">'));
+      return /briefDifficulties/.test(setup) && /briefKit/.test(setup) &&
+             (setup.match(/brief-setup-col/g) || []).length === 2 &&
+             /\.brief-setup \{[^}]*display:flex/.test(css);
+    })());
+
+    /* On a phone they stack, and the LAST one lands under the sticky launch
+       bar - so the kit goes first and the difficulty blurb takes that hit. */
+    check("on a phone the kit is not the thing hidden by LAUNCH", (() =>
+      /@media \(max-width: 699px\) \{\s*\.brief-setup-col:last-child \{ order:-1; \}/.test(css)
+    )());
+
+    /* Nothing may be permanently trapped under the sticky bar: the last
+       element in the scroll box has no content below it to scroll up. */
+    check("the launch bar cannot eat the last control", (() =>
+      /#screen-briefing > \.ghost-btn \{ margin-bottom:\s*(\d+)px/.test(css) &&
+      Number(RegExp.$1) >= 60
+    )());
+
+    /* Switch Pilot / Settings / Fullscreen on one line. Stacked, Fullscreen
+       fell below the fold on the only machines where it works at all. */
+    check("the menu utilities share one line", (() => {
+      const row = html.slice(html.indexOf('<div class="menu-utils">'),
+                             html.indexOf('</div>', html.indexOf('<div class="menu-utils">')));
+      return /switchBtn/.test(row) && /settingsBtnMenu/.test(row) && /fullscreenBtn/.test(row) &&
+             /\.menu-utils \{[^}]*display:flex[^}]*\}/.test(css) &&
+             /\.menu-utils \{[^}]*flex-wrap:wrap/.test(css);
+    })());
+
+    /* Reclaimed phone height must never shrink a tap target below 44px. */
+    check("the compact phone briefing keeps its tap targets", (() => {
+      const blk = css.slice(css.indexOf("@media (max-width: 699px) and (max-height: 900px)"));
+      const seg = blk.slice(0, blk.indexOf("}\n}") + 3);
+      return /\.brief-hero-art \{ max-height:150px/.test(seg) &&
+             !/min-height:\s*([0-3]?\d)px/.test(seg) &&    // nothing dropped under 40
+             !/\.diff-card|\.kit-item|\.ghost-btn/.test(seg);
+    })());
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

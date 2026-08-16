@@ -368,6 +368,12 @@ html, body {
 .mp-stats { font-size:10px; color: rgba(255,255,255,0.6); }
 
 .menu-buttons { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; max-width:400px; }
+/* Switch Pilot / Settings / Fullscreen, one row. They wrap on a narrow phone
+   rather than shrinking - a 44px tap target is the floor, not a suggestion. */
+.menu-utils {
+  display:flex; flex-wrap:wrap; justify-content:center; gap:8px; width:100%;
+}
+.menu-utils .ghost-btn { margin-top:12px; flex:1 1 auto; min-width:126px; padding:10px 12px; }
 .menu-btn {
   width:100%; font-family:inherit; cursor:pointer; text-align:left;
   display:flex; flex-direction:row; align-items:center; gap:13px;
@@ -501,6 +507,41 @@ html, body {
 }
 
 .brief-label { align-self:flex-start; margin-top:10px; }
+/*
+ * DIFFICULTY and KIT: one row on anything wide enough, stacked on a phone.
+ * The briefing used to be a single column of sections regardless of window
+ * width, so on a laptop the kit lived below the fold behind the launch bar
+ * and players reported not knowing it was there at all.
+ */
+.brief-setup { display:flex; flex-wrap:wrap; gap:8px 16px; width:100%; align-items:flex-start; }
+.brief-setup-col { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; align-items:flex-start; }
+.brief-setup-col .difficulty-list,
+.brief-setup-col .kit-list { width:100%; }
+.brief-setup-col .diff-detail { max-width:none; width:100%; }
+/*
+ * Below 700px the two stack, and whichever is LAST ends up under the sticky
+ * launch bar. That has to be the difficulty blurb, not the kit: the blurb
+ * explains a choice already visible as five chips, while the kit is a thing
+ * players did not know existed. So on a phone the kit goes first.
+ */
+@media (max-width: 699px) {
+  .brief-setup-col:last-child { order:-1; }
+}
+/*
+ * Reclaiming the phone's vertical budget so BOTH the kit and the difficulty
+ * chips sit above the launch bar at rest, instead of taking turns underneath
+ * it. The objectives and roster panels pair up, the hero gives back some of
+ * its letterbox, and the bar's fade zone tightens. Nothing shrinks below a
+ * 44px tap target.
+ */
+@media (max-width: 699px) and (max-height: 900px) {
+  .brief-block { flex:1 1 150px; padding:10px; }
+  .brief-hero { margin-bottom:9px; }
+  .brief-hero-art { max-height:150px; object-fit:cover; object-position:center 40%; }
+  .brief-label { margin-top:6px; }
+  .brief-actions { padding:18px 0 6px; }
+  .diff-detail { margin:6px 0 2px; }
+}
 /* Tier chips: a row you pick from, not five buttons that each launch a game. */
 .difficulty-list { width:100%; display:flex; gap:7px; }
 .diff-card {
@@ -557,6 +598,14 @@ html, body {
   -webkit-backdrop-filter: blur(7px);
   backdrop-filter: blur(7px);
 }
+/*
+ * A sticky bar guarantees LAUNCH is reachable, but it also floats over
+ * whatever happens to be under it - and the LAST thing on the page can
+ * never scroll out from beneath it, because there is nothing below to
+ * scroll up. Back to Missions was permanently half-eaten. This reserves a
+ * bar's worth of runway after it so every element can clear the bar.
+ */
+#screen-briefing > .ghost-btn { margin-bottom:74px; }
 
 /* ---------------- panels / armory ---------------- */
 .panel {
