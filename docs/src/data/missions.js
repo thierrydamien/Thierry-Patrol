@@ -372,7 +372,7 @@ function w(t, type, n, form, opts){
 const MISSIONS = [
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
-    brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves - and the squadron is flying this one with you.",
+    brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves - and the squadron is flying this one with you. Watch out for rocks, and for the pink one: it draws a line at you before it shoots, so just move off the line.",
     goal:"Fly with your finger. Shoot!",
     // Nobody's first ninety seconds are flown alone: two escort drones on the
     // house, flown by whoever else is on the device. It also shows a kid what
@@ -394,6 +394,40 @@ const MISSIONS = [
      *    by being touched. `noDamage` moved out to mission 3, where being
      *    shot at is the lesson.
      */
+    /*
+     * THREE SILHOUETTES, NOT ONE. The first cut was grunts for ninety
+     * seconds with three haulers in it, and the honest problem with that is
+     * not difficulty - it is that nothing NEW ever appears. A child who has
+     * understood the game by 0:20 spends the next seventy seconds doing the
+     * thing they already understood.
+     *
+     * So two guests, both chosen because the game already teaches them for
+     * free and neither of them takes a later level's lesson away:
+     *
+     *  - ROCKS at 0:30. Hazards, so they never count toward the 80% star
+     *    (systems.js leaves hazards out of the spawn count). They are the
+     *    first thing that does not die to one shot, and the first thing
+     *    worth steering around rather than into.
+     *  - ONE MARKSMAN at 0:54, alone, with nothing else new happening. It
+     *    draws a pink thread at you and thickens it for 1.7 seconds before
+     *    firing, and Control's own line for it - "See the pink line? Don't
+     *    be standing in it." - fires automatically the first time one is
+     *    sighted. A telegraph that long is a lesson, not a threat.
+     *
+     * Mission 4 keeps "Return Fire" whole: THAT is where being shot at is
+     * the subject, with several Marksmen at once and boulders to hide
+     * behind. One cameo here is the trailer for it, which is the right
+     * order - the first time you see a thing should not be the level that
+     * is about it.
+     *
+     * And it is still the easy one, which was measured rather than hoped
+     * for. Flown by the same scripted dodger three times a side: the old
+     * grunts-only list cost 2/2/2 lives on ROOKIE, a first draft with three
+     * rocks and three Marksmen cost 3/2/4, and this - four rocks and two
+     * Marksmen - costs 4/0/1 with no deaths to a rock at all. PILOT is
+     * unchanged either way. The guest list came down until the numbers said
+     * the level had got more interesting without getting harder.
+     */
     waves: [
       // Easy first kills, immediately - the guns fire themselves, so this is
       // "point the ship and things explode" within two seconds.
@@ -403,14 +437,18 @@ const MISSIONS = [
       // The first rescue. The heart of the game, in the first half-minute.
       w(22,  "carrier", 1, "column"),
       w(28,  "grunt", 6, "twinColumns"),
+      w(30,  "asteroid", 2, "scatter"),      // the first thing that takes more than one shot
       w(36,  "grunt", 8, "tripleColumns"),
       w(44,  "carrier", 1, "column"),
       w(50,  "grunt", 8, "wall"),
+      w(54,  "sniper", 1, "sides"),          // one, alone, so the line is all there is to watch
       w(58,  "grunt", 8, "pincer"),
       w(66,  "grunt", 9, "scatter"),
+      w(68,  "asteroid", 2, "scatter"),
       w(74,  "carrier", 1, "column"),
-      // Finale: the biggest crowd yet, and still only grunts, so it reads as
-      // "look how good I've got" rather than "this got hard".
+      w(76,  "sniper", 1, "sides"),
+      // Finale: the biggest crowd yet, and grunts again - after the guests it
+      // reads as "look how good I've got" rather than "this got hard".
       w(80,  "grunt", 10, "vee"),
       w(88,  "grunt", 12, "wall"),
     ],

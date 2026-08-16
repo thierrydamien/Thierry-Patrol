@@ -529,8 +529,51 @@ async function run(){
       m1.waves.filter(w => w.type === "carrier").length >= 3);
     check("no star on the first flight is lost by being touched",
       !m1.objectives.includes("noDamage") && !m1.objectives.includes("keepLives"));
-    check("the first flight only ever sends the gentlest enemy",
-      m1.waves.every(w => w.type === "grunt" || w.type === "carrier"));
+    /*
+     * This used to be a name whitelist - grunts and carriers, nothing else -
+     * which is not the actual rule, just the roster that happened to satisfy
+     * it. It also blocked the level from ever getting more interesting: a
+     * first flight of one enemy silhouette for ninety seconds is repetitive
+     * long before it is easy, and the customer said so.
+     *
+     * So the guests are allowed and the CONTRACT is pinned instead. A future
+     * designer can add any gentle thing; a Striker or a Kamikaze still can't
+     * get in.
+     */
+    const ETYPES = SF.enemyData.ENEMY_TYPES;
+    /*
+     * Grunts fire, and always have - straight down, not at you, which you
+     * sidestep without thinking. What a beginner cannot handle is a shot
+     * that TRACKS them with no warning. Anything that aims must therefore
+     * hold a visible tell long enough to read it and move: the Marksman
+     * draws its pink thread for 1.7s, which is the whole reason it is the
+     * one guest allowed to aim.
+     */
+    check("nothing on the first flight aims at you without a long tell",
+      m1.waves.every(w => {
+        const d = ETYPES[w.type];
+        if(!d || d.hazard) return true;                 // rocks are scenery
+        const aims = (d.fire && d.fire.pattern === "aimed") || d.behaviour === "sniper";
+        return !aims || (d.chargeTime || 0) >= 1.5;
+      }));
+    check("nothing on the first flight is fast or armoured",
+      m1.waves.every(w => {
+        const d = ETYPES[w.type];
+        return !d || d.hazard || ((d.speed || 0) <= 140 && (d.hp || 0) <= 8);
+      }));
+    /* Guests are a garnish. The backbone stays the enemy you already beat in
+       the first two seconds, so the finale reads as "look how good I've got". */
+    check("the first flight is still mostly the gentlest enemy", (() => {
+      let gentle = 0, guest = 0;
+      m1.waves.forEach(w => { if(w.type === "grunt") gentle += w.n; else guest += w.n; });
+      return gentle >= guest*3;
+    })());
+    /* ...and it does have guests, or we are back to the level the customer
+       called boring. Two different silhouettes beyond the backbone. */
+    check("the first flight has something to look at besides grunts", (() => {
+      const kinds = new Set(m1.waves.map(w => w.type).filter(t => t !== "grunt" && t !== "carrier"));
+      return kinds.size >= 2;
+    })());
   }
   check("every mission has waves and objectives",
     SF.missions.MISSIONS.every(m => m.waves.length > 0 && m.objectives.length === 3));
