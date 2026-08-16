@@ -141,11 +141,15 @@ function sprite(str){
 }
 
 /** Wears the drawing on a hull of size S centred on the origin (shipart space). */
-function paint(ctx, S, str){
+function paint(ctx, S, str, hullId){
   const img = sprite(str);
   if(!img) return;
   ctx.save();
-  SF.shipart.hullClip(ctx, S);
+  // The hull the pilot actually flies. This used to clip every drawing to the
+  // DART no matter what was underneath it, so an Anvil wore its paint trimmed
+  // to a narrower ship - the built-in liveries next door have always been
+  // handed opts.hull, and this one was simply missed.
+  SF.shipart.hullClip(ctx, S, hullId);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, REGION.x*S, REGION.y*S, REGION.w*S, REGION.h*S);
   ctx.restore();

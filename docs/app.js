@@ -34,11 +34,11 @@
  *    19708  src/skygen.js
  *    22033  src/shipart.js
  *    23111  src/paintjob.js
- *    23269  src/pilotart.js
- *    23364  src/comms.js
- *    23485  src/game.js
- *    26880  src/workshop.js
- *    27577  src/ui.js
+ *    23273  src/pilotart.js
+ *    23368  src/comms.js
+ *    23489  src/game.js
+ *    26884  src/workshop.js
+ *    27581  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -22726,7 +22726,7 @@ function drawShip(ctx, cx, cy, size, opts){
   // pattern but a drawing the pilot made - same layer, same clipping.
   if(opts.decal){
     if(SF.paintjob && SF.paintjob.isCustom(opts.decal)){
-      SF.paintjob.paint(ctx, S, opts.decal);
+      SF.paintjob.paint(ctx, S, opts.decal, opts.hull);
     } else if(LIVERY_ART[opts.decal]){
       ctx.save(); LIVERY_ART[opts.decal](ctx, S, opts.hull); ctx.restore();
     }
@@ -23251,11 +23251,15 @@ function sprite(str){
 }
 
 /** Wears the drawing on a hull of size S centred on the origin (shipart space). */
-function paint(ctx, S, str){
+function paint(ctx, S, str, hullId){
   const img = sprite(str);
   if(!img) return;
   ctx.save();
-  SF.shipart.hullClip(ctx, S);
+  // The hull the pilot actually flies. This used to clip every drawing to the
+  // DART no matter what was underneath it, so an Anvil wore its paint trimmed
+  // to a narrower ship - the built-in liveries next door have always been
+  // handed opts.hull, and this one was simply missed.
+  SF.shipart.hullClip(ctx, S, hullId);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, REGION.x*S, REGION.y*S, REGION.w*S, REGION.h*S);
   ctx.restore();
@@ -27593,6 +27597,9 @@ const audio = SF.audio;
 
 let profile = null;
 let failStreak = null;   // { key: "mission:tier", n } - resets on any win
+/* The code that stands between a curious seven-year-old and a wiped career.
+   See the reset button for what this is and is not. */
+const RESET_CODE = "1337";
 let selectedMissionIndex = 0;
 
 /* ---------------------------------------------------------
@@ -27796,7 +27803,10 @@ function dialog(opts){
     input.value = opts.value || "";
     input.placeholder = opts.placeholder || "";
     $("dialogOk").textContent = opts.okLabel || "OK";
+    // A message with nothing to decide gets ONE button. Without this the only
+    // way to say "that code was wrong" was two buttons both labelled OK.
     $("dialogCancel").textContent = opts.cancelLabel || "CANCEL";
+    $("dialogCancel").classList.toggle("hidden", !!opts.noCancel);
     $("dialogOverlay").querySelector(".dialog-inner").classList.toggle("dialog-danger", !!opts.danger);
     $("dialogOverlay").classList.remove("hidden");
     if(opts.input) setTimeout(() => { try { input.focus(); } catch(e){} }, 60);
@@ -32769,6 +32779,26 @@ click($("setReset"), async () => {
       { danger:true, okLabel:"RESET" })) return;
   if(!await confirmDlg("LAST CHANCE", "Really erase " + who + "'s whole career?",
       { danger:true, okLabel:"ERASE IT" })) return;
+  /*
+   * THE GROWN-UP CODE. Two scary dialogs are a speed bump, not a lock, and
+   * this button erases a career on every synced device at once - the one
+   * action in the game a seven-year-old can take that nobody can undo.
+   *
+   * This is a lock on the fridge, not a security control: the code sits in
+   * the source like everything else, and anyone who can read it can get past
+   * it. It is aimed squarely at the accidental tap and the dare.
+   */
+  const code = await ask("GROWN-UP CODE", {
+    text: "Ask a grown-up for the code before resetting " + who + ".",
+    placeholder: "4 digits", okLabel:"UNLOCK", danger:true,
+  });
+  if(code === null) return;                       // cancelled - no harm done
+  if(String(code).trim() !== RESET_CODE){
+    await dialog({ title:"NOT THAT ONE",
+                   text: who + "'s career is safe. Nothing was changed.",
+                   okLabel:"OK", noCancel:true });
+    return;
+  }
   // A fresh blank saved now carries the newest savedAt, so the wipe wins the
   // per-pilot merge on every other device instead of being "repaired" by it.
   const fresh = P.blank(who);

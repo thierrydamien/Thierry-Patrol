@@ -4352,6 +4352,49 @@ async function run(){
       !id("dialogOverlay").classList.contains("hidden") &&
       /LAST CHANCE/.test(id("dialogTitle").textContent));
     clickEl(id("dialogOk"));
+    await sleep(10);
+
+    /*
+     * ...and then the grown-up code. Two scary dialogs are a speed bump, not
+     * a lock, and this is the one button a seven-year-old can press that
+     * nobody can undo - on every synced device at once.
+     */
+    check("and then it asks for the grown-up code", (() => {
+      const inp = id("dialogInput");
+      return !id("dialogOverlay").classList.contains("hidden") &&
+             /GROWN-UP CODE/.test(id("dialogTitle").textContent) &&
+             !inp.classList.contains("hidden");
+    })());
+
+    // A wrong code must change NOTHING, and say so with one button.
+    id("dialogInput").value = "0000";
+    clickEl(id("dialogOk"));
+    await sleep(20);
+    const afterWrong = SF.profile.load("Marc");
+    check("a wrong code leaves the career untouched",
+      afterWrong.money === 4321 &&
+      /NOT THAT ONE/.test(id("dialogTitle").textContent) &&
+      id("dialogCancel").classList.contains("hidden"));
+    clickEl(id("dialogOk"));
+    await sleep(20);
+
+    // Backing out of the code prompt must change nothing either.
+    clickEl(id("setReset"));
+    await sleep(10); clickEl(id("dialogOk"));
+    await sleep(10); clickEl(id("dialogOk"));
+    await sleep(10); clickEl(id("dialogCancel"));
+    await sleep(20);
+    check("backing out of the code leaves the career untouched",
+      SF.profile.load("Marc").money === 4321 &&
+      id("dialogOverlay").classList.contains("hidden"));
+
+    // The real thing.
+    clickEl(id("setReset"));
+    await sleep(10); clickEl(id("dialogOk"));
+    await sleep(10); clickEl(id("dialogOk"));
+    await sleep(10);
+    id("dialogInput").value = "1337";
+    clickEl(id("dialogOk"));
     await sleep(30);
     const wiped = SF.profile.load("Marc");
     check("resetting a pilot wipes the career and stamps it newest",
@@ -4359,6 +4402,12 @@ async function run(){
       Object.keys(wiped.missions).length === 0 && wiped.savedAt > 0);
     check("the settings overlay closes after a reset",
       id("settingsOverlay").classList.contains("hidden"));
+    /* The code is a lock on the fridge, not a security control - it ships in
+       the source like everything else. Pinned so it cannot drift silently. */
+    check("the grown-up code is the one the family was given", (() => {
+      const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      return /const RESET_CODE = "1337";/.test(u);
+    })());
   }
 
   /* ---------- the paint shop, and the star vault's hidden door ---------- */
@@ -7257,6 +7306,30 @@ async function run(){
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
       const fn = r.slice(r.indexOf("function rockSprite"), r.indexOf("function drawAsteroid"));
       return /placed/.test(fn) && /Math\.hypot\(x-o\.x, y-o\.y\) < \(r \+ o\.r\)/.test(fn);
+    })());
+  }
+
+  /* ---------- a drawing is worn by the ship that flies it ---------- */
+  {
+    /*
+     * A custom paint job was clipped to the DART silhouette no matter which
+     * hull was underneath it, so an Anvil wore its drawing trimmed to a
+     * narrower ship. The built-in liveries next door have always been handed
+     * opts.hull; this one was simply missed.
+     */
+    check("a custom paint job is clipped to the hull it is worn on", (() => {
+      const pj = fs.readFileSync(path.join(__dirname, "src/paintjob.js"), "utf8");
+      const sa = fs.readFileSync(path.join(__dirname, "src/shipart.js"), "utf8");
+      return /function paint\(ctx, S, str, hullId\)/.test(pj) &&
+             /hullClip\(ctx, S, hullId\)/.test(pj) &&
+             /SF\.paintjob\.paint\(ctx, S, opts\.decal, opts\.hull\)/.test(sa);
+    })());
+
+    /* The Paint Shop can always take a drawing back off again - the one
+       control that answers "how do I get rid of this?". */
+    check("a paint job can be stripped back off", (() => {
+      const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      return /STRIP IT OFF/.test(u) && /profile\.decal = null/.test(u);
     })());
   }
 

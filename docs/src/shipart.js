@@ -694,7 +694,7 @@ function drawShip(ctx, cx, cy, size, opts){
   // pattern but a drawing the pilot made - same layer, same clipping.
   if(opts.decal){
     if(SF.paintjob && SF.paintjob.isCustom(opts.decal)){
-      SF.paintjob.paint(ctx, S, opts.decal);
+      SF.paintjob.paint(ctx, S, opts.decal, opts.hull);
     } else if(LIVERY_ART[opts.decal]){
       ctx.save(); LIVERY_ART[opts.decal](ctx, S, opts.hull); ctx.restore();
     }
