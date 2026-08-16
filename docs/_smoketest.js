@@ -7309,6 +7309,76 @@ async function run(){
     })());
   }
 
+  /* ---------- a coin is a coin, and a sun is a flare ---------- */
+  {
+    /* Same escape as the rocks: the shared canvas stub reads back zeros, so
+       the coin bakes in a private node-canvas instance or not at all. */
+    let CO = null;
+    try {
+      const NC3 = require("canvas");
+      const src = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const seg = src.slice(src.indexOf("const coinPhases = [];"),
+                            src.indexOf("let podSprite"));
+      CO = new Function("document", "BAKE", "TAU",
+        seg + "\nreturn coinSprite;"
+      )({ createElement: () => NC3.createCanvas(1, 1) }, 2, Math.PI*2);
+    } catch(e){ CO = null; }
+
+    const csig = (cv) => {
+      const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+      let s = 0, ink = 0;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3] > 8) ink++;
+        if(i % (4*29) === 0) s = ((s*33 + d[i] + d[i+1]*3 + d[i+2]*7 + d[i+3]) >>> 0);
+      }
+      return { s, ink };
+    };
+    const coinOk = !!CO && (() => { const cv = CO(0); return !!cv && csig(cv).ink > 200; })();
+    check("the coin pins are measuring real pixels", !CO || coinOk);
+
+    /* Eight phases of a spinning coin must be eight different drawings -
+       edge band swapping sides, glint walking, stamp appearing and going. */
+    check("a coin turns through eight different frames", !coinOk || (() => {
+      const seen = new Set();
+      for(let ph=0; ph<8; ph++) seen.add(csig(CO(ph)).s);
+      return seen.size === 8;
+    })());
+
+    /* The halo is BAKED - a coin rain glows on a dark sky at zero live cost.
+       Sampled outside the face+edge radius (~11 logical), inside the halo. */
+    check("a coin glows without a live composite", !coinOk || (() => {
+      const cv = CO(0);
+      const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+      const c = cv.width/2, rr = 12*2;             // logical 12 at BAKE 2
+      const a = (x,y) => d[((y|0)*cv.width + (x|0))*4 + 3];
+      return a(c+rr, c) > 4 || a(c-rr, c) > 4 || a(c, c+rr) > 4 || a(c, c-rr) > 4;
+    })());
+
+    /* The face is stamped with the HUD's own currency and the edge is
+       milled near edge-on - what separates a coin from a gold bean. */
+    check("the coin is stamped and its edge is milled", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = r.slice(r.indexOf("const coinPhases = [];"), r.indexOf("let podSprite"));
+      return /fillText\("£"/.test(fn) && /Reeding/.test(fn) && /squash < 0\.6/.test(fn);
+    })());
+
+    /*
+     * The suns' spikes taper. Constant-width fillRects read as drawn plus
+     * signs; a diffraction spike is a long diamond, widest at the core. And
+     * ONE spider angle per sky - the spikes come from the camera, so every
+     * star in a frame wears the same cross.
+     */
+    check("a sun's spikes taper from the core", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+      const i = g.indexOf("const spiderTilt");
+      if(i < 0) return false;
+      const seg = g.slice(i, g.indexOf("/* --- vignette", i) < 0 ? i + 3200 : g.indexOf("/* --- vignette", i));
+      return /const spiderTilt = \(rand\(\) - 0\.5\)/.test(seg) &&
+             /ctx\.rotate\(spiderTilt\)/.test(seg) &&
+             /lineTo\(0, -wide\)/.test(seg) && !/fillRect\(-reach/.test(seg);
+    })());
+  }
+
   /* ---------- a drawing is worn by the ship that flies it ---------- */
   {
     /*

@@ -29,16 +29,16 @@
  *    13366  src/sky29.js
  *    13607  src/systems.js
  *    14226  src/render.js
- *    18717  src/enemyart.js
- *    19463  src/insignia.js
- *    19708  src/skygen.js
- *    22033  src/shipart.js
- *    23111  src/paintjob.js
- *    23273  src/pilotart.js
- *    23368  src/comms.js
- *    23489  src/game.js
- *    26884  src/workshop.js
- *    27581  src/ui.js
+ *    18782  src/enemyart.js
+ *    19528  src/insignia.js
+ *    19773  src/skygen.js
+ *    22120  src/shipart.js
+ *    23198  src/paintjob.js
+ *    23360  src/pilotart.js
+ *    23455  src/comms.js
+ *    23576  src/game.js
+ *    26971  src/workshop.js
+ *    27668  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -15660,37 +15660,102 @@ function drawBullets(ctx, world){
 
 /*
  * Coins are the most numerous object in the game, so they get real art:
- * eight pre-rendered spin phases of a bevelled gold coin with a moving
- * glint. Flat yellow ellipses were the single most prototype-looking thing
- * still on screen.
+ * eight pre-rendered spin phases of a bevelled gold coin. Flat yellow
+ * ellipses were the single most prototype-looking thing still on screen.
+ *
+ * The eight frames model HALF a turn about the vertical axis (a coin's two
+ * faces are identical, so half a turn is the whole loop):
+ *  - the edge band sits on one side of the face and swaps sides at edge-on,
+ *    which is what makes it read as thickness instead of a border ring;
+ *  - near edge-on the band is MILLED - reeding ticks - so the thinnest
+ *    frames read as a coin's edge rather than a gold sliver;
+ *  - a specular glint walks the full width of the face across the loop,
+ *    because metal is what moving highlights look like;
+ *  - the face is stamped with the £ the HUD counts money in, squashed with
+ *    the face so it turns with the coin;
+ *  - a small warm halo is baked in, so a coin rain glows on the dark skies
+ *    without costing a single live composite.
  */
 const coinPhases = [];
+const COIN_BOX = 32;                       // sprite box; face radius stays ~9
 function coinSprite(phase){
   if(!coinPhases.length){
     for(let ph=0;ph<8;ph++){
       const cv = document.createElement("canvas");
-      cv.width = cv.height = Math.ceil(26*BAKE);
+      cv.width = cv.height = Math.ceil(COIN_BOX*BAKE);
       const c = cv.getContext("2d");
       if(!c) break;
       c.scale(BAKE, BAKE);
-      const squash = Math.max(0.22, Math.abs(Math.cos(ph/8*Math.PI)));
-      c.translate(13, 13);
-      // Edge (visible when the face turns away)
+      c.translate(COIN_BOX/2, COIN_BOX/2);
+      const t = ph/8;                              // 0 -> just short of half a turn
+      const squash = Math.max(0.16, Math.abs(Math.cos(t*Math.PI)));
+      // Which side of the face the edge band shows on; flips at edge-on.
+      const side = Math.cos(t*Math.PI) >= 0 ? 1 : -1;
+      const RX = 9*squash, RY = 9.8;
+
+      // Baked halo - the only glow a coin will ever need.
+      const halo = c.createRadialGradient(0, 0, 2, 0, 0, 15);
+      halo.addColorStop(0, "rgba(255,214,80,0.30)");
+      halo.addColorStop(0.6, "rgba(255,196,60,0.12)");
+      halo.addColorStop(1, "rgba(255,196,60,0)");
+      c.fillStyle = halo;
+      c.beginPath(); c.arc(0, 0, 15, 0, TAU); c.fill();
+
+      // Edge band: the coin's thickness, on the side turning away.
+      const th = 2.6*(1 - squash) + 0.6;           // thickest edge-on
       c.fillStyle = "#8a5f08";
-      c.beginPath(); c.ellipse(0, 0, 9*squash + 1.2, 10.2, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(side*th*0.5, 0, RX + th*0.5, RY, 0, 0, TAU); c.fill();
+      // Reeding: milled ticks down the band, only worth ink near edge-on.
+      if(squash < 0.6){
+        c.strokeStyle = "rgba(58,38,4,0.85)";
+        c.lineWidth = 0.8;
+        for(let k=-3;k<=3;k++){
+          const yy = k/3.6*RY*0.86;
+          const xx = side*(th*0.5 + RX*Math.sqrt(Math.max(0, 1 - (yy/RY)*(yy/RY))));
+          c.beginPath(); c.moveTo(xx - 0.5, yy - 1.1); c.lineTo(xx + 0.5, yy + 1.1); c.stroke();
+        }
+      }
+
       // Face
-      const g = c.createRadialGradient(-2.5, -3.5, 1, 0, 0, 10);
+      const g = c.createRadialGradient(-RX*0.35, -3.5, 1, 0, 0, 10.5);
       g.addColorStop(0, "#fff3b0");
       g.addColorStop(0.45, "#ffd23f");
       g.addColorStop(1, "#c98d12");
       c.fillStyle = g;
-      c.beginPath(); c.ellipse(0, 0, 9*squash, 9.6, 0, 0, TAU); c.fill();
-      // Inner ring stamped into the face
-      c.strokeStyle = "rgba(140,95,10,0.55)"; c.lineWidth = 1.4;
-      c.beginPath(); c.ellipse(0, 0, 5.6*squash, 6.2, 0, 0, TAU); c.stroke();
-      // Glint that walks across with the spin
-      c.fillStyle = "rgba(255,255,255,0.85)";
-      c.beginPath(); c.ellipse(-3*squash + ph*0.5 - 2, -4, 1.7*squash + 0.4, 1.1, -0.5, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(0, 0, RX, RY, 0, 0, TAU); c.fill();
+
+      // Bevel: a lit arc up the left shoulder, a shade down the right - the
+      // two-stroke version of "this face is raised". The inner ring stamps
+      // the bevel's floor.
+      c.lineWidth = 1.5;
+      c.strokeStyle = "rgba(255,248,214,0.85)";
+      c.beginPath(); c.ellipse(0, 0, RX*0.9, RY*0.9 - 0.2, 0, Math.PI*0.7, Math.PI*1.45); c.stroke();
+      c.strokeStyle = "rgba(122,78,6,0.7)";
+      c.beginPath(); c.ellipse(0, 0, RX*0.9, RY*0.9 - 0.2, 0, -Math.PI*0.28, Math.PI*0.42); c.stroke();
+      c.strokeStyle = "rgba(140,95,10,0.5)"; c.lineWidth = 1.1;
+      c.beginPath(); c.ellipse(0, 0, RX*0.66, RY*0.68, 0, 0, TAU); c.stroke();
+
+      // The stamp: the same £ the HUD counts. Squashes with the face, and
+      // skips the frames too thin to read it - a smeared glyph is worse
+      // than plain gold.
+      if(squash > 0.42){
+        c.save();
+        c.scale(squash, 1);
+        c.font = "700 11px Rajdhani, Arial, sans-serif";
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillStyle = "rgba(122,78,6,0.78)";
+        c.fillText("£", 0, 1.6);                   // relief: shadow first...
+        c.fillStyle = "rgba(255,240,170,0.85)";
+        c.fillText("£", 0, 0.7);                   // ...then the lit face
+        c.restore();
+      }
+
+      // The glint walks the whole face across the loop, riding the rim.
+      const gx = (t*2 - 1) * RX*0.8;
+      c.fillStyle = "rgba(255,255,255,0.9)";
+      c.beginPath();
+      c.ellipse(gx, -RY*0.42, 1.5*squash + 0.5, 1.4, -0.6*squash, 0, TAU);
+      c.fill();
       coinPhases.push(cv);
     }
   }
@@ -16554,7 +16619,7 @@ function drawPickups(ctx, world, timeMs){
     ctx.translate(it.x, it.y);
     if(it.kind === "coin"){
       const spr = coinSprite(Math.floor((it.angle/Math.PI)*8) & 7);
-      if(spr) ctx.drawImage(spr, -13, -13, 26, 26);
+      if(spr) ctx.drawImage(spr, -16, -16, 32, 32);   // box grew for the baked halo
       else {
         ctx.fillStyle = "#ffd23f";
         ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
@@ -21812,6 +21877,29 @@ function paint(sky, seed, W, H, dpr, wrap){
     });
   }
 
+  /*
+   * The suns' spikes TAPER. They were constant-width fillRects fading only
+   * by gradient, and parallel silhouette edges read as drawn bars - every
+   * bright star in the game was a plus sign. A diffraction spike is widest
+   * at the core and thins to nothing, so each is a long four-point diamond.
+   *
+   * One spider angle per SKY, not per star: in a real photograph the spikes
+   * come from the telescope, so every star in frame wears the same cross.
+   * Per-star angles read as scattered sparkles; one shared tilt reads as a
+   * camera. The vertical arm runs longer than the horizontal for the same
+   * reason - a perfectly even plus is a symbol, an uneven cross is a flare.
+   */
+  const spiderTilt = (rand() - 0.5)*0.5;
+  const spike = (len, wide, alpha) => {
+    const sg = ctx.createLinearGradient(-len, 0, len, 0);
+    sg.addColorStop(0,   rgba(sky.star, 0));
+    sg.addColorStop(0.5, "rgba(255,255,255," + alpha + ")");
+    sg.addColorStop(1,   rgba(sky.star, 0));
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(-len, 0); ctx.lineTo(0, -wide); ctx.lineTo(len, 0); ctx.lineTo(0, wide);
+    ctx.closePath(); ctx.fill();
+  };
   for(let i=0;i<Math.round(sky.bright * areaK);i++){
     const x = rand()*W, y = rand()*H;
     const r = 1.6 + rand()*1.6, reach = r*(5 + rand()*4);
@@ -21822,21 +21910,20 @@ function paint(sky, seed, W, H, dpr, wrap){
       g.addColorStop(1, rgba(sky.star, 0));
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, yy, reach, 0, TAU); ctx.fill();
-      // Four-point diffraction spikes.
       ctx.save();
       ctx.translate(x, yy);
+      ctx.rotate(spiderTilt);
       ctx.globalCompositeOperation = "lighter";
-      [0, Math.PI/2].forEach(a => {
-        ctx.save();
-        ctx.rotate(a);
-        const sg = ctx.createLinearGradient(-reach*1.5, 0, reach*1.5, 0);
-        sg.addColorStop(0, rgba(sky.star, 0));
-        sg.addColorStop(0.5, "rgba(255,255,255,0.7)");
-        sg.addColorStop(1, rgba(sky.star, 0));
-        ctx.fillStyle = sg;
-        ctx.fillRect(-reach*1.5, -r*0.13, reach*3.0, r*0.26);
-        ctx.restore();
-      });
+      ctx.save(); ctx.rotate(Math.PI/2); spike(reach*1.9, r*0.34, 0.8); ctx.restore();
+      spike(reach*1.35, r*0.30, 0.7);
+      // The biggest suns earn a short faint diagonal pair - the "eight-point"
+      // look the brightest star in an astrophoto has.
+      if(r > 2.4){
+        ctx.rotate(Math.PI/4);
+        spike(reach*0.6, r*0.2, 0.35);
+        ctx.rotate(Math.PI/2);
+        spike(reach*0.6, r*0.2, 0.35);
+      }
       ctx.restore();
       ctx.globalCompositeOperation = "source-over";
     });

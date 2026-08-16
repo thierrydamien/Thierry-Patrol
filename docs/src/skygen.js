@@ -2105,6 +2105,29 @@ function paint(sky, seed, W, H, dpr, wrap){
     });
   }
 
+  /*
+   * The suns' spikes TAPER. They were constant-width fillRects fading only
+   * by gradient, and parallel silhouette edges read as drawn bars - every
+   * bright star in the game was a plus sign. A diffraction spike is widest
+   * at the core and thins to nothing, so each is a long four-point diamond.
+   *
+   * One spider angle per SKY, not per star: in a real photograph the spikes
+   * come from the telescope, so every star in frame wears the same cross.
+   * Per-star angles read as scattered sparkles; one shared tilt reads as a
+   * camera. The vertical arm runs longer than the horizontal for the same
+   * reason - a perfectly even plus is a symbol, an uneven cross is a flare.
+   */
+  const spiderTilt = (rand() - 0.5)*0.5;
+  const spike = (len, wide, alpha) => {
+    const sg = ctx.createLinearGradient(-len, 0, len, 0);
+    sg.addColorStop(0,   rgba(sky.star, 0));
+    sg.addColorStop(0.5, "rgba(255,255,255," + alpha + ")");
+    sg.addColorStop(1,   rgba(sky.star, 0));
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(-len, 0); ctx.lineTo(0, -wide); ctx.lineTo(len, 0); ctx.lineTo(0, wide);
+    ctx.closePath(); ctx.fill();
+  };
   for(let i=0;i<Math.round(sky.bright * areaK);i++){
     const x = rand()*W, y = rand()*H;
     const r = 1.6 + rand()*1.6, reach = r*(5 + rand()*4);
@@ -2115,21 +2138,20 @@ function paint(sky, seed, W, H, dpr, wrap){
       g.addColorStop(1, rgba(sky.star, 0));
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, yy, reach, 0, TAU); ctx.fill();
-      // Four-point diffraction spikes.
       ctx.save();
       ctx.translate(x, yy);
+      ctx.rotate(spiderTilt);
       ctx.globalCompositeOperation = "lighter";
-      [0, Math.PI/2].forEach(a => {
-        ctx.save();
-        ctx.rotate(a);
-        const sg = ctx.createLinearGradient(-reach*1.5, 0, reach*1.5, 0);
-        sg.addColorStop(0, rgba(sky.star, 0));
-        sg.addColorStop(0.5, "rgba(255,255,255,0.7)");
-        sg.addColorStop(1, rgba(sky.star, 0));
-        ctx.fillStyle = sg;
-        ctx.fillRect(-reach*1.5, -r*0.13, reach*3.0, r*0.26);
-        ctx.restore();
-      });
+      ctx.save(); ctx.rotate(Math.PI/2); spike(reach*1.9, r*0.34, 0.8); ctx.restore();
+      spike(reach*1.35, r*0.30, 0.7);
+      // The biggest suns earn a short faint diagonal pair - the "eight-point"
+      // look the brightest star in an astrophoto has.
+      if(r > 2.4){
+        ctx.rotate(Math.PI/4);
+        spike(reach*0.6, r*0.2, 0.35);
+        ctx.rotate(Math.PI/2);
+        spike(reach*0.6, r*0.2, 0.35);
+      }
       ctx.restore();
       ctx.globalCompositeOperation = "source-over";
     });
