@@ -17,31 +17,31 @@
  *     5634  src/data/story.js
  *     5731  src/data/i18nbind.js
  *     5790  src/data/fr.js
- *     6769  src/profile.js
- *     7390  src/cloud.js
- *     7995  src/fx.js
- *     9053  src/input.js
- *     9464  src/entities.js
- *    10676  src/bossart.js
- *    11435  src/bosses.js
- *    12185  src/bossintro.js
- *    12308  src/rewind.js
- *    12830  src/finale.js
- *    13151  src/papadeath.js
- *    13473  src/backstage.js
- *    14676  src/sky29.js
- *    14917  src/systems.js
- *    15536  src/render.js
- *    20092  src/enemyart.js
- *    20838  src/insignia.js
- *    21083  src/skygen.js
- *    23455  src/shipart.js
- *    24533  src/paintjob.js
- *    24695  src/pilotart.js
- *    24790  src/comms.js
- *    24911  src/game.js
- *    28364  src/workshop.js
- *    29061  src/ui.js
+ *     6773  src/profile.js
+ *     7394  src/cloud.js
+ *     7999  src/fx.js
+ *     9057  src/input.js
+ *     9468  src/entities.js
+ *    10680  src/bossart.js
+ *    11439  src/bosses.js
+ *    12189  src/bossintro.js
+ *    12312  src/rewind.js
+ *    12834  src/finale.js
+ *    13155  src/papadeath.js
+ *    13477  src/backstage.js
+ *    14680  src/sky29.js
+ *    14921  src/systems.js
+ *    15540  src/render.js
+ *    20096  src/enemyart.js
+ *    20842  src/insignia.js
+ *    21087  src/skygen.js
+ *    23459  src/shipart.js
+ *    24537  src/paintjob.js
+ *    24699  src/pilotart.js
+ *    24794  src/comms.js
+ *    24915  src/game.js
+ *    28368  src/workshop.js
+ *    29065  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -5815,7 +5815,11 @@ if(!SF.i18n) return;
 SF.i18n.register("fr", { name: "Français", s: {
 
 /* ---------------- shell, menus, buttons ---------------- */
-"A FAMILY SQUADRON": "UN ESCADRON DE FAMILLE",
+/* Not "UN ESCADRON DE FAMILLE": that is the English structure with French
+   words in it, and it is not something anyone says. The parallel pair is a
+   normal French tagline shape and keeps both halves of the idea - the flying
+   and the family - without the calque. */
+"A FAMILY SQUADRON": "EN ESCADRILLE, EN FAMILLE",
 "Who's flying today?": "Qui vole aujourd'hui ?",
 "+ Add Pilot": "+ Ajouter un pilote",
 "Settings": "Réglages",

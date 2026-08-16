@@ -26,7 +26,11 @@ if(!SF.i18n) return;
 SF.i18n.register("fr", { name: "Français", s: {
 
 /* ---------------- shell, menus, buttons ---------------- */
-"A FAMILY SQUADRON": "UN ESCADRON DE FAMILLE",
+/* Not "UN ESCADRON DE FAMILLE": that is the English structure with French
+   words in it, and it is not something anyone says. The parallel pair is a
+   normal French tagline shape and keeps both halves of the idea - the flying
+   and the family - without the calque. */
+"A FAMILY SQUADRON": "EN ESCADRILLE, EN FAMILLE",
 "Who's flying today?": "Qui vole aujourd'hui ?",
 "+ Add Pilot": "+ Ajouter un pilote",
 "Settings": "Réglages",
