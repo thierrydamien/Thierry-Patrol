@@ -1300,8 +1300,33 @@ function drawWreck(ctx, W, H, p, rand){
       ctx.fillStyle = "rgba(12,15,24,0.9)";
       ctx.fillRect(dx, dy, ds*(1 + rand()*2), ds);
     }
-    ctx.fillStyle = "rgba(255,214,120,0.8)";
-    ctx.fillRect(-L*0.16, -T*0.12, L*0.009, T*0.13);
+    /*
+     * THE LIGHTS STILL ON. One hard gold rectangle, no glow, nothing near
+     * it - which is a lovely idea drawn so plainly that the customer asked
+     * whether it was a rendering bug. It is not: it is the last power in a
+     * dead ship, and it has to look like it.
+     *
+     * So: a short row of windows of uneven brightness with a warm bloom
+     * behind them. A lit window at this size is mostly its glow - that is
+     * what separates "a light" from "a rectangle" - and unevenness is what
+     * separates a hulk with a few compartments still live from a fitting.
+     */
+    const wx = -L*0.16, wy = -T*0.12, ww = L*0.009, wh = T*0.13;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const bloom = ctx.createRadialGradient(wx + ww/2, wy + wh/2, 0,
+                                           wx + ww/2, wy + wh/2, wh*2.6);
+    bloom.addColorStop(0, "rgba(255,206,120,0.5)");
+    bloom.addColorStop(0.45, "rgba(255,190,96,0.16)");
+    bloom.addColorStop(1, "rgba(255,190,96,0)");
+    ctx.fillStyle = bloom;
+    ctx.beginPath(); ctx.arc(wx + ww/2, wy + wh/2, wh*2.6, 0, TAU); ctx.fill();
+    ctx.restore();
+    for(let i = 0; i < 4; i++){
+      const a = [0.85, 0.30, 0.62, 0.16][i];
+      ctx.fillStyle = "rgba(255,222,150," + a + ")";
+      ctx.fillRect(wx + i*ww*2.1, wy + (i % 2)*wh*0.22, ww, wh*(i % 2 ? 0.62 : 1));
+    }
     ctx.restore();
   });
 }

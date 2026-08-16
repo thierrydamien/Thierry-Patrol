@@ -10,35 +10,35 @@
  *      957  src/audio.js
  *     1655  src/data/config.js
  *     2117  src/data/enemies.js
- *     2951  src/data/missions.js
- *     4820  src/wacky.js
- *     5036  src/data/comms.js
- *     5400  src/data/story.js
- *     5497  src/profile.js
- *     6118  src/cloud.js
- *     6723  src/fx.js
- *     7781  src/input.js
- *     8192  src/entities.js
- *     9404  src/bossart.js
- *    10163  src/bosses.js
- *    10913  src/bossintro.js
- *    11036  src/rewind.js
- *    11558  src/finale.js
- *    11879  src/papadeath.js
- *    12201  src/backstage.js
- *    13404  src/sky29.js
- *    13645  src/systems.js
- *    14264  src/render.js
- *    18820  src/enemyart.js
- *    19566  src/insignia.js
- *    19811  src/skygen.js
- *    22158  src/shipart.js
- *    23236  src/paintjob.js
- *    23398  src/pilotart.js
- *    23493  src/comms.js
- *    23614  src/game.js
- *    27062  src/workshop.js
- *    27759  src/ui.js
+ *     2976  src/data/missions.js
+ *     4845  src/wacky.js
+ *     5061  src/data/comms.js
+ *     5425  src/data/story.js
+ *     5522  src/profile.js
+ *     6143  src/cloud.js
+ *     6748  src/fx.js
+ *     7806  src/input.js
+ *     8217  src/entities.js
+ *     9429  src/bossart.js
+ *    10188  src/bosses.js
+ *    10938  src/bossintro.js
+ *    11061  src/rewind.js
+ *    11583  src/finale.js
+ *    11904  src/papadeath.js
+ *    12226  src/backstage.js
+ *    13429  src/sky29.js
+ *    13670  src/systems.js
+ *    14289  src/render.js
+ *    18845  src/enemyart.js
+ *    19591  src/insignia.js
+ *    19836  src/skygen.js
+ *    22208  src/shipart.js
+ *    23286  src/paintjob.js
+ *    23448  src/pilotart.js
+ *    23543  src/comms.js
+ *    23664  src/game.js
+ *    27117  src/workshop.js
+ *    27814  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2544,6 +2544,31 @@ const BEHAVIOURS = {
    * near-miss bonus for the contact it just made.
    */
   limpet(e, dt, c){
+    /*
+     * ARMOURED WHILE IT MAKES ITS RUN, and this is what makes the level
+     * work at all.
+     *
+     * A Limpet's entire mechanic happens after it has hold of you, and it
+     * only ever had 5 flat hit points - no toughSeconds, unlike every other
+     * mechanics carrier in the roster. Measured on a maxed ship (326 dps):
+     * of every Limpet the mission sent, ZERO ever reached the hull. The
+     * better your guns, the more completely the level's own star objective
+     * became unreachable - you deleted the mechanic before it could happen.
+     *
+     * Health cannot fix that. The run in is about 3.5 seconds and a maxed
+     * ship kills 242hp in 0.74s, so "survivable" would mean a four-figure
+     * hull that a beginner could never dent. So it is not a health problem:
+     * bullets simply do not answer this enemy. It shrugs them off on the way
+     * in - the same deflect the Serpent's armour plate uses, sparks and a
+     * ring and a clang, so the answer reads in one volley - and the ONLY way
+     * off is the waggle the level is named for.
+     *
+     * The five-second window is the safety catch. Four riders is the cap, so
+     * a Limpet that arrives with the hull full would otherwise be an
+     * immortal object orbiting a mission that can never end (`noLeash` means
+     * nothing sweeps it away either). Past its run it is spent, and soft.
+     */
+    e.armoured = !e.attached && e.life < 5;
     const p = c.player;
     if(!p){ e.y += e.vy * dt; return; }
     if(e.attached){
@@ -4090,7 +4115,7 @@ const MISSIONS = [
      * level's whole cognitive load is your own ship handling badly.
      */
     id:21, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
-    brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
+    brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all — and shooting them off does not work, they just shrug it off on the way in. They grab hold, and every one that sticks makes you heavier and slower. WAGGLE to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
     face:"limpet",
@@ -21110,8 +21135,33 @@ function drawWreck(ctx, W, H, p, rand){
       ctx.fillStyle = "rgba(12,15,24,0.9)";
       ctx.fillRect(dx, dy, ds*(1 + rand()*2), ds);
     }
-    ctx.fillStyle = "rgba(255,214,120,0.8)";
-    ctx.fillRect(-L*0.16, -T*0.12, L*0.009, T*0.13);
+    /*
+     * THE LIGHTS STILL ON. One hard gold rectangle, no glow, nothing near
+     * it - which is a lovely idea drawn so plainly that the customer asked
+     * whether it was a rendering bug. It is not: it is the last power in a
+     * dead ship, and it has to look like it.
+     *
+     * So: a short row of windows of uneven brightness with a warm bloom
+     * behind them. A lit window at this size is mostly its glow - that is
+     * what separates "a light" from "a rectangle" - and unevenness is what
+     * separates a hulk with a few compartments still live from a fitting.
+     */
+    const wx = -L*0.16, wy = -T*0.12, ww = L*0.009, wh = T*0.13;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const bloom = ctx.createRadialGradient(wx + ww/2, wy + wh/2, 0,
+                                           wx + ww/2, wy + wh/2, wh*2.6);
+    bloom.addColorStop(0, "rgba(255,206,120,0.5)");
+    bloom.addColorStop(0.45, "rgba(255,190,96,0.16)");
+    bloom.addColorStop(1, "rgba(255,190,96,0)");
+    ctx.fillStyle = bloom;
+    ctx.beginPath(); ctx.arc(wx + ww/2, wy + wh/2, wh*2.6, 0, TAU); ctx.fill();
+    ctx.restore();
+    for(let i = 0; i < 4; i++){
+      const a = [0.85, 0.30, 0.62, 0.16][i];
+      ctx.fillStyle = "rgba(255,222,150," + a + ")";
+      ctx.fillRect(wx + i*ww*2.1, wy + (i % 2)*wh*0.22, ww, wh*(i % 2 ? 0.62 : 1));
+    }
     ctx.restore();
   });
 }
@@ -25682,9 +25732,14 @@ function update(dt, timeMs){
    *
    * Three things keep it from being a punishment. The riders cost speed and
    * never a life (systems.js skips an attached one entirely). They cap at
-   * four, so the ship can always still be flown. And the waggle is not the
-   * only way off - they are three hit points and your guns fire themselves,
-   * so a child who never works out the gesture still finishes, just slowly.
+   * four, so the ship can always still be flown. And a child who never works
+   * out the gesture still finishes: four riders is a barge, not a loss, and
+   * the fleet lets go the moment the last wave is done.
+   *
+   * The guns are NOT the other way off, and used to be by accident. A Limpet
+   * shrugs off fire on its run in (see enemies.js) precisely so that a
+   * well-armed ship cannot delete the mechanic before it can happen -
+   * measured, a maxed ship let exactly none of them reach the hull.
    */
   if(run.limpets && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){

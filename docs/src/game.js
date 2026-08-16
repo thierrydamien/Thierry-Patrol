@@ -2069,9 +2069,14 @@ function update(dt, timeMs){
    *
    * Three things keep it from being a punishment. The riders cost speed and
    * never a life (systems.js skips an attached one entirely). They cap at
-   * four, so the ship can always still be flown. And the waggle is not the
-   * only way off - they are three hit points and your guns fire themselves,
-   * so a child who never works out the gesture still finishes, just slowly.
+   * four, so the ship can always still be flown. And a child who never works
+   * out the gesture still finishes: four riders is a barge, not a loss, and
+   * the fleet lets go the moment the last wave is done.
+   *
+   * The guns are NOT the other way off, and used to be by accident. A Limpet
+   * shrugs off fire on its run in (see enemies.js) precisely so that a
+   * well-armed ship cannot delete the mechanic before it can happen -
+   * measured, a maxed ship let exactly none of them reach the hull.
    */
   if(run.limpets && !run.ended && run.phase !== "intro" &&
      run.phase !== "lap" && run.phase !== "outro"){

@@ -428,6 +428,31 @@ const BEHAVIOURS = {
    * near-miss bonus for the contact it just made.
    */
   limpet(e, dt, c){
+    /*
+     * ARMOURED WHILE IT MAKES ITS RUN, and this is what makes the level
+     * work at all.
+     *
+     * A Limpet's entire mechanic happens after it has hold of you, and it
+     * only ever had 5 flat hit points - no toughSeconds, unlike every other
+     * mechanics carrier in the roster. Measured on a maxed ship (326 dps):
+     * of every Limpet the mission sent, ZERO ever reached the hull. The
+     * better your guns, the more completely the level's own star objective
+     * became unreachable - you deleted the mechanic before it could happen.
+     *
+     * Health cannot fix that. The run in is about 3.5 seconds and a maxed
+     * ship kills 242hp in 0.74s, so "survivable" would mean a four-figure
+     * hull that a beginner could never dent. So it is not a health problem:
+     * bullets simply do not answer this enemy. It shrugs them off on the way
+     * in - the same deflect the Serpent's armour plate uses, sparks and a
+     * ring and a clang, so the answer reads in one volley - and the ONLY way
+     * off is the waggle the level is named for.
+     *
+     * The five-second window is the safety catch. Four riders is the cap, so
+     * a Limpet that arrives with the hull full would otherwise be an
+     * immortal object orbiting a mission that can never end (`noLeash` means
+     * nothing sweeps it away either). Past its run it is spent, and soft.
+     */
+    e.armoured = !e.attached && e.life < 5;
     const p = c.player;
     if(!p){ e.y += e.vy * dt; return; }
     if(e.attached){

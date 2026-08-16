@@ -6597,7 +6597,15 @@ async function run(){
     // deadline and fail this for the wrong reason - keep the sky bare.
     SF.game.run.powerupTimer = 9999;
     SF.game.world.pickups.killAll();
-    await runFrames(340);   // ~11s of real play
+    /*
+     * Wait on the CLOCK, not on a frame count. This was `runFrames(340)` and
+     * hoping ~11s of simulated time had gone by, which is a bet on the frame
+     * budget - it lost at least once, failing a green build for a reason
+     * that had nothing to do with powerups. Same lesson as the boss rush:
+     * wait for the state you actually mean.
+     */
+    let spun = 0;
+    while(SF.game.now() <= p.tempRapidUntil && spun++ < 2000) await runFrames(10, true);
     check("but it does expire once time is actually played",
       SF.game.now() > p.tempRapidUntil);
   }
@@ -7426,6 +7434,65 @@ async function run(){
     })());
     SF.game.endMission(false);
   }
+
+  /* ---------- a limpet has to survive long enough to be a limpet ---------- */
+  {
+    const idx = SF.missions.MISSIONS.findIndex(m => m.limpets);
+    SF.game.startMission(idx, "pilot");
+    await runFrames(30);
+    const w = SF.game.world;
+    /*
+     * THE BUG. A Limpet's whole mechanic happens after it grabs you, and it
+     * carried a flat 5hp with no toughSeconds - the only mechanics carrier
+     * in the roster without one. Measured on a maxed ship (326 dps): of
+     * every Limpet the mission sent, ZERO reached the hull, so the better
+     * your guns the more completely the level's own star became impossible.
+     *
+     * Health could not fix it - the run in is ~3.5s and a maxed ship kills
+     * 242hp in 0.74s - so bullets simply do not answer this enemy while it
+     * is closing. It wears the Serpent's armour flag on the way in.
+     */
+    const arm = (() => {
+      w.enemies.killAll();
+      const e = w.spawnEnemy("limpet", 200, 200, { difficulty: SF.game.run.difficulty });
+      if(!e) return null;
+      e.life = 0; e.attached = false;
+      SF.enemyData.BEHAVIOURS.limpet(e, 0.016, { player: w.player, world: w, VW: 430 });
+      const closing = e.armoured;
+      e.attached = true;
+      SF.enemyData.BEHAVIOURS.limpet(e, 0.016, { player: w.player, world: w, VW: 430 });
+      const holding = e.armoured;
+      // ...and it cannot stay bulletproof forever, or a Limpet that arrives
+      // with the hull already full is an immortal object orbiting a mission
+      // that can never end - nothing leashes it away either.
+      e.attached = false; e.life = 30;
+      SF.enemyData.BEHAVIOURS.limpet(e, 0.016, { player: w.player, world: w, VW: 430 });
+      const spent = e.armoured;
+      e.alive = false;
+      return { closing, holding, spent };
+    })();
+    check("a limpet cannot be shot down on its run in", !!arm && arm.closing === true);
+    check("a limpet that has hold of you is soft again", !!arm && arm.holding === false);
+    check("a limpet that never lands stops being bulletproof", !!arm && arm.spent === false);
+    /* The deflect the armour flag drives is a real, visible answer - sparks,
+       a ring and a clang - not a bullet quietly vanishing. */
+    check("bullets visibly bounce off an armoured thing", (() => {
+      const sy = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+      const seg = sy.slice(sy.indexOf("if(e.armoured){"), sy.indexOf("e.hp -= b.dmg;"));
+      return /fx\.sparks/.test(seg) && /fx\.ring/.test(seg) && /hitArmour/.test(seg);
+    })());
+    SF.game.endMission(false);
+  }
+
+  /* ---------- the wreck still has its lights on ---------- */
+  check("the dead hull's lights read as lights, not a rectangle", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const fn = g.slice(g.indexOf("function drawWreck"), g.indexOf("Backlit columns of gas"));
+    // A glow behind them and more than one of them: the single hard bar with
+    // no bloom was reported as a rendering bug, which is the right reaction.
+    return /createRadialGradient/.test(fn) && /globalCompositeOperation = "lighter"/.test(fn) &&
+           /for\(let i = 0; i < 4; i\+\+\)/.test(fn);
+  })());
 
   /* ---------- a coin is a coin, and a sun is a flare ---------- */
   {

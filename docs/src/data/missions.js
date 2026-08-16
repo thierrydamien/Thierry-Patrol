@@ -1140,7 +1140,7 @@ const MISSIONS = [
      * level's whole cognitive load is your own ship handling badly.
      */
     id:21, name:"Shake Them Off", subtitle:"they don't shoot — they cling",
-    brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all. They grab hold, and every one that sticks makes you heavier and slower — until you waggle hard enough to throw them off.",
+    brief:"The yard where they cut up captured hulls has its own vermin, and it has noticed you. These ones carry no guns at all — and shooting them off does not work, they just shrug it off on the way in. They grab hold, and every one that sticks makes you heavier and slower. WAGGLE to throw them off.",
     goal:"WAGGLE hard to shake them off",
     limpets:true,
     face:"limpet",
