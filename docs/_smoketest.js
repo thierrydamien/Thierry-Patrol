@@ -7309,6 +7309,81 @@ async function run(){
     })());
   }
 
+  /* ---------- the escape gesture is always performable ---------- */
+  {
+    const idx = SF.missions.MISSIONS.findIndex(m => m.limpets);
+    SF.game.startMission(idx, "pilot");
+    await runFrames(60);
+    const run = SF.game.run, w = SF.game.world;
+
+    /*
+     * THE BUG THIS PINS. Every rider cuts maxSpeed by 16%, and the waggle
+     * detector asked for a flat 140px/s - a bar measured on an EMPTY DART.
+     * Four riders on THE ANVIL (0.88 speed) cap the ship at 136, under the
+     * bar, so the level's own star objective was unreachable on a hull the
+     * family had paid £30,000 for: simulated across 1.5-3.5Hz waggles it
+     * gave 0 shakes at every rate, and driven in a real browser it left a
+     * limpet welded on that no amount of waggling could remove.
+     *
+     * So: weld four riders to the slowest ship the game can field, waggle
+     * it at its own top speed, and require that they come off.
+     */
+    const slowest = SF.shipart.HULLS.reduce((m, h) => Math.min(m, h.speed), 1);
+    run.limpets.baseSpeed = 430 * slowest;
+    run.limpets.baseAccel = 4300 * slowest;
+    w.enemies.killAll();
+    const riders = [];
+    for(let i=0;i<4;i++){
+      const e = w.spawnEnemy("limpet", w.player.x, w.player.y - 40,
+                             { difficulty: run.difficulty });
+      if(e){ e.attached = true; e.holdAngle = i/4*Math.PI*2; riders.push(e); }
+    }
+    const shakenBefore = run.stats.limpetsShaken;
+    check("four riders really are aboard the slowest ship", riders.length === 4);
+
+    /*
+     * The waggle. The player's own steering runs first each frame, so the
+     * velocity is stamped AFTER it - this is the gesture arriving, not a
+     * way around the movement model. Sign flips every few frames at exactly
+     * the ship's current ceiling, which is the best a real finger can do.
+     */
+    for(let k=0;k<90;k++){
+      const p = w.player;
+      p.vx = (k % 6 < 3 ? 1 : -1) * p.maxSpeed;
+      await runFrames(1, true);
+    }
+    const stillOn = w.enemies.items.filter(e => e.alive && e.attached).length;
+    check("waggling at top speed throws riders off the slowest hull",
+      run.stats.limpetsShaken > shakenBefore && stillOn < 4);
+
+    /*
+     * And the rule itself: a FRACTION of the ship's current top speed, so it
+     * is reachable by construction at any weight, on any hull, forever. A
+     * bare number here is the bug coming back.
+     */
+    check("the shake bar scales with the ship, not a fixed speed", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const m = g.match(/lm\.lastSign && Math\.abs\(pl\.vx\) > pl\.maxSpeed\*([0-9.]+)/);
+      return !!m && Number(m[1]) > 0 && Number(m[1]) <= 0.6;
+    })());
+
+    /* The instruction repeats until they get one off - a child busy dodging
+       when it first appeared used to never see it again. */
+    check("the shake prompt comes back until it lands", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      return /run\.stats\.limpetsShaken === 0/.test(g) && /lm\.nag/.test(g);
+    })());
+
+    /* ...and the waggle shows its work, so a nearly-there gesture looks
+       different from one doing nothing at all. */
+    check("the waggle shows how close it is", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      return /lm\.charge = on > 0 \? clamp\(lm\.wig\/3/.test(g) &&
+             /charge\*Math\.PI\*2/.test(g);
+    })());
+    SF.game.endMission(false);
+  }
+
   /* ---------- a coin is a coin, and a sun is a flare ---------- */
   {
     /* Same escape as the rocks: the shared canvas stub reads back zeros, so

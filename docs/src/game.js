@@ -499,7 +499,7 @@ function startMission(missionIndex, difficultyId){
      * both toward zero over a two-minute mission and never come back.
      */
     limpets: mission.limpets ? { wig: 0, lastSign: 0, prompted: false,
-      baseSpeed: 0, baseAccel: 0 } : null,
+      nag: 0, charge: 0, baseSpeed: 0, baseAccel: 0 } : null,
     // The Bright Side: the star underneath throws a sheet of fire up the
     // screen. The Storm's clock with one extra beat.
     flare: mission.flare ? { y: VH + 60, mode:"calm", timer: 6, top: VH,
@@ -2090,17 +2090,43 @@ function update(dt, timeMs){
        * The detector reads p.vx, which under a finger is a damped SPRING
        * rather than raw input - so the threshold is tuned against the drag
        * model in entities.js, not against a key press.
+       *
+       * It is a FRACTION of the ship's current top speed, and that is the
+       * whole fix. A flat 140 was measured against an empty Dart, but every
+       * rider cuts maxSpeed by 16%, so the gesture got harder exactly as it
+       * got more urgent - and on THE ANVIL (0.88 speed) four riders cap the
+       * ship at 136, under the bar, making the star objective outright
+       * impossible on a hull the family had paid £30,000 for. Simulated
+       * across 1.5-3.5Hz waggles: flat 140 gives 0 shakes there at every
+       * rate; 0.45 x maxSpeed gives the same 2/5/7 as an empty Dart.
        */
       const s = Math.sign(pl.vx);
-      if(s && s !== lm.lastSign && Math.abs(pl.vx) > 140){ lm.lastSign = s; lm.wig++; }
-      lm.wig = Math.max(0, lm.wig - dt*1.2);
-      if(on > 0 && !lm.prompted){
-        lm.prompted = true;
-        run.bannerText = "SHAKE IT OFF!";
-        run.bannerSub = "waggle left and right, fast";
-        run.bannerColor = "#a3e635";
-        run.bannerUntil = simMs + 2600;
+      if(s && s !== lm.lastSign && Math.abs(pl.vx) > pl.maxSpeed*0.45){
+        lm.lastSign = s; lm.wig++;
       }
+      lm.wig = Math.max(0, lm.wig - dt*1.2);
+      // How close the current waggle is to throwing one off, for the meter
+      // the renderer draws on the hull. Nothing else reads it.
+      lm.charge = on > 0 ? clamp(lm.wig/3, 0, 1) : 0;
+      /*
+       * The prompt REPEATS. It used to latch after one showing, so a child
+       * who was busy dodging the first time it appeared never saw the only
+       * instruction the level ever gave - and the gesture is not one you
+       * stumble into while flying normally. It comes back whenever a rider
+       * has been aboard a while with no progress, and stops the moment they
+       * shake one off, because by then they know.
+       */
+      if(on > 0 && run.stats.limpetsShaken === 0){
+        lm.nag = (lm.nag || 0) + dt;
+        if(lm.nag > (lm.prompted ? 6 : 0.35)){
+          lm.nag = 0;
+          lm.prompted = true;
+          run.bannerText = "SHAKE IT OFF!";
+          run.bannerSub = "swipe left and right, fast";
+          run.bannerColor = "#a3e635";
+          run.bannerUntil = simMs + 2600;
+        }
+      } else lm.nag = 0;
       if(lm.wig >= 3 && oldest){
         // Thrown clear, stunned and cheap - the reward for working it out is
         // a free kill, not just the weight coming off.
@@ -3271,15 +3297,42 @@ function draw(timeMs){
     for(let i = 0; i < items.length; i++)
       if(items[i].alive && items[i].attached) on++;
     if(on > 0){
-      const p = world.player, puls = 0.45 + Math.sin(timeMs/90)*0.35;
+      const p = world.player, lm = game.run.limpets;
+      const charge = lm.charge || 0;
       ctx.save();
-      ctx.globalAlpha = puls; ctx.fillStyle = "#a3e635";
+      /*
+       * The chevrons ALTERNATE rather than pulsing together. Two arrows
+       * throbbing in unison say "something is wrong here"; one lighting
+       * after the other says "go that way, now that way", which is the
+       * gesture itself, demonstrated. A child who has read nothing can copy
+       * a rhythm.
+       */
+      const beat = Math.sin(timeMs/150);
       [-1, 1].forEach(s => {
-        const x = p.x + s*46;
+        const lead = (s < 0 ? beat : -beat);            // this one's turn?
+        ctx.globalAlpha = 0.28 + Math.max(0, lead)*0.62;
+        ctx.fillStyle = "#a3e635";
+        const x = p.x + s*(46 + Math.max(0, lead)*5);
         ctx.beginPath();
         ctx.moveTo(x + s*12, p.y); ctx.lineTo(x, p.y - 11); ctx.lineTo(x, p.y + 11);
         ctx.closePath(); ctx.fill();
       });
+      /*
+       * ...and an arc that FILLS as the waggle counts. Without it the
+       * gesture was invisible feedback: you either got the limpet off or
+       * nothing happened, with no way to tell a waggle that was nearly
+       * working from one that was doing nothing at all. This is the whole
+       * difference between a mechanic a seven-year-old can learn and one
+       * they can only be told about.
+       */
+      if(charge > 0.02){
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = charge >= 0.99 ? "#ffffff" : "#a3e635";
+        ctx.lineWidth = 3.5; ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 34, -Math.PI/2, -Math.PI/2 + charge*Math.PI*2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }

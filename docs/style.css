@@ -528,6 +528,28 @@ html, body {
   .brief-setup-col:last-child { order:-1; }
 }
 /*
+ * SHORT WINDOWS, ANY WIDTH. The compaction below was keyed on phone widths,
+ * so a laptop got the full-height layout however short its window was -
+ * measured at 842px of content, which overflows a 1280x720 window by 122px,
+ * a 1000x760 by 82 and a 1440x800 by 42. The briefing is a screen you read
+ * before choosing, so a launch bar sitting on top of the difficulty blurb is
+ * the one thing it must not do.
+ *
+ * The hero is what gives: it was 310px of a 842px page, and it is a mood
+ * shot with the title on it, not information. Cropping it (cover, biased
+ * above centre so the ship stays in frame) buys back the whole overflow
+ * without shrinking a single thing anyone has to read or tap.
+ */
+@media (max-height: 900px) {
+  .brief-hero-art { max-height:190px; object-fit:cover; object-position:center 42%; }
+  .brief-hero { margin-bottom:9px; }
+  .brief-label { margin-top:6px; }
+}
+@media (max-height: 800px) {
+  .brief-hero-art { max-height:150px; }
+  .brief-cols { margin-bottom:4px; }
+}
+/*
  * Reclaiming the phone's vertical budget so BOTH the kit and the difficulty
  * chips sit above the launch bar at rest, instead of taking turns underneath
  * it. The objectives and roster panels pair up, the hero gives back some of
@@ -1101,7 +1123,10 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .armory-tab .icon-glyph { display:block; }
 .icon-glyph { display:inline-block; vertical-align:middle; }
 .lock-slot { display:inline-flex; align-items:center; justify-content:center; }
-.btn-with-glyph { display:inline-flex; align-items:center; gap:7px; }
+/* justify-content matters: a flex button defaults to flex-start, so the
+   glyph+label pair sat against the left edge while the plain button next to
+   it centred its text - three buttons in a row, one of them visibly out. */
+.btn-with-glyph { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
 .icon-btn { display:flex; align-items:center; justify-content:center; }
 
 /* Unaffordable: looks inert, still answers the tap (deny shake + blip). */
@@ -1956,9 +1981,12 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 }
 .rail-stop.locked { color: rgba(255,255,255,0.25); }
 .rail-stop.locked span b, .rail-stop.locked em { color: rgba(255,255,255,0.22); }
-/* You are here. The rail computed this already and never showed it. */
+/* You are here. The rail computed this already and never showed it.
+   The tint and the white label carry it on their own - the inset bar down
+   the left edge was a third marker saying the same thing, and it read as a
+   stray line rather than as part of the chip. */
 .rail-stop.here { background: color-mix(in srgb, var(--sec) 20%, transparent);
-  box-shadow: inset 3px 0 0 var(--sec); color:#fff; }
+  color:#fff; }
 .rail-stop:active { background: rgba(255,255,255,0.08); }
 /* A phone has no room for a rail beside a map: it becomes a scrolling strip
    of chips above it, which is the same control in the shape that fits. */
