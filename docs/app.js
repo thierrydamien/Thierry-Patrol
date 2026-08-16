@@ -30131,9 +30131,44 @@ function renderProfiles(){
     // picker should show who you are, not a coloured circle.
     const ctx = card.querySelector("canvas").getContext("2d");
     if(ctx){
-      SF.shipart.drawShip(ctx, 66, 68, 108,
+      /*
+       * SIZED SO THE WHOLE PILOT FITS.
+       *
+       * This drew at 108 in a 132 canvas, which leaves 64px of room around
+       * the ship - and a fully kitted pilot needs a lot more than that.
+       * Measured on a maxed profile: the SOLID parts (drones, wingmen) reach
+       * 71.7px from centre and the Aegis Halo reaches 87.5. Everything past
+       * 64 was cut off by the edge of the canvas, and because a cut circle
+       * against a straight edge is a straight edge, the halo turned into a
+       * pale SQUARE behind the ship. Only the one pilot with shield at 4 ever
+       * saw it, which is why it looked like a bug in that pilot's card.
+       *
+       * 88 puts every solid part inside the canvas with room to spare.
+       */
+      SF.shipart.drawShip(ctx, 66, 66, 88,
         { color: p.shipColor, levels: SF.shipart.levelsOf(p), t: 0.7, idle:false,
           tune: p.tune, hull: p.hull, decal: p.decal });
+      /*
+       * The halo is still wider than the card - it is 0.82 of the ship and
+       * the card cannot hold that without shrinking the ship to a speck. So
+       * the rim dissolves rather than being cut: below the aura's reach this
+       * touches nothing, so an ordinary pilot's card is pixel-identical and
+       * only the kitted ones fade.
+       *
+       * 65 because that is the SHORTEST distance from the ship's centre to
+       * an edge of a 132px canvas, and a fade that finishes past the nearest
+       * edge does not finish at all - the first attempt ran to 67 and left
+       * the bottom rim still carrying paint. 59 clears the solid parts,
+       * which reach 58.4 at this size.
+       */
+      const fade = ctx.createRadialGradient(66, 66, 59, 66, 66, 65);
+      fade.addColorStop(0, "rgba(0,0,0,0)");
+      fade.addColorStop(1, "rgba(0,0,0,1)");
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, 0, 132, 132);
+      ctx.restore();
       // With an installed portrait, the pilot rides their card's corner.
       SF.pilotart.paint(ctx, 24, 24, 44, p);
     }

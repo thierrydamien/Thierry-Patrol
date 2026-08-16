@@ -7934,6 +7934,42 @@ async function run(){
              /SF\.paintjob\.paint\(ctx, S, opts\.decal, opts\.hull\)/.test(sa);
     })());
 
+    /*
+     * A PILOT CARD IS BIG ENOUGH FOR THE PILOT IN IT.
+     *
+     * The card drew the ship at 108 in a 132px canvas, which leaves 64px
+     * around it. A fully kitted pilot needs far more: measured on a maxed
+     * profile, the solid parts (drones, wingmen) reach 0.664 of the draw
+     * size from centre and the Aegis Halo - shield level 4 - reaches 0.81.
+     * Everything past 64 was cut off by the canvas, and a cut circle against
+     * a straight edge IS a straight edge, so the halo showed up as a pale
+     * square behind the ship. Only a pilot with shield maxed ever saw it.
+     *
+     * Pinned as the geometry rather than the numbers, so the card can be
+     * retuned but not broken: the solid ship must finish before the rim fade
+     * starts, and the fade must finish before the nearest edge - a fade that
+     * ends past the closest edge never finishes there at all, which is how
+     * the first attempt still left paint along the bottom.
+     */
+    check("a maxed pilot's ship is not cropped square by its own card", (() => {
+      const ui = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      const at = ui.indexOf("function renderProfiles(");
+      if(at < 0) return false;
+      const body = ui.slice(at, at + 4000);
+      const box  = /<canvas width="(\d+)" height="(\d+)">/.exec(body);
+      const ship = /drawShip\(ctx, (\d+), (\d+), (\d+),/.exec(body);
+      const fade = /createRadialGradient\((\d+), (\d+), (\d+), \d+, \d+, (\d+)\)/.exec(body);
+      if(!box || !ship || !fade) return false;
+      const W = +box[1], H = +box[2];
+      const cx = +ship[1], cy = +ship[2], S = +ship[3];
+      const fIn = +fade[3], fOut = +fade[4];
+      // the fade has to be concentric with the ship or it is not a rim
+      if(+fade[1] !== cx || +fade[2] !== cy) return false;
+      const SOLID = 0.664;                       // measured, maxed profile
+      const nearestEdge = Math.min(cx, cy, W - cx, H - cy);
+      return S*SOLID < fIn && fOut <= nearestEdge && fIn < fOut;
+    })());
+
     /* The Paint Shop can always take a drawing back off again - the one
        control that answers "how do I get rid of this?". */
     check("a paint job can be stripped back off", (() => {
