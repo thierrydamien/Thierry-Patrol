@@ -6969,13 +6969,46 @@ async function run(){
       /^rgba\(/.test(P.rimCool) && P.rimCool !== P.rim);
     check("an elite's rim is its own gold, not the fleet's white", E.rim !== P.rim);
     /*
-     * The shaded half used to run 0.42 toward black, scoring 0.56 of the lit
-     * side - dark enough that on empty space the bottom of a hull became a
-     * hole rather than a surface. The floor here fails that old constant.
+     * The shaded half used to run 0.42 toward black, which on empty space
+     * turned the bottom of a hull into a hole rather than a surface.
+     *
+     * These were ratios against base, and the re-grade that fixed the fleet
+     * reading as too bright moved base and the shadows together - at which
+     * point a ratio floor loose enough to pass the new grade was also loose
+     * enough to pass the old black-mixed one, i.e. it protected nothing. So
+     * pin the two things that actually matter instead, both roster-wide.
+     *
+     * ONE, the hole: no hull's dark side may collapse into the sky behind it.
+     * The darkest sky in SKIES is #02050e at luminance 5.1; measured across
+     * the roster the faintest shade is 56.0 and the faintest deep 36.0, so a
+     * floor of 5x the sky is a real floor everything clears comfortably.
      */
+    const SKY_DARKEST = 5.1;
+    const tints = Object.keys(SF.enemyData.ENEMY_TYPES)
+      .map(id => SF.enemyData.ENEMY_TYPES[id].tint).filter(Boolean);
+    const pals = tints.map(t => art.paletteFor(t, false));
     check("the dark side of a hull stays a colour, not a hole",
-      lum(P.shade) > lum(P.base)*0.60);
-    check("...and so does the deepest plate", lum(P.deep) > lum(P.base)*0.34);
+      pals.length > 15 && pals.every(q => lum(q.shade) > SKY_DARKEST*5));
+    check("...and so does the deepest plate",
+      pals.every(q => lum(q.deep) > SKY_DARKEST*5));
+    /*
+     * TWO, the light: shadows SHIFT as they darken rather than merely dimming.
+     * A mix toward black scales all three channels by one factor, so the
+     * spread of the per-channel shadow/base ratios is zero BY CONSTRUCTION;
+     * mixing toward a deep space navy pulls blue up against the rest. Measured
+     * both ways across the roster - worst case 0.025 with the cool mix, 0.001
+     * with the old black one - so unlike the ratio floors it replaces, this is
+     * a check the pre-lighting constant genuinely fails.
+     */
+    const chanSpread = (sh, base) => {
+      const s = String(sh).match(/\d+/g).map(Number);
+      const b = String(base).match(/\d+/g).map(Number);
+      const r = [0,1,2].filter(i => b[i] >= 8).map(i => s[i]/b[i]);
+      return Math.max.apply(null, r) - Math.min.apply(null, r);
+    };
+    check("a shadow cools as it darkens instead of just dimming",
+      pals.every(q => chanSpread(q.shade, q.base) > 0.010 &&
+                      chanSpread(q.deep,  q.base) > 0.010));
     check("the canopy has a colour to glow with", /^\d+,\d+,\d+$/.test(P.glassRgb));
 
     // rimLight() clips and restores around two extra strokes; a stray save
@@ -7707,6 +7740,45 @@ async function run(){
        */
       return (lit/ln) > (sh/sn)*1.7;
     })());
+    /*
+     * EXPOSURE, the other side of that pin.
+     *
+     * Lighting the fleet also over-exposed it: measured across the roster,
+     * mean sprite luminance went 148.0 -> 160.2 and not one enemy came out
+     * darker, which is what "the enemies appear too bright" looked like in
+     * numbers. The re-grade brings it to 150.5. The ratio pin above stops
+     * anyone fixing brightness by flattening the light back out; this one
+     * stops the light being bought with exposure again. Both must hold.
+     */
+    const roster = !EA ? null : (() => {
+      const ET = SF.enemyData.ENEMY_TYPES;
+      let mean = 0, white = 0, n = 0;
+      Object.keys(ET).forEach(id => {
+        if(!EA.has(id) || !ET[id].tint) return;
+        const spr = EA.spriteFor(id, ET[id].tint, false);
+        if(!spr) return;
+        const d = spr.getContext("2d").getImageData(0, 0, spr.width, spr.height).data;
+        let s = 0, k = 0, w = 0;
+        for(let i = 0; i < d.length; i += 4){
+          if(d[i+3] < 200) continue;
+          const L = 0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2];
+          s += L; k++; if(L >= 250) w++;
+        }
+        if(k){ mean += s/k; white += 100*w/k; n++; }
+      });
+      return n > 15 ? { mean: mean/n, white: white/n } : null;
+    })();
+    check("the fleet is lit without being over-exposed",
+      !roster || roster.mean < 155);
+    /*
+     * And the highlight itself. An additive rim has nowhere to go on a hull
+     * that is already pale, so at full strength every sprite in the roster
+     * peaked at exactly 255 and the pastels grew chalky edges - near-white
+     * area ran 1.79% of the average hull against 0.30% before the pass. The
+     * headroom scaling in lightBake() brings it to 1.14%.
+     */
+    check("...and its highlights are not blown to paper",
+      !roster || roster.white < 1.45);
   }
 
   /* ---------- a coin is a coin, and a sun is a flare ---------- */

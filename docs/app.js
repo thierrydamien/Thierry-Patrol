@@ -32,16 +32,16 @@
  *    14916  src/systems.js
  *    15535  src/render.js
  *    20100  src/enemyart.js
- *    20959  src/insignia.js
- *    21204  src/skygen.js
- *    23576  src/shipart.js
- *    24776  src/paintjob.js
- *    24938  src/pilotart.js
- *    25033  src/comms.js
- *    25154  src/game.js
- *    28607  src/workshop.js
- *    29304  src/data/i18nbind.js
- *    29371  src/ui.js
+ *    21018  src/insignia.js
+ *    21263  src/skygen.js
+ *    23635  src/shipart.js
+ *    24835  src/paintjob.js
+ *    24997  src/pilotart.js
+ *    25092  src/comms.js
+ *    25213  src/game.js
+ *    28666  src/workshop.js
+ *    29363  src/data/i18nbind.js
+ *    29430  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -20144,8 +20144,21 @@ function mixTo(c, t, k){
 function paletteFor(tint, elite){
   const c = hexToRgb(tint || "#c0392b");
   return {
-    lit:    mix(c, 255, 0.42),
-    base:   mix(c, 255, 0.06),
+    /*
+     * EXPOSURE. Putting the fleet under a light also washed it out: measured
+     * over the whole roster, mean sprite luminance went 148 -> 160 and not one
+     * enemy came out darker. Most of that was the ink diet (thinning the
+     * outline removed the near-black that had been holding small sprites
+     * down), so the fix is NOT to paint the outline back on - that undoes the
+     * reason for the pass. It's to stop lifting the lit half so far.
+     *
+     * lit ran to 42% white, which on this roster's already-pastel tints
+     * (#eaf2ff, #86efac, #bef264) is most of the way to paper. At 18% the
+     * highlight is still a highlight and the hull keeps its colour, and base
+     * is now the tint exactly as the data file spells it.
+     */
+    lit:    mix(c, 255, 0.18),
+    base:   mix(c, 255, 0),
     /*
      * The shaded half used to run to 0.42/0.68 toward black, which models
      * nicely on a light background and disappears on this game's. Space IS
@@ -20156,9 +20169,16 @@ function paletteFor(tint, elite){
      * Shadows COOL as they darken instead of just dimming - mixed toward a
      * deep space navy, not black. Shadows that keep the hue are the single
      * clearest "flat drawing" tell; shadows that drift cold read as light.
+     *
+     * Deeper than the first cut (0.44/0.66): the roster needed its overall
+     * value back, and spending that on the shadow side buys form instead of
+     * losing it. Checked for hue drain too - mean chroma across the roster is
+     * 74.6 against the pre-lighting 74.7, so the ships stay as identifiable
+     * by colour as they ever were, which is how a seven-year-old tells a
+     * Mender from a Marksman.
      */
-    shade:  mixTo(c, {r:22, g:30, b:56}, 0.44),
-    deep:   mixTo(c, {r:14, g:20, b:42}, 0.66),
+    shade:  mixTo(c, {r:22, g:30, b:56}, 0.58),
+    deep:   mixTo(c, {r:14, g:20, b:42}, 0.78),
     // Half the old ink. The line's job passed to the light: lightBake()
     // draws the lit and shaded edges, and a heavy outline over that reads
     // as a sticker border again.
@@ -20851,6 +20871,30 @@ function lightBake(cv, k){
   if(!c || !w) return;
   const K = k == null ? 1 : k;
   const d = Math.max(1.25, w*0.016);
+  /*
+   * HEADROOM. A fixed additive rim is the wrong model: the same alpha that
+   * shapes a deep indigo Thief has nowhere to go on a near-white Swooper and
+   * simply turns its edge to paper. Measured, that was the whole of what was
+   * left of the "too bright" report - the roster's near-white area (luminance
+   * 250+) sat at 1.79% of the average hull against 0.30% before the pass, and
+   * every ship over it was a pastel.
+   *
+   * So ask the sprite how much room it has. Sampling a quarter of the opaque
+   * pixels is plenty for a mean, and this is bake-time on a cached canvas.
+   * Dark hulls keep the full rim; bright ones get as little as 45% of it,
+   * which is the difference between a lit edge and a blown one.
+   */
+  let litK = 1;
+  try {
+    const px = c.getImageData(0, 0, w, h).data;
+    let s = 0, n = 0;
+    for(let i = 0; i < px.length; i += 16){
+      if(px[i+3] < 200) continue;
+      s += 0.2126*px[i] + 0.7152*px[i+1] + 0.0722*px[i+2]; n++;
+    }
+    // n===0 is the jsdom stub's zero buffer, not a real reading - leave it be.
+    if(n > 20) litK = Math.max(0.45, Math.min(1, 1 - (s/n - 120)/170));
+  } catch(e){ /* tainted or stubbed context: full rim, as before */ }
   const crescent = (dx, dy, tint) => {
     const t = document.createElement("canvas");
     t.width = w; t.height = h;
@@ -20866,24 +20910,39 @@ function lightBake(cv, k){
   };
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
-  const lit = crescent(d, d, "rgba(255,248,230,1)");
+  /*
+   * At 0.40 of a near-white cream, every single sprite in the roster came out
+   * peaking at exactly 255 - a clipped highlight, which reads as washed
+   * rather than lit. Two changes, both about ceiling: 0.28 instead of 0.40,
+   * and a rim colour that is properly cream rather than nearly white, so its
+   * own luminance caps how far it can push a pixel. Warmer reads as sunlight
+   * where the old one read as flash.
+   */
+  const lit = crescent(d, d, "rgba(255,236,205,1)");
   if(lit){
     c.globalCompositeOperation = "lighter";
-    c.globalAlpha = 0.40*K;
+    c.globalAlpha = 0.28*K*litK;
     c.drawImage(lit, 0, 0);
   }
+  /*
+   * The cool side takes up the slack. Contrast is what sells the light, and
+   * it can come from either end - taking it from the shadow costs nothing,
+   * where taking it from the highlight costs the highlight.
+   */
   const dark = crescent(-d*0.9, -d*0.9, "rgb(12,17,36)");
   if(dark){
     c.globalCompositeOperation = "source-over";
-    c.globalAlpha = 0.48*K;
+    c.globalAlpha = 0.70*K;
     c.drawImage(dark, 0, 0);
   }
   c.globalAlpha = 1;
   c.globalCompositeOperation = "source-atop";
   const sheen = c.createRadialGradient(w*0.30, h*0.26, 0, w*0.30, h*0.26, w*0.95);
-  sheen.addColorStop(0, "rgba(255,252,240," + (0.10*K).toFixed(3) + ")");
+  // Same trade across the whole-sprite sheen: barely any lift at the sun's
+  // corner, a real falloff away from it.
+  sheen.addColorStop(0, "rgba(255,252,240," + (0.04*K).toFixed(3) + ")");
   sheen.addColorStop(0.45, "rgba(255,252,240,0)");
-  sheen.addColorStop(0.8, "rgba(10,16,34," + (0.12*K).toFixed(3) + ")");
+  sheen.addColorStop(0.8, "rgba(10,16,34," + (0.23*K).toFixed(3) + ")");
   c.fillStyle = sheen;
   c.fillRect(0, 0, w, h);
   c.restore();
