@@ -966,10 +966,11 @@ function boltSprite(color, w, h){
   if(!c) return null;
   c.scale(BAKE, BAKE);                           // geometry stays in logical px
   const cx = (w + m*2)/2, cy = (h + m*2)/2;
-  // Halo - tight, or the additive pass turns every volley into fog.
+  // Halo - tight, or a volley turns into fog. A touch stronger than it was
+  // when the body was additive, since the sprite now carries all the glow.
   const halo = c.createRadialGradient(cx, cy, 1, cx, cy, Math.max(w, h*0.6));
   halo.addColorStop(0, color); halo.addColorStop(1, "rgba(0,0,0,0)");
-  c.globalAlpha = 0.34; c.fillStyle = halo;
+  c.globalAlpha = 0.42; c.fillStyle = halo;
   c.fillRect(0, 0, w + m*2, h + m*2);
   c.globalAlpha = 1;
   // Body capsule
@@ -1011,10 +1012,23 @@ const streakSprite = (() => {
 })();
 
 const enemyBoltCache = {};
+/*
+ * Enemy shots wear a DARK RIM. On The Bright Side's cream sky a glowing
+ * ball with no edge simply dissolves - and enemy fire is the one thing on
+ * screen that must never dissolve. The rim is baked between halo and body:
+ * nearly black, one step wide, so on dark skies it reads as the natural
+ * seam between glow and core and on bright skies it is the outline that
+ * keeps the shot a solid object.
+ *
+ * Two silhouettes, one promise each: "orb" stays round (floaty, slow),
+ * everything else bakes as a DART with its nose up the sprite's -Y, rotated
+ * at draw time along its real travel - so a fast shot points where it is
+ * going and the kid reads direction from the body itself, not just the tail.
+ */
 function enemyBolt(kind, r){
   const key = kind + "|" + Math.round(r);
   if(enemyBoltCache[key]) return enemyBoltCache[key];
-  const R = Math.max(3, r), m = Math.ceil(R*2.4);
+  const R = Math.max(3, r), m = Math.ceil(R*2.7);
   const cv = document.createElement("canvas");
   cv.width = cv.height = Math.ceil(m*2*BAKE);
   const c = cv.getContext("2d");
@@ -1026,20 +1040,40 @@ function enemyBolt(kind, r){
   halo.addColorStop(0.45, "rgba(" + col + ",0.28)");
   halo.addColorStop(1, "rgba(" + col + ",0)");
   c.fillStyle = halo; c.fillRect(0, 0, m*2, m*2);
-  c.fillStyle = "rgb(" + col + ")";
-  c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
+  const rim = "rgba(26,3,15,0.9)";
+  if(kind === "orb"){
+    c.fillStyle = rim;
+    c.beginPath(); c.arc(m, m, R + 1.4, 0, TAU); c.fill();
+    c.fillStyle = "rgb(" + col + ")";
+    c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
+  } else {
+    // The dart: a leaf pointed at both ends, widest just behind the nose.
+    // Drawn twice - dark and slightly fatter first, then the colour on top -
+    // because a stroked outline feathers at these sizes and a second fill
+    // does not.
+    const leaf = (rr) => {
+      c.beginPath();
+      c.moveTo(m, m - rr*1.8);
+      c.quadraticCurveTo(m + rr*1.12, m - rr*0.15, m, m + rr*1.55);
+      c.quadraticCurveTo(m - rr*1.12, m - rr*0.15, m, m - rr*1.8);
+      c.closePath(); c.fill();
+    };
+    c.fillStyle = rim;      leaf(R + 1.1);
+    c.fillStyle = "rgb(" + col + ")"; leaf(R);
+  }
   /*
    * A white-hot centre, concentric rather than an offset highlight. Offset
    * reads as a lit ball with a light source somewhere; centred reads as
    * something burning - and it puts the brightest pixel exactly on the point
    * that will actually hit you, which is the pixel you want to be tracking.
    */
-  const hot = c.createRadialGradient(m, m, 0, m, m, R*0.82);
+  const hy = kind === "orb" ? m : m - R*0.25;    // dart burns behind its nose
+  const hot = c.createRadialGradient(m, hy, 0, m, hy, R*0.82);
   hot.addColorStop(0, "rgba(255,255,255,0.98)");
   hot.addColorStop(0.42, "rgba(255,255,255,0.6)");
   hot.addColorStop(1, "rgba(255,255,255,0)");
   c.fillStyle = hot;
-  c.beginPath(); c.arc(m, m, R*0.82, 0, TAU); c.fill();
+  c.beginPath(); c.arc(m, hy, R*0.82, 0, TAU); c.fill();
   enemyBoltCache[key] = cv;
   return cv;
 }
@@ -1084,17 +1118,27 @@ function drawBullets(ctx, world){
     const k = b.fromDrone ? 0.7 : 1;
     const spr = boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
-    // Motion streak first, angled along the bullet's actual velocity.
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
     ctx.save();
     ctx.translate(b.x, b.y);
     ctx.rotate(ang);
+    // Motion streak first, angled along the bullet's actual velocity - the
+    // one part of the bolt that stays ADDITIVE, because a streak is light.
     ctx.globalAlpha = 0.22;
     ctx.drawImage(streakSprite, -2.5*k, -2, 5*k, (t.h + 18)*k);
     ctx.globalAlpha = 1;
+    /*
+     * The body is NOT additive. Additive capsules saturated to identical
+     * white pills over any bright sky - on The Bright Side you could not
+     * tell what tier you were flying, and at full spread the five bolts
+     * leaving the muzzle fused into one white sheet. Painted normally, the
+     * tier's colour survives every sky and overlap just looks like overlap;
+     * the baked halo carries the glow on dark ones.
+     */
+    ctx.globalCompositeOperation = "source-over";
     const dw = spr.width/BAKE, dh = spr.height/BAKE;   // logical size, retina bake
     ctx.drawImage(spr, -dw*0.5*k, -dh*0.5*k, dw*k, dh*k);
-    ctx.restore();
+    ctx.restore();                       // back to lighter for the next streak
   }
   ctx.restore();
 
@@ -1132,25 +1176,29 @@ function drawBullets(ctx, world){
      * reason, so how quick a shot looks is how quick it is.
      */
     const tail = sp > 40 ? enemyTail(kind) : null;
+    const spr = enemyBolt(kind, b.r);
+    // One rotated frame for tail AND body: the dart's nose is baked up -Y,
+    // the tail runs down +Y, so a single rotate points the whole shot along
+    // its travel. An orb is radially symmetric and doesn't mind the spin.
+    const ang = sp > 1 ? Math.atan2(b.vx, -b.vy) : 0;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
     if(tail){
       const len = (9 + Math.min(sp, 620)*0.055) * (b.r/4);
       // Wide enough at the base to read as the bolt's own wake. Narrower than
       // the bolt and it looks like a pin stuck through it.
       const w = b.r*2.6;
-      ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.translate(b.x, b.y);
-      // The sprite's tail runs down its +Y; aim that AWAY from the travel.
-      ctx.rotate(Math.atan2(b.vx, -b.vy));
       ctx.drawImage(tail, -w/2, 0, w, len);
-      ctx.restore();
+      ctx.globalCompositeOperation = "source-over";
     }
-    const spr = enemyBolt(kind, b.r);
     if(spr){
       const d = spr.width/BAKE;                  // logical size, retina bake
-      ctx.drawImage(spr, b.x - d/2, b.y - d/2, d, d);
+      ctx.drawImage(spr, -d/2, -d/2, d, d);
     }
-    else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(b.x-b.r*0.6, b.y-b.r, b.r*1.2, b.r*2); }
+    else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(-b.r*0.6, -b.r, b.r*1.2, b.r*2); }
+    ctx.restore();
   }
 }
 

@@ -7035,6 +7035,89 @@ async function run(){
     return before === after;
   })());
 
+  /* ---------- bullets: the colour law and the shapes of danger ---------- */
+  {
+    const rSrc = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+    const eSrc = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+
+    /*
+     * The player's fire may NEVER be the enemy's colour. Tier 5 used to be
+     * #ff7ce5 - the exact pixel value of the enemy orb - so this converts
+     * every tier to the same "r,g,b" form the enemy sprites use and demands
+     * an empty intersection, against whatever either side is TODAY.
+     */
+    check("your fire is never the enemy's colour", (() => {
+      const m = rSrc.match(/kind === "orb" \? "([\d,]+)" : "([\d,]+)"/);
+      if(!m) return false;
+      const enemy = [m[1], m[2]];
+      const tiers = SF.entityConst.BULLET_TIERS.map(t => {
+        const n = parseInt(t.color.slice(1), 16);
+        return ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255);
+      });
+      return tiers.length >= 6 && tiers.every(c => enemy.indexOf(c) < 0);
+    })());
+
+    /* Enemy shots wear a dark rim, both silhouettes - it is what keeps them
+       solid objects on The Bright Side's cream sky. */
+    check("enemy shots wear a dark rim", (() => {
+      const fn = rSrc.slice(rSrc.indexOf("function enemyBolt"), rSrc.indexOf("function enemyTail"));
+      return /rgba\(26,3,15/.test(fn) && /R \+ 1\.4/.test(fn) && /leaf\(R \+ 1\.1\)/.test(fn);
+    })());
+
+    /* Fast shots are darts pointed along their real travel; orbs stay round.
+       The dart is baked nose-up and rotated at draw with the same angle as
+       its tail, so body and wake always agree about the direction. */
+    check("aimed shots are darts pointed along travel", (() => {
+      const bolt = rSrc.slice(rSrc.indexOf("function enemyBolt"), rSrc.indexOf("function enemyTail"));
+      const loop = rSrc.slice(rSrc.indexOf("function drawBullets"), rSrc.indexOf("function coinSprite"));
+      return /quadraticCurveTo/.test(bolt) &&
+             /Math\.atan2\(b\.vx, -b\.vy\)/.test(loop) && /ctx\.rotate\(ang\)/.test(loop);
+    })());
+
+    /* Player bullet BODIES are not additive - additive capsules saturated
+       to identical white pills over bright skies. Streak stays light. */
+    check("bullet bodies do not saturate to white", (() => {
+      const fn = rSrc.slice(rSrc.indexOf("function drawBullets"), rSrc.indexOf("function coinSprite"));
+      const streak = fn.indexOf("streakSprite");
+      const over = fn.indexOf('"source-over"');
+      const body = fn.indexOf("ctx.drawImage(spr,");
+      return streak >= 0 && over > streak && body > over;
+    })());
+
+    /* The gun visibly fires: a real star plus kicked motes, not 3 frames of
+       6px. And enemy fire announces itself at the gun before it travels. */
+    check("the guns visibly fire", (() => {
+      SF.fx.reset();
+      SF.fx.muzzle(100, 100, "#ffd23f", 1);
+      const ps = SF.fx._pools.particles.items.filter(p => p.alive);
+      const star = ps.find(p => p.kind === "muzzle");
+      const kicks = ps.filter(p => p.kind === "spark");
+      return !!star && star.max >= 0.08 && star.size >= 9 && kicks.length >= 2;
+    })());
+    check("enemy fire announces itself at the gun", (() => {
+      SF.fx.reset();
+      SF.fx.enemyMuzzle(50, 60, "255,93,115", 4.5);
+      const pop = SF.fx._pools.particles.items.find(p => p.alive && p.kind === "flash" && p.x === 50);
+      const wired = /fx\.enemyMuzzle\(/.test(eSrc.slice(eSrc.indexOf("spawnEnemyBullet(x, y")));
+      return !!pop && pop.max >= 0.08 && wired;
+    })());
+
+    /* Both new emitters against the seeded stream: the birth cue consumes
+       ZERO draws (it lives on the sim's fire paths), and muzzle consumes
+       exactly the ONE draw it always has - the flourish rolls from mrand. */
+    check("the new flashes cannot move the simulation", (() => {
+      const C = SF.core;
+      C.seedSim(7171); const a = C.rand(0, 1);
+      C.seedSim(7171); SF.fx.enemyMuzzle(300, 400, "255,124,229", 6);
+      const b = C.rand(0, 1);
+      C.seedSim(9191); C.rand(0, 1); const second = C.rand(0, 1);
+      C.seedSim(9191); SF.fx.muzzle(140, 500, "#ffd23f", 1);
+      const afterOne = C.rand(0, 1);
+      return a === b && afterOne === second;
+    })());
+    SF.fx.reset();
+  }
+
   /* ---------- report ---------- */
   console.log("\n--- Smoke test results ---");
   let failed = 0;

@@ -17,28 +17,28 @@
  *     5459  src/profile.js
  *     6080  src/cloud.js
  *     6685  src/fx.js
- *     7707  src/input.js
- *     8118  src/entities.js
- *     9319  src/bossart.js
- *    10078  src/bosses.js
- *    10828  src/bossintro.js
- *    10951  src/rewind.js
- *    11473  src/finale.js
- *    11794  src/papadeath.js
- *    12116  src/backstage.js
- *    13319  src/sky29.js
- *    13560  src/systems.js
- *    14179  src/render.js
- *    18378  src/enemyart.js
- *    19124  src/insignia.js
- *    19369  src/skygen.js
- *    21694  src/shipart.js
- *    22772  src/paintjob.js
- *    22930  src/pilotart.js
- *    23025  src/comms.js
- *    23146  src/game.js
- *    26541  src/workshop.js
- *    27238  src/ui.js
+ *     7743  src/input.js
+ *     8154  src/entities.js
+ *     9366  src/bossart.js
+ *    10125  src/bosses.js
+ *    10875  src/bossintro.js
+ *    10998  src/rewind.js
+ *    11520  src/finale.js
+ *    11841  src/papadeath.js
+ *    12163  src/backstage.js
+ *    13366  src/sky29.js
+ *    13607  src/systems.js
+ *    14226  src/render.js
+ *    18473  src/enemyart.js
+ *    19219  src/insignia.js
+ *    19464  src/skygen.js
+ *    21789  src/shipart.js
+ *    22867  src/paintjob.js
+ *    23025  src/pilotart.js
+ *    23120  src/comms.js
+ *    23241  src/game.js
+ *    26636  src/workshop.js
+ *    27333  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -7084,11 +7084,47 @@ function light(x, y, r, rgb, peak, max){
 }
 
 /** Muzzle flash: a four-point star, rotated a little every shot. */
+/*
+ * The gun visibly FIRES. At 6.5px for 0.05s the old flash was three frames
+ * of nothing - bullets simply appeared above the nose and the ship read as
+ * an emitter, not a weapon. Bigger, a beat longer, and two hot motes kicked
+ * up the bullet's path. The seeded draw for the star's angle is kept
+ * byte-for-byte (fixed order on the fire path); everything NEW here rolls
+ * from mrand so the simulation stream never notices the flourish.
+ */
 function muzzle(x, y, color, scale){
   const p = pspawn();
-  p.x=x; p.y=y; p.life=0; p.max=0.05; p.size=(scale||1)*6.5;
+  p.x=x; p.y=y; p.life=0; p.max=0.085; p.size=(scale||1)*9.5;
   p.color=color||"#ffe9a8"; p.kind="muzzle"; p.vx=0; p.vy=-40; p.drag=1; p.gravity=0;
   p.angle=rand(-0.4,0.4); p.spin=0;
+  for(let i=0;i<2;i++){
+    spark(x + mrand(-3, 3), y - 2,
+          mrand(-45, 45), -mrand(130, 240),
+          i === 0 ? "#ffffff" : (color || "#ffe9a8"),
+          mrand(0.08, 0.16), mrand(1.3, 2.1));
+  }
+}
+
+/*
+ * The birth cue on enemy fire: a brief pop at the gun, so shots stop
+ * materialising out of clean sky and a kid gets one beat of "it just fired"
+ * before the dodge. Deliberately random-free - this is called from the
+ * simulation's fire paths, and the rule for anything on those paths is that
+ * it may not consume a single seeded draw (see the explosion lights).
+ *
+ * Rate-limited PER GUN, not globally: a boss ring-volley spawns sixteen
+ * bullets from one point in one frame, and sixteen stacked additive pops
+ * would flashbang the arena. Same instant, same spot = one pop; two enemies
+ * firing across the screen from each other still get one each.
+ */
+let eMuzzleAt = -1e9, eMuzzleX = 0, eMuzzleY = 0;
+function enemyMuzzle(x, y, col, r){
+  if(nowMs - eMuzzleAt < 30 && Math.abs(x - eMuzzleX) + Math.abs(y - eMuzzleY) < 24) return;
+  eMuzzleAt = nowMs; eMuzzleX = x; eMuzzleY = y;
+  const p = pspawn();
+  p.x=x; p.y=y; p.life=0; p.max=0.11; p.size=4 + (r || 4)*0.6;
+  p.color="rgba(" + (col || "255,93,115") + ",0.8)";
+  p.kind="flash"; p.vx=0; p.vy=0; p.drag=1; p.gravity=0; p.spin=0; p.angle=0;
 }
 
 /*
@@ -7690,7 +7726,7 @@ SF.fx = {
   // `spark` (singular) is the directional primitive - the Storm streaks its
   // wind with it, where the omnidirectional `sparks` puff would read as rain.
   spark,
-  sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
+  sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, enemyMuzzle, text, damageNumber,
   firework, bloom,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
@@ -8321,14 +8357,20 @@ function onFieldChange(fn){ fieldSubs.push(fn); }
 const PLAY_TOP = 250;
 const PLAY_BOTTOM = VH - 34;
 
-/* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric. */
+/* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric.
+ *
+ * THE COLOUR LAW: the player's fire lives in gold and blue; pink and red
+ * belong to the enemy. The top tier used to be #ff7ce5 - the EXACT pixel
+ * colour of the enemy orb - so a fully upgraded kid was dodging their own
+ * bullets. Whatever a future tier looks like, it does not look like theirs.
+ */
 const BULLET_TIERS = [
   { color:"#ffd23f", w:6,  h:17, glow:0 },
   { color:"#ffe27a", w:7,  h:19, glow:4 },
   { color:"#ffa94d", w:8,  h:22, glow:6 },
   { color:"#4dd2ff", w:9,  h:24, glow:8 },
   { color:"#7c9bff", w:11, h:27, glow:10 },
-  { color:"#ff7ce5", w:12, h:31, glow:14 },
+  { color:"#b78cff", w:12, h:31, glow:14 },
 ];
 
 const REFERENCE_DPS = 45;
@@ -8856,6 +8898,11 @@ class World {
       b.vy = vy*0.38;
       b.kind = "bubble";
     }
+    // The birth cue, in the shot's own colour - so fire announces itself at
+    // the gun instead of materialising mid-air. Sits on the sim path, so
+    // enemyMuzzle is contractually random-free (it rate-limits per gun too).
+    fx.enemyMuzzle(x, y, b.kind === "bubble" ? "165,243,252"
+                       : b.kind === "orb"    ? "255,124,229" : "255,93,115", b.r);
     return b;
   }
 
@@ -15144,10 +15191,11 @@ function boltSprite(color, w, h){
   if(!c) return null;
   c.scale(BAKE, BAKE);                           // geometry stays in logical px
   const cx = (w + m*2)/2, cy = (h + m*2)/2;
-  // Halo - tight, or the additive pass turns every volley into fog.
+  // Halo - tight, or a volley turns into fog. A touch stronger than it was
+  // when the body was additive, since the sprite now carries all the glow.
   const halo = c.createRadialGradient(cx, cy, 1, cx, cy, Math.max(w, h*0.6));
   halo.addColorStop(0, color); halo.addColorStop(1, "rgba(0,0,0,0)");
-  c.globalAlpha = 0.34; c.fillStyle = halo;
+  c.globalAlpha = 0.42; c.fillStyle = halo;
   c.fillRect(0, 0, w + m*2, h + m*2);
   c.globalAlpha = 1;
   // Body capsule
@@ -15189,10 +15237,23 @@ const streakSprite = (() => {
 })();
 
 const enemyBoltCache = {};
+/*
+ * Enemy shots wear a DARK RIM. On The Bright Side's cream sky a glowing
+ * ball with no edge simply dissolves - and enemy fire is the one thing on
+ * screen that must never dissolve. The rim is baked between halo and body:
+ * nearly black, one step wide, so on dark skies it reads as the natural
+ * seam between glow and core and on bright skies it is the outline that
+ * keeps the shot a solid object.
+ *
+ * Two silhouettes, one promise each: "orb" stays round (floaty, slow),
+ * everything else bakes as a DART with its nose up the sprite's -Y, rotated
+ * at draw time along its real travel - so a fast shot points where it is
+ * going and the kid reads direction from the body itself, not just the tail.
+ */
 function enemyBolt(kind, r){
   const key = kind + "|" + Math.round(r);
   if(enemyBoltCache[key]) return enemyBoltCache[key];
-  const R = Math.max(3, r), m = Math.ceil(R*2.4);
+  const R = Math.max(3, r), m = Math.ceil(R*2.7);
   const cv = document.createElement("canvas");
   cv.width = cv.height = Math.ceil(m*2*BAKE);
   const c = cv.getContext("2d");
@@ -15204,20 +15265,40 @@ function enemyBolt(kind, r){
   halo.addColorStop(0.45, "rgba(" + col + ",0.28)");
   halo.addColorStop(1, "rgba(" + col + ",0)");
   c.fillStyle = halo; c.fillRect(0, 0, m*2, m*2);
-  c.fillStyle = "rgb(" + col + ")";
-  c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
+  const rim = "rgba(26,3,15,0.9)";
+  if(kind === "orb"){
+    c.fillStyle = rim;
+    c.beginPath(); c.arc(m, m, R + 1.4, 0, TAU); c.fill();
+    c.fillStyle = "rgb(" + col + ")";
+    c.beginPath(); c.arc(m, m, R, 0, TAU); c.fill();
+  } else {
+    // The dart: a leaf pointed at both ends, widest just behind the nose.
+    // Drawn twice - dark and slightly fatter first, then the colour on top -
+    // because a stroked outline feathers at these sizes and a second fill
+    // does not.
+    const leaf = (rr) => {
+      c.beginPath();
+      c.moveTo(m, m - rr*1.8);
+      c.quadraticCurveTo(m + rr*1.12, m - rr*0.15, m, m + rr*1.55);
+      c.quadraticCurveTo(m - rr*1.12, m - rr*0.15, m, m - rr*1.8);
+      c.closePath(); c.fill();
+    };
+    c.fillStyle = rim;      leaf(R + 1.1);
+    c.fillStyle = "rgb(" + col + ")"; leaf(R);
+  }
   /*
    * A white-hot centre, concentric rather than an offset highlight. Offset
    * reads as a lit ball with a light source somewhere; centred reads as
    * something burning - and it puts the brightest pixel exactly on the point
    * that will actually hit you, which is the pixel you want to be tracking.
    */
-  const hot = c.createRadialGradient(m, m, 0, m, m, R*0.82);
+  const hy = kind === "orb" ? m : m - R*0.25;    // dart burns behind its nose
+  const hot = c.createRadialGradient(m, hy, 0, m, hy, R*0.82);
   hot.addColorStop(0, "rgba(255,255,255,0.98)");
   hot.addColorStop(0.42, "rgba(255,255,255,0.6)");
   hot.addColorStop(1, "rgba(255,255,255,0)");
   c.fillStyle = hot;
-  c.beginPath(); c.arc(m, m, R*0.82, 0, TAU); c.fill();
+  c.beginPath(); c.arc(m, hy, R*0.82, 0, TAU); c.fill();
   enemyBoltCache[key] = cv;
   return cv;
 }
@@ -15262,17 +15343,27 @@ function drawBullets(ctx, world){
     const k = b.fromDrone ? 0.7 : 1;
     const spr = boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
-    // Motion streak first, angled along the bullet's actual velocity.
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
     ctx.save();
     ctx.translate(b.x, b.y);
     ctx.rotate(ang);
+    // Motion streak first, angled along the bullet's actual velocity - the
+    // one part of the bolt that stays ADDITIVE, because a streak is light.
     ctx.globalAlpha = 0.22;
     ctx.drawImage(streakSprite, -2.5*k, -2, 5*k, (t.h + 18)*k);
     ctx.globalAlpha = 1;
+    /*
+     * The body is NOT additive. Additive capsules saturated to identical
+     * white pills over any bright sky - on The Bright Side you could not
+     * tell what tier you were flying, and at full spread the five bolts
+     * leaving the muzzle fused into one white sheet. Painted normally, the
+     * tier's colour survives every sky and overlap just looks like overlap;
+     * the baked halo carries the glow on dark ones.
+     */
+    ctx.globalCompositeOperation = "source-over";
     const dw = spr.width/BAKE, dh = spr.height/BAKE;   // logical size, retina bake
     ctx.drawImage(spr, -dw*0.5*k, -dh*0.5*k, dw*k, dh*k);
-    ctx.restore();
+    ctx.restore();                       // back to lighter for the next streak
   }
   ctx.restore();
 
@@ -15310,25 +15401,29 @@ function drawBullets(ctx, world){
      * reason, so how quick a shot looks is how quick it is.
      */
     const tail = sp > 40 ? enemyTail(kind) : null;
+    const spr = enemyBolt(kind, b.r);
+    // One rotated frame for tail AND body: the dart's nose is baked up -Y,
+    // the tail runs down +Y, so a single rotate points the whole shot along
+    // its travel. An orb is radially symmetric and doesn't mind the spin.
+    const ang = sp > 1 ? Math.atan2(b.vx, -b.vy) : 0;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
     if(tail){
       const len = (9 + Math.min(sp, 620)*0.055) * (b.r/4);
       // Wide enough at the base to read as the bolt's own wake. Narrower than
       // the bolt and it looks like a pin stuck through it.
       const w = b.r*2.6;
-      ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.translate(b.x, b.y);
-      // The sprite's tail runs down its +Y; aim that AWAY from the travel.
-      ctx.rotate(Math.atan2(b.vx, -b.vy));
       ctx.drawImage(tail, -w/2, 0, w, len);
-      ctx.restore();
+      ctx.globalCompositeOperation = "source-over";
     }
-    const spr = enemyBolt(kind, b.r);
     if(spr){
       const d = spr.width/BAKE;                  // logical size, retina bake
-      ctx.drawImage(spr, b.x - d/2, b.y - d/2, d, d);
+      ctx.drawImage(spr, -d/2, -d/2, d, d);
     }
-    else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(b.x-b.r*0.6, b.y-b.r, b.r*1.2, b.r*2); }
+    else { ctx.fillStyle = "#ff5d73"; ctx.fillRect(-b.r*0.6, -b.r, b.r*1.2, b.r*2); }
+    ctx.restore();
   }
 }
 

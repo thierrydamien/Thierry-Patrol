@@ -204,14 +204,20 @@ function onFieldChange(fn){ fieldSubs.push(fn); }
 const PLAY_TOP = 250;
 const PLAY_BOTTOM = VH - 34;
 
-/* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric. */
+/* Weapon look/feel scales with Plasma Rounds so power is visible, not just numeric.
+ *
+ * THE COLOUR LAW: the player's fire lives in gold and blue; pink and red
+ * belong to the enemy. The top tier used to be #ff7ce5 - the EXACT pixel
+ * colour of the enemy orb - so a fully upgraded kid was dodging their own
+ * bullets. Whatever a future tier looks like, it does not look like theirs.
+ */
 const BULLET_TIERS = [
   { color:"#ffd23f", w:6,  h:17, glow:0 },
   { color:"#ffe27a", w:7,  h:19, glow:4 },
   { color:"#ffa94d", w:8,  h:22, glow:6 },
   { color:"#4dd2ff", w:9,  h:24, glow:8 },
   { color:"#7c9bff", w:11, h:27, glow:10 },
-  { color:"#ff7ce5", w:12, h:31, glow:14 },
+  { color:"#b78cff", w:12, h:31, glow:14 },
 ];
 
 const REFERENCE_DPS = 45;
@@ -739,6 +745,11 @@ class World {
       b.vy = vy*0.38;
       b.kind = "bubble";
     }
+    // The birth cue, in the shot's own colour - so fire announces itself at
+    // the gun instead of materialising mid-air. Sits on the sim path, so
+    // enemyMuzzle is contractually random-free (it rate-limits per gun too).
+    fx.enemyMuzzle(x, y, b.kind === "bubble" ? "165,243,252"
+                       : b.kind === "orb"    ? "255,124,229" : "255,93,115", b.r);
     return b;
   }
 

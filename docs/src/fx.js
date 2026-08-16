@@ -400,11 +400,47 @@ function light(x, y, r, rgb, peak, max){
 }
 
 /** Muzzle flash: a four-point star, rotated a little every shot. */
+/*
+ * The gun visibly FIRES. At 6.5px for 0.05s the old flash was three frames
+ * of nothing - bullets simply appeared above the nose and the ship read as
+ * an emitter, not a weapon. Bigger, a beat longer, and two hot motes kicked
+ * up the bullet's path. The seeded draw for the star's angle is kept
+ * byte-for-byte (fixed order on the fire path); everything NEW here rolls
+ * from mrand so the simulation stream never notices the flourish.
+ */
 function muzzle(x, y, color, scale){
   const p = pspawn();
-  p.x=x; p.y=y; p.life=0; p.max=0.05; p.size=(scale||1)*6.5;
+  p.x=x; p.y=y; p.life=0; p.max=0.085; p.size=(scale||1)*9.5;
   p.color=color||"#ffe9a8"; p.kind="muzzle"; p.vx=0; p.vy=-40; p.drag=1; p.gravity=0;
   p.angle=rand(-0.4,0.4); p.spin=0;
+  for(let i=0;i<2;i++){
+    spark(x + mrand(-3, 3), y - 2,
+          mrand(-45, 45), -mrand(130, 240),
+          i === 0 ? "#ffffff" : (color || "#ffe9a8"),
+          mrand(0.08, 0.16), mrand(1.3, 2.1));
+  }
+}
+
+/*
+ * The birth cue on enemy fire: a brief pop at the gun, so shots stop
+ * materialising out of clean sky and a kid gets one beat of "it just fired"
+ * before the dodge. Deliberately random-free - this is called from the
+ * simulation's fire paths, and the rule for anything on those paths is that
+ * it may not consume a single seeded draw (see the explosion lights).
+ *
+ * Rate-limited PER GUN, not globally: a boss ring-volley spawns sixteen
+ * bullets from one point in one frame, and sixteen stacked additive pops
+ * would flashbang the arena. Same instant, same spot = one pop; two enemies
+ * firing across the screen from each other still get one each.
+ */
+let eMuzzleAt = -1e9, eMuzzleX = 0, eMuzzleY = 0;
+function enemyMuzzle(x, y, col, r){
+  if(nowMs - eMuzzleAt < 30 && Math.abs(x - eMuzzleX) + Math.abs(y - eMuzzleY) < 24) return;
+  eMuzzleAt = nowMs; eMuzzleX = x; eMuzzleY = y;
+  const p = pspawn();
+  p.x=x; p.y=y; p.life=0; p.max=0.11; p.size=4 + (r || 4)*0.6;
+  p.color="rgba(" + (col || "255,93,115") + ",0.8)";
+  p.kind="flash"; p.vx=0; p.vy=0; p.drag=1; p.gravity=0; p.spin=0; p.angle=0;
 }
 
 /*
@@ -1006,7 +1042,7 @@ SF.fx = {
   // `spark` (singular) is the directional primitive - the Storm streaks its
   // wind with it, where the omnidirectional `sparks` puff would read as rain.
   spark,
-  sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, text, damageNumber,
+  sparks, impact, fireball, embers, debris, smoke, ring, explosion, muzzle, enemyMuzzle, text, damageNumber,
   firework, bloom,
   shake, flash, hitStop, isHitStopped, reset, shakeEnabled, setShakeEnabled,
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
