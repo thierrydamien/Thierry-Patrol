@@ -32,13 +32,13 @@
  *    18378  src/enemyart.js
  *    19124  src/insignia.js
  *    19369  src/skygen.js
- *    21674  src/shipart.js
- *    22752  src/paintjob.js
- *    22910  src/pilotart.js
- *    23005  src/comms.js
- *    23126  src/game.js
- *    26521  src/workshop.js
- *    27218  src/ui.js
+ *    21694  src/shipart.js
+ *    22772  src/paintjob.js
+ *    22930  src/pilotart.js
+ *    23025  src/comms.js
+ *    23146  src/game.js
+ *    26541  src/workshop.js
+ *    27238  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -21528,26 +21528,46 @@ function paint(sky, seed, W, H, dpr, wrap){
   if(!sky.surface && (sky.lum || 1) >= 0.75){
     const core = cores[0].r >= cores[1].r ? cores[0] : cores[1];
     const rays = 7;
+    // A shaft has to END somewhere the eye can see it end. The first draft ran
+    // to 1.6x the sky's width, so every ray left the frame still lit and went
+    // back to reading as a grey bar laid across the picture - the exact
+    // failure this was written to avoid.
+    const reach = Math.min(W, H) * 0.9;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.translate(core.x, core.y);
     const spin = rand()*TAU;
     for(let i = 0; i < rays; i++){
-      const a2 = spin + (i/rays)*TAU + (rand()-0.5)*0.3;
-      const len = core.r*(1.5 + rand()*1.7);
+      // Wide angular jitter and a skewed alpha spread: evenly spaced arms of
+      // equal brightness read as a clock face, not as light. Most shafts
+      // should be faint and one or two should carry the frame.
+      const a2 = spin + (i/rays)*TAU + (rand() - 0.5)*(TAU/rays)*0.8;
+      const len = Math.min(reach, core.r*(1.1 + rand()*1.3));
       const wide = 0.05 + rand()*0.075;                 // half-angle, radians
-      const g = ctx.createLinearGradient(0, 0, Math.cos(a2)*len, Math.sin(a2)*len);
-      const al = (0.05 + rand()*0.05) * Math.min(1.2, sky.lum || 1);
-      g.addColorStop(0,    rgba(sky.star, 0));
-      g.addColorStop(0.18, rgba(sky.star, al));
-      g.addColorStop(1,    rgba(sky.star, 0));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(a2 - wide)*len, Math.sin(a2 - wide)*len);
-      ctx.lineTo(Math.cos(a2 + wide)*len, Math.sin(a2 + wide)*len);
-      ctx.closePath();
-      ctx.fill();
+      const al = (0.035 + Math.pow(rand(), 1.7)*0.085) * Math.min(1.2, sky.lum || 1);
+      /*
+       * Soft SIDES, the cheap way. A single gradient-filled wedge fades along
+       * its length but its two long edges stay razor-straight, so it reads as
+       * a triangle someone cut out and laid down rather than as a shaft of
+       * light. Three nested wedges - widest faintest, narrowest brightest -
+       * build a falloff ACROSS the shaft instead of a step. Three is enough:
+       * at these alphas, over nebula noise, the banding is invisible.
+       */
+      for(let L = 0; L < 3; L++){
+        const w = wide * (1 - L*0.32);
+        const g = ctx.createLinearGradient(0, 0, Math.cos(a2)*len, Math.sin(a2)*len);
+        g.addColorStop(0,    rgba(sky.star, 0));
+        g.addColorStop(0.14, rgba(sky.star, al*0.36));
+        g.addColorStop(0.55, rgba(sky.star, al*0.20));
+        g.addColorStop(1,    rgba(sky.star, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a2 - w)*len, Math.sin(a2 - w)*len);
+        ctx.lineTo(Math.cos(a2 + w)*len, Math.sin(a2 + w)*len);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
     ctx.restore();
     ctx.globalCompositeOperation = "source-over";
