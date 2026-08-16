@@ -1011,5 +1011,13 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Underslung pods, one per bomb": "Des nacelles sous la coque, une par bombe",
 "A pulsing collector under the nose": "Un collecteur pulsant sous le nez",
 
+/* ---------------- the leave-mission confirmation ----------------
+   Built by concatenation via confirmDlg(), so invisible to the DOM sweep -
+   the money is now run through money() too, for the right symbol side. */
+"LEAVE THE MISSION?": "QUITTER LA MISSION ?",
+"You'll lose the {money} you've collected so far.": "Tu perdras les {money} récoltés jusqu'ici.",
+"LEAVE": "QUITTER",
+"KEEP FLYING": "CONTINUER À VOLER",
+
 } });
 })();

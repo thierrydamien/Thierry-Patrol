@@ -5430,9 +5430,10 @@ click($("quitBtn"), () => {
   const run = SF.game.run;
   const purse = run && !run.ended ? Math.round(run.money || 0) : 0;
   if(purse <= 0) return leave();
-  confirmDlg("LEAVE THE MISSION?",
-             "You'll lose the £" + purse + " you've collected so far.",
-             { okLabel:"LEAVE", cancelLabel:"KEEP FLYING", danger:true })
+  const T = SF.i18n ? SF.i18n.t : (en) => en;
+  confirmDlg(T("LEAVE THE MISSION?"),
+             T("You'll lose the {money} you've collected so far.", { money: money(purse) }),
+             { okLabel:T("LEAVE"), cancelLabel:T("KEEP FLYING"), danger:true })
     .then(yes => { if(yes) leave(); });
 });
 click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));

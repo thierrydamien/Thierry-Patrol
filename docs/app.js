@@ -16,32 +16,32 @@
  *     5270  src/data/comms.js
  *     5634  src/data/story.js
  *     5731  src/data/fr.js
- *     6749  src/profile.js
- *     7370  src/cloud.js
- *     7975  src/fx.js
- *     9033  src/input.js
- *     9444  src/entities.js
- *    10656  src/bossart.js
- *    11415  src/bosses.js
- *    12165  src/bossintro.js
- *    12288  src/rewind.js
- *    12810  src/finale.js
- *    13131  src/papadeath.js
- *    13453  src/backstage.js
- *    14656  src/sky29.js
- *    14897  src/systems.js
- *    15516  src/render.js
- *    20072  src/enemyart.js
- *    20818  src/insignia.js
- *    21063  src/skygen.js
- *    23435  src/shipart.js
- *    24513  src/paintjob.js
- *    24675  src/pilotart.js
- *    24770  src/comms.js
- *    24891  src/game.js
- *    28344  src/workshop.js
- *    29041  src/data/i18nbind.js
- *    29108  src/ui.js
+ *     6757  src/profile.js
+ *     7378  src/cloud.js
+ *     7983  src/fx.js
+ *     9041  src/input.js
+ *     9452  src/entities.js
+ *    10664  src/bossart.js
+ *    11423  src/bosses.js
+ *    12173  src/bossintro.js
+ *    12296  src/rewind.js
+ *    12818  src/finale.js
+ *    13139  src/papadeath.js
+ *    13461  src/backstage.js
+ *    14664  src/sky29.js
+ *    14905  src/systems.js
+ *    15524  src/render.js
+ *    20080  src/enemyart.js
+ *    20826  src/insignia.js
+ *    21071  src/skygen.js
+ *    23443  src/shipart.js
+ *    24521  src/paintjob.js
+ *    24683  src/pilotart.js
+ *    24778  src/comms.js
+ *    24899  src/game.js
+ *    28352  src/workshop.js
+ *    29049  src/data/i18nbind.js
+ *    29116  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6740,6 +6740,14 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Angled armour down both flanks": "Un blindage incliné sur les deux flancs",
 "Underslung pods, one per bomb": "Des nacelles sous la coque, une par bombe",
 "A pulsing collector under the nose": "Un collecteur pulsant sous le nez",
+
+/* ---------------- the leave-mission confirmation ----------------
+   Built by concatenation via confirmDlg(), so invisible to the DOM sweep -
+   the money is now run through money() too, for the right symbol side. */
+"LEAVE THE MISSION?": "QUITTER LA MISSION ?",
+"You'll lose the {money} you've collected so far.": "Tu perdras les {money} récoltés jusqu'ici.",
+"LEAVE": "QUITTER",
+"KEEP FLYING": "CONTINUER À VOLER",
 
 } });
 })();
@@ -34537,9 +34545,10 @@ click($("quitBtn"), () => {
   const run = SF.game.run;
   const purse = run && !run.ended ? Math.round(run.money || 0) : 0;
   if(purse <= 0) return leave();
-  confirmDlg("LEAVE THE MISSION?",
-             "You'll lose the £" + purse + " you've collected so far.",
-             { okLabel:"LEAVE", cancelLabel:"KEEP FLYING", danger:true })
+  const T = SF.i18n ? SF.i18n.t : (en) => en;
+  confirmDlg(T("LEAVE THE MISSION?"),
+             T("You'll lose the {money} you've collected so far.", { money: money(purse) }),
+             { okLabel:T("LEAVE"), cancelLabel:T("KEEP FLYING"), danger:true })
     .then(yes => { if(yes) leave(); });
 });
 click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));
