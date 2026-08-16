@@ -22,26 +22,26 @@
  *     9052  src/input.js
  *     9463  src/entities.js
  *    10675  src/bossart.js
- *    11434  src/bosses.js
- *    12184  src/bossintro.js
- *    12307  src/rewind.js
- *    12829  src/finale.js
- *    13150  src/papadeath.js
- *    13472  src/backstage.js
- *    14675  src/sky29.js
- *    14916  src/systems.js
- *    15535  src/render.js
- *    20100  src/enemyart.js
- *    21018  src/insignia.js
- *    21263  src/skygen.js
- *    23635  src/shipart.js
- *    24835  src/paintjob.js
- *    24997  src/pilotart.js
- *    25092  src/comms.js
- *    25213  src/game.js
- *    28666  src/workshop.js
- *    29363  src/data/i18nbind.js
- *    29430  src/ui.js
+ *    11541  src/bosses.js
+ *    12291  src/bossintro.js
+ *    12414  src/rewind.js
+ *    12936  src/finale.js
+ *    13257  src/papadeath.js
+ *    13579  src/backstage.js
+ *    14782  src/sky29.js
+ *    15023  src/systems.js
+ *    15642  src/render.js
+ *    20238  src/enemyart.js
+ *    21156  src/insignia.js
+ *    21401  src/skygen.js
+ *    23773  src/shipart.js
+ *    24973  src/paintjob.js
+ *    25135  src/pilotart.js
+ *    25230  src/comms.js
+ *    25351  src/game.js
+ *    28804  src/workshop.js
+ *    29501  src/data/i18nbind.js
+ *    29568  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -10708,11 +10708,27 @@ function hexToRgb(hex){
   const v = parseInt(String(hex).replace("#",""), 16);
   return { r:(v>>16)&255, g:(v>>8)&255, b:v&255 };
 }
-function mix(c, target, k){
-  return "rgb(" + Math.round(c.r + (target - c.r)*k) + "," +
-                  Math.round(c.g + (target - c.g)*k) + "," +
-                  Math.round(c.b + (target - c.b)*k) + ")";
+/* Both mixers work on {r,g,b} and serialise at the end, so a material can be
+   graded in two steps - lift, then cool - without a round trip through CSS. */
+function mixRgb(c, target, k){
+  return { r: c.r + (target - c.r)*k,
+           g: c.g + (target - c.g)*k,
+           b: c.b + (target - c.b)*k };
 }
+/** Mix toward an {r,g,b} rather than a grey - how shadows go cool. */
+function mixToRgb(c, t, k){
+  return { r: c.r + (t.r - c.r)*k,
+           g: c.g + (t.g - c.g)*k,
+           b: c.b + (t.b - c.b)*k };
+}
+function str(o){
+  return "rgb(" + Math.round(o.r) + "," + Math.round(o.g) + "," + Math.round(o.b) + ")";
+}
+function mix(c, target, k){ return str(mixRgb(c, target, k)); }
+// The same deep space navy the fleet's shadows run to, so a boss and its
+// escorts are lit by one sky rather than two.
+const NAVY_S = { r:22, g:30, b:56 };
+const NAVY_D = { r:14, g:20, b:42 };
 /*
  * Material from a part's two design hexes: the old bright edge colour becomes
  * the lit half of the ramp, the old flat fill survives as the shadow half.
@@ -10725,20 +10741,52 @@ function mat(hi, lo, litK){
   if(MATS[key]) return MATS[key];
   const a = hexToRgb(hi), b = hexToRgb(lo || hi);
   return (MATS[key] = {
-    // litK caps the highlight for accents that are already pale - the default
-    // 0.42 (the fleet's) pushes them to white in the gradient's lit corner
-    lit:   mix(a, 255, litK === undefined ? 0.42 : litK),
-    base:  mix(a, 255, 0.06),
-    shade: lo ? mix(b, 255, 0.14) : mix(a, 0, 0.34),
-    deep:  lo ? mix(b, 0, 0.30)   : mix(a, 0, 0.58),
+    /*
+     * litK caps the highlight for accents that are already pale. It used to
+     * be fighting a 0.42 default that pushed anything light to paper; the
+     * default is now the fleet's re-graded 0.18, so the hand-set caps are
+     * doing what they say rather than rescuing a bad constant.
+     */
+    lit:   mix(a, 255, litK === undefined ? 0.18 : litK),
+    base:  mix(a, 255, 0),
+    /*
+     * SHADOWS, lifted and cooled - the two things the fleet pass did that
+     * the bosses never got.
+     *
+     * LIFTED, because these ran to authored near-blacks (#1c0c04, #1a0a03)
+     * and a boss's shaded half was landing at luminance 10-19 against a sky
+     * of 5.1. That is not a shadow, it is a hole in the ship, and it is the
+     * exact failure the fleet's own pin now forbids: the darkest deep tone
+     * measured 10 and the floor is 25.5. Now 38 at worst.
+     *
+     * COOLED, because the authored hexes disagreed about what dark means -
+     * some were already navy (#141634), the Leviathan's were warm near-black
+     * browns, which is why it read as cardboard next to the others. Pulling
+     * every one toward the fleet's space navy puts the whole cast under one
+     * sky while leaving each part's own hue legible.
+     */
+    shade: lo ? str(mixToRgb(mixRgb(b, 255, 0.28), NAVY_S, 0.34))
+              : str(mixToRgb(a, NAVY_S, 0.58)),
+    deep:  lo ? str(mixToRgb(mixRgb(b, 255, 0.13), NAVY_D, 0.30))
+              : str(mixToRgb(a, NAVY_D, 0.78)),
   });
 }
-// The fleet's edge and light constants, verbatim: same dark line, same fixed
-// top-left key light, same cool counter-light off the sky.
-const LINE     = "rgba(10,12,20,0.85)";
-const RIM      = "rgba(255,250,238,0.82)";
-const RIM_COOL = "rgba(126,188,255,0.34)";
-function lineW(S){ return Math.max(1.6, S*0.013); }
+/*
+ * The fleet's edge and light constants - still shared, still re-graded in
+ * step, but NOT verbatim any more, and the difference is scale.
+ *
+ * An enemy rasterises at RES=128 and is blitted at ~40px, so its outline and
+ * rim are drawn at 3x and shrink to a soft hairline. A boss is drawn straight
+ * to the screen at its final 130-300px, where those same fractions-of-S land
+ * as a hard 3px ink line and a 5px near-white rim on every part - and since
+ * the cool counter-light carries the far side too, the result is a pale
+ * keyline all the way round every panel. That is the sticker look the fleet
+ * pass set out to kill, and at boss size it was louder, not quieter.
+ */
+const LINE     = "rgba(8,10,18,0.55)";
+const RIM      = "rgba(255,244,226,0.55)";
+const RIM_COOL = "rgba(126,188,255,0.20)";
+function lineW(S){ return Math.max(1.2, S*0.008); }
 /** One gradient spans the whole hull, so every part sits under one light. */
 function skin(ctx, m, S){
   const g = ctx.createLinearGradient(-S*0.5, -S*0.55, S*0.42, S*0.5);
@@ -10746,6 +10794,57 @@ function skin(ctx, m, S){
   g.addColorStop(0.45, m.base);
   g.addColorStop(1, m.shade);
   return g;
+}
+/*
+ * THE SUN - what lightBake() does for the fleet, done in hull space.
+ *
+ * enemyArt bakes its whole-sprite light by reading the finished sprite back
+ * and compositing against its own silhouette. A boss cannot: its hull is
+ * drawn live every frame because cores pulse, lights march and armour cracks,
+ * and the same pass through an offscreen buffer measured 12ms per frame with
+ * scratch canvases reused and the readback removed - most of a 60fps budget,
+ * for one object. Measured, not assumed; the naive version was 17ms.
+ *
+ * But the buffer was only ever the delivery mechanism. What actually makes
+ * nineteen separately-drawn parts look like one lit object is that the light
+ * is keyed to the HULL and not to each part - which is a gradient in hull
+ * coordinates, exactly like skin() already is. So every part gets filled a
+ * second time with this, and a panel out on the left shoulder is lifted while
+ * the same panel mirrored on the right is in shadow, because the sun does not
+ * care which part it is falling on. One extra gradient fill per part, in the
+ * same order of cost as the skin fill that is already there.
+ */
+function sun(ctx, S){
+  const g = ctx.createRadialGradient(-S*0.30, -S*0.34, 0, -S*0.30, -S*0.34, S*1.15);
+  g.addColorStop(0,    "rgba(255,244,222,0.10)");
+  g.addColorStop(0.42, "rgba(255,244,222,0)");
+  g.addColorStop(1,    "rgba(10,16,34,0.30)");
+  return g;
+}
+/*
+ * BOLTED ON, not drawn beside. The player's hull got a contact shadow where
+ * the body meets the wing, and it is most of what stops a ship reading as
+ * flat shapes side by side. A boss is nineteen shapes side by side, so it
+ * needs this more than anything else in the game - but it has no adjacency
+ * table to consult, and authoring one per hull for seven hulls would be a
+ * lot of coordinates to keep in sync with art that still moves.
+ *
+ * It does not need one. Every part casting a small shadow toward the sun's
+ * far side lands on whatever happens to be underneath it, which is exactly
+ * the occlusion we want, and on the outer silhouette it falls on empty sky
+ * where it reads as the hull sitting in front of the starfield. The shadow
+ * goes under the skin fill only - the sun and the rim go on top of it, so a
+ * lit edge is never muddied by the shadow of the part it belongs to.
+ */
+function bolted(ctx, S, fill){
+  ctx.save();
+  ctx.shadowColor = "rgba(5,8,18,0.55)";
+  ctx.shadowBlur = S*0.035;
+  ctx.shadowOffsetX = S*0.014;
+  ctx.shadowOffsetY = S*0.014;
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
 }
 function pathPoly(ctx, pts){
   ctx.beginPath();
@@ -10780,18 +10879,20 @@ function rimPoly(ctx, pts, S, d, w){
 /** Gradient fill + dark outline + rim. `rw` slims the rim on small parts. */
 function hullPoly(ctx, pts, m, S, rw){
   pathPoly(ctx, pts);
-  ctx.fillStyle = skin(ctx, m, S); ctx.fill();
+  bolted(ctx, S, skin(ctx, m, S));
+  ctx.fillStyle = sun(ctx, S); ctx.fill();     // one sun, over every part
   ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S); ctx.stroke();
   const k = rw || 1;
-  rimPoly(ctx, pts, S, S*0.015*k, S*0.022*k);
+  rimPoly(ctx, pts, S, S*0.015*k, S*0.014*k);
 }
 function hullSlab(ctx, x, y, w, h, r, m, S){
   pathSlab(ctx, x, y, w, h, r);
-  ctx.fillStyle = skin(ctx, m, S); ctx.fill();
+  bolted(ctx, S, skin(ctx, m, S));
+  ctx.fillStyle = sun(ctx, S); ctx.fill();     // one sun, over every part
   ctx.strokeStyle = LINE; ctx.lineWidth = lineW(S); ctx.stroke();
   // rim capped by the part's own size, or a small pod is all rim
   const d = Math.min(S*0.015, Math.min(w, h)*0.09);
-  const lw = Math.min(S*0.022, Math.min(w, h)*0.16);
+  const lw = Math.min(S*0.014, Math.min(w, h)*0.11);
   ctx.save();
   pathSlab(ctx, x, y, w, h, r); ctx.clip();
   ctx.translate(d, d); pathSlab(ctx, x, y, w, h, r);
@@ -11426,7 +11527,13 @@ function draw(ctx, boss, S, damage, timeMs){
   return true;
 }
 
-SF.bossart = { draw, has, HULLS, poly, slab, bloom, lights, panels, cracks };
+// sun and bolted are shared with render.js so the Devourer - which is drawn
+// over there, in its own palette - stands under the same light as the cast it
+// is the climax of.
+// MATS is exported for the suite: draw every hull once and the cache holds
+// every material the roster actually uses, so the grade can be pinned without
+// a second copy of the design hexes to drift out of sync.
+SF.bossart = { draw, has, HULLS, poly, slab, bloom, lights, panels, cracks, sun, bolted, MATS };
 })();
 
 
@@ -18268,16 +18375,41 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
   ctx.beginPath(); ctx.arc(0, 0, S*0.95, 0, TAU); ctx.fill();
   ctx.restore();
 
+  /*
+   * The Devourer keeps its own palette - it is meant to be the grim thing at
+   * the end, not another cheerful hull, so it does NOT get the fleet's
+   * material grade, which would have taken its base from luminance 21 to 88
+   * and made it a bright magenta boss. What it does get is the two things
+   * that were defects rather than style.
+   *
+   * ONE: its darks were holes. The hull gradient bottomed out at #0b040c,
+   * luminance 7.0, against a darkest sky of 5.1 - the lower half of the final
+   * boss in the game was the same value as the empty space behind it. Every
+   * dark here is lifted clear of the sky and cooled toward the same navy as
+   * the rest of the cast, and it is still comfortably the darkest hull in the
+   * game.
+   *
+   * TWO: it was lit from nowhere. bossart.sun() and bossart.bolted() are
+   * shared so the last boss stands under the same light as its escorts.
+   */
+  const BA = SF.bossart;
+  const sun = BA && BA.sun ? BA.sun(ctx, S) : null;
+  const bolt = (fill) => {
+    if(BA && BA.bolted) BA.bolted(ctx, S, fill);
+    else { ctx.fillStyle = fill; ctx.fill(); }
+    if(sun){ ctx.fillStyle = sun; ctx.fill(); }
+  };
+
   // --- shoulder arms (the hangars live out here)
   [-1, 1].forEach(side => {
-    ctx.fillStyle = "#1a0c1a";
     ctx.beginPath();
     ctx.moveTo(side*S*0.30, -S*0.16);
     ctx.lineTo(side*S*0.62, -S*0.20);
     ctx.lineTo(side*S*0.68,  S*0.02);
     ctx.lineTo(side*S*0.58,  S*0.20);
     ctx.lineTo(side*S*0.30,  S*0.14);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    bolt("#31243a");
     ctx.strokeStyle = "#63304f"; ctx.lineWidth = 3*s; ctx.stroke();
     // hangar mouth
     ctx.fillStyle = "#0c0710";
@@ -18288,10 +18420,12 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
 
   // --- main hull: a heavy angular slab
   const hull = ctx.createLinearGradient(0, -S*0.42, 0, S*0.34);
-  hull.addColorStop(0, "#2b1020");
-  hull.addColorStop(0.45, "#180a18");
-  hull.addColorStop(1, "#0b040c");
-  ctx.fillStyle = hull;
+  // Lifted clear of the sky, cooled a little, but kept plum: a first cut that
+  // mixed straight toward navy came out grey-lavender and lost the character
+  // the colour was doing all the work for.
+  hull.addColorStop(0, "#43293c");     // was #2b1020, luminance 21
+  hull.addColorStop(0.45, "#312032");  // was #180a18, luminance 16
+  hull.addColorStop(1, "#241a28");     // was #0b040c, luminance 7 - a hole
   ctx.beginPath();
   ctx.moveTo(-S*0.20, -S*0.42);
   ctx.lineTo( S*0.20, -S*0.42);
@@ -18301,7 +18435,9 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
   ctx.lineTo(-S*0.26,  S*0.32);
   ctx.lineTo(-S*0.44,  S*0.10);
   ctx.lineTo(-S*0.40, -S*0.20);
-  ctx.closePath(); ctx.fill();
+  ctx.closePath();
+  ctx.fillStyle = hull; ctx.fill();
+  if(sun){ ctx.fillStyle = sun; ctx.fill(); }
   ctx.strokeStyle = "#7d3a5c"; ctx.lineWidth = 3.5*s; ctx.stroke();
 
   // --- panel lines and armour ribs
@@ -18343,8 +18479,10 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
       const pg = ctx.createLinearGradient(px - pr, py - pr, px + pr, py + pr);
       pg.addColorStop(0, "#8e3a63");
       pg.addColorStop(0.55, "#5c2140");
-      pg.addColorStop(1, "#3a1229");
-      ctx.fillStyle = pg; ctx.fill();
+      pg.addColorStop(1, "#3f2033");   // was #3a1229: the far corner was a hole
+      // A plate is the thing the fight is about, so it gets the contact
+      // shadow that says it is bolted ON rather than painted on.
+      bolt(pg);
       ctx.strokeStyle = "rgba(10,4,10,0.7)"; ctx.lineWidth = 3*s; ctx.stroke();
       // a lit top edge, so it reads as standing off the hull
       ctx.beginPath();

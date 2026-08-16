@@ -7011,6 +7011,69 @@ async function run(){
                       chanSpread(q.deep,  q.base) > 0.010));
     check("the canopy has a colour to glow with", /^\d+,\d+,\d+$/.test(P.glassRgb));
 
+    /* ---------- and the bosses are under the same sky ----------
+     *
+     * The bosses carried the fleet's PRE-lighting constants verbatim, and
+     * were left behind when it was re-graded: shadows mixed toward black,
+     * lit at 0.42, and an ink line and rim sized as fractions of S - which
+     * is fine for an enemy rasterised at 3x and blitted small, and lands as
+     * a hard keyline on a hull drawn at its final 130-300px.
+     *
+     * Rather than keep a second copy of the design hexes here, draw every
+     * hull once against the stub context and then read the material cache:
+     * whatever the roster actually used is what gets pinned, and a hull
+     * added later is covered without touching this test.
+     */
+    const BA = SF.bossart;
+    if(BA && BA.MATS){
+      Object.keys(BA.HULLS).forEach(id => {
+        const cv = window.document.createElement("canvas");
+        const c2 = cv.getContext("2d");
+        const boss = { defId:id, flash:0, charge:0, wounds:[] };
+        try { BA.draw(c2, boss, 200, 0.3, 1000); } catch(e){}
+      });
+      const bm = Object.keys(BA.MATS).map(k => BA.MATS[k]);
+      check("every boss hull drew, so the material cache is the real roster",
+        bm.length > 12);
+      /*
+       * Same floor as the fleet: 5x the darkest sky in SKIES. The Leviathan's
+       * shadows were authored as warm near-blacks (#1c0c04, #1a0a03) and its
+       * deepest tone measured luminance 10 against a sky of 5.1 - not a
+       * shadow, a hole. Worst case is now 38.
+       */
+      check("a boss's deepest plate is a surface, not a hole in the ship",
+        bm.every(q => lum(q.deep) > SKY_DARKEST*5));
+      check("...and its shaded half too", bm.every(q => lum(q.shade) > SKY_DARKEST*5));
+      /*
+       * Nothing may reach paper. This is a floor rather than a discriminator:
+       * the roster's brightest accent is a deliberately pale core at 210, and
+       * the constants that produced the washed-out Sentinel pods are pinned
+       * at source below instead, because a boss material takes its shade from
+       * a DIFFERENT design hex than its base - so the fleet's channel-spread
+       * test measures the gap between those two hexes, not the cooling, and
+       * passes either way. A pin that cannot fail is not worth having.
+       */
+      check("a boss's highlight is a highlight, not paper",
+        bm.every(q => lum(q.lit) < 232));
+      // The ink diet, and the rim that was reading as a sticker keyline.
+      const bsrc = fs.readFileSync(path.join(__dirname, "src/bossart.js"), "utf8");
+      check("a boss's shadows are mixed toward the fleet's navy, not toward black",
+        /NAVY_S\s*=\s*\{\s*r:22,\s*g:30,\s*b:56\s*\}/.test(bsrc) &&
+        /shade:\s*lo\s*\?\s*str\(mixToRgb\(/.test(bsrc) &&
+        /deep:\s*lo\s*\?\s*str\(mixToRgb\(/.test(bsrc) &&
+        !/mix\(b,\s*0,\s*0\.30\)/.test(bsrc));
+      check("...and a boss's default highlight is the fleet's re-graded 0.18",
+        /litK === undefined \? 0\.18 : litK/.test(bsrc));
+      check("a boss wears the fleet's thin ink, not the old 0.85 marker line",
+        /const LINE\s*=\s*"rgba\(8,10,18,0\.55\)"/.test(bsrc));
+      check("...and one sun over every part, in hull space",
+        /function sun\(ctx, S\)/.test(bsrc) &&
+        (bsrc.match(/fillStyle = sun\(ctx, S\)/g) || []).length >= 2);
+      check("...and a contact shadow, so a part is bolted on rather than beside",
+        /function bolted\(/.test(bsrc) &&
+        (bsrc.match(/bolted\(ctx, S,/g) || []).length >= 2);
+    }
+
     // rimLight() clips and restores around two extra strokes; a stray save
     // or a bad path there throws inside the rasteriser, which returns null.
     const ids = Object.keys(art.SHAPES);

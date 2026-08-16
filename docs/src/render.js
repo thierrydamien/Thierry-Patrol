@@ -2734,16 +2734,41 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
   ctx.beginPath(); ctx.arc(0, 0, S*0.95, 0, TAU); ctx.fill();
   ctx.restore();
 
+  /*
+   * The Devourer keeps its own palette - it is meant to be the grim thing at
+   * the end, not another cheerful hull, so it does NOT get the fleet's
+   * material grade, which would have taken its base from luminance 21 to 88
+   * and made it a bright magenta boss. What it does get is the two things
+   * that were defects rather than style.
+   *
+   * ONE: its darks were holes. The hull gradient bottomed out at #0b040c,
+   * luminance 7.0, against a darkest sky of 5.1 - the lower half of the final
+   * boss in the game was the same value as the empty space behind it. Every
+   * dark here is lifted clear of the sky and cooled toward the same navy as
+   * the rest of the cast, and it is still comfortably the darkest hull in the
+   * game.
+   *
+   * TWO: it was lit from nowhere. bossart.sun() and bossart.bolted() are
+   * shared so the last boss stands under the same light as its escorts.
+   */
+  const BA = SF.bossart;
+  const sun = BA && BA.sun ? BA.sun(ctx, S) : null;
+  const bolt = (fill) => {
+    if(BA && BA.bolted) BA.bolted(ctx, S, fill);
+    else { ctx.fillStyle = fill; ctx.fill(); }
+    if(sun){ ctx.fillStyle = sun; ctx.fill(); }
+  };
+
   // --- shoulder arms (the hangars live out here)
   [-1, 1].forEach(side => {
-    ctx.fillStyle = "#1a0c1a";
     ctx.beginPath();
     ctx.moveTo(side*S*0.30, -S*0.16);
     ctx.lineTo(side*S*0.62, -S*0.20);
     ctx.lineTo(side*S*0.68,  S*0.02);
     ctx.lineTo(side*S*0.58,  S*0.20);
     ctx.lineTo(side*S*0.30,  S*0.14);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    bolt("#31243a");
     ctx.strokeStyle = "#63304f"; ctx.lineWidth = 3*s; ctx.stroke();
     // hangar mouth
     ctx.fillStyle = "#0c0710";
@@ -2754,10 +2779,12 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
 
   // --- main hull: a heavy angular slab
   const hull = ctx.createLinearGradient(0, -S*0.42, 0, S*0.34);
-  hull.addColorStop(0, "#2b1020");
-  hull.addColorStop(0.45, "#180a18");
-  hull.addColorStop(1, "#0b040c");
-  ctx.fillStyle = hull;
+  // Lifted clear of the sky, cooled a little, but kept plum: a first cut that
+  // mixed straight toward navy came out grey-lavender and lost the character
+  // the colour was doing all the work for.
+  hull.addColorStop(0, "#43293c");     // was #2b1020, luminance 21
+  hull.addColorStop(0.45, "#312032");  // was #180a18, luminance 16
+  hull.addColorStop(1, "#241a28");     // was #0b040c, luminance 7 - a hole
   ctx.beginPath();
   ctx.moveTo(-S*0.20, -S*0.42);
   ctx.lineTo( S*0.20, -S*0.42);
@@ -2767,7 +2794,9 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
   ctx.lineTo(-S*0.26,  S*0.32);
   ctx.lineTo(-S*0.44,  S*0.10);
   ctx.lineTo(-S*0.40, -S*0.20);
-  ctx.closePath(); ctx.fill();
+  ctx.closePath();
+  ctx.fillStyle = hull; ctx.fill();
+  if(sun){ ctx.fillStyle = sun; ctx.fill(); }
   ctx.strokeStyle = "#7d3a5c"; ctx.lineWidth = 3.5*s; ctx.stroke();
 
   // --- panel lines and armour ribs
@@ -2809,8 +2838,10 @@ function drawDevourerHull(ctx, boss, bx, by, S, damage, timeMs){
       const pg = ctx.createLinearGradient(px - pr, py - pr, px + pr, py + pr);
       pg.addColorStop(0, "#8e3a63");
       pg.addColorStop(0.55, "#5c2140");
-      pg.addColorStop(1, "#3a1229");
-      ctx.fillStyle = pg; ctx.fill();
+      pg.addColorStop(1, "#3f2033");   // was #3a1229: the far corner was a hole
+      // A plate is the thing the fight is about, so it gets the contact
+      // shadow that says it is bolted ON rather than painted on.
+      bolt(pg);
       ctx.strokeStyle = "rgba(10,4,10,0.7)"; ctx.lineWidth = 3*s; ctx.stroke();
       // a lit top edge, so it reads as standing off the hull
       ctx.beginPath();
