@@ -10,38 +10,38 @@
  *      980  src/haptics.js
  *     1159  src/audio.js
  *     1857  src/data/config.js
- *     2319  src/data/enemies.js
- *     3178  src/data/missions.js
- *     5047  src/wacky.js
- *     5263  src/data/comms.js
- *     5627  src/data/story.js
- *     5724  src/data/i18nbind.js
- *     5783  src/data/fr.js
- *     6209  src/profile.js
- *     6830  src/cloud.js
- *     7435  src/fx.js
- *     8493  src/input.js
- *     8904  src/entities.js
- *    10116  src/bossart.js
- *    10875  src/bosses.js
- *    11625  src/bossintro.js
- *    11748  src/rewind.js
- *    12270  src/finale.js
- *    12591  src/papadeath.js
- *    12913  src/backstage.js
- *    14116  src/sky29.js
- *    14357  src/systems.js
- *    14976  src/render.js
- *    19532  src/enemyart.js
- *    20278  src/insignia.js
- *    20523  src/skygen.js
- *    22895  src/shipart.js
- *    23973  src/paintjob.js
- *    24135  src/pilotart.js
- *    24230  src/comms.js
- *    24351  src/game.js
- *    27804  src/workshop.js
- *    28501  src/ui.js
+ *     2326  src/data/enemies.js
+ *     3185  src/data/missions.js
+ *     5054  src/wacky.js
+ *     5270  src/data/comms.js
+ *     5634  src/data/story.js
+ *     5731  src/data/i18nbind.js
+ *     5790  src/data/fr.js
+ *     6335  src/profile.js
+ *     6956  src/cloud.js
+ *     7561  src/fx.js
+ *     8619  src/input.js
+ *     9030  src/entities.js
+ *    10242  src/bossart.js
+ *    11001  src/bosses.js
+ *    11751  src/bossintro.js
+ *    11874  src/rewind.js
+ *    12396  src/finale.js
+ *    12717  src/papadeath.js
+ *    13039  src/backstage.js
+ *    14242  src/sky29.js
+ *    14483  src/systems.js
+ *    15102  src/render.js
+ *    19658  src/enemyart.js
+ *    20404  src/insignia.js
+ *    20649  src/skygen.js
+ *    23021  src/shipart.js
+ *    24099  src/paintjob.js
+ *    24261  src/pilotart.js
+ *    24356  src/comms.js
+ *    24477  src/game.js
+ *    27930  src/workshop.js
+ *    28627  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2023,52 +2023,59 @@ function costCurve(first, levels){
   return out;
 }
 
+/*
+ * The shop's effect lines are assembled from a number and a phrase, and
+ * French does not order them the way English does ("2 drones", but
+ * "portée d'attraction 128 px"). Each is a template with a named slot
+ * rather than a concatenation - the only shape a translator can reorder.
+ */
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const UPGRADES = [
   { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:costCurve(150,5),
     desc:"Shoot more bullets at once, in a wider fan",
-    effect: lvl => spreadPattern(lvl).length + "-way fire" },
+    effect: lvl => T("{n}-way fire", { n: spreadPattern(lvl).length }) },
   { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:costCurve(120,5),
     desc:"Your guns shoot way faster",
-    effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
+    effect: lvl => T("+{n}% fire rate", { n: Math.round((1/fireRateMult(lvl) - 1)*100) }) },
   { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:costCurve(200,5),
     desc:"Every bullet hits much harder",
-    effect: lvl => (1+lvl) + " damage per hit" },
+    effect: lvl => T("{n} damage per hit", { n: 1+lvl }) },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
     desc:"Bullets punch straight through anything they blow up",
-    effect: lvl => "blasts through " + (lvl === 1 ? "1 enemy" : lvl + " enemies") + " and keeps going" },
+    effect: lvl => T("blasts through {n} and keeps going", { n: lvl === 1 ? T("1 enemy") : T("{n} enemies", { n: lvl }) }) },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
     desc:"Your bullets bend through the air to chase enemies",
-    effect: lvl => "tracking " + lvl + "/3" },
+    effect: lvl => T("tracking {n}/3", { n: lvl }) },
 
   { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:costCurve(100,4),
     desc:"A bubble that eats a hit for you. It refills every time you clear a wave",
-    effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
+    effect: lvl => T(lvl===1 ? "{n} charge" : "{n} charges", { n: lvl }) },
   { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:costCurve(80,5),
     desc:"Start every mission with extra lives",
-    effect: lvl => (3+lvl) + " starting lives" },
+    effect: lvl => T("{n} starting lives", { n: 3+lvl }) },
   { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:costCurve(250,3),
     desc:"After a hit you flash and nothing can hurt you - this makes it last longer",
-    effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
+    effect: lvl => T("+{n}s recovery", { n: (lvl*0.6).toFixed(1) }) },
 
   { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:costCurve(130,4),
     desc:"Zoom around faster and turn on a dime",
-    effect: lvl => "+" + (lvl*14) + "% speed" },
+    effect: lvl => T("+{n}% speed", { n: lvl*14 }) },
   { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:costCurve(220,3),
     desc:"Coins, power-ups and rescue pods fly straight to you",
-    effect: lvl => (60 + lvl*68) + "px pull range" },
+    effect: lvl => T("{n}px pull range", { n: 60 + lvl*68 }) },
 
   { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:costCurve(300,5),
     desc:"Everything you blow up drops more money. Get this early!",
-    effect: lvl => "+" + (lvl*15) + "% money" },
+    effect: lvl => T("+{n}% money", { n: lvl*15 }) },
   { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:costCurve(1200,2),
     desc:"Little robot buddies fly next to you and shoot too",
-    effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
+    effect: lvl => T(lvl===1 ? "{n} drone" : "{n} drones", { n: lvl }) },
   { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:costCurve(400,3),
     desc:"BOOM - wipes out the whole screen. Tap 💣 or press B",
-    effect: lvl => lvl + (lvl===1 ? " bomb per mission" : " bombs per mission") },
+    effect: lvl => T(lvl===1 ? "{n} bomb per mission" : "{n} bombs per mission", { n: lvl }) },
   { id:"overdrive", cat:"extras", name:"Overdrive", icon:"🔥", max:3, costs:costCurve(600,3),
     desc:"Super mode: double speed guns and double damage. Tap 🔥 or press V",
-    effect: lvl => lvl + " use" + (lvl===1?"":"s") + " · " + (4 + lvl) + "s each" },
+    effect: lvl => T(lvl===1 ? "{n} use · {s}s each" : "{n} uses · {s}s each", { n: lvl, s: 4 + lvl }) },
 ];
 const UPGRADE_BY_ID = {};
 UPGRADES.forEach(u => UPGRADE_BY_ID[u.id] = u);
@@ -5751,7 +5758,7 @@ Object.keys(M.BOSSES || {}).forEach(k => I.bind(M.BOSSES[k], ["name", "epithet"]
 Object.keys(M.OBJECTIVES || {}).forEach(k => I.bind(M.OBJECTIVES[k], ["label"]));
 
 /* The shop: categories, parts, hulls, paints, trails and their blurbs. */
-(C.UPGRADES || []).forEach(u => I.bind(u, ["name", "blurb", "cat"]));
+(C.UPGRADES || []).forEach(u => I.bind(u, ["name", "desc", "blurb", "cat"]));
 (C.SHIP_COLORS || []).forEach(c => I.bind(c, ["name"]));
 (C.RANKS || []).forEach(r => I.bind(r, ["name"]));
 (C.DIFFICULTIES || []).forEach(d => I.bind(d, ["name", "word", "blurb"]));
@@ -6200,6 +6207,125 @@ SF.i18n.register("fr", { name: "Français", s: {
 "normal pay": "paie normale",
 "smaller pay": "paie réduite",
 "pays {n}× the money": "rapporte {n}× plus",
+
+/* ---------------- the shop ----------------
+   Part names read as kit, not as jargon: a seven-year-old should be able to
+   say what they just bought. The effect lines below carry numbers in named
+   slots, because French puts the figure where English does not. */
+"Spread Shot": "Tir en Éventail",
+"Rapid Fire": "Tir Rapide",
+"Plasma Rounds": "Munitions Plasma",
+"Piercing Rounds": "Munitions Perforantes",
+"Seeker Rounds": "Munitions à Tête Chercheuse",
+"Energy Shield": "Bouclier d'Énergie",
+"Extra Life": "Vie Supplémentaire",
+"Hull Plating": "Blindage de Coque",
+"Ion Thrusters": "Propulseurs Ioniques",
+"Tractor Beam": "Rayon Tracteur",
+"Salvage Rig": "Récupérateur",
+"Wingman Drone": "Drone Ailier",
+"Smart Bombs": "Bombes",
+"Overdrive": "Surrégime",
+"Shoot more bullets at once, in a wider fan":
+  "Tire plus de projectiles à la fois, en éventail plus large",
+"Your guns shoot way faster": "Tes canons tirent bien plus vite",
+"Every bullet hits much harder": "Chaque tir frappe beaucoup plus fort",
+"Bullets punch straight through anything they blow up":
+  "Tes tirs transpercent tout ce qu'ils font exploser",
+"Your bullets bend through the air to chase enemies":
+  "Tes tirs s'incurvent en vol pour poursuivre les ennemis",
+"A bubble that eats a hit for you. It refills when you clear a wave":
+  "Une bulle qui encaisse un coup à ta place. Elle se recharge quand tu nettoies une vague",
+"Start every mission with extra lives": "Commence chaque mission avec des vies en plus",
+"After a hit you flash and nothing can hurt you - this makes it last longer":
+  "Après un coup tu clignotes et rien ne peut te toucher — ça dure plus longtemps",
+"Zoom around faster and turn on a dime": "File plus vite et tourne au quart de tour",
+"Coins, power-ups and rescue pods fly straight to you":
+  "Les pièces, les bonus et les capsules de sauvetage volent droit vers toi",
+"Everything you blow up drops more money. Get this early!":
+  "Tout ce que tu fais exploser rapporte plus. À prendre tôt !",
+"Little robot buddies fly next to you and shoot too":
+  "De petits copains robots volent à tes côtés et tirent aussi",
+"BOOM - wipes out the whole screen. Tap 💣 or press B":
+  "BOUM — nettoie tout l'écran. Touche 💣 ou appuie sur B",
+"Super mode: double speed guns and double damage. Tap 🔥 or press V":
+  "Mode super : cadence doublée et dégâts doublés. Touche 🔥 ou appuie sur V",
+"{n}-way fire": "tir en {n} directions",
+"+{n}% fire rate": "+{n} % de cadence",
+"{n} damage per hit": "{n} dégâts par tir",
+"blasts through {n} and keeps going": "traverse {n} et continue",
+"1 enemy": "1 ennemi",
+"{n} enemies": "{n} ennemis",
+"tracking {n}/3": "guidage {n}/3",
+"{n} charge": "{n} charge",
+"{n} charges": "{n} charges",
+"{n} starting lives": "{n} vies au départ",
+"+{n}s recovery": "+{n} s d'invincibilité",
+"+{n}% speed": "+{n} % de vitesse",
+"{n}px pull range": "portée d'attraction {n} px",
+"+{n}% money": "+{n} % d'argent",
+"{n} drone": "{n} drone",
+"{n} drones": "{n} drones",
+"{n} bomb per mission": "{n} bombe par mission",
+"{n} bombs per mission": "{n} bombes par mission",
+"{n} use · {s}s each": "{n} utilisation · {s} s chacune",
+"{n} uses · {s}s each": "{n} utilisations · {s} s chacune",
+
+/* ---------------- medals ----------------
+   Titles stay short and boastful - they are worn, not read. */
+"First Blood": "Premier Sang",
+"Sharpshooter": "Fine Gâchette",
+"Combo Master": "Maître du Combo",
+"Mission Complete": "Mission Accomplie",
+"Full Marks": "Sans Faute",
+"Star Collector": "Collectionneur d'Étoiles",
+"Search & Rescue": "Recherche et Sauvetage",
+"Boss Slayer": "Tueur de Boss",
+"Boss Hunter": "Chasseur de Boss",
+"Untouchable": "Intouchable",
+"Century Club": "Club des Cent",
+"Sky Sweeper": "Balayeur du Ciel",
+"High Roller": "Gros Joueur",
+"War Chest": "Trésor de Guerre",
+"Kitted Out": "Bien Équipé",
+"Specialist": "Spécialiste",
+"Quartermaster": "Intendant",
+"Fully Loaded": "Armé jusqu'aux Dents",
+"Ace Pilot": "Pilote As",
+"Veteran Wings": "Ailes de Vétéran",
+"Nightmare Fuel": "Carburant de Cauchemar",
+"Sky Spinner": "Acrobate du Ciel",
+"Iron Wings": "Ailes de Fer",
+"Gauntlet Runner": "Traverseur du Gant",
+"The Last Star": "La Dernière Étoile",
+"Rush Master": "Maître du Marathon",
+"Destroy your first enemy": "Détruis ton premier ennemi",
+"Reach a x5 combo": "Atteins un combo x5",
+"Reach a x10 combo": "Atteins un combo x10",
+"Finish your first mission": "Termine ta première mission",
+"Earn 3 stars on any mission": "Gagne 3 étoiles sur une mission",
+"Collect 15 stars in total": "Récolte 15 étoiles en tout",
+"Rescue 25 stranded pilots": "Sauve 25 pilotes en perdition",
+"Defeat a boss": "Bats un boss",
+"Defeat 5 bosses": "Bats 5 boss",
+"Finish a mission without a scratch": "Termine une mission sans une égratignure",
+"Destroy 100 enemies (lifetime)": "Détruis 100 ennemis (au total)",
+"Destroy 1000 enemies (lifetime)": "Détruis 1000 ennemis (au total)",
+"Earn £1,000 (lifetime)": "Gagne 1 000 £ (au total)",
+"Earn £25,000 (lifetime)": "Gagne 25 000 £ (au total)",
+"Buy your first Armory upgrade": "Achète ta première amélioration à l'Arsenal",
+"Max out any single upgrade": "Pousse une amélioration au maximum",
+"Buy 20 upgrade levels in total": "Achète 20 niveaux d'amélioration en tout",
+"Max out every Armory upgrade": "Pousse toutes les améliorations au maximum",
+"Complete a mission on ACE": "Termine une mission en AS",
+"Complete a mission on VETERAN": "Termine une mission en VÉTÉRAN",
+"Complete a mission on NIGHTMARE": "Termine une mission en CAUCHEMAR",
+"Complete every mission": "Termine toutes les missions",
+"Score 3,000 in the Wacky Sky": "Marque 3 000 points dans le Ciel Farfelu",
+"Last 4 minutes in the Wacky Sky": "Tiens 4 minutes dans le Ciel Farfelu",
+"Beat 3 bosses in one Boss Rush": "Bats 3 boss en un seul Marathon",
+"Destroy the Devourer": "Détruis le Dévoreur",
+"Beat 5 bosses in one Boss Rush": "Bats 5 boss en un seul Marathon",
 
 } });
 })();

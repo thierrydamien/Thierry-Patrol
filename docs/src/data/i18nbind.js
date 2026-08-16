@@ -28,7 +28,7 @@ Object.keys(M.BOSSES || {}).forEach(k => I.bind(M.BOSSES[k], ["name", "epithet"]
 Object.keys(M.OBJECTIVES || {}).forEach(k => I.bind(M.OBJECTIVES[k], ["label"]));
 
 /* The shop: categories, parts, hulls, paints, trails and their blurbs. */
-(C.UPGRADES || []).forEach(u => I.bind(u, ["name", "blurb", "cat"]));
+(C.UPGRADES || []).forEach(u => I.bind(u, ["name", "desc", "blurb", "cat"]));
 (C.SHIP_COLORS || []).forEach(c => I.bind(c, ["name"]));
 (C.RANKS || []).forEach(r => I.bind(r, ["name"]));
 (C.DIFFICULTIES || []).forEach(d => I.bind(d, ["name", "word", "blurb"]));

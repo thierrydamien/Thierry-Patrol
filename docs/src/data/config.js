@@ -167,52 +167,59 @@ function costCurve(first, levels){
   return out;
 }
 
+/*
+ * The shop's effect lines are assembled from a number and a phrase, and
+ * French does not order them the way English does ("2 drones", but
+ * "portée d'attraction 128 px"). Each is a template with a named slot
+ * rather than a concatenation - the only shape a translator can reorder.
+ */
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const UPGRADES = [
   { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:costCurve(150,5),
     desc:"Shoot more bullets at once, in a wider fan",
-    effect: lvl => spreadPattern(lvl).length + "-way fire" },
+    effect: lvl => T("{n}-way fire", { n: spreadPattern(lvl).length }) },
   { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:costCurve(120,5),
     desc:"Your guns shoot way faster",
-    effect: lvl => "+" + Math.round((1/fireRateMult(lvl) - 1)*100) + "% fire rate" },
+    effect: lvl => T("+{n}% fire rate", { n: Math.round((1/fireRateMult(lvl) - 1)*100) }) },
   { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:costCurve(200,5),
     desc:"Every bullet hits much harder",
-    effect: lvl => (1+lvl) + " damage per hit" },
+    effect: lvl => T("{n} damage per hit", { n: 1+lvl }) },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
     desc:"Bullets punch straight through anything they blow up",
-    effect: lvl => "blasts through " + (lvl === 1 ? "1 enemy" : lvl + " enemies") + " and keeps going" },
+    effect: lvl => T("blasts through {n} and keeps going", { n: lvl === 1 ? T("1 enemy") : T("{n} enemies", { n: lvl }) }) },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
     desc:"Your bullets bend through the air to chase enemies",
-    effect: lvl => "tracking " + lvl + "/3" },
+    effect: lvl => T("tracking {n}/3", { n: lvl }) },
 
   { id:"shield", cat:"armour", name:"Energy Shield", icon:"🛡️", max:4, costs:costCurve(100,4),
     desc:"A bubble that eats a hit for you. It refills every time you clear a wave",
-    effect: lvl => lvl + (lvl===1 ? " charge" : " charges") },
+    effect: lvl => T(lvl===1 ? "{n} charge" : "{n} charges", { n: lvl }) },
   { id:"life", cat:"armour", name:"Extra Life", icon:"❤️", max:5, costs:costCurve(80,5),
     desc:"Start every mission with extra lives",
-    effect: lvl => (3+lvl) + " starting lives" },
+    effect: lvl => T("{n} starting lives", { n: 3+lvl }) },
   { id:"armor", cat:"armour", name:"Hull Plating", icon:"🧱", max:3, costs:costCurve(250,3),
     desc:"After a hit you flash and nothing can hurt you - this makes it last longer",
-    effect: lvl => "+" + (lvl*0.6).toFixed(1) + "s recovery" },
+    effect: lvl => T("+{n}s recovery", { n: (lvl*0.6).toFixed(1) }) },
 
   { id:"thrusters", cat:"ship", name:"Ion Thrusters", icon:"🚀", max:4, costs:costCurve(130,4),
     desc:"Zoom around faster and turn on a dime",
-    effect: lvl => "+" + (lvl*14) + "% speed" },
+    effect: lvl => T("+{n}% speed", { n: lvl*14 }) },
   { id:"magnet", cat:"ship", name:"Tractor Beam", icon:"🧲", max:3, costs:costCurve(220,3),
     desc:"Coins, power-ups and rescue pods fly straight to you",
-    effect: lvl => (60 + lvl*68) + "px pull range" },
+    effect: lvl => T("{n}px pull range", { n: 60 + lvl*68 }) },
 
   { id:"fortune", cat:"extras", name:"Salvage Rig", icon:"💰", max:5, costs:costCurve(300,5),
     desc:"Everything you blow up drops more money. Get this early!",
-    effect: lvl => "+" + (lvl*15) + "% money" },
+    effect: lvl => T("+{n}% money", { n: lvl*15 }) },
   { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:costCurve(1200,2),
     desc:"Little robot buddies fly next to you and shoot too",
-    effect: lvl => lvl + (lvl===1 ? " drone" : " drones") },
+    effect: lvl => T(lvl===1 ? "{n} drone" : "{n} drones", { n: lvl }) },
   { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:costCurve(400,3),
     desc:"BOOM - wipes out the whole screen. Tap 💣 or press B",
-    effect: lvl => lvl + (lvl===1 ? " bomb per mission" : " bombs per mission") },
+    effect: lvl => T(lvl===1 ? "{n} bomb per mission" : "{n} bombs per mission", { n: lvl }) },
   { id:"overdrive", cat:"extras", name:"Overdrive", icon:"🔥", max:3, costs:costCurve(600,3),
     desc:"Super mode: double speed guns and double damage. Tap 🔥 or press V",
-    effect: lvl => lvl + " use" + (lvl===1?"":"s") + " · " + (4 + lvl) + "s each" },
+    effect: lvl => T(lvl===1 ? "{n} use · {s}s each" : "{n} uses · {s}s each", { n: lvl, s: 4 + lvl }) },
 ];
 const UPGRADE_BY_ID = {};
 UPGRADES.forEach(u => UPGRADE_BY_ID[u.id] = u);
