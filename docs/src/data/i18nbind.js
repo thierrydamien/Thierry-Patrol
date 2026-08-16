@@ -7,6 +7,12 @@
  * the fields with i18n.js, which rewrites them in place and keeps the
  * English so switching back is exact.
  *
+ * LOADS LATE, DELIBERATELY. Every table named below has to exist by the time
+ * this runs, and shipart is module 31 of 38 - registered from slot 11 this
+ * file silently bound nothing for the hulls, the tunes and the ship parts,
+ * which is why "Twin Barrels" stayed English through three passes of
+ * translation. It sits immediately before ui.js, which boots the language.
+ *
  * Separate from fr.js on purpose: this file says WHICH text is player-facing,
  * which is a fact about the game and not about French. A second language adds
  * a pack and touches nothing here.
@@ -36,6 +42,8 @@ Object.keys(M.OBJECTIVES || {}).forEach(k => I.bind(M.OBJECTIVES[k], ["label"]))
 (C.CATEGORIES || []).forEach(c => I.bind(c, ["name"]));
 if(SF.shipart && SF.shipart.HULLS)
   SF.shipart.HULLS.forEach(h => I.bind(h, ["name", "blurb"]));
+if(SF.shipart && SF.shipart.PARTS)
+  SF.shipart.PARTS.forEach(p => I.bind(p, ["name", "blurb"]));
 if(SF.shipart && SF.shipart.TUNES)
   SF.shipart.TUNES.forEach(t => I.bind(t, ["name", "blurb"]));
 

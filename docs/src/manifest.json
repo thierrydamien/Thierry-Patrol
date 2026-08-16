@@ -12,7 +12,6 @@
     "src/wacky.js",
     "src/data/comms.js",
     "src/data/story.js",
-    "src/data/i18nbind.js",
     "src/data/fr.js",
     "src/profile.js",
     "src/cloud.js",
@@ -38,6 +37,7 @@
     "src/comms.js",
     "src/game.js",
     "src/workshop.js",
+    "src/data/i18nbind.js",
     "src/ui.js"
   ]
 }

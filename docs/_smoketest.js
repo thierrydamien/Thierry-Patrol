@@ -7562,6 +7562,34 @@ async function run(){
              Object.keys(SF.enemyData.ENEMY_TYPES).every(k => bound.has(SF.enemyData.ENEMY_TYPES[k]));
     })());
 
+    /*
+     * THE BINDER HAS TO LOAD LAST. It registers tables from shipart, which is
+     * module 31 of 38 - and it sat at slot 11, so SF.shipart was undefined and
+     * the hulls, tunes and bolt-on parts silently bound NOTHING. "Twin
+     * Barrels" survived three passes of translation because of it. Nothing
+     * about that failure is visible except by looking, so it is pinned.
+     */
+    check("the binder loads after every table it names", (() => {
+      const man = JSON.parse(fs.readFileSync(path.join(__dirname, "src/manifest.json"), "utf8"));
+      const at = n => man.files.indexOf(n);
+      return at("src/data/i18nbind.js") > at("src/shipart.js") &&
+             at("src/data/i18nbind.js") > at("src/data/missions.js") &&
+             at("src/data/i18nbind.js") < at("src/ui.js");
+    })());
+    check("the ship's parts and hulls really are bound", (() => {
+      const bound = new Set(I._bound.map(b => b.obj));
+      return SF.shipart.PARTS.every(p2 => bound.has(p2)) &&
+             SF.shipart.HULLS.every(h => bound.has(h));
+    })());
+    /* Numbers are language too: French groups with a space and puts the
+       currency symbol after the amount. */
+    check("numbers and money follow the language", (() => {
+      const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      return /function numLocale\(\)/.test(u) &&
+             !/toLocaleString\("en-/.test(u) &&
+             /numLocale\(\) === "fr-FR" \? v \+ "\\u00a0£" : "£" \+ v/.test(u);
+    })());
+
     /* Nothing may be translated to empty - a blank button is worse than an
        English one, and it is the failure mode a bad merge produces. */
     check("no translation is blank", (() => {

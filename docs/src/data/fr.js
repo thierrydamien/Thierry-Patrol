@@ -976,5 +976,40 @@ SF.i18n.register("fr", { name: "Français", s: {
 "✓ DEFEATED": "✓ VAINCU",
 "Sector {n}": "Secteur {n}",
 
+/* ---------------- menu subtitles ----------------
+   Each menu button says what it is FOR right now, built from a live count.
+   Concatenations again, so none of them ever matched the dictionary. */
+"opens after Mission {n}": "débloqué après la mission {n}",
+"beat {who}'s {pts} pts": "bats les {pts} pts de {who}",
+"every flight is a surprise": "chaque vol est une surprise",
+"beat the Mission {n} boss first": "bats d'abord le boss de la mission {n}",
+"{n} boss in the queue · best {best} down": "{n} boss en file · record {best} abattu",
+"{n} bosses in the queue · best {best} down": "{n} boss en file · record {best} abattus",
+"{n} sky on the family board": "{n} ciel sur le tableau de famille",
+"{n} skies on the family board": "{n} ciels sur le tableau de famille",
+"draw a sky, dare the family": "dessine un ciel, défie la famille",
+"Next part: {part}": "Prochaine pièce : {part}",
+"Every part fitted": "Toutes les pièces montées",
+"Collect £{n}!": "Encaisse {n} £ !",
+"{n} of {total} earned": "{n} sur {total} obtenues",
+"{who} leads with {n} ★": "{who} mène avec {n} ★",
+"No one to race yet": "Personne à défier pour l'instant",
+
+/* ---------------- bolt-on ship parts ---------------- */
+"Twin Barrels": "Canons Jumelés",
+"Ion Nozzles": "Tuyères Ioniques",
+"Wing Guns": "Canons d'Aile",
+"Shield Generator": "Générateur de Bouclier",
+"Hull Plates": "Plaques de Coque",
+"Bomb Pods": "Nacelles à Bombes",
+"Tractor Dish": "Antenne Tractrice",
+"A second cannon on each side": "Un second canon de chaque côté",
+"A hotter, longer exhaust plume": "Un panache d'échappement plus chaud et plus long",
+"A gun pod bolted to each wing": "Une nacelle de tir boulonnée sous chaque aile",
+"A live containment ring around the hull": "Un anneau de confinement actif autour de la coque",
+"Angled armour down both flanks": "Un blindage incliné sur les deux flancs",
+"Underslung pods, one per bomb": "Des nacelles sous la coque, une par bombe",
+"A pulsing collector under the nose": "Un collecteur pulsant sous le nez",
+
 } });
 })();

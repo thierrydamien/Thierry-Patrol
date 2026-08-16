@@ -204,7 +204,18 @@ if(typeof window !== "undefined" && window.addEventListener){
 function $(id){ return document.getElementById(id); }
 function qa(sel){ return Array.from(document.querySelectorAll(sel)); }
 /** Prices run to six figures now, so they need separators to stay readable. */
-function money(n){ return "£" + Math.round(n).toLocaleString("en-GB"); }
+/*
+ * Numbers are language, too. Every tally in here was formatted "en-GB", so
+ * French read "5,100 pts" where it should be "5 100", and "£5,100" where a
+ * French reader expects the symbol AFTER the amount. Both follow the chosen
+ * language now - the locale for the grouping, and the order for the symbol.
+ */
+function numLocale(){ return SF.i18n && SF.i18n.lang() === "fr" ? "fr-FR" : "en-GB"; }
+function num(n){ return Number(n).toLocaleString(numLocale()); }
+function money(n){
+  const v = Math.round(n).toLocaleString(numLocale());
+  return numLocale() === "fr-FR" ? v + "\u00a0£" : "£" + v;
+}
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -590,39 +601,44 @@ function renderMenu(){
     $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("wackySub", !open ? "opens after Mission " + (WACKY_AFTER + 1)
+    setSub("wackySub", !open ? T("opens after Mission {n}", { n: WACKY_AFTER + 1 })
       : rivals.length
-        ? "beat " + (rivals[0].callsign || rivals[0].name) + "'s " +
-          rivals[0].endlessBest.toLocaleString("en-US") + " pts"
-        : "every flight is a surprise");
+        ? T("beat {who}'s {pts} pts", { who: rivals[0].callsign || rivals[0].name,
+                                        pts: rivals[0].endlessBest.toLocaleString(numLocale()) })
+        : T("every flight is a surprise"));
   }
   // Boss Rush opens once the first boss falls; the sub is the score to beat.
   {
     const bosses = RUSH_IDS.filter(id => profile.missions && profile.missions[id] &&
                                          profile.missions[id].cleared).length;
     $("rushBtn").classList.toggle("locked", bosses === 0);
-    setSub("rushSub", bosses === 0 ? "beat the Mission " + (RUSH_AFTER + 1) + " boss first"
-      : bosses + " boss" + (bosses > 1 ? "es" : "") + " in the queue · best " +
-        (profile.bossRushBest || 0) + " down");
+    setSub("rushSub", bosses === 0
+      ? T("beat the Mission {n} boss first", { n: RUSH_AFTER + 1 })
+      : T(bosses > 1 ? "{n} bosses in the queue · best {best} down"
+                     : "{n} boss in the queue · best {best} down",
+          { n: bosses, best: profile.bossRushBest || 0 }));
   }
   {
     const drawn = SF.workshop ? SF.workshop.familySkies().length : 0;
     setSub("workshopSub", drawn
-      ? drawn + " sk" + (drawn > 1 ? "ies" : "y") + " on the family board"
-      : "draw a sky, dare the family");
+      ? T(drawn > 1 ? "{n} skies on the family board" : "{n} sky on the family board",
+          { n: drawn })
+      : T("draw a sky, dare the family"));
   }
-  setSub("armorySub", part ? "Next part: " + part.name : "Every part fitted");
+  setSub("armorySub", part ? T("Next part: {part}", { part: part.name })
+                           : T("Every part fitted"));
   {
     const owed = P.unclaimedMedals(profile);
     setSub("medalsSub", owed.length
-      ? "Collect £" + owed.reduce((n,a)=>n+a.pay,0).toLocaleString("en-GB") + "!"
-      : profile.achievements.length + " of " + ACHIEVEMENTS.length + " earned");
+      ? T("Collect £{n}!", { n: owed.reduce((n,a)=>n+a.pay,0).toLocaleString(numLocale()) })
+      : T("{n} of {total} earned", { n: profile.achievements.length, total: ACHIEVEMENTS.length }));
   }
   const rows = P.listNames().map(P.load)
     .sort((a,b) => P.totalStars(b) - P.totalStars(a));
   setSub("champSub", rows.length > 1
-    ? (rows[0].callsign || rows[0].name) + " leads with " + P.totalStars(rows[0]) + " ★"
-    : "No one to race yet");
+    ? T("{who} leads with {n} ★", { who: rows[0].callsign || rows[0].name,
+                                    n: P.totalStars(rows[0]) })
+    : T("No one to race yet"));
   drawMenuIcons();
   if(SF.i18n) SF.i18n.sweep();
 }
@@ -4226,7 +4242,7 @@ function renderKit(){
     b.className = "kit-item" + (held ? " held" : "") + (!held && !canBuy ? " cant" : "");
     b.style.setProperty("--kit", def.color);
     b.innerHTML = `<span class="kit-name">${esc(def.label)}</span>` +
-                  `<span class="kit-cost">${held ? "\u00d7" + held + " ABOARD" : "\u00a3" + cost.toLocaleString("en-GB")}</span>`;
+                  `<span class="kit-cost">${held ? "\u00d7" + held + " ABOARD" : money(cost)}</span>`;
     click(b, () => {
       const k = profile.kit;
       // Tapping something you already bought puts it back and refunds it -
@@ -4435,14 +4451,14 @@ function renderAchievements(){
   $("achievementsCount").innerHTML =
     `<b>${owned.length}</b> of ${ACHIEVEMENTS.length} medals` +
     (unclaimed.length
-      ? ` · <b class="mh-owed">£${unclaimed.reduce((n,a)=>n+a.pay,0).toLocaleString("en-GB")}</b> to collect`
+      ? ` · <b class="mh-owed">${money(unclaimed.reduce((n,a)=>n+a.pay,0))}</b> to collect`
       : "");
 
   // Name the nearest thing still to win, so the screen is a to-do list rather
   // than a scoreboard of things that already happened.
   const next = ACHIEVEMENTS.find(a => !owned.includes(a.id));
   $("medalNext").innerHTML = next
-    ? `<span>NEXT UP</span>${esc(next.name)} — ${esc(next.desc)} · <b>£${next.pay.toLocaleString("en-GB")}</b>`
+    ? `<span>NEXT UP</span>${esc(next.name)} — ${esc(next.desc)} · <b>${money(next.pay)}</b>`
     : `<span>COMPLETE</span>Every medal earned. Nothing left to win.`;
 
   drawMedalRing(owned.length / ACHIEVEMENTS.length);
@@ -4460,9 +4476,9 @@ function renderAchievements(){
       <div class="medal-desc">${esc(a.desc)}</div>
       ${has
         ? (claimed
-            ? `<div class="medal-pay done">£${a.pay.toLocaleString("en-GB")} collected</div>`
-            : `<button class="medal-claim" data-medal="${a.id}">COLLECT £${a.pay.toLocaleString("en-GB")}</button>`)
-        : `<div class="medal-pay">worth £${a.pay.toLocaleString("en-GB")}</div>`}
+            ? `<div class="medal-pay done">${money(a.pay)} collected</div>`
+            : `<button class="medal-claim" data-medal="${a.id}">COLLECT ${money(a.pay)}</button>`)
+        : `<div class="medal-pay">worth ${money(a.pay)}</div>`}
     </div>`;
   }).join("");
 
@@ -4475,7 +4491,7 @@ function renderAchievements(){
       const paid = P.claimMedal(profile, btn.dataset.medal);
       if(paid > 0){
         audio.play("buy");
-        queueToast({ name: "+£" + paid.toLocaleString("en-GB") + " collected", label:"MEDAL PAID" });
+        queueToast({ name: "+£" + paid.toLocaleString(numLocale()) + " collected", label:"MEDAL PAID" });
         renderAchievements();
         renderMenu();
       }
@@ -4703,9 +4719,9 @@ function showResults(result){
     // A Wacky Sky run never fails - it just has a length and a score.
     const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
     sub.textContent = endlessNewBest
-      ? "NEW RECORD! " + run.score.toLocaleString("en-US") + " pts in " + m + ":" + s
-      : run.score.toLocaleString("en-US") + " pts in " + m + ":" + s +
-        " — your best is " + (profile.endlessBest || 0).toLocaleString("en-US");
+      ? "NEW RECORD! " + run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s
+      : run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s +
+        " — your best is " + (profile.endlessBest || 0).toLocaleString(numLocale());
   } else if(completed){
     failStreak = null;
     sub.textContent = stars === 3
@@ -4847,7 +4863,7 @@ function wackyRecordLine(){
   const top = rows[0];
   const mine = top.name === profile.name;
   return `<div class="rl record"><span>Wacky Sky crown</span><b>${mine ? "YOURS" :
-    esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString("en-US")} pts</b></div>`;
+    esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString(numLocale())} pts</b></div>`;
 }
 
 /**
@@ -4948,7 +4964,7 @@ function runCountUps(root){
     const k = 1 - Math.pow(1 - t, 3);
     els.forEach(el => {
       const v = Math.round(Number(el.dataset.countup) * k);
-      el.textContent = (el.dataset.prefix || "") + v.toLocaleString("en-GB");
+      el.textContent = (el.dataset.prefix || "") + v.toLocaleString(numLocale());
     });
     if(t < 1) requestAnimationFrame(step);
   };
@@ -4964,10 +4980,10 @@ function medalLines(unlocked){
   const list = unlocked || [];
   if(list.length > 2){
     const pay = list.reduce((a, m) => a + (m.pay || 0), 0);
-    return `<div class="rl record"><span>Medals earned</span><b>${list.length} at once! — collect £${pay.toLocaleString("en-GB")} in MEDALS</b></div>`;
+    return `<div class="rl record"><span>Medals earned</span><b>${list.length} at once! — collect ${money(pay)} in MEDALS</b></div>`;
   }
   return list.map(a =>
-    `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect £${(a.pay||0).toLocaleString("en-GB")} in MEDALS</b></div>`).join("");
+    `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect ${money((a.pay||0))} in MEDALS</b></div>`).join("");
 }
 
 function recordLine(run, prevBest){
