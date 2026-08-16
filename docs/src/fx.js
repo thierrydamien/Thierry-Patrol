@@ -20,6 +20,28 @@ const texts      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:-34,gravity:0,
                                      life:0,max:0.9,text:"",color:"#fff",size:14,bold:true,
                                      rise:false }), 80);
 const rings      = new Pool(() => ({ alive:false, x:0,y:0,life:0,max:0.45,r0:6,r1:60,color:"#fff",width:3,delay:0 }), 40);
+/*
+ * LIGHT SOURCES.
+ *
+ * An explosion used to emit particles and illuminate nothing - the world
+ * around it never noticed, which is most of the visible difference between
+ * "drawn effects" and "things happening in a place". A light is a position, a
+ * radius, a colour and a short life, drawn as an additive pool UNDER the ships
+ * (after the scenery, before the entities), so a kill briefly lights the dust
+ * around it, the canyon wall beside it, anything dark enough to catch it. The
+ * bright pixels then feed the lens glow for free: a light both illuminates and
+ * blooms.
+ *
+ * Deliberately NOT hooked to the guns. At ten shots a second a muzzle light is
+ * a 10Hz strobe, which is squarely inside the band Calmer Visuals exists to
+ * avoid. Explosions are events; triggers are not.
+ *
+ * Every light is spawned with FIXED parameters - no random draws. explosion()
+ * is called from the seeded kill path, and a light that rolled a number there
+ * would move every spawn point downstream of it.
+ */
+const lights     = new Pool(() => ({ alive:false, x:0,y:0, r:90, life:0, max:0.34,
+                                     color:"255,190,110", peak:0.34 }), 48);
 
 let shakeMag = 0, shakeDecay = 26;
 let flashAlpha = 0, flashColor = "255,60,80";
@@ -313,6 +335,9 @@ function sparksAt(x, y, n, color, speed){
  * `style` names one of DEATHS and is layered on top, never in place of.
  */
 function explosion(x, y, size, color, big, style){
+  // The kill lights its neighbourhood.
+  light(x, y, size*(big ? 3.1 : 2.3), big ? "255,200,130" : "255,184,116",
+        big ? 0.42 : 0.30, big ? 0.5 : 0.32);
   at(0.035, () => fireball(x, y, big ? 7 : 4, size));
   sparks(x, y, big ? 18 : 10, color, big ? 240 : 160);
   at(0.14, () => embers(x, y, big ? 10 : 5));
@@ -364,6 +389,14 @@ function firework(x, y, color){
   flash.x=x; flash.y=y; flash.life=0; flash.max=0.12; flash.size=26;
   flash.color="#ffffff"; flash.kind="flash"; flash.vx=0; flash.vy=0; flash.drag=1; flash.gravity=0;
   ring(x, y, 54, color, 2, 0.4);
+  light(x, y, 120, "255,220,170", 0.22, 0.45);   // the sky claps, and it glows
+}
+
+/** A light in the world: a warm pool that blooms fast and dies out. */
+function light(x, y, r, rgb, peak, max){
+  const L = lights.spawn();
+  L.x = x; L.y = y; L.r = r; L.life = 0;
+  L.max = max || 0.34; L.color = rgb || "255,190,110"; L.peak = peak || 0.32;
 }
 
 /** Muzzle flash: a four-point star, rotated a little every shot. */
@@ -616,7 +649,7 @@ function hitStop(ms){ hitStopUntil = Math.max(hitStopUntil, nowMs + ms); }
 function isHitStopped(){ return nowMs < hitStopUntil; }
 
 function reset(){
-  particles.killAll(); texts.killAll(); rings.killAll();
+  particles.killAll(); texts.killAll(); rings.killAll(); lights.killAll();
   shakeMag = 0; flashAlpha = 0; hitStopUntil = 0;
   cameraReset();
 }
@@ -626,6 +659,13 @@ function reset(){
    --------------------------------------------------------- */
 function update(dt, timeMs){
   nowMs = timeMs;
+  { const ls = lights.items;
+    for(let i=0;i<ls.length;i++){
+      const L = ls[i];
+      if(!L.alive) continue;
+      L.life += dt;
+      if(L.life >= L.max) L.alive = false;
+    } }
   cameraUpdate(dt);
   const items = particles.items;
   for(let i=0;i<items.length;i++){
@@ -722,6 +762,36 @@ const bloomGrad = (() => {
   }
   return c;
 })();
+
+/*
+ * The pools of light, additive, drawn between the scenery and the ships.
+ * Fast attack, long decay: full for the first fifth of the life, then a curve
+ * down - a flash that fades, not a bulb that switches. Calm mode keeps them at
+ * a little over half, the same deal the camera and the glow get.
+ */
+function drawLights(ctx){
+  const ls = lights.items;
+  let any = false;
+  for(let i=0;i<ls.length;i++) if(ls[i].alive){ any = true; break; }
+  if(!any) return;
+  const k = calmOn ? 0.55 : 1;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for(let i=0;i<ls.length;i++){
+    const L = ls[i];
+    if(!L.alive) continue;
+    const t = L.life / L.max;
+    const a = L.peak * (t < 0.2 ? t/0.2 : Math.pow(1 - (t - 0.2)/0.8, 1.7)) * k;
+    if(a <= 0.004) continue;
+    const g = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+    g.addColorStop(0, "rgba(" + L.color + "," + a.toFixed(3) + ")");
+    g.addColorStop(0.55, "rgba(" + L.color + "," + (a*0.35).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + L.color + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
 
 function drawParticles(ctx){
   const items = particles.items;
@@ -850,7 +920,14 @@ function drawParticles(ctx){
     const r = rs[i];
     if(!r.alive || r.delay > 0) continue;
     const t = r.life/r.max;
-    ctx.globalAlpha = (1-t)*0.85;
+    /*
+     * Fades FASTER than it grows. The radius runs on an easeOutCubic, so a
+     * linear fade left the ring at 70% opacity when it was already half its
+     * final size - a hard drawn circle rather than a shock dissipating. Now
+     * that the explosion also lights the ground around it, that was the one
+     * part of a blast still reading as an outline.
+     */
+    ctx.globalAlpha = Math.pow(1-t, 1.9)*0.85;
     ctx.strokeStyle = r.color;
     ctx.lineWidth = r.width*(1-t*0.6);
     ctx.beginPath();
@@ -935,7 +1012,8 @@ SF.fx = {
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
   calmEnabled, setCalmEnabled,
   glowEnabled, setGlowEnabled, glowActive, glowShed, glowWatch,
+  light, drawLights,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
-  _pools: { particles, texts, rings },
+  _pools: { particles, texts, rings, lights },
 };
 })();

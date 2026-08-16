@@ -17,28 +17,28 @@
  *     5459  src/profile.js
  *     6080  src/cloud.js
  *     6685  src/fx.js
- *     7629  src/input.js
- *     8040  src/entities.js
- *     9241  src/bossart.js
- *    10000  src/bosses.js
- *    10750  src/bossintro.js
- *    10873  src/rewind.js
- *    11395  src/finale.js
- *    11716  src/papadeath.js
- *    12038  src/backstage.js
- *    13241  src/sky29.js
- *    13482  src/systems.js
- *    14101  src/render.js
- *    18188  src/enemyart.js
- *    18934  src/insignia.js
- *    19179  src/skygen.js
- *    21441  src/shipart.js
- *    22519  src/paintjob.js
- *    22677  src/pilotart.js
- *    22772  src/comms.js
- *    22893  src/game.js
- *    26287  src/workshop.js
- *    26984  src/ui.js
+ *     7707  src/input.js
+ *     8118  src/entities.js
+ *     9319  src/bossart.js
+ *    10078  src/bosses.js
+ *    10828  src/bossintro.js
+ *    10951  src/rewind.js
+ *    11473  src/finale.js
+ *    11794  src/papadeath.js
+ *    12116  src/backstage.js
+ *    13319  src/sky29.js
+ *    13560  src/systems.js
+ *    14179  src/render.js
+ *    18378  src/enemyart.js
+ *    19124  src/insignia.js
+ *    19369  src/skygen.js
+ *    21674  src/shipart.js
+ *    22752  src/paintjob.js
+ *    22910  src/pilotart.js
+ *    23005  src/comms.js
+ *    23126  src/game.js
+ *    26521  src/workshop.js
+ *    27218  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6704,6 +6704,28 @@ const texts      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:-34,gravity:0,
                                      life:0,max:0.9,text:"",color:"#fff",size:14,bold:true,
                                      rise:false }), 80);
 const rings      = new Pool(() => ({ alive:false, x:0,y:0,life:0,max:0.45,r0:6,r1:60,color:"#fff",width:3,delay:0 }), 40);
+/*
+ * LIGHT SOURCES.
+ *
+ * An explosion used to emit particles and illuminate nothing - the world
+ * around it never noticed, which is most of the visible difference between
+ * "drawn effects" and "things happening in a place". A light is a position, a
+ * radius, a colour and a short life, drawn as an additive pool UNDER the ships
+ * (after the scenery, before the entities), so a kill briefly lights the dust
+ * around it, the canyon wall beside it, anything dark enough to catch it. The
+ * bright pixels then feed the lens glow for free: a light both illuminates and
+ * blooms.
+ *
+ * Deliberately NOT hooked to the guns. At ten shots a second a muzzle light is
+ * a 10Hz strobe, which is squarely inside the band Calmer Visuals exists to
+ * avoid. Explosions are events; triggers are not.
+ *
+ * Every light is spawned with FIXED parameters - no random draws. explosion()
+ * is called from the seeded kill path, and a light that rolled a number there
+ * would move every spawn point downstream of it.
+ */
+const lights     = new Pool(() => ({ alive:false, x:0,y:0, r:90, life:0, max:0.34,
+                                     color:"255,190,110", peak:0.34 }), 48);
 
 let shakeMag = 0, shakeDecay = 26;
 let flashAlpha = 0, flashColor = "255,60,80";
@@ -6997,6 +7019,9 @@ function sparksAt(x, y, n, color, speed){
  * `style` names one of DEATHS and is layered on top, never in place of.
  */
 function explosion(x, y, size, color, big, style){
+  // The kill lights its neighbourhood.
+  light(x, y, size*(big ? 3.1 : 2.3), big ? "255,200,130" : "255,184,116",
+        big ? 0.42 : 0.30, big ? 0.5 : 0.32);
   at(0.035, () => fireball(x, y, big ? 7 : 4, size));
   sparks(x, y, big ? 18 : 10, color, big ? 240 : 160);
   at(0.14, () => embers(x, y, big ? 10 : 5));
@@ -7048,6 +7073,14 @@ function firework(x, y, color){
   flash.x=x; flash.y=y; flash.life=0; flash.max=0.12; flash.size=26;
   flash.color="#ffffff"; flash.kind="flash"; flash.vx=0; flash.vy=0; flash.drag=1; flash.gravity=0;
   ring(x, y, 54, color, 2, 0.4);
+  light(x, y, 120, "255,220,170", 0.22, 0.45);   // the sky claps, and it glows
+}
+
+/** A light in the world: a warm pool that blooms fast and dies out. */
+function light(x, y, r, rgb, peak, max){
+  const L = lights.spawn();
+  L.x = x; L.y = y; L.r = r; L.life = 0;
+  L.max = max || 0.34; L.color = rgb || "255,190,110"; L.peak = peak || 0.32;
 }
 
 /** Muzzle flash: a four-point star, rotated a little every shot. */
@@ -7300,7 +7333,7 @@ function hitStop(ms){ hitStopUntil = Math.max(hitStopUntil, nowMs + ms); }
 function isHitStopped(){ return nowMs < hitStopUntil; }
 
 function reset(){
-  particles.killAll(); texts.killAll(); rings.killAll();
+  particles.killAll(); texts.killAll(); rings.killAll(); lights.killAll();
   shakeMag = 0; flashAlpha = 0; hitStopUntil = 0;
   cameraReset();
 }
@@ -7310,6 +7343,13 @@ function reset(){
    --------------------------------------------------------- */
 function update(dt, timeMs){
   nowMs = timeMs;
+  { const ls = lights.items;
+    for(let i=0;i<ls.length;i++){
+      const L = ls[i];
+      if(!L.alive) continue;
+      L.life += dt;
+      if(L.life >= L.max) L.alive = false;
+    } }
   cameraUpdate(dt);
   const items = particles.items;
   for(let i=0;i<items.length;i++){
@@ -7406,6 +7446,36 @@ const bloomGrad = (() => {
   }
   return c;
 })();
+
+/*
+ * The pools of light, additive, drawn between the scenery and the ships.
+ * Fast attack, long decay: full for the first fifth of the life, then a curve
+ * down - a flash that fades, not a bulb that switches. Calm mode keeps them at
+ * a little over half, the same deal the camera and the glow get.
+ */
+function drawLights(ctx){
+  const ls = lights.items;
+  let any = false;
+  for(let i=0;i<ls.length;i++) if(ls[i].alive){ any = true; break; }
+  if(!any) return;
+  const k = calmOn ? 0.55 : 1;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for(let i=0;i<ls.length;i++){
+    const L = ls[i];
+    if(!L.alive) continue;
+    const t = L.life / L.max;
+    const a = L.peak * (t < 0.2 ? t/0.2 : Math.pow(1 - (t - 0.2)/0.8, 1.7)) * k;
+    if(a <= 0.004) continue;
+    const g = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+    g.addColorStop(0, "rgba(" + L.color + "," + a.toFixed(3) + ")");
+    g.addColorStop(0.55, "rgba(" + L.color + "," + (a*0.35).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + L.color + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
 
 function drawParticles(ctx){
   const items = particles.items;
@@ -7534,7 +7604,14 @@ function drawParticles(ctx){
     const r = rs[i];
     if(!r.alive || r.delay > 0) continue;
     const t = r.life/r.max;
-    ctx.globalAlpha = (1-t)*0.85;
+    /*
+     * Fades FASTER than it grows. The radius runs on an easeOutCubic, so a
+     * linear fade left the ring at 70% opacity when it was already half its
+     * final size - a hard drawn circle rather than a shock dissipating. Now
+     * that the explosion also lights the ground around it, that was the one
+     * part of a blast still reading as an outline.
+     */
+    ctx.globalAlpha = Math.pow(1-t, 1.9)*0.85;
     ctx.strokeStyle = r.color;
     ctx.lineWidth = r.width*(1-t*0.6);
     ctx.beginPath();
@@ -7619,8 +7696,9 @@ SF.fx = {
   DEATHS, push, cameraApply, cameraZoom, cameraReset,
   calmEnabled, setCalmEnabled,
   glowEnabled, setGlowEnabled, glowActive, glowShed, glowWatch,
+  light, drawLights,
   update, shakeOffset, drawParticles, drawTexts, drawFlash,
-  _pools: { particles, texts, rings },
+  _pools: { particles, texts, rings, lights },
 };
 })();
 
@@ -14576,6 +14654,29 @@ function drawPlayer(ctx, p, timeMs){
   const overdrive = timeMs < p.overdriveUntil;
   const speed = Math.hypot(p.vx || 0, p.vy || 0);
 
+  /*
+   * The engine's own pool of light on the world. The wake ribbon says the ship
+   * is moving; this says it is BURNING - a soft warm floor-glow under the
+   * hull that anchors the ship into the sky instead of on top of it. Wall
+   * clock, cosmetic, and it flares with overdrive.
+   */
+  {
+    const glowR = size * (overdrive ? 1.5 : 1.05) * (1 + Math.min(1, speed/420)*0.22);
+    const beat = 0.86 + Math.sin(timeMs/110)*0.14;
+    const a = (overdrive ? 0.30 : 0.17) * beat * (SF.fx.calmEnabled() ? 0.55 : 1);
+    const gy = y + size*0.44;
+    const g = ctx.createRadialGradient(p.x, gy, 0, p.x, gy, glowR);
+    const rgb = overdrive ? "255,214,120" : "255,168,92";
+    g.addColorStop(0, "rgba(" + rgb + "," + a.toFixed(3) + ")");
+    g.addColorStop(0.5, "rgba(" + rgb + "," + (a*0.34).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + rgb + ",0)");
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(p.x, gy, glowR, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
   // Engine wake: an additive ribbon of light behind the ship, stretched by
   // how fast it's actually moving.
   ctx.save();
@@ -15461,6 +15562,32 @@ function drawAct4(ctx, run, world, timeMs){
     ctx.restore();
   }
 
+  /* --- THE NARROWS: weather ------------------------------------------------
+     Two or three big soft shadows crossing the canyon floor. Nothing says
+     "a planet, with a sun and a sky above it" like the ground going dark
+     because something unseen passed over - and it is three gradient fills.
+     Under the walls, so the rock is never dimmed by its own weather. */
+  if(run.narrows){
+    const t2 = (timeMs || 0)/1000;
+    ctx.save();
+    for(let i = 0; i < 3; i++){
+      const sp2 = 26 + i*11;
+      const cy2 = ((t2*sp2 + i*640) % (VH + 700)) - 240;
+      const cx2 = VW*(0.30 + 0.42*Math.sin(i*2.1 + t2*0.06));
+      const rw = VW*(0.44 + i*0.13), rh = 150 + i*70;
+      const g = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 1);
+      g.addColorStop(0, "rgba(0,0,0,0.30)");
+      g.addColorStop(0.55, "rgba(0,0,0,0.19)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.save();
+      ctx.translate(cx2, cy2); ctx.scale(rw, rh); ctx.translate(-cx2, -cy2);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx2, cy2, 1, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   /* --- THE NARROWS: the canyon --------------------------------------------
      The rock IS the collision - both come off `run.narrows.w`, so the wall
      that hurts is the wall you can see, to the pixel. Drawn as a ragged edge
@@ -15584,6 +15711,32 @@ function drawAct4(ctx, run, world, timeMs){
       ctx.stroke();
     });
     ctx.restore();
+    /*
+     * Dust IN the beam. Nothing sells "light travelling through air" like
+     * something for it to travel through - and on the one level whose whole
+     * identity is that beam it is worth the thirty specks. Positioned in the
+     * beam's OWN frame (distance along, angle across) so they ride the sweep
+     * instead of sitting still while it passes over them, and drawn from a
+     * fixed lattice rather than a random draw so they never flicker.
+     */
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(sp.pivotX, sp.pivotY);
+    ctx.rotate(sp.a);
+    const drift = (timeMs || 0) * 0.00004;
+    for(let i = 0; i < 30; i++){
+      const u = ((i*0.37 + drift) % 1);
+      const along = 90 + u*L*0.75;
+      const across = Math.sin(i*12.9898)*sp.half*0.82;
+      const dx = Math.cos(across)*along, dy = Math.sin(across)*along;
+      const fade = Math.sin(u*Math.PI);                 // dim at both ends
+      ctx.globalAlpha = (0.10 + (i % 3)*0.05) * fade * hot;
+      ctx.fillStyle = "#fff7d6";
+      const r = 1 + (i % 4)*0.5;
+      ctx.beginPath(); ctx.arc(dx, dy, r, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+
     // The lamp itself, so the beam comes from somewhere.
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
@@ -16880,8 +17033,45 @@ function drawBossIntro(ctx, timeMs){
   else if(beat.id === "rise") dark = 0.62 - beat.k*0.34;
   else if(beat.id === "out") dark = 0.28 * (1 - easeOutCubic(beat.k));
   else dark = 0.28;
-  ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
-  ctx.fillRect(0, 0, VW, VH);
+  /*
+   * ...with ONE hole in it, on the boss.
+   *
+   * The intro already darkened the world; this makes that dark a SPOTLIGHT
+   * rather than a dimmer - the arrival is lit and nothing else is, which is
+   * the oldest staging trick there is and exactly the grammar this cutscene
+   * already speaks (letterbox bars, a name card, a klaxon).
+   *
+   * A full-frame composite, and affordable precisely BECAUSE it is a
+   * cutscene: three seconds in which nothing is being dodged. Nothing during
+   * ordinary play may spend this - see the lens glow's watchdog for what it
+   * costs when the answer is wrong.
+   */
+  if(!darkCv){
+    darkCv = document.createElement("canvas");
+    darkCv.width = VW; darkCv.height = VH;
+    darkCtx = darkCv.getContext("2d");
+  }
+  if(darkCtx && dark > 0.01){
+    const c2 = darkCtx;
+    c2.globalCompositeOperation = "source-over";
+    c2.clearRect(0, 0, VW, VH);
+    c2.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+    c2.fillRect(0, 0, VW, VH);
+    c2.globalCompositeOperation = "destination-out";
+    // The pool opens as the hull comes down, so the light finds it arriving.
+    const grow = beat.id === "alarm" ? easeOutCubic(beat.k) : 1;
+    const rr = (boss.size || 120) * (1.5 + 0.5*grow);
+    const g2 = c2.createRadialGradient(boss.x, boss.y, rr*0.25, boss.x, boss.y, rr);
+    g2.addColorStop(0, "rgba(0,0,0,0.96)");
+    g2.addColorStop(0.6, "rgba(0,0,0,0.72)");
+    g2.addColorStop(1, "rgba(0,0,0,0)");
+    c2.fillStyle = g2;
+    c2.fillRect(boss.x - rr, boss.y - rr, rr*2, rr*2);
+    ctx.drawImage(darkCv, 0, 0);
+  } else {
+    ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+    ctx.fillRect(0, 0, VW, VH);
+  }
 
   ctx.textAlign = "center";
   if(beat.id === "alarm"){
@@ -21320,6 +21510,49 @@ function paint(sky, seed, W, H, dpr, wrap){
      whole pass - kept scenery dim but let stars and nebula shine straight
      through solid bodies, and every planet read as a ghost hologram. Same
      dimness, real occlusion; scenery still never competes with bullets. */
+  /* --- GOD RAYS -----------------------------------------------------------
+   *
+   * Shafts fanning out of the brighter core. The skies have had a light
+   * DIRECTION for a while - the planets, the rocks and the ring all obey it -
+   * and this is the first thing that makes that direction visible: you can
+   * see where the light in this place is coming from.
+   *
+   * Baked, so they cost nothing forever. Anchored ON the core and fading out
+   * along their length, because the lesson from the aurora's first draft is
+   * that a shaft floating in open sky reads as a grey bar, and what sells it
+   * is being visibly attached to something bright.
+   *
+   * Skipped on the surface sky (a canyon floor has no shafts across it) and
+   * on the near-black ones, where any addition is just fog.
+   */
+  if(!sky.surface && (sky.lum || 1) >= 0.75){
+    const core = cores[0].r >= cores[1].r ? cores[0] : cores[1];
+    const rays = 7;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(core.x, core.y);
+    const spin = rand()*TAU;
+    for(let i = 0; i < rays; i++){
+      const a2 = spin + (i/rays)*TAU + (rand()-0.5)*0.3;
+      const len = core.r*(1.5 + rand()*1.7);
+      const wide = 0.05 + rand()*0.075;                 // half-angle, radians
+      const g = ctx.createLinearGradient(0, 0, Math.cos(a2)*len, Math.sin(a2)*len);
+      const al = (0.05 + rand()*0.05) * Math.min(1.2, sky.lum || 1);
+      g.addColorStop(0,    rgba(sky.star, 0));
+      g.addColorStop(0.18, rgba(sky.star, al));
+      g.addColorStop(1,    rgba(sky.star, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a2 - wide)*len, Math.sin(a2 - wide)*len);
+      ctx.lineTo(Math.cos(a2 + wide)*len, Math.sin(a2 + wide)*len);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   const props = sky.props || [];
   if(props.length){
     if(!propLayer) propLayer = document.createElement("canvas");
@@ -26111,6 +26344,7 @@ function draw(timeMs){
   if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
+  fx.drawLights(ctx);                                // the world catches the fire
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);

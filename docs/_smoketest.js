@@ -3764,6 +3764,70 @@ async function run(){
     })());
   }
 
+  /* ---------- light in the world ---------- */
+  {
+    /*
+     * An explosion used to emit particles and illuminate nothing. These pin
+     * the three things that make a light a light rather than another sprite:
+     * a kill actually spawns one, they are drawn UNDER the ships (a light
+     * that covers what it lights is a veil), and Calmer Visuals softens them
+     * the way it softens the shake, the flash and the lens.
+     */
+    const live = () => SF.fx._pools.lights.items.filter(l => l.alive).length;
+    SF.fx.reset();
+    check("a kill lights the world around it", (() => {
+      const before = live();
+      SF.fx.explosion(200, 300, 60, "#ffb03d", true);
+      return live() > before;
+    })());
+    check("a light burns out", (() => {
+      for(let k = 0; k < 90; k++) SF.fx.update(1/60, k*16.7);
+      return live() === 0;
+    })());
+    check("the light goes under the ships, not over them", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const d = g.slice(g.indexOf("function draw(timeMs)"), g.indexOf("MAIN LOOP"));
+      const lit = d.indexOf("fx.drawLights(ctx)");
+      return lit > d.indexOf("SF.render.drawBackground") &&
+             lit < d.indexOf("SF.render.drawEnemies") &&
+             lit < d.indexOf("SF.render.drawPlayer");
+    })());
+    check("calmer visuals softens the light too", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const f = fs.readFileSync(path.join(__dirname, "src/fx.js"), "utf8");
+      const fn = f.slice(f.indexOf("function drawLights"), f.indexOf("function drawParticles"));
+      const m = fn.match(/calmOn \? ([0-9.]+) : 1/);
+      return !!m && Number(m[1]) > 0.3 && Number(m[1]) < 1 &&
+             /calmEnabled\(\) \? 0\.55 : 1/.test(r);      // the engine glow too
+    })());
+    /*
+     * Guns are NOT lights. At ten shots a second a muzzle light is a 10Hz
+     * strobe, which is inside the band Calmer Visuals exists to avoid.
+     */
+    check("the guns do not strobe the sky", (() => {
+      const f = fs.readFileSync(path.join(__dirname, "src/fx.js"), "utf8");
+      const fn = f.slice(f.indexOf("function muzzle"), f.indexOf("function text"));
+      return !/light\(/.test(fn);
+    })());
+    /* God rays are baked into the sky, so they cost nothing forever - and
+       they are skipped where they would be nonsense (a canyon floor) or fog
+       (a sky that is already almost black). */
+    check("the god rays are baked, and skip the ground", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+      return /GOD RAYS/.test(g) && /!sky\.surface && \(sky\.lum \|\| 1\) >= 0\.75/.test(g);
+    })());
+    /* The boss arrival is lit rather than merely dimmed - a full-frame pass
+       that is affordable only because nothing is being dodged during it. */
+    check("a boss arrives in a spotlight", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const s = r.indexOf("function drawBossIntro");
+      const fn = r.slice(s, r.indexOf("\nfunction ", s + 24));
+      return s > 0 && fn.length > 200 &&
+             /destination-out/.test(fn) && /boss\.x, boss\.y, rr/.test(fn);
+    })());
+    SF.fx.reset();
+  }
+
   /* ---------- the sky river actually carries things ---------- */
   {
     /*
@@ -6955,6 +7019,20 @@ async function run(){
       return C.rand(0, 1);
     });
     return after.length >= 5 && after.every(v => v === plain);
+  })());
+  /*
+   * ...and neither can the LIGHT it casts, for exactly the same reason. Every
+   * light is spawned with fixed parameters and no random draws, so an
+   * explosion lighting the world around it cannot move a spawn point three
+   * minutes later. Same seed, same next number, with the light in between.
+   */
+  check("an explosion's light cannot move the simulation", (() => {
+    const C = SF.core;
+    C.seedSim(4242); const before = C.rand(0, 1);
+    C.seedSim(4242); SF.fx.light(120, 200, 140, "255,200,130", 0.4, 0.5);
+    SF.fx.light(80, 90, 90);
+    const after = C.rand(0, 1);
+    return before === after;
   })());
 
   /* ---------- report ---------- */

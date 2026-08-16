@@ -2142,6 +2142,49 @@ function paint(sky, seed, W, H, dpr, wrap){
      whole pass - kept scenery dim but let stars and nebula shine straight
      through solid bodies, and every planet read as a ghost hologram. Same
      dimness, real occlusion; scenery still never competes with bullets. */
+  /* --- GOD RAYS -----------------------------------------------------------
+   *
+   * Shafts fanning out of the brighter core. The skies have had a light
+   * DIRECTION for a while - the planets, the rocks and the ring all obey it -
+   * and this is the first thing that makes that direction visible: you can
+   * see where the light in this place is coming from.
+   *
+   * Baked, so they cost nothing forever. Anchored ON the core and fading out
+   * along their length, because the lesson from the aurora's first draft is
+   * that a shaft floating in open sky reads as a grey bar, and what sells it
+   * is being visibly attached to something bright.
+   *
+   * Skipped on the surface sky (a canyon floor has no shafts across it) and
+   * on the near-black ones, where any addition is just fog.
+   */
+  if(!sky.surface && (sky.lum || 1) >= 0.75){
+    const core = cores[0].r >= cores[1].r ? cores[0] : cores[1];
+    const rays = 7;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(core.x, core.y);
+    const spin = rand()*TAU;
+    for(let i = 0; i < rays; i++){
+      const a2 = spin + (i/rays)*TAU + (rand()-0.5)*0.3;
+      const len = core.r*(1.5 + rand()*1.7);
+      const wide = 0.05 + rand()*0.075;                 // half-angle, radians
+      const g = ctx.createLinearGradient(0, 0, Math.cos(a2)*len, Math.sin(a2)*len);
+      const al = (0.05 + rand()*0.05) * Math.min(1.2, sky.lum || 1);
+      g.addColorStop(0,    rgba(sky.star, 0));
+      g.addColorStop(0.18, rgba(sky.star, al));
+      g.addColorStop(1,    rgba(sky.star, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a2 - wide)*len, Math.sin(a2 - wide)*len);
+      ctx.lineTo(Math.cos(a2 + wide)*len, Math.sin(a2 + wide)*len);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   const props = sky.props || [];
   if(props.length){
     if(!propLayer) propLayer = document.createElement("canvas");

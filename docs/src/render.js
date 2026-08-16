@@ -476,6 +476,29 @@ function drawPlayer(ctx, p, timeMs){
   const overdrive = timeMs < p.overdriveUntil;
   const speed = Math.hypot(p.vx || 0, p.vy || 0);
 
+  /*
+   * The engine's own pool of light on the world. The wake ribbon says the ship
+   * is moving; this says it is BURNING - a soft warm floor-glow under the
+   * hull that anchors the ship into the sky instead of on top of it. Wall
+   * clock, cosmetic, and it flares with overdrive.
+   */
+  {
+    const glowR = size * (overdrive ? 1.5 : 1.05) * (1 + Math.min(1, speed/420)*0.22);
+    const beat = 0.86 + Math.sin(timeMs/110)*0.14;
+    const a = (overdrive ? 0.30 : 0.17) * beat * (SF.fx.calmEnabled() ? 0.55 : 1);
+    const gy = y + size*0.44;
+    const g = ctx.createRadialGradient(p.x, gy, 0, p.x, gy, glowR);
+    const rgb = overdrive ? "255,214,120" : "255,168,92";
+    g.addColorStop(0, "rgba(" + rgb + "," + a.toFixed(3) + ")");
+    g.addColorStop(0.5, "rgba(" + rgb + "," + (a*0.34).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + rgb + ",0)");
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(p.x, gy, glowR, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
   // Engine wake: an additive ribbon of light behind the ship, stretched by
   // how fast it's actually moving.
   ctx.save();
@@ -1361,6 +1384,32 @@ function drawAct4(ctx, run, world, timeMs){
     ctx.restore();
   }
 
+  /* --- THE NARROWS: weather ------------------------------------------------
+     Two or three big soft shadows crossing the canyon floor. Nothing says
+     "a planet, with a sun and a sky above it" like the ground going dark
+     because something unseen passed over - and it is three gradient fills.
+     Under the walls, so the rock is never dimmed by its own weather. */
+  if(run.narrows){
+    const t2 = (timeMs || 0)/1000;
+    ctx.save();
+    for(let i = 0; i < 3; i++){
+      const sp2 = 26 + i*11;
+      const cy2 = ((t2*sp2 + i*640) % (VH + 700)) - 240;
+      const cx2 = VW*(0.30 + 0.42*Math.sin(i*2.1 + t2*0.06));
+      const rw = VW*(0.44 + i*0.13), rh = 150 + i*70;
+      const g = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 1);
+      g.addColorStop(0, "rgba(0,0,0,0.30)");
+      g.addColorStop(0.55, "rgba(0,0,0,0.19)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.save();
+      ctx.translate(cx2, cy2); ctx.scale(rw, rh); ctx.translate(-cx2, -cy2);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx2, cy2, 1, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   /* --- THE NARROWS: the canyon --------------------------------------------
      The rock IS the collision - both come off `run.narrows.w`, so the wall
      that hurts is the wall you can see, to the pixel. Drawn as a ragged edge
@@ -1484,6 +1533,32 @@ function drawAct4(ctx, run, world, timeMs){
       ctx.stroke();
     });
     ctx.restore();
+    /*
+     * Dust IN the beam. Nothing sells "light travelling through air" like
+     * something for it to travel through - and on the one level whose whole
+     * identity is that beam it is worth the thirty specks. Positioned in the
+     * beam's OWN frame (distance along, angle across) so they ride the sweep
+     * instead of sitting still while it passes over them, and drawn from a
+     * fixed lattice rather than a random draw so they never flicker.
+     */
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(sp.pivotX, sp.pivotY);
+    ctx.rotate(sp.a);
+    const drift = (timeMs || 0) * 0.00004;
+    for(let i = 0; i < 30; i++){
+      const u = ((i*0.37 + drift) % 1);
+      const along = 90 + u*L*0.75;
+      const across = Math.sin(i*12.9898)*sp.half*0.82;
+      const dx = Math.cos(across)*along, dy = Math.sin(across)*along;
+      const fade = Math.sin(u*Math.PI);                 // dim at both ends
+      ctx.globalAlpha = (0.10 + (i % 3)*0.05) * fade * hot;
+      ctx.fillStyle = "#fff7d6";
+      const r = 1 + (i % 4)*0.5;
+      ctx.beginPath(); ctx.arc(dx, dy, r, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+
     // The lamp itself, so the beam comes from somewhere.
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
@@ -2780,8 +2855,45 @@ function drawBossIntro(ctx, timeMs){
   else if(beat.id === "rise") dark = 0.62 - beat.k*0.34;
   else if(beat.id === "out") dark = 0.28 * (1 - easeOutCubic(beat.k));
   else dark = 0.28;
-  ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
-  ctx.fillRect(0, 0, VW, VH);
+  /*
+   * ...with ONE hole in it, on the boss.
+   *
+   * The intro already darkened the world; this makes that dark a SPOTLIGHT
+   * rather than a dimmer - the arrival is lit and nothing else is, which is
+   * the oldest staging trick there is and exactly the grammar this cutscene
+   * already speaks (letterbox bars, a name card, a klaxon).
+   *
+   * A full-frame composite, and affordable precisely BECAUSE it is a
+   * cutscene: three seconds in which nothing is being dodged. Nothing during
+   * ordinary play may spend this - see the lens glow's watchdog for what it
+   * costs when the answer is wrong.
+   */
+  if(!darkCv){
+    darkCv = document.createElement("canvas");
+    darkCv.width = VW; darkCv.height = VH;
+    darkCtx = darkCv.getContext("2d");
+  }
+  if(darkCtx && dark > 0.01){
+    const c2 = darkCtx;
+    c2.globalCompositeOperation = "source-over";
+    c2.clearRect(0, 0, VW, VH);
+    c2.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+    c2.fillRect(0, 0, VW, VH);
+    c2.globalCompositeOperation = "destination-out";
+    // The pool opens as the hull comes down, so the light finds it arriving.
+    const grow = beat.id === "alarm" ? easeOutCubic(beat.k) : 1;
+    const rr = (boss.size || 120) * (1.5 + 0.5*grow);
+    const g2 = c2.createRadialGradient(boss.x, boss.y, rr*0.25, boss.x, boss.y, rr);
+    g2.addColorStop(0, "rgba(0,0,0,0.96)");
+    g2.addColorStop(0.6, "rgba(0,0,0,0.72)");
+    g2.addColorStop(1, "rgba(0,0,0,0)");
+    c2.fillStyle = g2;
+    c2.fillRect(boss.x - rr, boss.y - rr, rr*2, rr*2);
+    ctx.drawImage(darkCv, 0, 0);
+  } else {
+    ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(2) + ")";
+    ctx.fillRect(0, 0, VW, VH);
+  }
 
   ctx.textAlign = "center";
   if(beat.id === "alarm"){

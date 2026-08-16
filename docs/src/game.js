@@ -3219,6 +3219,7 @@ function draw(timeMs){
   if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
+  fx.drawLights(ctx);                                // the world catches the fire
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
