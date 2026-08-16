@@ -851,54 +851,285 @@ function drawMine(ctx, e, size, t){
 
 /* Rocks are drawn, not sprited: the enemy art is a ship, and a tumbling
    ship reads as a bug. A fixed seed per rock keeps its outline stable. */
+/*
+ * ROCKS.
+ *
+ * The old asteroid was drawn live every frame: a nine-sided near-circle with
+ * a flat grey gradient, a 5px cartoon outline, and THREE CRATERS AT FIXED
+ * COORDINATES. Every rock in the game was therefore the same rock, wearing
+ * the same three dots in the same three places, brighter than the sky it sat
+ * in. Held still side by side they were indistinguishable.
+ *
+ * Now: six baked variants per class, each with its own silhouette, its own
+ * regolith mottling and its own craters. Baking is what makes the detail
+ * affordable - a live rock could never pay for two hundred texture blobs,
+ * and detail is the entire difference between a rock and a grey polygon.
+ *
+ * The light is baked in local space, so it turns with the rock. That is a
+ * deliberate borrow from the coin, which spins its own baked glint: at these
+ * sizes, under this much surface texture, the eye reads tumbling stone and
+ * cannot pick out which side the sun is on. The alternative - world-fixed
+ * light - costs either a full-frame scratch composite per rock per frame or
+ * ~20MB of pre-rotated sprites, and buys nothing anybody can see.
+ */
+const rockCache = {};
+const ROCK_VARIANTS = 6;
+/*
+ * Rocks bake BELOW device resolution on purpose. Measured, A/B, same scene
+ * and machine, 15 rocks on screen: the old live-drawn polygons cost 1.5ms a
+ * frame and the first cut of these cost 7.6ms - a rotated, alpha-blended
+ * texture sample per covered pixel is simply dearer than a gradient fill of
+ * a small path, which is the opposite of what I assumed when I baked them.
+ *
+ * Halving the bake quarters that pixel work. A rock is mottled noise and
+ * soft-edged craters, so it is the one asset in the game that loses almost
+ * nothing to it - unlike text, or the hairline silhouettes on the ships.
+ */
+const ROCK_BAKE = Math.min(BAKE, 1.15);
+/* Art, not simulation: its own stream, so a variant is the same rock on
+   every device and in every session, and it never touches the seeded one. */
+function rockRng(seed){
+  let s = ((seed*2654435761) >>> 0) || 1;
+  return function(){ s = (s*1664525 + 1013904223) >>> 0; return s/4294967296; };
+}
+
+function rockSprite(tough, variant){
+  const key = (tough ? "t" : "s") + variant;
+  if(rockCache[key]) return rockCache[key];
+  const D = tough ? 168 : 96;                       // logical sprite box
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = Math.ceil(D*ROCK_BAKE);
+  const c = cv.getContext("2d");
+  if(!c) return null;
+  c.scale(ROCK_BAKE, ROCK_BAKE);
+  const rnd = rockRng(variant*131 + (tough ? 7919 : 104729));
+  const cx = D/2, cy = D/2, RMAX = D/2 - 2;
+
+  /* --- silhouette ------------------------------------------------------
+     A sum of harmonics, normalised so the widest point just fits the box.
+     The old shape wobbled by a fixed +-19% around a circle, which is why
+     every rock read as the same lumpy heptagon; four harmonics with random
+     phases give lobes, flats and the occasional pinch. */
+  const harm = [];
+  const AMP = [0.085, 0.072, 0.052, 0.038];
+  for(let i=0;i<4;i++)
+    harm.push({ k: 2 + i*(tough ? 2 : 1) + Math.floor(rnd()*2),
+                amp: AMP[i]*(0.6 + rnd()*0.8), ph: rnd()*TAU });
+  // Floored well above zero: the first pass let the harmonics stack into a
+  // deep pinch and both boulders came out heart-shaped. A rock is a lump.
+  const profile = a => {
+    let v = 1;
+    for(let i=0;i<harm.length;i++) v += Math.cos(a*harm[i].k + harm[i].ph)*harm[i].amp;
+    return Math.max(0.74, v);
+  };
+  let peak = 0;
+  for(let i=0;i<180;i++) peak = Math.max(peak, profile(i/180*TAU));
+  const rad = a => profile(a)/peak*RMAX;
+  // Faceted, not smooth: stone breaks along flats.
+  const verts = tough ? 15 : 11;
+  const path = () => {
+    c.beginPath();
+    for(let n=0;n<verts;n++){
+      const a = n/verts*TAU, r = rad(a);
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      if(n === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.closePath();
+  };
+
+  /* --- body ------------------------------------------------------------
+     Darker and warmer than the old pale slate, which out-shone every sky it
+     was ever placed against. Each variant shifts hue slightly so a field of
+     rocks is a field of different rocks. */
+  // Every rock keeps a WARM floor. The first pass let `warm` run to zero and
+  // the neutral variants came out chalk-grey and brighter than the sky they
+  // sat in - the exact fault the old asteroid had. Stone here is always some
+  // kind of brown, and always darker than the sky's bright regions.
+  // A boulder is the SAME STONE as an asteroid, only bigger and older. The
+  // tough branch used to add blue, which drained the warmth out of exactly
+  // the two rocks that fill the most screen - they read as a different and
+  // worse material sitting next to the small ones. Size and wear separate
+  // the classes now; colour does not.
+  const warm = 0.55 + rnd()*0.45;
+  const tint = (l) => {
+    const r = Math.round(l*(1 + warm*0.26)), g = Math.round(l*(1 + warm*0.02)),
+          b = Math.round(l*(1 - warm*0.32));
+    return "rgb(" + Math.min(255,r) + "," + Math.min(255,g) + "," + Math.min(255,b) + ")";
+  };
+  c.save();
+  path(); c.clip();
+  const body = c.createLinearGradient(cx - RMAX*0.75, cy - RMAX*0.8, cx + RMAX*0.7, cy + RMAX*0.85);
+  body.addColorStop(0,    tint(tough ?  94 : 108));
+  body.addColorStop(0.45, tint(tough ?  58 :  70));
+  body.addColorStop(1,    tint(tough ?  24 :  32));
+  c.fillStyle = body;
+  c.fillRect(0, 0, D, D);
+
+  // Regolith. Two hundred soft blobs, half lighter and half darker, is what
+  // turns a fill into a surface - and it is free, because it is baked.
+  const blobs = tough ? 230 : 150;
+  for(let i=0;i<blobs;i++){
+    const a = rnd()*TAU, d = Math.sqrt(rnd())*RMAX*1.02;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    const r = RMAX*(0.035 + rnd()*0.12);
+    const up = rnd() < 0.45;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, up ? "rgba(255,247,236,0.07)" : "rgba(18,14,12,0.15)");
+    g.addColorStop(1, up ? "rgba(255,247,236,0)"    : "rgba(18,14,12,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  }
+  // A few broad darker plains, so the texture has structure and not just noise.
+  for(let i=0;i<3;i++){
+    const a = rnd()*TAU, d = rnd()*RMAX*0.5;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d, r = RMAX*(0.3 + rnd()*0.35);
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(22,17,14,0.20)");
+    g.addColorStop(1, "rgba(22,17,14,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  }
+
+  /* --- craters ---------------------------------------------------------
+     A crater is a BOWL, so it lights backwards from a ball: the wall on the
+     sunward side is the one in shadow, and the far wall is the one lit. The
+     old version drew a dark disc with a lighter disc offset the same way a
+     sphere would highlight, which is why they read as bubbles or rivets.
+     Light here is upper-left, matching the body gradient above. */
+  const LX = -0.62, LY = -0.78;
+  /*
+   * Placed with a minimum separation. Left to pure chance the bowls piled on
+   * top of each other and their rims read as overlapping soap bubbles - a
+   * cell diagram, not a surface. Rejection sampling is cheap at bake time,
+   * and a few well-spaced craters beat a dozen fighting for the same spot.
+   */
+  const nCraters = (tough ? 5 : 3) + Math.floor(rnd()*3);
+  const placed = [];
+  for(let i=0;i<nCraters;i++){
+    let x = 0, y = 0, r = 0, ok = false;
+    for(let tryN=0; tryN<14 && !ok; tryN++){
+      const a = rnd()*TAU, d = Math.sqrt(rnd())*RMAX*0.62;
+      x = cx + Math.cos(a)*d; y = cy + Math.sin(a)*d;
+      r = RMAX*(0.07 + rnd()*(tough ? 0.11 : 0.10));
+      ok = true;
+      for(let p=0;p<placed.length;p++){
+        const o = placed[p];
+        if(Math.hypot(x-o.x, y-o.y) < (r + o.r)*1.25){ ok = false; break; }
+      }
+    }
+    if(!ok) continue;
+    placed.push({ x, y, r });
+    // Nearly round. Squashed to 0.66 the bowls came out as long ovals with a
+    // bright crescent down one edge, and a cluster of them read as thumbprints
+    // pressed into the rock.
+    const squash = 0.84 + rnd()*0.16, rot = rnd()*TAU;
+    c.save();
+    c.translate(x, y); c.rotate(rot); c.scale(1, squash);
+    // Raised rim: catches light on the sunward side, casts on the other.
+    // Kept faint - at 0.30 the lit arc read as a drawn circle, which is what
+    // turned a field of craters into a field of rings.
+    const rim = c.createLinearGradient(LX*r*1.2, LY*r*1.2, -LX*r*1.2, -LY*r*1.2);
+    rim.addColorStop(0,   "rgba(255,246,232,0.15)");
+    rim.addColorStop(0.5, "rgba(255,246,232,0)");
+    rim.addColorStop(1,   "rgba(14,10,8,0.17)");
+    c.fillStyle = rim;
+    c.beginPath(); c.arc(0, 0, r*1.14, 0, TAU); c.fill();
+    // The bowl, lit backwards.
+    const bowl = c.createLinearGradient(LX*r, LY*r, -LX*r, -LY*r);
+    bowl.addColorStop(0,   "rgba(10,7,6,0.40)");
+    bowl.addColorStop(0.62,"rgba(10,7,6,0.12)");
+    bowl.addColorStop(1,   "rgba(255,244,228,0.12)");
+    c.fillStyle = bowl;
+    c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.restore();
+  }
+
+  /* --- form ------------------------------------------------------------
+     One broad terminator across the whole body and a dark inner limb all
+     round. The limb is what lets the outline drop from a 5px ink stroke to
+     a hairline: the rock now ends because it gets dark, not because someone
+     drew a border on it. */
+  const term = c.createLinearGradient(cx + LX*RMAX, cy + LY*RMAX, cx - LX*RMAX, cy - LY*RMAX);
+  term.addColorStop(0,    "rgba(255,240,220,0.13)");
+  term.addColorStop(0.42, "rgba(0,0,0,0)");
+  term.addColorStop(1,    "rgba(6,5,9,0.55)");
+  c.fillStyle = term; c.fillRect(0, 0, D, D);
+  const limb = c.createRadialGradient(cx, cy, RMAX*0.55, cx, cy, RMAX);
+  limb.addColorStop(0, "rgba(6,5,9,0)");
+  limb.addColorStop(1, "rgba(6,5,9,0.5)");
+  c.fillStyle = limb; c.fillRect(0, 0, D, D);
+  c.restore();                                       // drop the clip
+
+  // Hairline, only enough to hold the silhouette against a bright sky.
+  path();
+  c.strokeStyle = "rgba(10,8,14,0.75)";
+  c.lineWidth = tough ? 1.6 : 1.3;
+  c.stroke();
+
+  rockCache[key] = cv;
+  return cv;
+}
+
 function drawAsteroid(ctx, e, size){
   const R = size*0.5;
+  // Stable per rock, varied across the field, and it costs no new pooled
+  // field and no seeded draw: spinRate is already rolled once per spawn.
+  const variant = Math.floor(Math.abs((e.spinRate || 0.37)*997)) % ROCK_VARIANTS;
+  const spr = rockSprite(!!e.type.tough, variant);
   ctx.save();
   ctx.translate(e.x, e.y);
   ctx.rotate(e.spin || 0);
-  // Lit from the upper left, like everything else on screen, so a rock reads
-  // as a solid lump rather than a flat grey polygon.
-  const lit = ctx.createLinearGradient(-R*0.7, -R*0.7, R*0.6, R*0.7);
-  lit.addColorStop(0, "#9aa4b4");
-  lit.addColorStop(0.55, "#6b7280");
-  lit.addColorStop(1, "#3f4653");
-  ctx.fillStyle = lit;
-  ctx.strokeStyle = e.type.tough ? "rgba(8,11,18,0.95)" : "rgba(12,16,26,0.85)";
-  ctx.lineWidth = Math.max(1.5, R*(e.type.tough ? 0.055 : 0.07));
-  ctx.beginPath();
-  const verts = e.type.tough ? 13 : 9;
-  for(let n=0;n<verts;n++){
-    const a = n/verts*TAU;
-    const wob = 0.74 + ((Math.sin(n*12.9898 + e.spinRate*78.233)*43758.5453) % 1 + 1) % 1 * 0.38;
-    const x = Math.cos(a)*R*wob, y = Math.sin(a)*R*wob;
-    if(n === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  if(spr){
+    // 1.12 keeps the drawn footprint exactly where the old polygon's widest
+    // vertex sat, so nothing about reading the field changes.
+    const d = size*1.12;
+    ctx.drawImage(spr, -d/2, -d/2, d, d);
+  } else {
+    ctx.fillStyle = "#6b7280";
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
   }
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  [[0.28,-0.2,0.20],[-0.3,0.14,0.15],[0.06,0.34,0.12]].forEach(([cx,cy,cr]) => {
-    ctx.fillStyle = "rgba(28,34,48,0.5)";         // crater floor
-    ctx.beginPath(); ctx.arc(cx*R, cy*R, cr*R, 0, TAU); ctx.fill();
-    ctx.fillStyle = "rgba(190,200,215,0.22)";     // and its lit rim
-    ctx.beginPath(); ctx.arc(cx*R - cr*R*0.22, cy*R - cr*R*0.26, cr*R*0.72, 0, TAU); ctx.fill();
-  });
   // Cracks open up as it takes damage, so a boulder visibly comes apart
-  // rather than just having a bar tick down.
+  // rather than just having a bar tick down. Drawn live because they track
+  // hp - a dark fissure with a lit lip along one side, so it reads as the
+  // rock splitting rather than as biro on the sprite.
   const wear = 1 - clamp(e.hp/e.maxHp, 0, 1);
   if(wear > 0.15){
-    ctx.strokeStyle = "rgba(16,21,32," + Math.min(0.85, 0.3 + wear*0.6) + ")";
-    ctx.lineWidth = Math.max(1, R*0.035);
-    ctx.lineCap = "round";
+    const rr = rockRng(variant*31 + 7);
     const cracks = wear > 0.6 ? 3 : wear > 0.35 ? 2 : 1;
-    for(let c=0;c<cracks;c++){
-      const a0 = (c/3)*TAU + (e.spinRate||0);
-      // Kept well inside the silhouette so they read as fractures in the rock
-      // rather than scratches drawn over the top of it.
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a0)*R*0.66, Math.sin(a0)*R*0.66);
-      ctx.lineTo(Math.cos(a0+0.55)*R*0.18, Math.sin(a0+0.55)*R*0.18);
-      ctx.lineTo(Math.cos(a0+1.5)*R*0.60, Math.sin(a0+1.5)*R*0.60);
-      ctx.stroke();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for(let c2=0;c2<cracks;c2++){
+      const a0 = rr()*TAU, span = 1.1 + rr()*1.0;
+      const pts = [];
+      for(let s=0;s<=4;s++){
+        const t2 = s/4;
+        const a = a0 + span*t2;
+        // Out from a point near the middle toward the limb, wandering as it
+        // goes - but kept inside 0.72R so a fissure never leaves the stone.
+        const rad2 = Math.min(R*0.72, R*(0.10 + t2*0.56)*(0.85 + rr()*0.30));
+        pts.push([Math.cos(a)*rad2, Math.sin(a)*rad2]);
+      }
+      const trace = () => {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for(let s=1;s<pts.length;s++) ctx.lineTo(pts[s][0], pts[s][1]);
+      };
+      /*
+       * The lit lip - offset toward the light - is what turns a dark line
+       * into a split in the stone. It only earns its place on a big rock:
+       * on a 74px asteroid the lip and the fissure are each about a pixel
+       * and land on top of each other, and two muddled greys read worse
+       * than one clean dark line.
+       */
+      if(R > 45){
+        ctx.strokeStyle = "rgba(255,240,220," + (0.16 + wear*0.22).toFixed(2) + ")";
+        ctx.lineWidth = Math.max(1, R*0.030);
+        ctx.save(); ctx.translate(-R*0.034, -R*0.040); trace(); ctx.stroke(); ctx.restore();
+      }
+      ctx.strokeStyle = "rgba(9,7,12," + Math.min(0.9, 0.44 + wear*0.5).toFixed(2) + ")";
+      ctx.lineWidth = Math.max(1.2, R*(R > 45 ? 0.038 : 0.052));
+      trace(); ctx.stroke();
     }
-    ctx.lineCap = "butt";
+    ctx.lineCap = "butt"; ctx.lineJoin = "miter";
   }
   ctx.restore();
   if(e.flash > 0){
@@ -4240,5 +4471,18 @@ SF.render = {
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,
   tinted,
+  // Exposed so the suite can prove the rocks are actually distinct sprites
+  // rather than one shape drawn six times, and so the cost of baking them
+  // can be measured rather than assumed.
+  _rockBakeAll: () => {
+    let n = 0;
+    for(let v=0; v<ROCK_VARIANTS; v++){
+      if(rockSprite(false, v)) n++;
+      if(rockSprite(true, v)) n++;
+    }
+    return n;
+  },
+  _rockSprite: rockSprite,
+  ROCK_VARIANTS,
 };
 })();

@@ -7118,6 +7118,148 @@ async function run(){
     SF.fx.reset();
   }
 
+  /* ---------- rocks are rocks, and each one is its own rock ---------- */
+  {
+    const RD = SF.render;
+    /* Baking runs off its own art stream. Run this FIRST, while the sprite
+       cache is still cold, or it proves nothing but that a cache hit is
+       cheap. */
+    check("baking a rock cannot move the simulation", (() => {
+      const C = SF.core;
+      C.seedSim(3131); const before = C.rand(0, 1);
+      C.seedSim(3131); RD._rockBakeAll();
+      return C.rand(0, 1) === before;
+    })());
+
+    /*
+     * The suite's shared canvas is a no-op stub whose getImageData hands back
+     * a zero-filled buffer, so measuring the game's OWN sprites here would
+     * pass whatever it was asked - the first cut of these pins was green
+     * against nothing. Same escape as the planet pins above: re-run the
+     * baker in a private instance backed by node-canvas, and fall through
+     * vacuously only when the native dep is genuinely absent.
+     */
+    let RK = null;
+    try {
+      const NC2 = require("canvas");
+      const src = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const seg = src.slice(src.indexOf("const rockCache = {};"),
+                            src.indexOf("function drawAsteroid(ctx, e, size){"));
+      RK = new Function("document", "BAKE", "TAU",
+        seg + "\nreturn { rockSprite: rockSprite, ROCK_VARIANTS: ROCK_VARIANTS };"
+      )({ createElement: () => NC2.createCanvas(1, 1) }, 2, Math.PI*2);
+    } catch(e){ RK = null; }
+
+    const sig = (cv) => {
+      const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+      let s = 0, ink = 0;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3] > 8) ink++;
+        if(i % (4*53) === 0) s = ((s*31 + d[i] + d[i+1]*3 + d[i+2]*7 + d[i+3]) >>> 0);
+      }
+      return { s, ink };
+    };
+    // Proof the private instance really paints, so a silent stub can never
+    // make the three measurements below pass by describing an empty canvas.
+    const canRead = !!RK && (() => {
+      const cv = RK.rockSprite(false, 0);
+      return !!cv && cv.width > 8 && sig(cv).ink > 200;
+    })();
+    check("the rock pins are measuring real pixels", !RK || canRead);
+
+    /*
+     * THE headline defect this replaced: every asteroid in the game was the
+     * same nine-sided lump wearing three craters at the same three fixed
+     * coordinates. Six variants that are byte-identical would be the same
+     * bug wearing a bigger implementation, so this compares real pixels.
+     */
+    check("every rock variant is a different rock", !canRead || (() => {
+      const seen = new Set();
+      for(let v=0; v<RK.ROCK_VARIANTS; v++){
+        for(const tough of [false, true]){
+          const cv = RK.rockSprite(tough, v);
+          if(!cv) return false;
+          seen.add(sig(cv).s);
+        }
+      }
+      return seen.size === RK.ROCK_VARIANTS*2;
+    })());
+
+    /*
+     * A rock has a SURFACE. The old one was a flat gradient, which is what
+     * made it read as cut paper; local contrast measures that the way the
+     * planet pin does, so "it has texture" is a number and not an opinion.
+     *
+     * The thresholds are MEASURED, not guessed. Stripping the regolith and
+     * then the craters from the real baker gives:
+     *
+     *                          boulder   asteroid
+     *   full                    3.32%      4.46%
+     *   no regolith             2.35%      3.62%
+     *   no regolith, no craters 1.67%      2.94%
+     *
+     * The first draft of this pin asked for >1.2%, which even a completely
+     * flat rock clears on its limb gradients alone - it passed happily with
+     * the texture deleted. Each bar now sits above its own no-regolith
+     * number, so the pin fails if the surface is taken away.
+     */
+    const contrast = (cv) => {
+      const W = cv.width, H = cv.height;
+      const d = cv.getContext("2d").getImageData(0, 0, W, H).data;
+      const at = (x,y) => { const i=(y*W+x)*4;
+        return d[i+3] < 200 ? -1 : 0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2]; };
+      let sum = 0, mean = 0, n = 0;
+      for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+        const l = at(x,y), r = at(x+1,y), b = at(x,y+1);
+        if(l < 0 || r < 0 || b < 0) continue;
+        sum += Math.abs(l-r) + Math.abs(l-b); mean += l; n++;
+      }
+      return n < 500 ? 0 : (sum/(2*n))/Math.max(1, mean/n)*100;
+    };
+    check("a rock has a surface, not a flat fill", !canRead || (() =>
+      contrast(RK.rockSprite(true, 0)) > 2.8 && contrast(RK.rockSprite(false, 2)) > 3.9
+    )());
+
+    /* Stone is stone: the tough class is bigger and older, not a different
+       and colder material. Both classes must stay on the warm side. */
+    check("boulders are the same stone as asteroids", !canRead || (() => {
+      const warmth = (tough) => {
+        let r = 0, b = 0, n = 0;
+        for(let v=0; v<RK.ROCK_VARIANTS; v++){
+          const cv = RK.rockSprite(tough, v);
+          const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+          for(let i=0;i<d.length;i+=4) if(d[i+3] > 200){ r += d[i]; b += d[i+2]; n++; }
+        }
+        return n ? (r - b)/n : 0;                  // mean red-minus-blue
+      };
+      const s = warmth(false), t = warmth(true);
+      return s > 6 && t > 6 && Math.abs(s - t) < 14;
+    })());
+
+    /*
+     * Measured, A/B against the old live-drawn path on the same machine and
+     * scene: a rotated alpha-blended sprite costs MORE per frame than the
+     * polygon it replaced, not less. The bake is capped below device
+     * resolution to claw some of that back - a rock is noise and soft
+     * craters and loses nothing to it, unlike text or a hairline hull.
+     */
+    check("the rock bake stays below device resolution", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const m = r.match(/const ROCK_BAKE = Math\.min\(BAKE, ([0-9.]+)\)/);
+      const fn = r.slice(r.indexOf("function rockSprite"), r.indexOf("function drawAsteroid"));
+      return !!m && Number(m[1]) <= 1.5 &&
+             /D\*ROCK_BAKE/.test(fn) && !/D\*BAKE/.test(fn);
+    })());
+
+    /* Craters are placed with a minimum separation - left to chance they
+       piled up and read as overlapping soap bubbles. */
+    check("craters do not pile on top of each other", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      const fn = r.slice(r.indexOf("function rockSprite"), r.indexOf("function drawAsteroid"));
+      return /placed/.test(fn) && /Math\.hypot\(x-o\.x, y-o\.y\) < \(r \+ o\.r\)/.test(fn);
+    })());
+  }
+
   /* ---------- the briefing shows what it asks you to choose ---------- */
   {
     const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
