@@ -306,10 +306,25 @@ const COMMS = {
     "That... wasn't me on the radio, {you}. Stay sharp.",
   ]},
   mirrorSeen: { speaker:"control", cooldown:999, lines:[
-    "{you} - that ship. That's YOUR ship. It's flying your moves!",
+    "{you} - your reflection! It's off the glass - and it's NOT copying any more!",
   ]},
   mirrorBomb: { speaker:"control", cooldown:14, lines:[
     "It has your bombs too?! That's cheating. Probably.",
+  ]},
+  mirrorDown: { speaker:"mate", cooldown:999, lines:[
+    "The sea's just a sea again, {you}. There was only ever one of you.",
+  ]},
+  homecomingStart: { speaker:"control", cooldown:999, lines:[
+    "One wall left between us and home, {you} - and it's built out of everything you already beat. Take it apart one weld at a time.",
+  ]},
+  homecomingTurn: { speaker:"control", cooldown:999, lines:[
+    "That's the last of them, {you}. Squadron... let's go home.",
+  ]},
+  homecomingFarm: { speaker:"mate", cooldown:999, lines:[
+    "Clouds! Real ones! {you} - look down. There's the farm.",
+  ]},
+  homecomingLights: { speaker:"workshop", cooldown:999, lines:[
+    "I can see you from the yard, {you}. Lights are on. Supper too. Come down easy.",
   ]},
   brushSeen: { speaker:"control", cooldown:999, lines:[
     "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.",

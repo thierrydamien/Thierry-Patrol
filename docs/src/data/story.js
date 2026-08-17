@@ -91,6 +91,20 @@ const STORY = {
     button:"FLY DARK",
   },
 
+  /* The campaign's true curtain now: the Titan falls at mission 39 and the
+     squadron flies the Launch Day sequence backwards, all the way down to
+     the farm. The last panel hands over the one thing left - the canvas -
+     so the ending points at the bonus level instead of just stopping. */
+  homecoming: {
+    title: "EVERY STAR IS HOME",
+    panels: [
+      { art:"starsBack", text:"That night the family lay on the grass behind the workshop and counted. Every single star was back where Papa said it belonged." },
+      { art:"crew", text:"The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost." },
+      { art:"sky",  text:"Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map." },
+    ],
+    button:"HOME AT LAST",
+  },
+
   /* The Devourer falls: a proper curtain, still not a full stop - the last
      panel opens the crack that Act 4 flies through. */
   campaign: {

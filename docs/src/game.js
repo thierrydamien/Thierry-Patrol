@@ -343,6 +343,10 @@ function startMission(missionIndex, difficultyId){
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
+  SF.mirrorduel.reset();                  // the glass keeps pretending until asked
+  if(mission.mirrorDuel) SF.mirrorduel.begin();
+  SF.homecoming.reset();                  // the road home waits for the last fight
+  if(mission.homecoming) SF.homecoming.begin();
   SF.bossintro.reset();
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
@@ -685,8 +689,11 @@ function startMission(missionIndex, difficultyId){
              : mission.foundry ? "foundryStart"
              : mission.serpent ? "serpentStart"
              : mission.prologue ? "prologueStart"
-             : mission.backstage ? "backstageStart"
+             : mission.homecoming ? "homecomingStart"
+             // Behind the Sky opens as Papa's canvas - the pencil and the
+             // colours - and keeps the workshop's own line for the tear.
              : mission.sky29 ? "sky29Start"
+             : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
              : mission.limpets ? "limpetStart"
@@ -718,6 +725,24 @@ function beginVictoryLap(){
   run.phaseTimer = 5.0;   // a real stretch of open sky, not a blink
   const p = game.world.player;
   if(p) p.invuln = Math.max(p.invuln, 30);   // no stray bullet ruins the ending
+  /*
+   * The Long Way Home doesn't lap - it LANDS. The Titan was the last of
+   * them, so instead of circling the same sky the squadron turns for Earth
+   * and homecoming.js flies the launch sequence backwards, all the way down
+   * to the farm. The lap phase holds below until the wheels touch.
+   */
+  if(run.mission.homecoming){
+    SF.homecoming.start();
+    run.phaseTimer = 15.0;
+    run.bannerText = SF.i18n ? SF.i18n.t("THE WAR IS OVER!") : "THE WAR IS OVER!";
+    run.bannerSub = SF.i18n ? SF.i18n.t("squadron — we're going home") : "squadron — we're going home";
+    run.bannerColor = "#ffd23f";
+    run.bannerUntil = simMs + 3400;
+    audio.play("victory");
+    audio.setMusic("menu");
+    SF.comms.say("homecomingTurn");
+    return;
+  }
   run.bannerText = "AREA CLEAR!";
   run.bannerSub = "grab the last coins — then head home";
   run.bannerColor = "#4ade80";
@@ -1424,8 +1449,9 @@ function killBoss(boss){
     fx.shake(20);
     return;
   }
-  // THE FORGERY's titan is only act one: it cracks open, and what crawls
-  // out is yours. backstage.js owns everything after this frame.
+  // THE FORGERY - every boss they beat, bolted back together - is the war's
+  // LAST fight now, not act one of three. It dies like the wall it is, and
+  // the mission that fields it turns for home (homecoming.js owns the ride).
   if(boss.def.forge){
     fx.explosion(boss.x, boss.y, 170, "#e8c14a", true);
     for(let i = 0; i < 4; i++)
@@ -1433,10 +1459,14 @@ function killBoss(boss){
     fx.debris(boss.x, boss.y, 26, "#e8c14a");
     fx.shake(26); fx.hitStop(160);
     audio.play("bossExplode");
-    run.score += Math.round(1500 * run.difficulty.pay);
+    game.world.dropCoins(boss.x, Math.min(boss.y, VH*0.4),
+      Math.round(900 * run.difficulty.pay * game.world.player.moneyMult));
+    run.score += Math.round(3000 * run.difficulty.pay);
+    game.profile.bossesDefeated++;
     game.world.boss = null;
-    run.bossActive = true;              // the fight goes on - just not in this slot
-    SF.backstage.titanDown();
+    run.bossActive = false;
+    run.bossCleared = true;
+    run.finishTimer = 1.6;
     return;
   }
   // The Devourer dies for eight seconds, in five stages, on its own clock.
@@ -1721,13 +1751,16 @@ function update(dt, timeMs){
     run.director.update(dt);
     run.stats.spawned = run.director.spawnedCount;
     if(run.director.finishedSpawning && game.world.countEnemies() === 0){
-      // Behind the Sky: the first fake ending plays out before the boss may
-      // arrive - backstage.js says when the workshop is ready.
-      if(run.mission.backstage && !SF.backstage.readyForBoss()){ /* hold */ }
+      // Behind the Sky: the fake endings, the tear and the Royal Brush all
+      // play HERE, in the hold - backstage.js says when the show is over.
+      if(run.mission.backstage && !SF.backstage.readyToClear()){ /* hold */ }
       // Mission 0: the raid is swept, but the story is mid-sentence - the
       // chute, the theft and the climb happen HERE, in the hold. prologue.js
       // raises readyToEnd() when the family is out of the atmosphere.
       else if(run.mission.prologue && !SF.prologue.readyToEnd()){ /* hold */ }
+      // The Glass Sea: the reflection peels off the sky and the duel is the
+      // level's last word - mirrorduel.js says when the glass has broken.
+      else if(run.mission.mirrorDuel && !SF.mirrorduel.readyToClear()){ /* hold */ }
       else if(run.mission.boss){
         run.bossActive = true;
         run.bossSpawned = true;
@@ -1800,8 +1833,14 @@ function update(dt, timeMs){
     // last coins still falling, nothing that can hurt you - and fireworks,
     // because a cleared sky deserves applause.
     run.phaseTimer -= dt;
+    // The Long Way Home holds the lap until the wheels are down - the
+    // results card must not land mid-descent. Fireworks stay grounded too:
+    // the descent is its own show.
+    const descending = run.mission.homecoming && SF.homecoming.active() &&
+                       SF.homecoming.started() && !SF.homecoming.done();
+    if(descending) run.phaseTimer = Math.max(run.phaseTimer, 0.6);
     run.fwTimer = (run.fwTimer || 0.001) - dt;
-    if(run.fwTimer <= 0){
+    if(run.fwTimer <= 0 && !descending){
       const FW = (SF.config.FIREWORK_BY_ID[game.profile.fireworks] ||
                   SF.config.FIREWORKS[0]).colors;   // their bought show, or classic
       fx.firework(rand(70, VW-70), rand(VH*0.12, VH*0.45),
@@ -1864,17 +1903,19 @@ function update(dt, timeMs){
    * readout for the next fight.
    */
   let progressNow;
-  if(run.mission.backstage && run.bossActive && SF.backstage.active()){
+  if(run.mission.backstage && SF.backstage.active() && SF.backstage.stage() !== "travel"){
     /*
-     * Behind the sky, boss health stops being the story: the Forgery dies,
-     * RE-FORGES to full, and then stands there invulnerable while the real
-     * fight moves into the three acts. Measured on a live run, the bar climbed
-     * to 97%, snapped back to 65% and froze there for the rest of the mission -
-     * so the longest and strangest fight in the game was the one place the
-     * player was told nothing at all about how it was going. The act's own
-     * progress drives it instead (see backstage.progress01()).
+     * Behind the sky, waves stop being the story the moment the workshop
+     * takes the stage: the fake endings, the tear and the Royal Brush have
+     * no boss slot for the bar to read, so the act's own progress drives it
+     * instead (see backstage.progress01()).
      */
     progressNow = 0.65 + 0.35*clamp(SF.backstage.progress01(), 0, 1);
+  } else if(run.mission.mirrorDuel && SF.mirrorduel.active() &&
+            !SF.mirrorduel.readyToClear() &&
+            run.director.finishedSpawning && game.world.countEnemies() === 0){
+    // The Glass Sea's duel owns the last stretch the same way.
+    progressNow = 0.65 + 0.35*clamp(SF.mirrorduel.progress01(), 0, 1);
   } else if(run.bossActive && game.world.boss){
     progressNow = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
   } else if(run.bossCleared){
@@ -1883,7 +1924,10 @@ function update(dt, timeMs){
     const timeline = clamp(run.director.time / run.wavesEndT, 0, 1);
     const cleared = run.director.totalPlanned
       ? clamp(run.stats.kills / run.director.totalPlanned, 0, 1) : 0;
-    progressNow = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
+    // A mission whose ENDING owns the last stretch - a boss, the duel, the
+    // workshop's show - keeps 35% of the bar for it.
+    const holdsEnding = run.mission.boss || run.mission.mirrorDuel || run.mission.backstage;
+    progressNow = Math.max(timeline, cleared) * (holdsEnding ? 0.65 : 1);
   }
   /*
    * A progress bar goes one way. Every backwards jump this game has had came
@@ -2922,6 +2966,10 @@ function update(dt, timeMs){
   if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
+  // The Glass Sea's turned reflection lives in mirrorduel.js...
+  if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
+  // ...and the descent to the farm lives in homecoming.js.
+  if(run.mission.homecoming) SF.homecoming.update(dt, run, game.world, simMs);
 
   /*
    * THE CONVOY. Three haulers cross bottom-to-top over ~34s each, staggered
@@ -3271,9 +3319,12 @@ function draw(timeMs){
   // fight rather than sitting still behind it.
   if(!replaying) fx.cameraApply(ctx, VW, VH);
   SF.render.drawBackground(ctx);
-  SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
+  // Veil first, blueprint second: on Behind the Sky both run at once, and
+  // the tear has to cover the pencil - the workshop owns the torn stage.
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
+  SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint over everything
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
+  SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -3286,7 +3337,8 @@ function draw(timeMs){
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
-  SF.backstage.drawActors(ctx, timeMs);              // the mirror, the brush, the letters
+  SF.backstage.drawActors(ctx, timeMs);              // the brush, the sketches, the letters
+  SF.mirrorduel.drawActors(ctx, timeMs);             // the Glass Sea's turned reflection
   SF.render.drawArena(ctx, world.boss, timeMs);      // the Devourer's screen-wide attacks
   SF.render.drawFleet(ctx, timeMs);                  // the rescued pilots, phase five
   SF.render.drawBullets(ctx, world);
@@ -3399,7 +3451,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

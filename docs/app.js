@@ -4,45 +4,47 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       48  src/core.js
- *      218  src/i18n.js
- *      417  src/icons.js
- *      983  src/haptics.js
- *     1162  src/audio.js
- *     1860  src/data/config.js
- *     2329  src/data/enemies.js
- *     3200  src/data/missions.js
- *     5166  src/wacky.js
- *     5382  src/data/comms.js
- *     5788  src/data/story.js
- *     5912  src/data/fr.js
- *     7051  src/profile.js
- *     7680  src/cloud.js
- *     8285  src/fx.js
- *     9398  src/input.js
- *     9821  src/entities.js
- *    11033  src/bossart.js
- *    11899  src/bosses.js
- *    12649  src/bossintro.js
- *    12772  src/rewind.js
- *    13303  src/finale.js
- *    13624  src/papadeath.js
- *    13946  src/backstage.js
- *    15149  src/sky29.js
- *    15390  src/prologue.js
- *    15856  src/systems.js
- *    16487  src/render.js
- *    21086  src/enemyart.js
- *    22038  src/insignia.js
- *    22283  src/skygen.js
- *    25227  src/shipart.js
- *    26427  src/paintjob.js
- *    26589  src/pilotart.js
- *    26684  src/comms.js
- *    26823  src/game.js
- *    30308  src/workshop.js
- *    31005  src/data/i18nbind.js
- *    31076  src/ui.js
+ *       50  src/core.js
+ *      220  src/i18n.js
+ *      419  src/icons.js
+ *      985  src/haptics.js
+ *     1164  src/audio.js
+ *     1862  src/data/config.js
+ *     2332  src/data/enemies.js
+ *     3203  src/data/missions.js
+ *     5182  src/wacky.js
+ *     5398  src/data/comms.js
+ *     5819  src/data/story.js
+ *     5957  src/data/fr.js
+ *     7163  src/profile.js
+ *     7792  src/cloud.js
+ *     8397  src/fx.js
+ *     9510  src/input.js
+ *     9933  src/entities.js
+ *    11145  src/bossart.js
+ *    12011  src/bosses.js
+ *    12761  src/bossintro.js
+ *    12884  src/rewind.js
+ *    13415  src/finale.js
+ *    13736  src/papadeath.js
+ *    14058  src/backstage.js
+ *    15007  src/sky29.js
+ *    15252  src/mirrorduel.js
+ *    15599  src/homecoming.js
+ *    15796  src/prologue.js
+ *    16262  src/systems.js
+ *    16893  src/render.js
+ *    21492  src/enemyart.js
+ *    22444  src/insignia.js
+ *    22689  src/skygen.js
+ *    25633  src/shipart.js
+ *    26833  src/paintjob.js
+ *    26995  src/pilotart.js
+ *    27090  src/comms.js
+ *    27229  src/game.js
+ *    30766  src/workshop.js
+ *    31463  src/data/i18nbind.js
+ *    31534  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1918,9 +1920,10 @@ const PAINTS = [
   { id:"midnight", name:"MIDNIGHT",   hex:"#3b5bdb", cost:700 },
   { id:"mint",     name:"MINT",       hex:"#6ee7b7", cost:700 },
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
-  // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
-  // painting the sky is the only way to wear it.
-  { id:"sky29",    name:"SKY 40",     hex:"#ff9e7d", secret:true },
+  // Behind the Sky's memento: the dawn rose off Papa's last canvas. Never
+  // sold - painting the sky is the only way to wear it. (The id predates the
+  // level's rename and is written into the family's saves; it stays.)
+  { id:"sky29",    name:"PAPA'S DAWN", hex:"#ff9e7d", secret:true },
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [
@@ -3481,7 +3484,7 @@ const BOSSES = {
    * remix pool drawn from every earlier fight.
    */
   forgery: {
-    name: "THE FORGERY", epithet: "it plays your game back at you",
+    name: "THE FORGERY", epithet: "every boss you beat, bolted back together",
     forge: true,
     hp: 2400, fightSeconds: 55, size: 300, tint: "#e8c14a", entryY: 190,
     armoured: true,
@@ -4941,9 +4944,13 @@ const MISSIONS = [
      * reach" always has a partner the reflection can.
      */
     id:36, name:"The Glass Sea", subtitle:"two of you",
-    brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
+    brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
+    // The level's last word: when the final wave falls, the reflection peels
+    // off the sky and turns - THE MIRROR PILOT, mirrorduel.js. A mirror boss
+    // at the end of the mirror level; it used to be act two behind the sky.
+    mirrorDuel:true,
     face:"splitter",                  // the one that becomes two, like you
     waves: [
       w(1,   "weaver",      8, "twinColumns"),
@@ -5034,17 +5041,19 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:39, name:"Behind the Sky", subtitle:"Where the game is made",
-    brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
-    goal:"The workshop is awake. Fly!",
-    face:"rival",
-    backstage:true,
     /*
-     * Short on purpose, like the Devourer's: the waves are the approach, and
-     * backstage.js owns everything after them - the remixes, the fake
-     * endings, and the three-act boss. What spawns here is a taste of every
-     * act, about to be replayed back at the player in sketch form.
+     * THE WAR'S LAST FIGHT, and then the flight home. The Titan used to be
+     * act one of a three-act meta finale; the family asked for the campaign
+     * to END like a story instead - so the meta moved up to mission 40 and
+     * this one keeps the wall: every boss they ever beat, welded together,
+     * parked between the squadron and Earth. When it falls, homecoming.js
+     * flies the Launch Day sequence backwards, all the way down to the farm.
      */
+    id:39, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
+    goal:"Beat the Titan — then go home.",
+    face:"rival",
+    homecoming:true,
     waves: [
       w(1,   "grunt",   10, "vee"),
       w(9,   "weaver",   8, "twinColumns"),
@@ -5055,20 +5064,23 @@ const MISSIONS = [
       w(47,  "interceptor", 10, "scatter"),
     ],
     boss: "forgery",
-    objectives: ["complete","paintSix","rescueAll"],
+    objectives: ["complete","stripBoss","rescueAll"],
   },
   {
     /*
-     * SKY 29 - the gift level. Gated on every star in the campaign (the gift
-     * itself is excluded from the count - see profile.totalStars), and it is
-     * a celebration, not a test: a parade of everything the family has
-     * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
-     * owns the pencil veil, the last stroke and the squadron photo.
+     * BEHIND THE SKY - the bonus level the war leaves behind, unlocked the
+     * moment mission 39 falls (gift missions stay OFF the star ledger - see
+     * profile.totalStars - so the campaign total never moves). It is a
+     * celebration with a fight in the middle: a parade of everything the
+     * family has beaten, flown over Papa's unfinished canvas, and then the
+     * workshop's own pranks - the fake ending, the tear to blueprint, THE
+     * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
+     * and lines the squadron up for a photo.
      */
-    id:40, name:"Sky 40", subtitle:"the one Papa never finished",
-    brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
+    id:40, name:"Behind the Sky", subtitle:"Where the game is made",
+    brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
-    gift:true, sky29:true, coinRain:true,
+    gift:true, sky29:true, backstage:true, coinRain:true,
     waves: [
       w(1,  "grunt",       8, "vee"),
       w(8,  "weaver",      8, "twinColumns"),
@@ -5084,7 +5096,9 @@ const MISSIONS = [
       w(63, "brute",       3, "wall", { elite:1 }),
       w(69, "interceptor", 9, "scatter"),
     ],
-    objectives: ["complete","rescueAll","coinRush"],
+    // rescueAll is owed, not chosen: the parade's carriers shed pods, and
+    // the suite holds every mission with pilots to free to starring it.
+    objectives: ["complete","paintSix","rescueAll"],
   },
 ];
 
@@ -5102,12 +5116,14 @@ function isMissionUnlocked(profile, index){
   if(own && own.cleared) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
-  const prevCleared = !!(record && record.cleared);
-  // The gift stop wants more than the road to it: every star in the campaign.
-  // (totalStars already excludes gift missions, so the bar can actually be met.)
-  if(MISSIONS[index].gift)
-    return prevCleared && SF.profile.totalStars(profile) >= SF.profile.maxStars();
-  return prevCleared;
+  /*
+   * The gift stop unlocks like any other: beat the mission before it. It
+   * used to demand every star in the campaign, and at 117 stars that made
+   * the fun level a stop nobody in the family would ever fly - a trophy is
+   * a poor use of the game's best celebration. The stars still matter: they
+   * gate the harder tiers, and the gift's own stars stay off the ledger.
+   */
+  return !!(record && record.cleared);
 }
 
 /** Total rescue pods a mission can yield: one per hauler, plus free drifters. */
@@ -5687,10 +5703,25 @@ const COMMS = {
     "That... wasn't me on the radio, {you}. Stay sharp.",
   ]},
   mirrorSeen: { speaker:"control", cooldown:999, lines:[
-    "{you} - that ship. That's YOUR ship. It's flying your moves!",
+    "{you} - your reflection! It's off the glass - and it's NOT copying any more!",
   ]},
   mirrorBomb: { speaker:"control", cooldown:14, lines:[
     "It has your bombs too?! That's cheating. Probably.",
+  ]},
+  mirrorDown: { speaker:"mate", cooldown:999, lines:[
+    "The sea's just a sea again, {you}. There was only ever one of you.",
+  ]},
+  homecomingStart: { speaker:"control", cooldown:999, lines:[
+    "One wall left between us and home, {you} - and it's built out of everything you already beat. Take it apart one weld at a time.",
+  ]},
+  homecomingTurn: { speaker:"control", cooldown:999, lines:[
+    "That's the last of them, {you}. Squadron... let's go home.",
+  ]},
+  homecomingFarm: { speaker:"mate", cooldown:999, lines:[
+    "Clouds! Real ones! {you} - look down. There's the farm.",
+  ]},
+  homecomingLights: { speaker:"workshop", cooldown:999, lines:[
+    "I can see you from the yard, {you}. Lights are on. Supper too. Come down easy.",
   ]},
   brushSeen: { speaker:"control", cooldown:999, lines:[
     "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.",
@@ -5876,6 +5907,20 @@ const STORY = {
       { art:"crew", text:"No guns means no mistakes, {you}. Catch the coins, catch our drifting pilots, and bring the ship home in one piece." },
     ],
     button:"FLY DARK",
+  },
+
+  /* The campaign's true curtain now: the Titan falls at mission 39 and the
+     squadron flies the Launch Day sequence backwards, all the way down to
+     the farm. The last panel hands over the one thing left - the canvas -
+     so the ending points at the bonus level instead of just stopping. */
+  homecoming: {
+    title: "EVERY STAR IS HOME",
+    panels: [
+      { art:"starsBack", text:"That night the family lay on the grass behind the workshop and counted. Every single star was back where Papa said it belonged." },
+      { art:"crew", text:"The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost." },
+      { art:"sky",  text:"Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map." },
+    ],
+    button:"HOME AT LAST",
   },
 
   /* The Devourer falls: a proper curtain, still not a full stop - the last
@@ -6173,7 +6218,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THEIR STAR": "LEUR ÉTOILE",
 "THE DARK": "LES TÉNÈBRES",
 "THE CRACK": "LA FAILLE",
-"THE WORKSHOP": "L'ATELIER",
+"THE ROAD HOME": "LA ROUTE DU RETOUR",
 "THE EASEL": "LE CHEVALET",
 
 /* ---------------- mission names ---------------- */
@@ -6216,6 +6261,80 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Personne ne vole le ciel de la famille. Allez les récupérer.",
 "Full throttle, straight up. Wheels up, squadron!":
   "Pleins gaz, droit vers le haut. Décollage, escadrille !",
+
+/* ---------------- the restructured ending ----------------
+   Mission 39 became the homecoming, mission 40 became the workshop's own
+   level, and the Glass Sea grew a duel - names, briefs, comms, banners and
+   the new story page, all here. Canvas banners go through T() at the call
+   site, so they need entries like everything else. */
+"The Long Way Home": "Le Long Chemin du Retour",
+"the last fight, then the farm": "le dernier combat, puis la ferme",
+"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.":
+  "C'est le dernier, {you} : tous les vaisseaux que la famille a battus, soudés en un seul mur, garé entre vous et la maison. Dessoude-le. À l'instant où il tombe, l'escadrille met le cap sur la Terre — jusqu'à la ferme.",
+"Beat the Titan — then go home.": "Bats le Titan — puis rentre à la maison.",
+"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.":
+  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Un canevas attend encore sur le chevalet, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
+"every boss you beat, bolted back together": "tous les boss que tu as battus, boulonnés ensemble",
+"PAPA'S DAWN": "L'AUBE DE PAPA",
+"{you} - your reflection! It's off the glass - and it's NOT copying any more!":
+  "{you} — ton reflet ! Il a quitté le verre — et il ne copie PLUS !",
+"The sea's just a sea again, {you}. There was only ever one of you.":
+  "La mer n'est plus qu'une mer, {you}. Il n'y a jamais eu que toi.",
+"One wall left between us and home, {you} - and it's built out of everything you already beat. Take it apart one weld at a time.":
+  "Un dernier mur entre nous et la maison, {you} — et il est fait de tout ce que tu as déjà battu. Démonte-le soudure par soudure.",
+"That's the last of them, {you}. Squadron... let's go home.":
+  "C'était le dernier, {you}. Escadrille… on rentre à la maison.",
+"Clouds! Real ones! {you} - look down. There's the farm.":
+  "Des nuages ! Des vrais ! {you} — regarde en bas. C'est la ferme.",
+"I can see you from the yard, {you}. Lights are on. Supper too. Come down easy.":
+  "Je vous vois depuis la cour, {you}. Les lumières sont allumées. Le dîner aussi. Descendez en douceur.",
+"THE MIRROR PILOT": "LE PILOTE MIROIR",
+"it bought everything you bought": "il a acheté tout ce que tu as acheté",
+"IT'S WIDE OPEN": "IL EST GRAND OUVERT",
+"when it stops, SHOOT IT": "quand il s'arrête, TIRE",
+"THE GLASS BREAKS": "LE VERRE SE BRISE",
+"there was only ever one of you": "il n'y a jamais eu que toi",
+"OPEN!": "OUVERT !",
+"THE WAR IS OVER!": "LA GUERRE EST FINIE !",
+"squadron — we're going home": "escadrille — on rentre à la maison",
+"WHEELS DOWN": "TRAIN D'ATTERRISSAGE SORTI",
+"home": "à la maison",
+"AREA CLEAR!": "ZONE DÉGAGÉE !",
+"grab the last coins — then head home": "ramasse les dernières pièces — puis rentre",
+"no.": "non.",
+"the workshop isn't done with you": "l'atelier n'en a pas fini avec toi",
+"THE SKY TEARS": "LE CIEL SE DÉCHIRE",
+"this is where skies come from": "c'est d'ici que viennent les ciels",
+"THE ROYAL BRUSH": "LE PINCEAU ROYAL",
+"paint faster than it does": "peins plus vite que lui",
+"FLY THROUGH THE SKETCHES": "TRAVERSE LES CROQUIS",
+"your paint turns them onto OUR side": "ta peinture les fait passer de NOTRE côté",
+"IT'S WRITING SOMETHING": "IL ÉCRIT QUELQUE CHOSE",
+"don't let it finish the sentence!": "ne le laisse pas finir sa phrase !",
+"MISSION COMPLETE?": "MISSION ACCOMPLIE ?",
+"that's not your handwriting...": "ce n'est pas ton écriture…",
+"IT'S TIRED — HIT THE CORE!": "IL FATIGUE — VISE LE CŒUR !",
+"SENTENCE BROKEN!": "PHRASE BRISÉE !",
+"PAINTED!": "PEINT !",
+"THE WORKSHOP IS YOURS": "L'ATELIER EST À VOUS",
+"one stroke left on the canvas": "plus qu'un coup de pinceau",
+"WIN THE WAR FIRST — BEAT MISSION {n}": "GAGNE D'ABORD LA GUERRE — BATS LA MISSION {n}",
+"Papa left one sky unfinished - this one. It has your names pencilled in the corner.":
+  "Papa a laissé un ciel inachevé — celui-ci. Vos noms y sont écrits au crayon, dans le coin.",
+"Win the war first - beat mission {n} - and the squadron flies up to paint it together.":
+  "Gagne d'abord la guerre — bats la mission {n} — et l'escadrille montera le peindre tous ensemble.",
+"WE'RE ON OUR WAY": "ON ARRIVE",
+"CLOSE": "FERMER",
+"EVERY STAR IS HOME — the whole campaign, gold.": "TOUTES LES ÉTOILES SONT RENTRÉES — toute la campagne, en or.",
+"EVERY STAR": "TOUTES LES ÉTOILES",
+"EVERY STAR IS HOME": "TOUTES LES ÉTOILES SONT RENTRÉES",
+"That night the family lay on the grass behind the workshop and counted. Every single star was back where Papa said it belonged.":
+  "Cette nuit-là, la famille s'est allongée dans l'herbe derrière l'atelier et a compté. Chaque étoile était revenue là où Papa disait qu'elle devait être.",
+"The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost.":
+  "Les vaisseaux sont rayés, la peinture est écaillée, et personne ne les échangerait pour rien au monde. Papa dit qu'ils ont mérité du repos — presque.",
+"Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map.":
+  "Parce que derrière le ciel, un canevas attend encore sur le chevalet, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
+"HOME AT LAST": "ENFIN À LA MAISON",
 
 /* ---------------- story pages ----------------
    The comic-panel beats. These went untranslated for months because only
@@ -6329,8 +6448,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The Foundry": "La Fonderie",
 "The Serpent's Garden": "Le Jardin du Serpent",
 "Behind the Sky": "Derrière le Ciel",
-"Sky 40": "Ciel 40",
-"SKY 40": "CIEL 40",
 
 /* ---------------- mission subtitles ---------------- */
 "Learn the ropes": "Prise en main",
@@ -6415,7 +6532,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "USE your reflection — it shoots too": "SERS-TOI de ton reflet — il tire aussi",
 "Shoot the parts on the belts!": "Détruis les pièces sur les tapis !",
 "It EATS coins — hit the glow ring!": "Il MANGE les pièces — vise l'anneau lumineux !",
-"The workshop is awake. Fly!": "L'atelier s'est réveillé. Vole !",
 "Paint Papa's last sky!": "Peins le dernier ciel de Papa !",
 
 
@@ -6632,16 +6748,12 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Quelque chose vit ici, et c'est plus gros que tout ce que les deux camps pilotent. Rien de ce que tu as ne percera ce cuir — mais tes tirs POUSSENT quand même. Aligne-en un, pousse-le à travers le ciel, et laisse-le traverser leur formation.",
 "Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.":
   "Écoute, {you} — ici la flotte entière tire ensemble, EN RYTHME. Regarde le ciel pulser, apprends la chanson, et slalome entre les couplets. Fais taire un chef d'orchestre et tout leur chœur oublie les paroles.",
-"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.":
-  "Personne n'explique ce passage. Le ciel est un miroir, et toi aussi — il y a un second vaisseau là-dehors qui refait ton vol à l'envers, et il tire chaque fois que tu tires. On ne peut ni le blesser ni le toucher. Place-toi là où il servira à quelque chose.",
+"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.":
+  "Personne ne sait expliquer ce coin. Le ciel est un miroir, et toi aussi — il y a un second vaisseau là-bas qui refait ton vol à l'envers, et qui tire quand tu tires. On ne peut ni le toucher ni le blesser. Mets-le là où il peut servir — et méfie-toi du bout de la mer. Il paraît que le verre finit par arrêter de faire semblant.",
 "They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!":
   "Ils FABRIQUENT des renforts juste devant toi, {you}. Les pièces défilent sur les tapis vers l'assembleuse — chaque pièce que tu détruis est un vaisseau qui ne naîtra jamais. Affame la machine !",
 "Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.":
   "Quelque chose d'ancien vit dans ce jardin, {you}, et il a FAIM. Le Serpent à Dîme dévore tes pièces et se fait pousser un anneau à chaque bouchée. Vise l'anneau lumineux — terrasse-le et récupère jusqu'au dernier centime.",
-"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.":
-  "La faille traverse de part en part, {you} — DERRIÈRE le ciel, là où on peint les ciels et où on dessine les vaisseaux. Quelque chose s'est réveillé dans l'atelier, et ça te regarde jouer depuis le début. Ça connaît toutes tes astuces.",
-"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.":
-  "Derrière l'atelier, une toile est restée sur le chevalet — un ciel avec vos noms crayonnés dans le coin. Chaque étoile que tu as gagnée était une couleur, {you}, et tu les as TOUTES gagnées. C'est l'heure de le peindre. Tout le monde arrive.",
 
 /* ---------------- comms ----------------
    Control is the grown-up on the radio, your mate is the sibling in the next
@@ -6889,8 +7001,8 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Rien n'est terminé ici, {you}. Je ne crois pas qu'on soit censés voir ça.",
 "That... wasn't me on the radio, {you}. Stay sharp.":
   "Ce… n'était pas moi à la radio, {you}. Reste vigilant.",
-"{you} - that ship. That's YOUR ship. It's flying your moves!":
-  "{you} — ce vaisseau. C'est TON vaisseau. Il refait tes manœuvres !",
+"{you} - your reflection! It's off the glass - and it's NOT copying any more!":
+  "{you} — ton reflet ! Il a quitté le verre — et il ne copie PLUS !",
 "It has your bombs too?! That's cheating. Probably.":
   "Il a aussi tes bombes ?! C'est de la triche. Sans doute.",
 "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.":
@@ -6993,7 +7105,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "over their sun, and the last big ship": "au-dessus de leur soleil, et le dernier gros vaisseau",
 "their star went out, and something ate it": "leur étoile s'est éteinte, et quelque chose l'a dévorée",
 "where space stops behaving itself": "là où l'espace cesse de se tenir correctement",
-"behind the sky, where skies get made": "derrière le ciel, là où l'on fabrique les ciels",
+"their last works, the last fight — and the farm": "leurs dernières usines, le dernier combat — et la ferme",
 
 "{n} / {want} ★ collected": "{n} / {want} ★ récoltées",
 "locked": "verrouillé",
@@ -13944,26 +14056,23 @@ SF.papadeath = { reset, begin, active, act, state, update, TOTAL, ACTS, FRENCH }
 
 ;/* ===== src/backstage.js ===== */
 /*
- * BEHIND THE SKY - the Act 4 finale, and the fight the whole game is for.
+ * BEHIND THE SKY - mission 40, the bonus level the war leaves behind.
  *
- * Mission 28 flies through the crack the Devourer left and comes out where
- * the game is MADE: the workshop. Out here the sky loses its paint in
- * stutters, coins forget which way is down, and the boss is THE FORGERY -
- * which is not one fight but three, each one built from something the
- * player already loves:
+ * The campaign used to end here: three boss acts stacked on mission 39,
+ * with the Welded Titan in front. The family asked for the ending to be a
+ * homecoming instead - so the Titan stayed at 39 as the war's last fight
+ * (see homecoming.js), the Mirror Pilot moved to the Glass Sea where a
+ * mirror boss belongs (mirrorduel.js), and everything META - the paint
+ * stutters, the fake endings, the tear to blueprint, THE ROYAL BRUSH -
+ * lives here now, one level up, unlocked the moment 39 falls.
  *
- *   act 1  THE WELDED TITAN   every boss they beat, bolted back together
- *                             (bossart's composite hull; the standard
- *                             controller runs it with a remix attack pool)
- *   act 2  THE MIRROR PILOT   the titan cracks open and the player's OWN
- *                             ship crawls out - their hull, their paint,
- *                             their actual purchased loadout, fired back
- *   act 3  THE ROYAL BRUSH    the sky itself tears away to blueprint and
- *                             the workshop's living brush fights by
- *                             DRAWING: it sketches squadrons that ink into
- *                             the real thing, sweeps eraser bands through
- *                             your fire, and letters G A M E  O V E R down
- *                             the screen like falling scenery
+ * The level is a celebration with a fight in the middle. It flies over
+ * Papa's unfinished canvas (sky29.js owns the pencil veil and paints it as
+ * you play), and when the last parade wave falls the workshop plays its
+ * pranks: AREA CLEAR!, snatched away - then the sky itself tears off to
+ * blueprint and the workshop's living brush fights by DRAWING: it sketches
+ * squadrons that ink into the real thing, sweeps eraser bands through your
+ * fire, and letters G A M E  O V E R down the screen like falling scenery.
  *
  * The brush also hands the player the game's last secret: from the tear
  * onward the ship trails PAINT (their own colour - the Style Shop made
@@ -13972,17 +14081,21 @@ SF.papadeath = { reset, begin, active, act, state, update, TOTAL, ACTS, FRENCH }
  * game about a family drawing together: the brush isn't the weapon,
  * whose hand it's in is.
  *
+ * When the brush's star goes up, sky29.js takes the stage back: the last
+ * stroke sweeps the blueprint away and the squadron lines up for a photo.
+ *
  * Same rules as finale.js: simulation time only, and the module owns its
  * own theatre - game.js only asks three things (reset, update, and "may
- * the boss spawn yet?") plus three draw hooks at fixed depths.
+ * the mission end yet?") plus three draw hooks at fixed depths.
  */
 (function(){
 "use strict";
 const SF = window.SF;
 const { clamp, lerp, rand, randInt, chance, pick } = SF.core;
 const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
 
-let S = null;          // the whole finale state; null when inactive
+let S = null;          // the whole theatre state; null when inactive
 const VW = () => (SF.game && SF.game.VW) || 600;
 /** The pilot's own paint - the colour the whole act is about. */
 function pcolOf(){ return (SF.game.profile && SF.game.profile.shipColor) || "#3399ff"; }
@@ -13991,15 +14104,12 @@ function reset(){ S = null; }
 
 function begin(){
   S = {
-    stage: "travel",        // travel -> fakeClear -> titan -> shed -> mirror
-                            // -> tear -> brush -> nova -> done
+    stage: "travel",        // travel -> fakeClear -> tear -> brush -> nova -> done
     t: 0,                   // seconds in current stage
     stutter: 0,             // >0: the sky is losing its paint right now
     nextStutter: 7,
     fakeStep: 0,
-    // act 2
-    mirror: null,
-    // act 3
+    // the brush act
     brush: null,
     sketches: [],
     allies: [],
@@ -14016,26 +14126,10 @@ function begin(){
 function active(){ return !!S; }
 function stage(){ return S ? S.stage : ""; }
 
-/** The welded titan just blew apart: act two begins. */
-function titanDown(){
-  if(!S) return;
-  S.stage = "shed";
-  S.t = 0;
-  // The duel is one-on-one: whatever the titan called in goes with it.
-  const w = SF.game.world;
-  if(w){
-    const en = w.enemies.items;
-    for(let i = 0; i < en.length; i++)
-      if(en[i].alive) SF.fx.explosion(en[i].x, en[i].y, 26, "#e8c14a", false);
-    w.enemies.killAll();
-    w.enemyBullets.killAll();
-  }
-}
-
-/* The waves may end, but the boss must wait for the first fake ending. */
-function readyForBoss(){
-  return !S || S.stage === "titan" || S.fakeStep >= 3;
-}
+/* The waves may end, but the pranks, the tear and the brush come first.
+ * sky29.js waits for this too: its last stroke only sweeps once the
+ * workshop has nothing left to say. */
+function readyToClear(){ return !S || S.stage === "done"; }
 
 /* ------------------------------------------------------------------ */
 /*  UPDATE                                                             */
@@ -14047,7 +14141,7 @@ function update(dt, run, world, simMs){
   S.t += dt;
 
   // --- the travel weirdness: paint stutters, coins falling up ----------
-  if(S.stage === "travel" || S.stage === "titan"){
+  if(S.stage === "travel"){
     S.nextStutter -= dt;
     if(S.nextStutter <= 0){
       S.stutter = 0.45;
@@ -14071,8 +14165,8 @@ function update(dt, run, world, simMs){
   if(S.stage === "fakeClear"){
     if(S.fakeStep === 0 && S.t > 0.6){
       S.fakeStep = 1;
-      run.bannerText = "AREA CLEAR!";
-      run.bannerSub = "grab the last coins — then head home";
+      run.bannerText = T("AREA CLEAR!");
+      run.bannerSub = T("grab the last coins — then head home");
       run.bannerColor = "#4ade80";
       run.bannerUntil = simMs + 2600;
       audio.play("victory");
@@ -14080,8 +14174,8 @@ function update(dt, run, world, simMs){
     if(S.fakeStep === 1 && S.t > 2.6){
       S.fakeStep = 2;
       S.stutter = 0.8;
-      run.bannerText = "no.";
-      run.bannerSub = "the workshop isn't done with you";
+      run.bannerText = T("no.");
+      run.bannerSub = T("the workshop isn't done with you");
       run.bannerColor = "#ff5d73";
       run.bannerUntil = simMs + 2200;
       fx.shake(14);
@@ -14089,202 +14183,18 @@ function update(dt, run, world, simMs){
       SF.comms.say("backstageNo");
     }
     if(S.fakeStep === 2 && S.t > 4.6){
-      S.fakeStep = 3;                    // readyForBoss() now says yes
-      S.stage = "titan"; S.t = 0;
-    }
-  }
-
-  // --- act 2: THE MIRROR PILOT ----------------------------------------
-  if(S.stage === "shed"){
-    if(S.t > 1.4){
-      const p = world.player;
-      const lv = id => SF.profile.upgradeLevel(SF.game.profile, id);
-      const dps = p ? p.dps : 60;
-      /*
-       * SIZING A DUEL AGAINST A SHIP-SIZED BOSS.
-       *
-       * The old bar was dps * 16 with a 27px hit radius, and measured, that
-       * is a fight nobody finishes. Two reasons, both invisible on paper.
-       * A real boss is a 300px hull with a ~126px hitbox, so a fanned spread
-       * lands nearly all of it; this thing is the size of your own ship, so
-       * most of the fan flies past and only ~11 of a 65-dps loadout ever
-       * arrives. And the bar ignored difficulty.bossHp, so ROOKIE faced the
-       * same wall as NIGHTMARE.
-       *
-       * So: a hitbox that matches its role rather than its sprite, and a
-       * pool derived from what actually lands. Measured at ~22s on PILOT.
-       */
-      const diff = (SF.game.run && SF.game.run.difficulty) || { bossHp: 1 };
-      const pool = Math.round(dps * 3.2 * (diff.bossHp || 1));
-      S.mirror = {
-        x: W/2, y: -60, r: 34,
-        hp: pool, maxHp: pool,
-        holdY: 190, vx: 0,
-        fireTimer: 1.2, dodgeCool: 0, tell: 0, dodgeDir: 0,
-        spread: lv("spread"), rapid: lv("rapid"),
-        bombs: 2, nextBombAt: 0.66,
-        // The duel breathes: it mirrors and shoots, then it OPENS - drifts to
-        // the middle, holds still, stops firing - and that is your turn.
-        mode: "mirror", modeT: 3.2, taught: false,
-        flash: 0, t: 0,
-      };
-      S.stage = "mirror"; S.t = 0;
-      run.bannerText = "THE MIRROR PILOT";
-      run.bannerSub = "it bought everything you bought";
-      run.bannerColor = "#e8c14a";
-      run.bannerUntil = simMs + 3400;
-      audio.play("bossWake");
-      SF.comms.say("mirrorSeen");
-    }
-  }
-  if(S.stage === "mirror" && S.mirror){
-    const m = S.mirror, p = world.player;
-    m.t += dt;
-    m.flash = Math.max(0, m.flash - dt*4);
-    /*
-     * THE FIGHT'S RHYTHM.
-     *
-     * Mirroring your lane is the whole idea of this boss, and on its own it
-     * made the duel unwinnable: your guns fire straight up from your x, and
-     * it sits at W - x, so the ONLY place you are lined up with it is dead
-     * centre - which is also the only place its volley lands on you. Safe and
-     * able-to-shoot were mutually exclusive, so a good player could dodge
-     * forever and never take its health down.
-     *
-     * So it breathes. It mirrors and shoots for a few seconds, then OPENS:
-     * drifts to the middle, holds, stops firing, stops dodging, and cannot be
-     * bumped into. Dodge its turn, take yours. The reflection still reads -
-     * it is your ship, flying your loadout - it just no longer stands where
-     * you cannot reach it forever.
-     */
-    if(m.y >= m.holdY){
-      m.modeT -= dt;
-      if(m.modeT <= 0){
-        if(m.mode === "mirror"){
-          m.mode = "open"; m.modeT = 3.0;
-          m.dodgeDir = 0; m.dodgeUsed = 0;
-          audio.play("telegraph");
-          if(!m.taught){                 // teach the window the first time
-            m.taught = true;
-            run.bannerText = "IT'S WIDE OPEN";
-            run.bannerSub = "when it stops, SHOOT IT";
-            run.bannerColor = "#4ade80";
-            run.bannerUntil = simMs + 2600;
-          }
-        } else {
-          m.mode = "mirror"; m.modeT = 3.2;
-          m.fireTimer = Math.max(m.fireTimer, 0.7);   // room to slide away
-        }
-      }
-    }
-    // Arrive, then hold a mirrored lane: your x, reflected. Except when it is
-    // open, where it comes to the middle and waits - a target you can reach
-    // from anywhere rather than one that is always exactly opposite you.
-    if(m.y < m.holdY) m.y += 130 * dt;
-    else if(m.mode === "open"){
-      m.x = lerp(m.x, W/2, Math.min(1, dt*1.6));
-      m.y = m.holdY + Math.sin(m.t*1.3)*10;
-    }
-    else if(p){
-      const lane = W - p.x;
-      m.x = lerp(m.x, lane, Math.min(1, dt*2.2));
-      m.y = m.holdY + Math.sin(m.t*1.3)*22;
-    }
-    // It shoots YOUR guns back: your spread pattern, your fire rate.
-    m.fireTimer -= dt;
-    if(m.fireTimer <= 0 && m.y > 40 && m.mode === "mirror"){
-      const angles = SF.config.spreadPattern(m.spread);
-      for(let i = 0; i < angles.length; i++){
-        const a = Math.PI/2 + angles[i]/600;      // down, fanned like yours
-        world.spawnEnemyBullet(m.x, m.y + 24,
-          Math.cos(a)*330, Math.sin(a)*330, "aimed", 4.5);
-      }
-      m.fireTimer = 0.62 * SF.config.fireRateMult(m.rapid) * 2.4;
-      audio.play("shoot", true);
-    }
-    // It dodges like the rival - on a cooldown, with a tell.
-    m.dodgeCool = Math.max(0, m.dodgeCool - dt);
-    m.tell = Math.max(0, m.tell - dt);
-    if(!m.dodgeDir && m.dodgeCool <= 0 && m.mode === "mirror"){
-      const bs = world.bullets.items;
-      for(let i = 0; i < bs.length; i++){
-        const b = bs[i];
-        if(!b.alive || b.vy >= 0) continue;
-        if(Math.abs(b.x - m.x) < m.r + 26 && b.y > m.y && b.y - m.y < 170){
-          m.dodgeDir = b.x < m.x ? 1 : -1;
-          if(m.x < 90) m.dodgeDir = 1;
-          if(m.x > W - 90) m.dodgeDir = -1;
-          m.tell = 0.14;
-          break;
-        }
-      }
-    }
-    if(m.dodgeDir && m.tell <= 0){
-      m.x = clamp(m.x + m.dodgeDir * 460 * dt, 40, W - 40);
-      m.dodgeUsed = (m.dodgeUsed || 0) + 460 * dt;
-      if(m.dodgeUsed > 120){ m.dodgeDir = 0; m.dodgeUsed = 0; m.dodgeCool = 1.5; }
-    }
-    // Your bullets vs it.
-    const bs = world.bullets.items;
-    for(let i = 0; i < bs.length; i++){
-      const b = bs[i];
-      if(!b.alive) continue;
-      const dx = b.x - m.x, dy = b.y - m.y;
-      if(dx*dx + dy*dy < (m.r + 5)*(m.r + 5)){
-        b.alive = false;
-        /*
-         * An open guard is worth double. Shrinking the pool instead would
-         * have made the bar flicker away in a handful of volleys; this keeps
-         * the duel long enough to feel like one while paying out hard for
-         * the thing the fight is teaching - wait, then hit.
-         */
-        const mult = m.mode === "open" ? 2 : 1;
-        /*
-         * `b.dmg`, NOT `b.damage`. Player bullets carry `dmg` (see the pool
-         * factory in entities.js); nothing anywhere sets `damage`. So this
-         * read was always undefined and the `|| 1` fallback fired on every
-         * single hit - the whole backstage fight ignored Plasma Rounds and
-         * took one point per bullet whether you flew in stock or maxed.
-         * Measured: at a maxed loadout the mirror needed ~137s instead of the
-         * ~19s its pool is sized for. The pool is derived from `dps`, which
-         * already includes the damage level, so reading the right field is
-         * the entire fix - no re-tune follows it.
-         */
-        const hit = (b.dmg || 1) * mult;
-        m.hp -= hit;
-        m.flash = 1;
-        fx.spark(b.x, b.y, 0, -60, mult > 1 ? "#4ade80" : "#e8c14a", 0.3, 2);
-        if(SF.game.run) SF.game.run.stats.damageDealt =
-          (SF.game.run.stats.damageDealt || 0) + hit;
-      }
-    }
-    // At each third of health it plays YOUR panic button: a bomb that
-    // clears YOUR bullets off the screen.
-    if(m.bombs > 0 && m.hp <= m.maxHp * m.nextBombAt){
-      m.bombs--; m.nextBombAt -= 0.33;
-      for(let i = 0; i < bs.length; i++)
-        if(bs[i].alive){ fx.spark(bs[i].x, bs[i].y, 0, 40, "#e8c14a", 0.25, 2); bs[i].alive = false; }
-      fx.ring(m.x, m.y, 180, "#e8c14a", 6, 0.6);
-      fx.shake(10);
-      audio.play("bomb");
-      SF.comms.say("mirrorBomb");
-    }
-    // Ram guard: standing under it hurts (gently - it is still a duel). Not
-    // while it is open, though: the window is the one moment the fight tells
-    // you to come and get it, and punishing that teaches the wrong lesson.
-    if(m.mode === "mirror" && p && p.alive &&
-       Math.hypot(p.x - m.x, p.y - m.y) < m.r + 16)
-      SF.game.hurtPlayer && SF.game.hurtPlayer("mirror");
-    if(m.hp <= 0){
+      // No titan waits here any more - the war ended a mission ago. The
+      // prank goes straight for the reveal: the sky itself comes off.
+      S.fakeStep = 3;
       S.stage = "tear"; S.t = 0;
-      fx.explosion(m.x, m.y, 150, "#e8c14a", true);
       fx.shake(26); fx.hitStop(160);
       fx.flash(0.8, "255,255,255");
       audio.play("bossExplode");
-      run.bannerText = "THE SKY TEARS";
-      run.bannerSub = "this is where skies come from";
+      run.bannerText = T("THE SKY TEARS");
+      run.bannerSub = T("this is where skies come from");
       run.bannerColor = "#e2e8f0";
       run.bannerUntil = simMs + 3000;
+      SF.comms.say("backstageStart");
     }
   }
 
@@ -14304,11 +14214,12 @@ function update(dt, run, world, simMs){
         tired: 0,                 // >0: core exposed, takes player bullets
         cycle: 0,
       };
-      run.bannerText = "THE ROYAL BRUSH";
-      run.bannerSub = "paint faster than it does";
+      run.bannerText = T("THE ROYAL BRUSH");
+      run.bannerSub = T("paint faster than it does");
       run.bannerColor = "#c9b458";
       run.bannerUntil = simMs + 3600;
       audio.play("bossWake");
+      audio.setMusic("boss");
       SF.comms.say("brushSeen");
     }
   }
@@ -14409,8 +14320,8 @@ function update(dt, run, world, simMs){
         if(!S.taughtPaint || (run.stats.painted === 0 && !S.taughtTwice)){
           if(S.taughtPaint) S.taughtTwice = true;
           S.taughtPaint = true;
-          run.bannerText = "FLY THROUGH THE SKETCHES";
-          run.bannerSub = "your paint turns them onto OUR side";
+          run.bannerText = T("FLY THROUGH THE SKETCHES");
+          run.bannerSub = T("your paint turns them onto OUR side");
           run.bannerColor = pcolOf();
           run.bannerUntil = simMs + 4200;
           SF.comms.say("paintSketch");
@@ -14458,8 +14369,8 @@ function update(dt, run, world, simMs){
           });
           k++;
         }
-        run.bannerText = "IT'S WRITING SOMETHING";
-        run.bannerSub = "don't let it finish the sentence!";
+        run.bannerText = T("IT'S WRITING SOMETHING");
+        run.bannerSub = T("don't let it finish the sentence!");
         run.bannerColor = "#e2e8f0";
         run.bannerUntil = simMs + 2400;
         audio.play("alarm");
@@ -14494,7 +14405,7 @@ function update(dt, run, world, simMs){
               fx.spark(sk.x, sk.y, Math.cos(a)*130, Math.sin(a)*130, pcolOf(), 0.4, 3);
             }
             fx.text(sk.x, sk.y - 26,
-                    "PAINTED!  " + run.stats.painted + "/6", "#4ade80", 17, true);
+                    T("PAINTED!") + "  " + run.stats.painted + "/6", "#4ade80", 17, true);
             audio.play("rescue");
             S.sketches.splice(i, 1);
             break;
@@ -14551,7 +14462,7 @@ function update(dt, run, world, simMs){
         S.erasers.splice(i, 1);
         // Rubbing you out is tiring: the core glows, and your guns matter.
         B.tired = 3.5;
-        fx.text(B.x, B.y + 60, "IT'S TIRED — HIT THE CORE!", "#ffd23f", 16, true);
+        fx.text(B.x, B.y + 60, T("IT'S TIRED — HIT THE CORE!"), "#ffd23f", 16, true);
       }
     }
 
@@ -14586,7 +14497,7 @@ function update(dt, run, world, simMs){
           B.tired = 4.5;
           B.hp -= Math.round(B.maxHp * 0.06);
           B.flash = 1;
-          fx.text(B.x, B.y + 60, "SENTENCE BROKEN!", "#4ade80", 18, true);
+          fx.text(B.x, B.y + 60, T("SENTENCE BROKEN!"), "#4ade80", 18, true);
           audio.play("victory");
         }
         continue;
@@ -14620,8 +14531,8 @@ function update(dt, run, world, simMs){
     // - and then tears its own forgery apart.
     if(!S.fakeCard && B.hp <= B.maxHp * 0.35){
       S.fakeCard = 3.2;
-      run.bannerText = "MISSION COMPLETE?";
-      run.bannerSub = "that's not your handwriting...";
+      run.bannerText = T("MISSION COMPLETE?");
+      run.bannerSub = T("that's not your handwriting...");
       run.bannerColor = "#e2e8f0";
       run.bannerUntil = simMs + 2600;
       audio.play("telegraph");
@@ -14669,20 +14580,17 @@ function update(dt, run, world, simMs){
       S.doneSaid = true;
       const run2 = SF.game.run;
       if(run2){
-        run2.bannerText = "YOU PAINTED THE SKY";
-        run2.bannerSub = "the workshop is yours, " +
-          ((SF.game.profile && (SF.game.profile.callsign || SF.game.profile.name)) || "pilot");
+        run2.bannerText = T("THE WORKSHOP IS YOURS");
+        run2.bannerSub = T("one stroke left on the canvas");
         run2.bannerColor = "#ffd23f";
-        run2.bannerUntil = simMs + 4200;
+        run2.bannerUntil = simMs + 3600;
         world.dropCoins(B ? B.x : W/2, Math.min(B ? B.y : 200, 300),
           Math.round(1200 * run2.difficulty.pay * (world.player ? world.player.moneyMult : 1)));
         run2.score += Math.round(5000 * run2.difficulty.pay);
-        // Hand the mission back to the normal ending machinery.
-        run2.bossCleared = true;
-        run2.bossActive = false;
-        run2.finishTimer = 1.6;
       }
       SF.game.profile && SF.game.profile.bossesDefeated++;
+      // The stage goes dark and sky29.js takes over: the last stroke sweeps
+      // the blueprint away, the photo lands, and the normal ending follows.
       S.stage = "done";
       SF.comms.say("brushDown");
     }
@@ -14701,8 +14609,24 @@ function drawSky(ctx, timeMs, VWpx, VHpx){
   const k = torn ? 1 : (S.stutter > 0 ? Math.min(1, S.stutter / 0.2) : 0);
   if(k <= 0) return;
 
-  // The unpainted ground: graphite, a drawing grid, pencil notes.
   ctx.save();
+  /*
+   * THE HANDOFF. Once the brush is beaten, sky29's last stroke sweeps the
+   * canvas top to bottom - so from "done" onward the blueprint only exists
+   * BELOW the stroke's front, exactly like the pencil veil it lives under.
+   * One clip, and both layers leave the stage under the same brush.
+   */
+  if(S.stage === "done" && SF.sky29 && SF.sky29.active()){
+    const sk = SF.sky29._state();
+    if(sk && (sk.phase === "photo" || sk.phase === "done")){ ctx.restore(); return; }
+    if(sk && sk.phase === "stroke"){
+      ctx.beginPath();
+      ctx.rect(0, Math.max(0, sk.strokeY), VWpx, VHpx);
+      ctx.clip();
+    }
+  }
+
+  // The unpainted ground: graphite, a drawing grid, pencil notes.
   ctx.globalAlpha = k;
   ctx.fillStyle = "#12141d";
   ctx.fillRect(0, 0, VWpx, VHpx);
@@ -14920,61 +14844,6 @@ function drawActors(ctx, timeMs){
     ctx.restore();
   }
 
-  // THE MIRROR PILOT: your ship, upside down, in the workshop's gold.
-  if(S.stage === "mirror" && S.mirror){
-    const m = S.mirror;
-    ctx.save();
-    ctx.translate(m.x, m.y);
-    ctx.rotate(Math.PI);
-    SF.shipart.drawShip(ctx, 0, 0, 62, {
-      color: "#3a3324",
-      levels: SF.shipart.levelsOf(SF.game.profile),
-      t: m.t, idle: false,
-      tune: SF.game.profile && SF.game.profile.tune,
-      hull: SF.game.profile && SF.game.profile.hull,
-    });
-    ctx.restore();
-    if(m.flash > 0){
-      ctx.globalAlpha = Math.min(0.5, m.flash*0.5);
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.arc(m.x, m.y, 34, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    // Its tell, so a dodge is always something you watched it decide.
-    if(m.tell > 0){
-      ctx.strokeStyle = "rgba(232,193,74,0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 30, 0, TAU);
-      ctx.stroke();
-    }
-    /*
-     * The open window, said in green - the game's own colour for "this is
-     * good for you". Guns cold, a target ring, and a countdown arc that runs
-     * out, so a seven-year-old can see the turn coming and see it ending.
-     */
-    if(m.mode === "open"){
-      const k = clamp(m.modeT / 3.0, 0, 1);
-      const pulse = 0.55 + Math.sin(m.t*9)*0.45;
-      ctx.save();
-      ctx.strokeStyle = "rgba(74,222,128," + (0.45 + pulse*0.45).toFixed(2) + ")";
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(m.x, m.y, 40 + pulse*5, 0, TAU); ctx.stroke();
-      // the turn running out
-      ctx.strokeStyle = "rgba(74,222,128,0.95)";
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 52, -Math.PI/2, -Math.PI/2 + TAU*k);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(74,222,128,0.95)";
-      ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("OPEN!", m.x, m.y - 62);
-      ctx.restore();
-    }
-  }
-
   // THE ROYAL BRUSH: a workshop brush the size of a boss, held nib-down.
   if((S.stage === "brush" || S.stage === "nova") && S.brush){
     const B = S.brush;
@@ -15105,10 +14974,8 @@ function drawOver(ctx, timeMs){
     ctx.fillStyle = "#fff";
     ctx.fillText(label, W/2, y - 6);
   };
-  if(S.stage === "mirror" && S.mirror)
-    bar("THE MIRROR PILOT", S.mirror.hp, S.mirror.maxHp, "#e8c14a");
   if((S.stage === "brush") && S.brush)
-    bar("THE ROYAL BRUSH", S.brush.hp, S.brush.maxHp, "#c9b458");
+    bar(T("THE ROYAL BRUSH"), S.brush.hp, S.brush.maxHp, "#c9b458");
 }
 
 /* _state is for the test harness only: the fights are timed and aimed, and a
@@ -15116,30 +14983,21 @@ function drawOver(ctx, timeMs){
 /*
  * How far through the act we are, 0..1 - for the mission bar in the HUD.
  *
- * The bar reads boss health, and behind the sky that number stops meaning
- * anything: the Forgery dies, re-forges to FULL, and then stands there
- * invulnerable while the real fight moves in here. Measured on a live run, the
- * readout climbed to 97%, snapped back to 65% and sat there, frozen, for the
- * whole three-act finale - so the longest and strangest fight in the game was
- * also the one place the player was told nothing about how it was going.
- *
- * Each stage owns a slice, and the two that are real fights fill their slice
- * from the thing you are actually shooting.
+ * Once the workshop takes the stage, waves stop being the story - so each
+ * stage owns a slice, and the brush (the one real fight left in here) fills
+ * its slice from the thing you are actually shooting.
  */
-const PROGRESS_AT = { shed:0.00, fakeClear:0.10, titan:0.16,
-                      mirror:0.24, tear:0.55, brush:0.60, nova:0.96, done:1 };
+const PROGRESS_AT = { fakeClear:0.04, tear:0.12, brush:0.16, nova:0.96, done:1 };
 function progress01(){
   if(!S) return 0;
   const base = PROGRESS_AT[S.stage] != null ? PROGRESS_AT[S.stage] : 0;
-  if(S.stage === "mirror" && S.mirror && S.mirror.maxHp)
-    return base + (PROGRESS_AT.tear - base) * (1 - S.mirror.hp/S.mirror.maxHp);
   if(S.stage === "brush" && S.brush && S.brush.maxHp)
     return base + (PROGRESS_AT.nova - base) * (1 - S.brush.hp/S.brush.maxHp);
   return base;
 }
 
 SF.backstage = { _state: () => S,
-                 reset, begin, active, stage, readyForBoss, titanDown, update,
+                 reset, begin, active, stage, readyToClear, update,
                  progress01,
                  drawSky, drawActors, drawOver };
 })();
@@ -15236,7 +15094,11 @@ function update(dt, run, world, simMs){
       S.saidHalf = true;
       SF.comms.say("sky29Half");
     }
-    if(run.director && run.director.finishedSpawning && world.countEnemies() === 0){
+    // The last stroke waits for the whole show: on Behind the Sky the waves
+    // ending is only the middle of the level - the fake endings, the tear
+    // and the Royal Brush all play out before the canvas may finish.
+    if(run.director && run.director.finishedSpawning && world.countEnemies() === 0 &&
+       (!run.mission.backstage || SF.backstage.readyToClear())){
       S.phase = "stroke"; S.strokeY = -120;
       run.bannerText = "THE LAST STROKE";
       run.bannerSub = "it's yours to finish";
@@ -15383,6 +15245,550 @@ function drawOver(ctx, timeMs){
 
 SF.sky29 = { _state: () => S,
              reset, begin, active, readyToClear, splash, update, drawSky, drawOver };
+})();
+
+
+;/* ===== src/mirrorduel.js ===== */
+/*
+ * THE GLASS SEA'S DUEL - the reflection turns.
+ *
+ * The whole level teaches one idea: the sky is a mirror, and the second ship
+ * out there is YOURS - it flies your flight backwards, it fires when you
+ * fire, and the brief promises it cannot be hurt and cannot be hit. That
+ * promise holds right up until the last wave falls. Then the glass gives up
+ * pretending: the ghost peels off the sky exactly where it was flying,
+ * climbs to the top of the field, and opens fire with everything you own.
+ *
+ * The fight itself came from Behind the Sky, where it was act two of three
+ * and belonged to the workshop. It belongs here more: a mirror boss at the
+ * end of the mirror level is a punchline the whole mission sets up, and the
+ * finale it left behind is better for being one fight instead of three.
+ *
+ * Same contract as prologue.js and backstage.js: a mission flag
+ * (`mirrorDuel`) plus hooks game.js already calls - reset/begin/update, a
+ * hold before "clearing" (readyToClear), one draw pass at boss depth and one
+ * over the world for the bar. All state lives in S; reset() clears it.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp, lerp } = SF.core;
+const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
+
+let S = null;
+const VW = () => (SF.game && SF.game.VW) || 600;
+
+function reset(){ S = null; }
+function begin(){ S = { stage: "waves", t: 0, mirror: null }; }
+function active(){ return !!S; }
+
+/* The waves may end, but the duel is the level's last word. */
+function readyToClear(){ return !S || S.stage === "done"; }
+
+function update(dt, run, world, simMs){
+  if(!S || run.ended) return;
+  const fx = SF.fx, audio = SF.audio;
+  const W = SF.game.VW || 600;
+  S.t += dt;
+
+  // The last wave falls, and the reflection stops reflecting.
+  if(S.stage === "waves" && run.director && run.director.finishedSpawning &&
+     world.countEnemies() === 0){
+    S.stage = "turn"; S.t = 0;
+    // The ghost gun is gone from this frame on - it is not helping any more.
+    world.mirror = false;
+    audio.play("telegraph");
+    fx.shake(8);
+  }
+
+  if(S.stage === "turn" && S.t > 1.0){
+    const p = world.player;
+    const lv = id => SF.profile.upgradeLevel(SF.game.profile, id);
+    const dps = p ? p.dps : 60;
+    /*
+     * Sized exactly as the duel was behind the sky (see the note there
+     * about hitboxes and dps-derived pools): a ship-sized boss only ever
+     * catches a sliver of a fanned spread, so the pool is set from what
+     * actually lands. Measured at ~22s on PILOT.
+     */
+    const diff = (SF.game.run && SF.game.run.difficulty) || { bossHp: 1 };
+    const pool = Math.round(dps * 3.2 * (diff.bossHp || 1));
+    S.mirror = {
+      // It peels off the glass where the reflection was: your x, mirrored.
+      x: p ? clamp(W - p.x, 50, W - 50) : W/2,
+      y: p ? p.y : 500, r: 34,
+      hp: pool, maxHp: pool,
+      holdY: 190, vx: 0,
+      fireTimer: 1.4, dodgeCool: 0, tell: 0, dodgeDir: 0,
+      spread: lv("spread"), rapid: lv("rapid"),
+      bombs: 2, nextBombAt: 0.66,
+      // The duel breathes: it mirrors and shoots, then it OPENS - drifts to
+      // the middle, holds still, stops firing - and that is your turn.
+      mode: "mirror", modeT: 3.2, taught: false,
+      flash: 0, t: 0,
+    };
+    S.stage = "duel"; S.t = 0;
+    run.bannerText = T("THE MIRROR PILOT");
+    run.bannerSub = T("it bought everything you bought");
+    run.bannerColor = "#7dd3fc";
+    run.bannerUntil = simMs + 3400;
+    audio.play("bossWake");
+    audio.setMusic("boss");
+    fx.ring(S.mirror.x, S.mirror.y, 70, "#7dd3fc", 5, 0.5);
+    fx.ring(S.mirror.x, S.mirror.y, 40, "#ffffff", 3, 0.4);
+    SF.comms.say("mirrorSeen");
+  }
+
+  if(S.stage === "duel" && S.mirror){
+    const m = S.mirror, p = world.player;
+    m.t += dt;
+    m.flash = Math.max(0, m.flash - dt*4);
+    /*
+     * THE FIGHT'S RHYTHM (unchanged from its first home).
+     *
+     * Mirroring your lane is the whole idea of this boss, and on its own it
+     * made the duel unwinnable: your guns fire straight up from your x, and
+     * it sits at W - x, so the ONLY place you are lined up with it is dead
+     * centre - which is also the only place its volley lands on you. So it
+     * breathes: mirror and shoot, then OPEN - middle, hold, guns cold - and
+     * that is your turn. Wait, then hit.
+     */
+    if(m.y <= m.holdY){
+      m.modeT -= dt;
+      if(m.modeT <= 0){
+        if(m.mode === "mirror"){
+          m.mode = "open"; m.modeT = 3.0;
+          m.dodgeDir = 0; m.dodgeUsed = 0;
+          audio.play("telegraph");
+          if(!m.taught){                 // teach the window the first time
+            m.taught = true;
+            run.bannerText = T("IT'S WIDE OPEN");
+            run.bannerSub = T("when it stops, SHOOT IT");
+            run.bannerColor = "#4ade80";
+            run.bannerUntil = simMs + 2600;
+          }
+        } else {
+          m.mode = "mirror"; m.modeT = 3.2;
+          m.fireTimer = Math.max(m.fireTimer, 0.7);   // room to slide away
+        }
+      }
+    }
+    // It rises out of the sea to its lane at the top, then holds it: your x,
+    // reflected - except when it is open, where it waits in the middle.
+    if(m.y > m.holdY) m.y -= 150 * dt;
+    else if(m.mode === "open"){
+      m.x = lerp(m.x, W/2, Math.min(1, dt*1.6));
+      m.y = m.holdY + Math.sin(m.t*1.3)*10;
+    }
+    else if(p){
+      const lane = W - p.x;
+      m.x = lerp(m.x, lane, Math.min(1, dt*2.2));
+      m.y = m.holdY + Math.sin(m.t*1.3)*22;
+    }
+    // It shoots YOUR guns back: your spread pattern, your fire rate.
+    m.fireTimer -= dt;
+    if(m.fireTimer <= 0 && m.y <= m.holdY + 60 && m.mode === "mirror"){
+      const angles = SF.config.spreadPattern(m.spread);
+      for(let i = 0; i < angles.length; i++){
+        const a = Math.PI/2 + angles[i]/600;      // down, fanned like yours
+        world.spawnEnemyBullet(m.x, m.y + 24,
+          Math.cos(a)*330, Math.sin(a)*330, "aimed", 4.5);
+      }
+      m.fireTimer = 0.62 * SF.config.fireRateMult(m.rapid) * 2.4;
+      audio.play("shoot", true);
+    }
+    // It dodges like the rival - on a cooldown, with a tell.
+    m.dodgeCool = Math.max(0, m.dodgeCool - dt);
+    m.tell = Math.max(0, m.tell - dt);
+    if(!m.dodgeDir && m.dodgeCool <= 0 && m.mode === "mirror"){
+      const bs = world.bullets.items;
+      for(let i = 0; i < bs.length; i++){
+        const b = bs[i];
+        if(!b.alive || b.vy >= 0) continue;
+        if(Math.abs(b.x - m.x) < m.r + 26 && b.y > m.y && b.y - m.y < 170){
+          m.dodgeDir = b.x < m.x ? 1 : -1;
+          if(m.x < 90) m.dodgeDir = 1;
+          if(m.x > W - 90) m.dodgeDir = -1;
+          m.tell = 0.14;
+          break;
+        }
+      }
+    }
+    if(m.dodgeDir && m.tell <= 0){
+      m.x = clamp(m.x + m.dodgeDir * 460 * dt, 40, W - 40);
+      m.dodgeUsed = (m.dodgeUsed || 0) + 460 * dt;
+      if(m.dodgeUsed > 120){ m.dodgeDir = 0; m.dodgeUsed = 0; m.dodgeCool = 1.5; }
+    }
+    // Your bullets vs it. An open guard is worth double - the payout for the
+    // thing the fight is teaching.
+    const bs = world.bullets.items;
+    for(let i = 0; i < bs.length; i++){
+      const b = bs[i];
+      if(!b.alive) continue;
+      const dx = b.x - m.x, dy = b.y - m.y;
+      if(dx*dx + dy*dy < (m.r + 5)*(m.r + 5)){
+        b.alive = false;
+        const mult = m.mode === "open" ? 2 : 1;
+        // `b.dmg`, NOT `b.damage` - see the pool factory in entities.js.
+        const hit = (b.dmg || 1) * mult;
+        m.hp -= hit;
+        m.flash = 1;
+        fx.spark(b.x, b.y, 0, -60, mult > 1 ? "#4ade80" : "#7dd3fc", 0.3, 2);
+        if(SF.game.run) SF.game.run.stats.damageDealt =
+          (SF.game.run.stats.damageDealt || 0) + hit;
+      }
+    }
+    // At each third of health it plays YOUR panic button: a bomb that
+    // clears YOUR bullets off the screen.
+    if(m.bombs > 0 && m.hp <= m.maxHp * m.nextBombAt){
+      m.bombs--; m.nextBombAt -= 0.33;
+      for(let i = 0; i < bs.length; i++)
+        if(bs[i].alive){ fx.spark(bs[i].x, bs[i].y, 0, 40, "#7dd3fc", 0.25, 2); bs[i].alive = false; }
+      fx.ring(m.x, m.y, 180, "#7dd3fc", 6, 0.6);
+      fx.shake(10);
+      audio.play("bomb");
+      SF.comms.say("mirrorBomb");
+    }
+    // Ram guard: standing under it hurts (gently - it is still a duel). Not
+    // while it is open: the window is the one moment the fight tells you to
+    // come and get it.
+    if(m.mode === "mirror" && p && p.alive &&
+       Math.hypot(p.x - m.x, p.y - m.y) < m.r + 16)
+      SF.game.hurtPlayer && SF.game.hurtPlayer("mirror");
+    if(m.hp <= 0){
+      S.stage = "shatter"; S.t = 0;
+      // The glass breaks the way glass breaks: white, then everywhere.
+      fx.explosion(m.x, m.y, 150, "#7dd3fc", true);
+      for(let i = 0; i < 3; i++)
+        fx.ring(m.x, m.y, 60 + i*55, i % 2 ? "#ffffff" : "#7dd3fc", 5 - i, 0.5 + i*0.14);
+      fx.debris(m.x, m.y, 26, "#bfe8ff");
+      fx.shake(26); fx.hitStop(160);
+      fx.flash(0.8, "220,240,255");
+      audio.play("bossExplode");
+      world.enemyBullets.killAll();
+      run.bannerText = T("THE GLASS BREAKS");
+      run.bannerSub = T("there was only ever one of you");
+      run.bannerColor = "#7dd3fc";
+      run.bannerUntil = simMs + 3200;
+      const pay = run.difficulty.pay * (world.player ? world.player.moneyMult : 1);
+      world.dropCoins(m.x, Math.min(m.y, 300), Math.round(650 * pay));
+      run.score += Math.round(2500 * run.difficulty.pay);
+      SF.game.profile && SF.game.profile.bossesDefeated++;
+      SF.comms.say("mirrorDown");
+    }
+  }
+
+  if(S.stage === "shatter" && S.t > 1.6) S.stage = "done";
+}
+
+/* At boss depth: the pilot itself - your ship, upside down, in sea glass. */
+function drawActors(ctx, timeMs){
+  if(!S || S.stage !== "duel" && S.stage !== "shatter") return;
+  const m = S.mirror;
+  if(!m || S.stage === "shatter") return;
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  ctx.rotate(Math.PI);
+  SF.shipart.drawShip(ctx, 0, 0, 62, {
+    color: "#28455e",
+    levels: SF.shipart.levelsOf(SF.game.profile),
+    t: m.t, idle: false,
+    tune: SF.game.profile && SF.game.profile.tune,
+    hull: SF.game.profile && SF.game.profile.hull,
+  });
+  ctx.restore();
+  // A glass sheen down the hull, so it still reads as the reflection even
+  // now that it has a mind of its own.
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.16 + Math.sin(timeMs/300)*0.06;
+  const g = ctx.createLinearGradient(m.x - 30, m.y - 30, m.x + 30, m.y + 30);
+  g.addColorStop(0, "rgba(190,230,255,0)");
+  g.addColorStop(0.5, "rgba(190,230,255,0.9)");
+  g.addColorStop(1, "rgba(190,230,255,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(m.x, m.y, 34, 0, TAU); ctx.fill();
+  ctx.restore();
+  if(m.flash > 0){
+    ctx.globalAlpha = Math.min(0.5, m.flash*0.5);
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(m.x, m.y, 34, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // Its tell, so a dodge is always something you watched it decide.
+  if(m.tell > 0){
+    ctx.strokeStyle = "rgba(125,211,252,0.9)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 30, 0, TAU);
+    ctx.stroke();
+  }
+  /*
+   * The open window, said in green - the game's own colour for "this is
+   * good for you". Guns cold, a target ring, and a countdown arc that runs
+   * out, so a seven-year-old can see the turn coming and see it ending.
+   */
+  if(m.mode === "open"){
+    const k = clamp(m.modeT / 3.0, 0, 1);
+    const pulse = 0.55 + Math.sin(m.t*9)*0.45;
+    ctx.save();
+    ctx.strokeStyle = "rgba(74,222,128," + (0.45 + pulse*0.45).toFixed(2) + ")";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(m.x, m.y, 40 + pulse*5, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = "rgba(74,222,128,0.95)";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 52, -Math.PI/2, -Math.PI/2 + TAU*k);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(74,222,128,0.95)";
+    ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(T("OPEN!"), m.x, m.y - 62);
+    ctx.restore();
+  }
+}
+
+/* Above the scene, below the HUD: the duel's bar, in sea glass. */
+function drawOver(ctx, timeMs){
+  if(!S || S.stage !== "duel" || !S.mirror) return;
+  const W = VW(), m = S.mirror;
+  const w = W*0.62, x = (W - w)/2, y = 96;
+  ctx.fillStyle = "rgba(4,8,18,0.72)";
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x, y, w, 10, 5);
+  else ctx.rect(x, y, w, 10);
+  ctx.fill(); ctx.stroke();
+  const k = clamp(m.hp/m.maxHp, 0, 1);
+  const g = ctx.createLinearGradient(0, y, 0, y + 10);
+  g.addColorStop(0, "#ffffff");
+  g.addColorStop(0.35, "#7dd3fc");
+  g.addColorStop(1, "#7dd3fc");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x + 1.5, y + 1.5, Math.max(3, (w - 3)*k), 7, 3.5);
+  else ctx.rect(x + 1.5, y + 1.5, Math.max(3, (w - 3)*k), 7);
+  ctx.fill();
+  const label = T("THE MIRROR PILOT");
+  ctx.font = "700 13px Rajdhani, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.strokeStyle = "rgba(6,8,18,0.75)";
+  ctx.lineWidth = 3;
+  ctx.strokeText(label, W/2, y - 6);
+  ctx.fillStyle = "#fff";
+  ctx.fillText(label, W/2, y - 6);
+}
+
+/** 0..1 for the HUD's mission bar while the duel owns the ending. */
+function progress01(){
+  if(!S || !S.mirror || S.stage === "waves" || S.stage === "turn") return 0;
+  if(S.stage !== "duel") return 1;
+  return 1 - S.mirror.hp/S.mirror.maxHp;
+}
+
+SF.mirrorduel = { _state: () => S,
+                  reset, begin, active, readyToClear, update, progress01,
+                  drawActors, drawOver };
+})();
+
+
+;/* ===== src/homecoming.js ===== */
+/*
+ * THE LONG WAY HOME - mission 39's ending, played instead of a victory lap.
+ *
+ * The Titan falls, the war is over, and the game does the one thing it has
+ * been promising since Launch Day: it flies the family back DOWN. The launch
+ * sequence from Mission 0, run in reverse - stars streaking past, then the
+ * sky warming to daylight, then the cloud deck, then the same farmland the
+ * whole story took off from, scrolling up to meet the wheels. Nobody flies
+ * this bit for score; input stays live so a kid can waggle the wings on the
+ * way down, but nothing can hurt anyone and nothing needs doing.
+ *
+ * Same contract as prologue.js: a mission flag (`homecoming`) plus hooks
+ * game.js already calls - reset/begin/update and one draw pass over the sky.
+ * The victory lap holds until done() so the results card waits for the
+ * wheels. All state lives in S; reset() clears it.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp } = SF.core;
+const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
+
+let S = null;
+
+const DESCENT_SECS = 13.6;    // turn 2s, flood 4s, farm 5s, wheels 2.6s
+
+/* Soft cumulus, baked once per shape - the same trick the prologue's deck
+ * uses, cosmetic randomness off Math.random so the sim stream never moves. */
+function bakeCloud(){
+  const cv = document.createElement("canvas");
+  cv.width = 300; cv.height = 150;
+  const x = cv.getContext("2d");
+  if(!x) return cv;
+  const blobs = 9 + Math.floor(Math.random()*6);
+  for(let i = 0; i < blobs; i++){
+    const bx = 40 + Math.random()*220, by = 55 + Math.random()*50;
+    const r = 26 + Math.random()*34;
+    const g = x.createRadialGradient(bx, by - r*0.2, r*0.1, bx, by, r);
+    g.addColorStop(0, "rgba(255,252,246,0.85)");
+    g.addColorStop(0.7, "rgba(244,242,238,0.45)");
+    g.addColorStop(1, "rgba(240,238,235,0)");
+    x.fillStyle = g;
+    x.beginPath(); x.arc(bx, by, r, 0, TAU); x.fill();
+  }
+  return cv;
+}
+
+function reset(){ S = null; }
+
+/** Armed at mission start; the show itself waits for the Titan. */
+function begin(){
+  S = { started: false, t: 0, clouds: [], stars: [], earth: null,
+        scroll: 0, saidFarm: false, saidLights: false, touched: false };
+}
+
+function active(){ return !!S; }
+function started(){ return !!(S && S.started); }
+function done(){ return !S || (S.started && S.t >= DESCENT_SECS); }
+
+/** The Titan is down: turn for home. Called from the boss's death. */
+function start(){
+  if(!S || S.started) return;
+  S.started = true;
+  S.t = 0;
+  // The ground they are coming home to - Earth's own sky texture, baked here
+  // under the death blast's hit-stop so the stall never shows.
+  try { S.earth = SF.skygen.build(40, SF.game.VW || 600, SF.game.VH || 800, 1); }
+  catch(e){ S.earth = null; }
+  for(let i = 0; i < 9; i++){
+    S.clouds.push({ spr: bakeCloud(),
+      fx: Math.random(), y: -200 - Math.random()*900,
+      sc: 0.8 + Math.random()*1.3, v: 60 + Math.random()*90,
+      a: 0.5 + Math.random()*0.4 });
+  }
+  for(let i = 0; i < 80; i++)
+    S.stars.push({ fx: Math.random(), fy: Math.random(), s: Math.random() });
+}
+
+function update(dt, run, world, simMs){
+  if(!S || !S.started || run.ended) return;
+  const H = SF.game.VH || 800;
+  S.t += dt;
+  const t = S.t;
+
+  // How fast the world still rushes past: full tilt off the turn, feathered
+  // to nothing for the wheels.
+  const rush = t < 2 ? 1 : t < 11 ? 1 - (t - 2)/9 * 0.85 : Math.max(0, 0.15 - (t - 11)*0.06);
+  S.scroll = (S.scroll + (90 + rush*380) * dt) % H;
+  for(const c of S.clouds){
+    c.y += (c.v + rush*430) * dt;
+    if(c.y > H + 160){ c.y = -220; c.fx = Math.random(); }
+  }
+
+  if(!S.saidFarm && t > 6.4){
+    S.saidFarm = true;
+    SF.comms.say("homecomingFarm");
+  }
+  if(!S.saidLights && t > 10.2){
+    S.saidLights = true;
+    SF.comms.say("homecomingLights");
+  }
+  if(!S.touched && t > 12.2){
+    S.touched = true;
+    run.bannerText = T("WHEELS DOWN");
+    run.bannerSub = T("home");
+    run.bannerColor = "#ffd23f";
+    run.bannerUntil = simMs + 3000;
+    SF.fx.flash(0.35, "255,240,210");
+    SF.fx.shake(5);
+    SF.audio.play("rescue");
+  }
+}
+
+/* Over the mission's own sky: night thins, clouds pass, the farm arrives. */
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S || !S.started) return;
+  const t = S.t;
+
+  // The sky warms first: space fades under a daylight wash.
+  const dayK = clamp((t - 1.6)/4.2, 0, 1);
+  if(dayK > 0){
+    ctx.save();
+    ctx.globalAlpha = dayK;
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, "#8fb7e8");
+    g.addColorStop(0.62, "#bcd6ef");
+    g.addColorStop(1, "#f0cda2");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.restore();
+  }
+
+  // Stars streak past on the way down, then daylight swallows them.
+  const starK = clamp(t/1.2, 0, 1) * (1 - dayK);
+  if(starK > 0.01){
+    ctx.save();
+    ctx.globalAlpha = starK * 0.9;
+    ctx.strokeStyle = "#eaf4ff";
+    ctx.lineWidth = 1.4;
+    for(const st of S.stars){
+      const len = 26 + st.s*46;
+      const y = ((st.fy*VH + timeMs*0.55*(0.5 + st.s)) % (VH + len)) - len;
+      ctx.beginPath();
+      ctx.moveTo(st.fx*VW, y);
+      ctx.lineTo(st.fx*VW, y + len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // The farmland rises to meet them - Launch Day's own ground, same painter.
+  const earthK = clamp((t - 5.6)/3.4, 0, 1);
+  if(earthK > 0 && S.earth){
+    ctx.save();
+    ctx.globalAlpha = earthK;
+    const y = S.scroll;
+    ctx.drawImage(S.earth, 0, y, VW, VH);
+    ctx.drawImage(S.earth, 0, y - VH, VW, VH);
+    ctx.restore();
+  }
+
+  // The cloud deck, punched through on the way down.
+  const cloudK = t < 3 ? clamp((t - 2.2)/1.2, 0, 1)
+                       : t < 11 ? 1 : clamp(1 - (t - 11)/1.6, 0, 1);
+  if(cloudK > 0.01){
+    ctx.save();
+    for(const c of S.clouds){
+      ctx.globalAlpha = c.a * cloudK;
+      const w = 300*c.sc, h = 150*c.sc;
+      ctx.drawImage(c.spr, c.fx*VW - w/2, c.y - h/2, w, h);
+    }
+    ctx.restore();
+  }
+
+  // Wheels-down: the ships gather shadows, the one tell of real ground.
+  const landK = clamp((t - 11.2)/1.6, 0, 1);
+  if(landK > 0){
+    const p = SF.game.world && SF.game.world.player;
+    if(p && p.alive){
+      ctx.save();
+      ctx.globalAlpha = landK * 0.35;
+      ctx.fillStyle = "#1c2410";
+      ctx.beginPath();
+      ctx.ellipse(p.x + 10, p.y + 26 + (1 - landK)*40, 30, 9, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+SF.homecoming = { _state: () => S,
+                  reset, begin, active, started, start, done, update, drawSky };
 })();
 
 
@@ -27165,6 +27571,10 @@ function startMission(missionIndex, difficultyId){
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
+  SF.mirrorduel.reset();                  // the glass keeps pretending until asked
+  if(mission.mirrorDuel) SF.mirrorduel.begin();
+  SF.homecoming.reset();                  // the road home waits for the last fight
+  if(mission.homecoming) SF.homecoming.begin();
   SF.bossintro.reset();
   SF.rewind.arm();                        // a blank tape for this run
   game.world.silent = !!mission.noGuns;   // nobody shoots on a silent run
@@ -27507,8 +27917,11 @@ function startMission(missionIndex, difficultyId){
              : mission.foundry ? "foundryStart"
              : mission.serpent ? "serpentStart"
              : mission.prologue ? "prologueStart"
-             : mission.backstage ? "backstageStart"
+             : mission.homecoming ? "homecomingStart"
+             // Behind the Sky opens as Papa's canvas - the pencil and the
+             // colours - and keeps the workshop's own line for the tear.
              : mission.sky29 ? "sky29Start"
+             : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
              : mission.limpets ? "limpetStart"
@@ -27540,6 +27953,24 @@ function beginVictoryLap(){
   run.phaseTimer = 5.0;   // a real stretch of open sky, not a blink
   const p = game.world.player;
   if(p) p.invuln = Math.max(p.invuln, 30);   // no stray bullet ruins the ending
+  /*
+   * The Long Way Home doesn't lap - it LANDS. The Titan was the last of
+   * them, so instead of circling the same sky the squadron turns for Earth
+   * and homecoming.js flies the launch sequence backwards, all the way down
+   * to the farm. The lap phase holds below until the wheels touch.
+   */
+  if(run.mission.homecoming){
+    SF.homecoming.start();
+    run.phaseTimer = 15.0;
+    run.bannerText = SF.i18n ? SF.i18n.t("THE WAR IS OVER!") : "THE WAR IS OVER!";
+    run.bannerSub = SF.i18n ? SF.i18n.t("squadron — we're going home") : "squadron — we're going home";
+    run.bannerColor = "#ffd23f";
+    run.bannerUntil = simMs + 3400;
+    audio.play("victory");
+    audio.setMusic("menu");
+    SF.comms.say("homecomingTurn");
+    return;
+  }
   run.bannerText = "AREA CLEAR!";
   run.bannerSub = "grab the last coins — then head home";
   run.bannerColor = "#4ade80";
@@ -28246,8 +28677,9 @@ function killBoss(boss){
     fx.shake(20);
     return;
   }
-  // THE FORGERY's titan is only act one: it cracks open, and what crawls
-  // out is yours. backstage.js owns everything after this frame.
+  // THE FORGERY - every boss they beat, bolted back together - is the war's
+  // LAST fight now, not act one of three. It dies like the wall it is, and
+  // the mission that fields it turns for home (homecoming.js owns the ride).
   if(boss.def.forge){
     fx.explosion(boss.x, boss.y, 170, "#e8c14a", true);
     for(let i = 0; i < 4; i++)
@@ -28255,10 +28687,14 @@ function killBoss(boss){
     fx.debris(boss.x, boss.y, 26, "#e8c14a");
     fx.shake(26); fx.hitStop(160);
     audio.play("bossExplode");
-    run.score += Math.round(1500 * run.difficulty.pay);
+    game.world.dropCoins(boss.x, Math.min(boss.y, VH*0.4),
+      Math.round(900 * run.difficulty.pay * game.world.player.moneyMult));
+    run.score += Math.round(3000 * run.difficulty.pay);
+    game.profile.bossesDefeated++;
     game.world.boss = null;
-    run.bossActive = true;              // the fight goes on - just not in this slot
-    SF.backstage.titanDown();
+    run.bossActive = false;
+    run.bossCleared = true;
+    run.finishTimer = 1.6;
     return;
   }
   // The Devourer dies for eight seconds, in five stages, on its own clock.
@@ -28543,13 +28979,16 @@ function update(dt, timeMs){
     run.director.update(dt);
     run.stats.spawned = run.director.spawnedCount;
     if(run.director.finishedSpawning && game.world.countEnemies() === 0){
-      // Behind the Sky: the first fake ending plays out before the boss may
-      // arrive - backstage.js says when the workshop is ready.
-      if(run.mission.backstage && !SF.backstage.readyForBoss()){ /* hold */ }
+      // Behind the Sky: the fake endings, the tear and the Royal Brush all
+      // play HERE, in the hold - backstage.js says when the show is over.
+      if(run.mission.backstage && !SF.backstage.readyToClear()){ /* hold */ }
       // Mission 0: the raid is swept, but the story is mid-sentence - the
       // chute, the theft and the climb happen HERE, in the hold. prologue.js
       // raises readyToEnd() when the family is out of the atmosphere.
       else if(run.mission.prologue && !SF.prologue.readyToEnd()){ /* hold */ }
+      // The Glass Sea: the reflection peels off the sky and the duel is the
+      // level's last word - mirrorduel.js says when the glass has broken.
+      else if(run.mission.mirrorDuel && !SF.mirrorduel.readyToClear()){ /* hold */ }
       else if(run.mission.boss){
         run.bossActive = true;
         run.bossSpawned = true;
@@ -28622,8 +29061,14 @@ function update(dt, timeMs){
     // last coins still falling, nothing that can hurt you - and fireworks,
     // because a cleared sky deserves applause.
     run.phaseTimer -= dt;
+    // The Long Way Home holds the lap until the wheels are down - the
+    // results card must not land mid-descent. Fireworks stay grounded too:
+    // the descent is its own show.
+    const descending = run.mission.homecoming && SF.homecoming.active() &&
+                       SF.homecoming.started() && !SF.homecoming.done();
+    if(descending) run.phaseTimer = Math.max(run.phaseTimer, 0.6);
     run.fwTimer = (run.fwTimer || 0.001) - dt;
-    if(run.fwTimer <= 0){
+    if(run.fwTimer <= 0 && !descending){
       const FW = (SF.config.FIREWORK_BY_ID[game.profile.fireworks] ||
                   SF.config.FIREWORKS[0]).colors;   // their bought show, or classic
       fx.firework(rand(70, VW-70), rand(VH*0.12, VH*0.45),
@@ -28686,17 +29131,19 @@ function update(dt, timeMs){
    * readout for the next fight.
    */
   let progressNow;
-  if(run.mission.backstage && run.bossActive && SF.backstage.active()){
+  if(run.mission.backstage && SF.backstage.active() && SF.backstage.stage() !== "travel"){
     /*
-     * Behind the sky, boss health stops being the story: the Forgery dies,
-     * RE-FORGES to full, and then stands there invulnerable while the real
-     * fight moves into the three acts. Measured on a live run, the bar climbed
-     * to 97%, snapped back to 65% and froze there for the rest of the mission -
-     * so the longest and strangest fight in the game was the one place the
-     * player was told nothing at all about how it was going. The act's own
-     * progress drives it instead (see backstage.progress01()).
+     * Behind the sky, waves stop being the story the moment the workshop
+     * takes the stage: the fake endings, the tear and the Royal Brush have
+     * no boss slot for the bar to read, so the act's own progress drives it
+     * instead (see backstage.progress01()).
      */
     progressNow = 0.65 + 0.35*clamp(SF.backstage.progress01(), 0, 1);
+  } else if(run.mission.mirrorDuel && SF.mirrorduel.active() &&
+            !SF.mirrorduel.readyToClear() &&
+            run.director.finishedSpawning && game.world.countEnemies() === 0){
+    // The Glass Sea's duel owns the last stretch the same way.
+    progressNow = 0.65 + 0.35*clamp(SF.mirrorduel.progress01(), 0, 1);
   } else if(run.bossActive && game.world.boss){
     progressNow = 0.65 + 0.35*(1 - game.world.boss.hp/game.world.boss.maxHp);
   } else if(run.bossCleared){
@@ -28705,7 +29152,10 @@ function update(dt, timeMs){
     const timeline = clamp(run.director.time / run.wavesEndT, 0, 1);
     const cleared = run.director.totalPlanned
       ? clamp(run.stats.kills / run.director.totalPlanned, 0, 1) : 0;
-    progressNow = Math.max(timeline, cleared) * (run.mission.boss ? 0.65 : 1);
+    // A mission whose ENDING owns the last stretch - a boss, the duel, the
+    // workshop's show - keeps 35% of the bar for it.
+    const holdsEnding = run.mission.boss || run.mission.mirrorDuel || run.mission.backstage;
+    progressNow = Math.max(timeline, cleared) * (holdsEnding ? 0.65 : 1);
   }
   /*
    * A progress bar goes one way. Every backwards jump this game has had came
@@ -29744,6 +30194,10 @@ function update(dt, timeMs){
   if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
+  // The Glass Sea's turned reflection lives in mirrorduel.js...
+  if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
+  // ...and the descent to the farm lives in homecoming.js.
+  if(run.mission.homecoming) SF.homecoming.update(dt, run, game.world, simMs);
 
   /*
    * THE CONVOY. Three haulers cross bottom-to-top over ~34s each, staggered
@@ -30093,9 +30547,12 @@ function draw(timeMs){
   // fight rather than sitting still behind it.
   if(!replaying) fx.cameraApply(ctx, VW, VH);
   SF.render.drawBackground(ctx);
-  SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
+  // Veil first, blueprint second: on Behind the Sky both run at once, and
+  // the tear has to cover the pencil - the workshop owns the torn stage.
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
+  SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint over everything
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
+  SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -30108,7 +30565,8 @@ function draw(timeMs){
   SF.render.drawPickups(ctx, world, timeMs);
   SF.render.drawEnemies(ctx, world, timeMs);
   SF.render.drawBoss(ctx, world.boss, timeMs);
-  SF.backstage.drawActors(ctx, timeMs);              // the mirror, the brush, the letters
+  SF.backstage.drawActors(ctx, timeMs);              // the brush, the sketches, the letters
+  SF.mirrorduel.drawActors(ctx, timeMs);             // the Glass Sea's turned reflection
   SF.render.drawArena(ctx, world.boss, timeMs);      // the Devourer's screen-wide attacks
   SF.render.drawFleet(ctx, timeMs);                  // the rescued pilots, phase five
   SF.render.drawBullets(ctx, world);
@@ -30221,7 +30679,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -32586,8 +33044,8 @@ const SECTORS = [
     sub:"their star went out, and something ate it" },      // 28-30
   { at:32, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 32-36
-  { at:37, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 37-39
+  { at:37, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 37-39
   { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
@@ -32682,13 +33140,13 @@ function renderMissions(){
     const giftIdx = MISSIONS.findIndex(m => m.gift);
     const giftDone = giftIdx >= 0 && profile.missions[MISSIONS[giftIdx].id] &&
                      profile.missions[MISSIONS[giftIdx].id].cleared;
+    // Stars stopped being a key when the gift stop started opening with the
+    // war - so the header sells them as what they are now: the shine.
     goal.textContent = left > 0
-      ? T("{n} more ★ to open {sky} — the sky Papa never finished",
-          { n: left, sky: SF.missions.giftName() })
+      ? T("{n} more ★ to a golden campaign — the hunt knows where", { n: left })
       : giftDone ? T("Every star home, and {sky} painted. Nothing left but the flying.",
                      { sky: SF.missions.GIFT.name })
-                 : T("Every star is home — {sky} is open at the top of the map",
-                     { sky: SF.missions.giftName() });
+                 : T("Every star is home — the whole campaign, gold.");
     goal.classList.toggle("camp-goal-done", left <= 0);
   }
   const debts = starDebts();
@@ -32749,10 +33207,10 @@ function renderMissions(){
       audio.play("uiClick");
       dialog({
         title: SF.missions.giftName(),
-        text: "Papa left one sky unfinished - this one. It has your names pencilled in the corner." +
-              "\n\nEarn EVERY star in the campaign - all " + P.maxStars() + " - and the squadron paints it together." +
-              "\n\n★ " + P.totalStars(profile) + " / " + P.maxStars() + " so far.",
-        okLabel: "WE'LL EARN THEM", cancelLabel: "CLOSE",
+        text: T("Papa left one sky unfinished - this one. It has your names pencilled in the corner.") +
+              "\n\n" + T("Win the war first - beat mission {n} - and the squadron flies up to paint it together.",
+                         { n: SF.missions.GIFT.id - 1 }),
+        okLabel: T("WE'RE ON OUR WAY"), cancelLabel: T("CLOSE"),
       });
     });
     holder.appendChild(btn);
@@ -33245,10 +33703,9 @@ function drawCampaign(){
         ctx.font = "italic bold 13px Rajdhani, Arial, sans-serif";
         ctx.fillText(SF.missions.giftName(), x, y - R - 46);
         // The requirement, in plain kid words, always visible.
-        const have = P.totalStars(profile), want = P.maxStars();
         ctx.fillStyle = "rgba(255,210,63,0.85)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
-        ctx.fillText(T("★ {have} / {want} — EARN EVERY STAR", { have, want }), x, y - R - 29);
+        ctx.fillText(T("WIN THE WAR FIRST — BEAT MISSION {n}", { n: SF.missions.GIFT.id - 1 }), x, y - R - 29);
         ctx.restore();
       } else {
         // Painted (or ready to be): the disc wears the dawn itself.
@@ -35374,6 +35831,60 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "rgba(255,255,255,0.8)";                     // out of their reach
     ctx.fillRect(W*0.12, 6, 1.6, 1.6); ctx.fillRect(W*0.55, 12, 1.4, 1.4);
     ctx.fillRect(W*0.83, 4, 1.6, 1.6);
+  } else if(art === "starsBack"){
+    /*
+     * The first night, undone. Same composition as "dark" - the farm, the
+     * night - except the sky is FULL again: every stolen star home, and the
+     * workshop's lights finally off, because the house's are on instead.
+     */
+    const d = ctx.createLinearGradient(0, 0, 0, H);
+    d.addColorStop(0, "rgba(7,10,26,0.35)");
+    d.addColorStop(1, "rgba(7,10,26,0.85)");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 90; i++){                     // the sky, refilled
+      const sx = ((Math.sin(i*93.7)*43758.5453) % 1 + 1) % 1 * W;
+      const sy = ((Math.sin(i*57.3)*43758.5453) % 1 + 1) % 1 * H*0.8;
+      const s = i % 7 === 0 ? 2.2 : 1.3;
+      ctx.fillStyle = i % 5 ? "rgba(255,255,255,0.9)" : "rgba(255,232,170,0.95)";
+      ctx.fillRect(sx, sy, s, s);
+    }
+    // one of them, five-pointed and gold: the one they went furthest for
+    ctx.fillStyle = "#ffd76e";
+    ctx.save();
+    ctx.translate(W*0.68, H*0.22);
+    ctx.beginPath();
+    for(let k = 0; k < 10; k++){
+      const a2 = -Math.PI/2 + k*Math.PI/5, rr = k % 2 ? 3 : 7;
+      const px = Math.cos(a2)*rr, py = Math.sin(a2)*rr;
+      if(k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+    const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, 18);
+    halo.addColorStop(0, "rgba(255,214,110,0.5)"); halo.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "#020308";                       // the farm, asleep at last
+    ctx.fillRect(0, H*0.86, W, H*0.14);
+    const hx = W*0.26, hy = H*0.86;
+    const hg = ctx.createRadialGradient(hx + 22, hy, 1, hx + 22, hy, 22);
+    hg.addColorStop(0, "rgba(255,214,110,0.5)"); hg.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(hx + 22, hy, 22, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#000106";
+    ctx.fillRect(hx - 14, hy - 8, 28, 9);            // the workshop, dark tonight
+    ctx.beginPath(); ctx.moveTo(hx - 16, hy - 8); ctx.lineTo(hx, hy - 17);
+    ctx.lineTo(hx + 16, hy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillRect(hx + 14, hy - 6, 16, 7);            // the house, lit
+    ctx.beginPath(); ctx.moveTo(hx + 12, hy - 6); ctx.lineTo(hx + 22, hy - 13);
+    ctx.lineTo(hx + 32, hy - 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(hx + 18, hy - 4.5, 3.6, 4); ctx.fillRect(hx + 24, hy - 4.5, 3.6, 4);
+    // six little ships on the grass, nose up, done for the day
+    ctx.fillStyle = "rgba(190,200,215,0.8)";
+    for(let k = 0; k < 6; k++){
+      const px = W*0.55 + k*13, py = H*0.9;
+      ctx.beginPath(); ctx.moveTo(px, py - 5); ctx.lineTo(px + 3.4, py + 3);
+      ctx.lineTo(px - 3.4, py + 3); ctx.closePath(); ctx.fill();
+    }
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -35392,7 +35903,7 @@ function openBriefing(index){
   // The fight's music starts downloading NOW, while somebody reads the brief,
   // instead of in the first second of the mission. Measured: about 300ms from
   // creating the element to sound, and this screen is up for several seconds.
-  if(SF.audio.warm) SF.audio.warm(m.boss ? "boss" : "combat");
+  if(SF.audio.warm) SF.audio.warm(m.boss || m.mirrorDuel || m.backstage ? "boss" : "combat");
 
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
@@ -35407,7 +35918,10 @@ function openBriefing(index){
   if(m.prologue) showStory(SF.storyData.STORY.launchDay);
 
   $("briefNum").textContent = "MISSION " + m.id;
-  $("briefBoss").classList.toggle("hidden", !m.boss);
+  // The badge warns about any boss-SHAPED ending, not just a BOSSES-table
+  // one: the Glass Sea's turned reflection and the workshop's brush both
+  // deserve the same heads-up a titan gets.
+  $("briefBoss").classList.toggle("hidden", !(m.boss || m.mirrorDuel || m.backstage));
   $("briefTitle").textContent = m.name.toUpperCase();
   $("briefSubtitle").textContent = m.subtitle;
 
@@ -36147,15 +36661,18 @@ function showResults(result){
   if(result.sky29Won)
     queueToast({ glyph:"star", name: SF.missions.giftName() + " — the dawn off Papa's last canvas. Wear it well.",
       label:"PAINT WON" });
-  // The 84th star is a door opening, and the door is at the top of the map.
+  // Every star is a lap of honour now, not a key - the gift stop opens with
+  // the war instead. Still worth a toast: 117 of 117 is the family record.
   if(result.allStarsNow)
-    queueToast({ glyph:"star", name:"EVERY STAR IS HOME — " + SF.missions.GIFT.name + " is waiting at the top of the map.",
-      label: SF.missions.giftName() + " UNLOCKED" });
-  // The true curtain lives behind the sky now; the Devourer keeps its own.
-  // Anchoring the old finale to its mission (not to campaignComplete) matters:
+    queueToast({ glyph:"star", name: T("EVERY STAR IS HOME — the whole campaign, gold."),
+      label: T("EVERY STAR") });
+  // Every curtain is anchored to its own MISSION, not to a profile state -
   // with Act 4 in the campaign, a fresh profile would otherwise get the
-  // Devourer's curtain played over the workshop's ending.
-  if(completed && P.campaignComplete(profile)) maybeStory("workshop");
+  // wrong story played over the wrong ending. The campaign's true curtain
+  // is the homecoming at 39; the workshop's painted-sky card belongs to the
+  // bonus level that actually fields the brush now.
+  if(completed && run.mission.sky29) maybeStory("workshop");
+  else if(completed && run.mission.homecoming) maybeStory("homecoming");
   else if(completed && run.missionIndex === DEVOURER_END) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");

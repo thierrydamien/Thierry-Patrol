@@ -262,7 +262,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THEIR STAR": "LEUR ÉTOILE",
 "THE DARK": "LES TÉNÈBRES",
 "THE CRACK": "LA FAILLE",
-"THE WORKSHOP": "L'ATELIER",
+"THE ROAD HOME": "LA ROUTE DU RETOUR",
 "THE EASEL": "LE CHEVALET",
 
 /* ---------------- mission names ---------------- */
@@ -305,6 +305,80 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Personne ne vole le ciel de la famille. Allez les récupérer.",
 "Full throttle, straight up. Wheels up, squadron!":
   "Pleins gaz, droit vers le haut. Décollage, escadrille !",
+
+/* ---------------- the restructured ending ----------------
+   Mission 39 became the homecoming, mission 40 became the workshop's own
+   level, and the Glass Sea grew a duel - names, briefs, comms, banners and
+   the new story page, all here. Canvas banners go through T() at the call
+   site, so they need entries like everything else. */
+"The Long Way Home": "Le Long Chemin du Retour",
+"the last fight, then the farm": "le dernier combat, puis la ferme",
+"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.":
+  "C'est le dernier, {you} : tous les vaisseaux que la famille a battus, soudés en un seul mur, garé entre vous et la maison. Dessoude-le. À l'instant où il tombe, l'escadrille met le cap sur la Terre — jusqu'à la ferme.",
+"Beat the Titan — then go home.": "Bats le Titan — puis rentre à la maison.",
+"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.":
+  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Un canevas attend encore sur le chevalet, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
+"every boss you beat, bolted back together": "tous les boss que tu as battus, boulonnés ensemble",
+"PAPA'S DAWN": "L'AUBE DE PAPA",
+"{you} - your reflection! It's off the glass - and it's NOT copying any more!":
+  "{you} — ton reflet ! Il a quitté le verre — et il ne copie PLUS !",
+"The sea's just a sea again, {you}. There was only ever one of you.":
+  "La mer n'est plus qu'une mer, {you}. Il n'y a jamais eu que toi.",
+"One wall left between us and home, {you} - and it's built out of everything you already beat. Take it apart one weld at a time.":
+  "Un dernier mur entre nous et la maison, {you} — et il est fait de tout ce que tu as déjà battu. Démonte-le soudure par soudure.",
+"That's the last of them, {you}. Squadron... let's go home.":
+  "C'était le dernier, {you}. Escadrille… on rentre à la maison.",
+"Clouds! Real ones! {you} - look down. There's the farm.":
+  "Des nuages ! Des vrais ! {you} — regarde en bas. C'est la ferme.",
+"I can see you from the yard, {you}. Lights are on. Supper too. Come down easy.":
+  "Je vous vois depuis la cour, {you}. Les lumières sont allumées. Le dîner aussi. Descendez en douceur.",
+"THE MIRROR PILOT": "LE PILOTE MIROIR",
+"it bought everything you bought": "il a acheté tout ce que tu as acheté",
+"IT'S WIDE OPEN": "IL EST GRAND OUVERT",
+"when it stops, SHOOT IT": "quand il s'arrête, TIRE",
+"THE GLASS BREAKS": "LE VERRE SE BRISE",
+"there was only ever one of you": "il n'y a jamais eu que toi",
+"OPEN!": "OUVERT !",
+"THE WAR IS OVER!": "LA GUERRE EST FINIE !",
+"squadron — we're going home": "escadrille — on rentre à la maison",
+"WHEELS DOWN": "TRAIN D'ATTERRISSAGE SORTI",
+"home": "à la maison",
+"AREA CLEAR!": "ZONE DÉGAGÉE !",
+"grab the last coins — then head home": "ramasse les dernières pièces — puis rentre",
+"no.": "non.",
+"the workshop isn't done with you": "l'atelier n'en a pas fini avec toi",
+"THE SKY TEARS": "LE CIEL SE DÉCHIRE",
+"this is where skies come from": "c'est d'ici que viennent les ciels",
+"THE ROYAL BRUSH": "LE PINCEAU ROYAL",
+"paint faster than it does": "peins plus vite que lui",
+"FLY THROUGH THE SKETCHES": "TRAVERSE LES CROQUIS",
+"your paint turns them onto OUR side": "ta peinture les fait passer de NOTRE côté",
+"IT'S WRITING SOMETHING": "IL ÉCRIT QUELQUE CHOSE",
+"don't let it finish the sentence!": "ne le laisse pas finir sa phrase !",
+"MISSION COMPLETE?": "MISSION ACCOMPLIE ?",
+"that's not your handwriting...": "ce n'est pas ton écriture…",
+"IT'S TIRED — HIT THE CORE!": "IL FATIGUE — VISE LE CŒUR !",
+"SENTENCE BROKEN!": "PHRASE BRISÉE !",
+"PAINTED!": "PEINT !",
+"THE WORKSHOP IS YOURS": "L'ATELIER EST À VOUS",
+"one stroke left on the canvas": "plus qu'un coup de pinceau",
+"WIN THE WAR FIRST — BEAT MISSION {n}": "GAGNE D'ABORD LA GUERRE — BATS LA MISSION {n}",
+"Papa left one sky unfinished - this one. It has your names pencilled in the corner.":
+  "Papa a laissé un ciel inachevé — celui-ci. Vos noms y sont écrits au crayon, dans le coin.",
+"Win the war first - beat mission {n} - and the squadron flies up to paint it together.":
+  "Gagne d'abord la guerre — bats la mission {n} — et l'escadrille montera le peindre tous ensemble.",
+"WE'RE ON OUR WAY": "ON ARRIVE",
+"CLOSE": "FERMER",
+"EVERY STAR IS HOME — the whole campaign, gold.": "TOUTES LES ÉTOILES SONT RENTRÉES — toute la campagne, en or.",
+"EVERY STAR": "TOUTES LES ÉTOILES",
+"EVERY STAR IS HOME": "TOUTES LES ÉTOILES SONT RENTRÉES",
+"That night the family lay on the grass behind the workshop and counted. Every single star was back where Papa said it belonged.":
+  "Cette nuit-là, la famille s'est allongée dans l'herbe derrière l'atelier et a compté. Chaque étoile était revenue là où Papa disait qu'elle devait être.",
+"The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost.":
+  "Les vaisseaux sont rayés, la peinture est écaillée, et personne ne les échangerait pour rien au monde. Papa dit qu'ils ont mérité du repos — presque.",
+"Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map.":
+  "Parce que derrière le ciel, un canevas attend encore sur le chevalet, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
+"HOME AT LAST": "ENFIN À LA MAISON",
 
 /* ---------------- story pages ----------------
    The comic-panel beats. These went untranslated for months because only
@@ -418,8 +492,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The Foundry": "La Fonderie",
 "The Serpent's Garden": "Le Jardin du Serpent",
 "Behind the Sky": "Derrière le Ciel",
-"Sky 40": "Ciel 40",
-"SKY 40": "CIEL 40",
 
 /* ---------------- mission subtitles ---------------- */
 "Learn the ropes": "Prise en main",
@@ -504,7 +576,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "USE your reflection — it shoots too": "SERS-TOI de ton reflet — il tire aussi",
 "Shoot the parts on the belts!": "Détruis les pièces sur les tapis !",
 "It EATS coins — hit the glow ring!": "Il MANGE les pièces — vise l'anneau lumineux !",
-"The workshop is awake. Fly!": "L'atelier s'est réveillé. Vole !",
 "Paint Papa's last sky!": "Peins le dernier ciel de Papa !",
 
 
@@ -721,16 +792,12 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Quelque chose vit ici, et c'est plus gros que tout ce que les deux camps pilotent. Rien de ce que tu as ne percera ce cuir — mais tes tirs POUSSENT quand même. Aligne-en un, pousse-le à travers le ciel, et laisse-le traverser leur formation.",
 "Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.":
   "Écoute, {you} — ici la flotte entière tire ensemble, EN RYTHME. Regarde le ciel pulser, apprends la chanson, et slalome entre les couplets. Fais taire un chef d'orchestre et tout leur chœur oublie les paroles.",
-"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.":
-  "Personne n'explique ce passage. Le ciel est un miroir, et toi aussi — il y a un second vaisseau là-dehors qui refait ton vol à l'envers, et il tire chaque fois que tu tires. On ne peut ni le blesser ni le toucher. Place-toi là où il servira à quelque chose.",
+"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.":
+  "Personne ne sait expliquer ce coin. Le ciel est un miroir, et toi aussi — il y a un second vaisseau là-bas qui refait ton vol à l'envers, et qui tire quand tu tires. On ne peut ni le toucher ni le blesser. Mets-le là où il peut servir — et méfie-toi du bout de la mer. Il paraît que le verre finit par arrêter de faire semblant.",
 "They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!":
   "Ils FABRIQUENT des renforts juste devant toi, {you}. Les pièces défilent sur les tapis vers l'assembleuse — chaque pièce que tu détruis est un vaisseau qui ne naîtra jamais. Affame la machine !",
 "Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.":
   "Quelque chose d'ancien vit dans ce jardin, {you}, et il a FAIM. Le Serpent à Dîme dévore tes pièces et se fait pousser un anneau à chaque bouchée. Vise l'anneau lumineux — terrasse-le et récupère jusqu'au dernier centime.",
-"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.":
-  "La faille traverse de part en part, {you} — DERRIÈRE le ciel, là où on peint les ciels et où on dessine les vaisseaux. Quelque chose s'est réveillé dans l'atelier, et ça te regarde jouer depuis le début. Ça connaît toutes tes astuces.",
-"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.":
-  "Derrière l'atelier, une toile est restée sur le chevalet — un ciel avec vos noms crayonnés dans le coin. Chaque étoile que tu as gagnée était une couleur, {you}, et tu les as TOUTES gagnées. C'est l'heure de le peindre. Tout le monde arrive.",
 
 /* ---------------- comms ----------------
    Control is the grown-up on the radio, your mate is the sibling in the next
@@ -978,8 +1045,8 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Rien n'est terminé ici, {you}. Je ne crois pas qu'on soit censés voir ça.",
 "That... wasn't me on the radio, {you}. Stay sharp.":
   "Ce… n'était pas moi à la radio, {you}. Reste vigilant.",
-"{you} - that ship. That's YOUR ship. It's flying your moves!":
-  "{you} — ce vaisseau. C'est TON vaisseau. Il refait tes manœuvres !",
+"{you} - your reflection! It's off the glass - and it's NOT copying any more!":
+  "{you} — ton reflet ! Il a quitté le verre — et il ne copie PLUS !",
 "It has your bombs too?! That's cheating. Probably.":
   "Il a aussi tes bombes ?! C'est de la triche. Sans doute.",
 "It's... a paintbrush, {you}. The one that draws the skies. RESPECTFULLY: shoot it.":
@@ -1082,7 +1149,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "over their sun, and the last big ship": "au-dessus de leur soleil, et le dernier gros vaisseau",
 "their star went out, and something ate it": "leur étoile s'est éteinte, et quelque chose l'a dévorée",
 "where space stops behaving itself": "là où l'espace cesse de se tenir correctement",
-"behind the sky, where skies get made": "derrière le ciel, là où l'on fabrique les ciels",
+"their last works, the last fight — and the farm": "leurs dernières usines, le dernier combat — et la ferme",
 
 "{n} / {want} ★ collected": "{n} / {want} ★ récoltées",
 "locked": "verrouillé",

@@ -88,7 +88,11 @@ function update(dt, run, world, simMs){
       S.saidHalf = true;
       SF.comms.say("sky29Half");
     }
-    if(run.director && run.director.finishedSpawning && world.countEnemies() === 0){
+    // The last stroke waits for the whole show: on Behind the Sky the waves
+    // ending is only the middle of the level - the fake endings, the tear
+    // and the Royal Brush all play out before the canvas may finish.
+    if(run.director && run.director.finishedSpawning && world.countEnemies() === 0 &&
+       (!run.mission.backstage || SF.backstage.readyToClear())){
       S.phase = "stroke"; S.strokeY = -120;
       run.bannerText = "THE LAST STROKE";
       run.bannerSub = "it's yours to finish";

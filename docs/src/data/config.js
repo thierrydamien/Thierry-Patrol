@@ -59,9 +59,10 @@ const PAINTS = [
   { id:"midnight", name:"MIDNIGHT",   hex:"#3b5bdb", cost:700 },
   { id:"mint",     name:"MINT",       hex:"#6ee7b7", cost:700 },
   { id:"solar",    name:"SOLAR GOLD", hex:"#f5c518", secret:true },
-  // Sky 29's memento: the dawn rose off Papa's last canvas. Never sold -
-  // painting the sky is the only way to wear it.
-  { id:"sky29",    name:"SKY 40",     hex:"#ff9e7d", secret:true },
+  // Behind the Sky's memento: the dawn rose off Papa's last canvas. Never
+  // sold - painting the sky is the only way to wear it. (The id predates the
+  // level's rename and is written into the family's saves; it stays.)
+  { id:"sky29",    name:"PAPA'S DAWN", hex:"#ff9e7d", secret:true },
 ];
 const PAINT_BY_ID = Object.fromEntries(PAINTS.map(p => [p.id, p]));
 const TRAILS = [

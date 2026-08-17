@@ -26,6 +26,8 @@
     "src/papadeath.js",
     "src/backstage.js",
     "src/sky29.js",
+    "src/mirrorduel.js",
+    "src/homecoming.js",
     "src/prologue.js",
     "src/systems.js",
     "src/render.js",

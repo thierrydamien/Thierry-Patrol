@@ -1,24 +1,21 @@
 /*
- * BEHIND THE SKY - the Act 4 finale, and the fight the whole game is for.
+ * BEHIND THE SKY - mission 40, the bonus level the war leaves behind.
  *
- * Mission 28 flies through the crack the Devourer left and comes out where
- * the game is MADE: the workshop. Out here the sky loses its paint in
- * stutters, coins forget which way is down, and the boss is THE FORGERY -
- * which is not one fight but three, each one built from something the
- * player already loves:
+ * The campaign used to end here: three boss acts stacked on mission 39,
+ * with the Welded Titan in front. The family asked for the ending to be a
+ * homecoming instead - so the Titan stayed at 39 as the war's last fight
+ * (see homecoming.js), the Mirror Pilot moved to the Glass Sea where a
+ * mirror boss belongs (mirrorduel.js), and everything META - the paint
+ * stutters, the fake endings, the tear to blueprint, THE ROYAL BRUSH -
+ * lives here now, one level up, unlocked the moment 39 falls.
  *
- *   act 1  THE WELDED TITAN   every boss they beat, bolted back together
- *                             (bossart's composite hull; the standard
- *                             controller runs it with a remix attack pool)
- *   act 2  THE MIRROR PILOT   the titan cracks open and the player's OWN
- *                             ship crawls out - their hull, their paint,
- *                             their actual purchased loadout, fired back
- *   act 3  THE ROYAL BRUSH    the sky itself tears away to blueprint and
- *                             the workshop's living brush fights by
- *                             DRAWING: it sketches squadrons that ink into
- *                             the real thing, sweeps eraser bands through
- *                             your fire, and letters G A M E  O V E R down
- *                             the screen like falling scenery
+ * The level is a celebration with a fight in the middle. It flies over
+ * Papa's unfinished canvas (sky29.js owns the pencil veil and paints it as
+ * you play), and when the last parade wave falls the workshop plays its
+ * pranks: AREA CLEAR!, snatched away - then the sky itself tears off to
+ * blueprint and the workshop's living brush fights by DRAWING: it sketches
+ * squadrons that ink into the real thing, sweeps eraser bands through your
+ * fire, and letters G A M E  O V E R down the screen like falling scenery.
  *
  * The brush also hands the player the game's last secret: from the tear
  * onward the ship trails PAINT (their own colour - the Style Shop made
@@ -27,17 +24,21 @@
  * game about a family drawing together: the brush isn't the weapon,
  * whose hand it's in is.
  *
+ * When the brush's star goes up, sky29.js takes the stage back: the last
+ * stroke sweeps the blueprint away and the squadron lines up for a photo.
+ *
  * Same rules as finale.js: simulation time only, and the module owns its
  * own theatre - game.js only asks three things (reset, update, and "may
- * the boss spawn yet?") plus three draw hooks at fixed depths.
+ * the mission end yet?") plus three draw hooks at fixed depths.
  */
 (function(){
 "use strict";
 const SF = window.SF;
 const { clamp, lerp, rand, randInt, chance, pick } = SF.core;
 const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
 
-let S = null;          // the whole finale state; null when inactive
+let S = null;          // the whole theatre state; null when inactive
 const VW = () => (SF.game && SF.game.VW) || 600;
 /** The pilot's own paint - the colour the whole act is about. */
 function pcolOf(){ return (SF.game.profile && SF.game.profile.shipColor) || "#3399ff"; }
@@ -46,15 +47,12 @@ function reset(){ S = null; }
 
 function begin(){
   S = {
-    stage: "travel",        // travel -> fakeClear -> titan -> shed -> mirror
-                            // -> tear -> brush -> nova -> done
+    stage: "travel",        // travel -> fakeClear -> tear -> brush -> nova -> done
     t: 0,                   // seconds in current stage
     stutter: 0,             // >0: the sky is losing its paint right now
     nextStutter: 7,
     fakeStep: 0,
-    // act 2
-    mirror: null,
-    // act 3
+    // the brush act
     brush: null,
     sketches: [],
     allies: [],
@@ -71,26 +69,10 @@ function begin(){
 function active(){ return !!S; }
 function stage(){ return S ? S.stage : ""; }
 
-/** The welded titan just blew apart: act two begins. */
-function titanDown(){
-  if(!S) return;
-  S.stage = "shed";
-  S.t = 0;
-  // The duel is one-on-one: whatever the titan called in goes with it.
-  const w = SF.game.world;
-  if(w){
-    const en = w.enemies.items;
-    for(let i = 0; i < en.length; i++)
-      if(en[i].alive) SF.fx.explosion(en[i].x, en[i].y, 26, "#e8c14a", false);
-    w.enemies.killAll();
-    w.enemyBullets.killAll();
-  }
-}
-
-/* The waves may end, but the boss must wait for the first fake ending. */
-function readyForBoss(){
-  return !S || S.stage === "titan" || S.fakeStep >= 3;
-}
+/* The waves may end, but the pranks, the tear and the brush come first.
+ * sky29.js waits for this too: its last stroke only sweeps once the
+ * workshop has nothing left to say. */
+function readyToClear(){ return !S || S.stage === "done"; }
 
 /* ------------------------------------------------------------------ */
 /*  UPDATE                                                             */
@@ -102,7 +84,7 @@ function update(dt, run, world, simMs){
   S.t += dt;
 
   // --- the travel weirdness: paint stutters, coins falling up ----------
-  if(S.stage === "travel" || S.stage === "titan"){
+  if(S.stage === "travel"){
     S.nextStutter -= dt;
     if(S.nextStutter <= 0){
       S.stutter = 0.45;
@@ -126,8 +108,8 @@ function update(dt, run, world, simMs){
   if(S.stage === "fakeClear"){
     if(S.fakeStep === 0 && S.t > 0.6){
       S.fakeStep = 1;
-      run.bannerText = "AREA CLEAR!";
-      run.bannerSub = "grab the last coins — then head home";
+      run.bannerText = T("AREA CLEAR!");
+      run.bannerSub = T("grab the last coins — then head home");
       run.bannerColor = "#4ade80";
       run.bannerUntil = simMs + 2600;
       audio.play("victory");
@@ -135,8 +117,8 @@ function update(dt, run, world, simMs){
     if(S.fakeStep === 1 && S.t > 2.6){
       S.fakeStep = 2;
       S.stutter = 0.8;
-      run.bannerText = "no.";
-      run.bannerSub = "the workshop isn't done with you";
+      run.bannerText = T("no.");
+      run.bannerSub = T("the workshop isn't done with you");
       run.bannerColor = "#ff5d73";
       run.bannerUntil = simMs + 2200;
       fx.shake(14);
@@ -144,202 +126,18 @@ function update(dt, run, world, simMs){
       SF.comms.say("backstageNo");
     }
     if(S.fakeStep === 2 && S.t > 4.6){
-      S.fakeStep = 3;                    // readyForBoss() now says yes
-      S.stage = "titan"; S.t = 0;
-    }
-  }
-
-  // --- act 2: THE MIRROR PILOT ----------------------------------------
-  if(S.stage === "shed"){
-    if(S.t > 1.4){
-      const p = world.player;
-      const lv = id => SF.profile.upgradeLevel(SF.game.profile, id);
-      const dps = p ? p.dps : 60;
-      /*
-       * SIZING A DUEL AGAINST A SHIP-SIZED BOSS.
-       *
-       * The old bar was dps * 16 with a 27px hit radius, and measured, that
-       * is a fight nobody finishes. Two reasons, both invisible on paper.
-       * A real boss is a 300px hull with a ~126px hitbox, so a fanned spread
-       * lands nearly all of it; this thing is the size of your own ship, so
-       * most of the fan flies past and only ~11 of a 65-dps loadout ever
-       * arrives. And the bar ignored difficulty.bossHp, so ROOKIE faced the
-       * same wall as NIGHTMARE.
-       *
-       * So: a hitbox that matches its role rather than its sprite, and a
-       * pool derived from what actually lands. Measured at ~22s on PILOT.
-       */
-      const diff = (SF.game.run && SF.game.run.difficulty) || { bossHp: 1 };
-      const pool = Math.round(dps * 3.2 * (diff.bossHp || 1));
-      S.mirror = {
-        x: W/2, y: -60, r: 34,
-        hp: pool, maxHp: pool,
-        holdY: 190, vx: 0,
-        fireTimer: 1.2, dodgeCool: 0, tell: 0, dodgeDir: 0,
-        spread: lv("spread"), rapid: lv("rapid"),
-        bombs: 2, nextBombAt: 0.66,
-        // The duel breathes: it mirrors and shoots, then it OPENS - drifts to
-        // the middle, holds still, stops firing - and that is your turn.
-        mode: "mirror", modeT: 3.2, taught: false,
-        flash: 0, t: 0,
-      };
-      S.stage = "mirror"; S.t = 0;
-      run.bannerText = "THE MIRROR PILOT";
-      run.bannerSub = "it bought everything you bought";
-      run.bannerColor = "#e8c14a";
-      run.bannerUntil = simMs + 3400;
-      audio.play("bossWake");
-      SF.comms.say("mirrorSeen");
-    }
-  }
-  if(S.stage === "mirror" && S.mirror){
-    const m = S.mirror, p = world.player;
-    m.t += dt;
-    m.flash = Math.max(0, m.flash - dt*4);
-    /*
-     * THE FIGHT'S RHYTHM.
-     *
-     * Mirroring your lane is the whole idea of this boss, and on its own it
-     * made the duel unwinnable: your guns fire straight up from your x, and
-     * it sits at W - x, so the ONLY place you are lined up with it is dead
-     * centre - which is also the only place its volley lands on you. Safe and
-     * able-to-shoot were mutually exclusive, so a good player could dodge
-     * forever and never take its health down.
-     *
-     * So it breathes. It mirrors and shoots for a few seconds, then OPENS:
-     * drifts to the middle, holds, stops firing, stops dodging, and cannot be
-     * bumped into. Dodge its turn, take yours. The reflection still reads -
-     * it is your ship, flying your loadout - it just no longer stands where
-     * you cannot reach it forever.
-     */
-    if(m.y >= m.holdY){
-      m.modeT -= dt;
-      if(m.modeT <= 0){
-        if(m.mode === "mirror"){
-          m.mode = "open"; m.modeT = 3.0;
-          m.dodgeDir = 0; m.dodgeUsed = 0;
-          audio.play("telegraph");
-          if(!m.taught){                 // teach the window the first time
-            m.taught = true;
-            run.bannerText = "IT'S WIDE OPEN";
-            run.bannerSub = "when it stops, SHOOT IT";
-            run.bannerColor = "#4ade80";
-            run.bannerUntil = simMs + 2600;
-          }
-        } else {
-          m.mode = "mirror"; m.modeT = 3.2;
-          m.fireTimer = Math.max(m.fireTimer, 0.7);   // room to slide away
-        }
-      }
-    }
-    // Arrive, then hold a mirrored lane: your x, reflected. Except when it is
-    // open, where it comes to the middle and waits - a target you can reach
-    // from anywhere rather than one that is always exactly opposite you.
-    if(m.y < m.holdY) m.y += 130 * dt;
-    else if(m.mode === "open"){
-      m.x = lerp(m.x, W/2, Math.min(1, dt*1.6));
-      m.y = m.holdY + Math.sin(m.t*1.3)*10;
-    }
-    else if(p){
-      const lane = W - p.x;
-      m.x = lerp(m.x, lane, Math.min(1, dt*2.2));
-      m.y = m.holdY + Math.sin(m.t*1.3)*22;
-    }
-    // It shoots YOUR guns back: your spread pattern, your fire rate.
-    m.fireTimer -= dt;
-    if(m.fireTimer <= 0 && m.y > 40 && m.mode === "mirror"){
-      const angles = SF.config.spreadPattern(m.spread);
-      for(let i = 0; i < angles.length; i++){
-        const a = Math.PI/2 + angles[i]/600;      // down, fanned like yours
-        world.spawnEnemyBullet(m.x, m.y + 24,
-          Math.cos(a)*330, Math.sin(a)*330, "aimed", 4.5);
-      }
-      m.fireTimer = 0.62 * SF.config.fireRateMult(m.rapid) * 2.4;
-      audio.play("shoot", true);
-    }
-    // It dodges like the rival - on a cooldown, with a tell.
-    m.dodgeCool = Math.max(0, m.dodgeCool - dt);
-    m.tell = Math.max(0, m.tell - dt);
-    if(!m.dodgeDir && m.dodgeCool <= 0 && m.mode === "mirror"){
-      const bs = world.bullets.items;
-      for(let i = 0; i < bs.length; i++){
-        const b = bs[i];
-        if(!b.alive || b.vy >= 0) continue;
-        if(Math.abs(b.x - m.x) < m.r + 26 && b.y > m.y && b.y - m.y < 170){
-          m.dodgeDir = b.x < m.x ? 1 : -1;
-          if(m.x < 90) m.dodgeDir = 1;
-          if(m.x > W - 90) m.dodgeDir = -1;
-          m.tell = 0.14;
-          break;
-        }
-      }
-    }
-    if(m.dodgeDir && m.tell <= 0){
-      m.x = clamp(m.x + m.dodgeDir * 460 * dt, 40, W - 40);
-      m.dodgeUsed = (m.dodgeUsed || 0) + 460 * dt;
-      if(m.dodgeUsed > 120){ m.dodgeDir = 0; m.dodgeUsed = 0; m.dodgeCool = 1.5; }
-    }
-    // Your bullets vs it.
-    const bs = world.bullets.items;
-    for(let i = 0; i < bs.length; i++){
-      const b = bs[i];
-      if(!b.alive) continue;
-      const dx = b.x - m.x, dy = b.y - m.y;
-      if(dx*dx + dy*dy < (m.r + 5)*(m.r + 5)){
-        b.alive = false;
-        /*
-         * An open guard is worth double. Shrinking the pool instead would
-         * have made the bar flicker away in a handful of volleys; this keeps
-         * the duel long enough to feel like one while paying out hard for
-         * the thing the fight is teaching - wait, then hit.
-         */
-        const mult = m.mode === "open" ? 2 : 1;
-        /*
-         * `b.dmg`, NOT `b.damage`. Player bullets carry `dmg` (see the pool
-         * factory in entities.js); nothing anywhere sets `damage`. So this
-         * read was always undefined and the `|| 1` fallback fired on every
-         * single hit - the whole backstage fight ignored Plasma Rounds and
-         * took one point per bullet whether you flew in stock or maxed.
-         * Measured: at a maxed loadout the mirror needed ~137s instead of the
-         * ~19s its pool is sized for. The pool is derived from `dps`, which
-         * already includes the damage level, so reading the right field is
-         * the entire fix - no re-tune follows it.
-         */
-        const hit = (b.dmg || 1) * mult;
-        m.hp -= hit;
-        m.flash = 1;
-        fx.spark(b.x, b.y, 0, -60, mult > 1 ? "#4ade80" : "#e8c14a", 0.3, 2);
-        if(SF.game.run) SF.game.run.stats.damageDealt =
-          (SF.game.run.stats.damageDealt || 0) + hit;
-      }
-    }
-    // At each third of health it plays YOUR panic button: a bomb that
-    // clears YOUR bullets off the screen.
-    if(m.bombs > 0 && m.hp <= m.maxHp * m.nextBombAt){
-      m.bombs--; m.nextBombAt -= 0.33;
-      for(let i = 0; i < bs.length; i++)
-        if(bs[i].alive){ fx.spark(bs[i].x, bs[i].y, 0, 40, "#e8c14a", 0.25, 2); bs[i].alive = false; }
-      fx.ring(m.x, m.y, 180, "#e8c14a", 6, 0.6);
-      fx.shake(10);
-      audio.play("bomb");
-      SF.comms.say("mirrorBomb");
-    }
-    // Ram guard: standing under it hurts (gently - it is still a duel). Not
-    // while it is open, though: the window is the one moment the fight tells
-    // you to come and get it, and punishing that teaches the wrong lesson.
-    if(m.mode === "mirror" && p && p.alive &&
-       Math.hypot(p.x - m.x, p.y - m.y) < m.r + 16)
-      SF.game.hurtPlayer && SF.game.hurtPlayer("mirror");
-    if(m.hp <= 0){
+      // No titan waits here any more - the war ended a mission ago. The
+      // prank goes straight for the reveal: the sky itself comes off.
+      S.fakeStep = 3;
       S.stage = "tear"; S.t = 0;
-      fx.explosion(m.x, m.y, 150, "#e8c14a", true);
       fx.shake(26); fx.hitStop(160);
       fx.flash(0.8, "255,255,255");
       audio.play("bossExplode");
-      run.bannerText = "THE SKY TEARS";
-      run.bannerSub = "this is where skies come from";
+      run.bannerText = T("THE SKY TEARS");
+      run.bannerSub = T("this is where skies come from");
       run.bannerColor = "#e2e8f0";
       run.bannerUntil = simMs + 3000;
+      SF.comms.say("backstageStart");
     }
   }
 
@@ -359,11 +157,12 @@ function update(dt, run, world, simMs){
         tired: 0,                 // >0: core exposed, takes player bullets
         cycle: 0,
       };
-      run.bannerText = "THE ROYAL BRUSH";
-      run.bannerSub = "paint faster than it does";
+      run.bannerText = T("THE ROYAL BRUSH");
+      run.bannerSub = T("paint faster than it does");
       run.bannerColor = "#c9b458";
       run.bannerUntil = simMs + 3600;
       audio.play("bossWake");
+      audio.setMusic("boss");
       SF.comms.say("brushSeen");
     }
   }
@@ -464,8 +263,8 @@ function update(dt, run, world, simMs){
         if(!S.taughtPaint || (run.stats.painted === 0 && !S.taughtTwice)){
           if(S.taughtPaint) S.taughtTwice = true;
           S.taughtPaint = true;
-          run.bannerText = "FLY THROUGH THE SKETCHES";
-          run.bannerSub = "your paint turns them onto OUR side";
+          run.bannerText = T("FLY THROUGH THE SKETCHES");
+          run.bannerSub = T("your paint turns them onto OUR side");
           run.bannerColor = pcolOf();
           run.bannerUntil = simMs + 4200;
           SF.comms.say("paintSketch");
@@ -513,8 +312,8 @@ function update(dt, run, world, simMs){
           });
           k++;
         }
-        run.bannerText = "IT'S WRITING SOMETHING";
-        run.bannerSub = "don't let it finish the sentence!";
+        run.bannerText = T("IT'S WRITING SOMETHING");
+        run.bannerSub = T("don't let it finish the sentence!");
         run.bannerColor = "#e2e8f0";
         run.bannerUntil = simMs + 2400;
         audio.play("alarm");
@@ -549,7 +348,7 @@ function update(dt, run, world, simMs){
               fx.spark(sk.x, sk.y, Math.cos(a)*130, Math.sin(a)*130, pcolOf(), 0.4, 3);
             }
             fx.text(sk.x, sk.y - 26,
-                    "PAINTED!  " + run.stats.painted + "/6", "#4ade80", 17, true);
+                    T("PAINTED!") + "  " + run.stats.painted + "/6", "#4ade80", 17, true);
             audio.play("rescue");
             S.sketches.splice(i, 1);
             break;
@@ -606,7 +405,7 @@ function update(dt, run, world, simMs){
         S.erasers.splice(i, 1);
         // Rubbing you out is tiring: the core glows, and your guns matter.
         B.tired = 3.5;
-        fx.text(B.x, B.y + 60, "IT'S TIRED — HIT THE CORE!", "#ffd23f", 16, true);
+        fx.text(B.x, B.y + 60, T("IT'S TIRED — HIT THE CORE!"), "#ffd23f", 16, true);
       }
     }
 
@@ -641,7 +440,7 @@ function update(dt, run, world, simMs){
           B.tired = 4.5;
           B.hp -= Math.round(B.maxHp * 0.06);
           B.flash = 1;
-          fx.text(B.x, B.y + 60, "SENTENCE BROKEN!", "#4ade80", 18, true);
+          fx.text(B.x, B.y + 60, T("SENTENCE BROKEN!"), "#4ade80", 18, true);
           audio.play("victory");
         }
         continue;
@@ -675,8 +474,8 @@ function update(dt, run, world, simMs){
     // - and then tears its own forgery apart.
     if(!S.fakeCard && B.hp <= B.maxHp * 0.35){
       S.fakeCard = 3.2;
-      run.bannerText = "MISSION COMPLETE?";
-      run.bannerSub = "that's not your handwriting...";
+      run.bannerText = T("MISSION COMPLETE?");
+      run.bannerSub = T("that's not your handwriting...");
       run.bannerColor = "#e2e8f0";
       run.bannerUntil = simMs + 2600;
       audio.play("telegraph");
@@ -724,20 +523,17 @@ function update(dt, run, world, simMs){
       S.doneSaid = true;
       const run2 = SF.game.run;
       if(run2){
-        run2.bannerText = "YOU PAINTED THE SKY";
-        run2.bannerSub = "the workshop is yours, " +
-          ((SF.game.profile && (SF.game.profile.callsign || SF.game.profile.name)) || "pilot");
+        run2.bannerText = T("THE WORKSHOP IS YOURS");
+        run2.bannerSub = T("one stroke left on the canvas");
         run2.bannerColor = "#ffd23f";
-        run2.bannerUntil = simMs + 4200;
+        run2.bannerUntil = simMs + 3600;
         world.dropCoins(B ? B.x : W/2, Math.min(B ? B.y : 200, 300),
           Math.round(1200 * run2.difficulty.pay * (world.player ? world.player.moneyMult : 1)));
         run2.score += Math.round(5000 * run2.difficulty.pay);
-        // Hand the mission back to the normal ending machinery.
-        run2.bossCleared = true;
-        run2.bossActive = false;
-        run2.finishTimer = 1.6;
       }
       SF.game.profile && SF.game.profile.bossesDefeated++;
+      // The stage goes dark and sky29.js takes over: the last stroke sweeps
+      // the blueprint away, the photo lands, and the normal ending follows.
       S.stage = "done";
       SF.comms.say("brushDown");
     }
@@ -756,8 +552,24 @@ function drawSky(ctx, timeMs, VWpx, VHpx){
   const k = torn ? 1 : (S.stutter > 0 ? Math.min(1, S.stutter / 0.2) : 0);
   if(k <= 0) return;
 
-  // The unpainted ground: graphite, a drawing grid, pencil notes.
   ctx.save();
+  /*
+   * THE HANDOFF. Once the brush is beaten, sky29's last stroke sweeps the
+   * canvas top to bottom - so from "done" onward the blueprint only exists
+   * BELOW the stroke's front, exactly like the pencil veil it lives under.
+   * One clip, and both layers leave the stage under the same brush.
+   */
+  if(S.stage === "done" && SF.sky29 && SF.sky29.active()){
+    const sk = SF.sky29._state();
+    if(sk && (sk.phase === "photo" || sk.phase === "done")){ ctx.restore(); return; }
+    if(sk && sk.phase === "stroke"){
+      ctx.beginPath();
+      ctx.rect(0, Math.max(0, sk.strokeY), VWpx, VHpx);
+      ctx.clip();
+    }
+  }
+
+  // The unpainted ground: graphite, a drawing grid, pencil notes.
   ctx.globalAlpha = k;
   ctx.fillStyle = "#12141d";
   ctx.fillRect(0, 0, VWpx, VHpx);
@@ -975,61 +787,6 @@ function drawActors(ctx, timeMs){
     ctx.restore();
   }
 
-  // THE MIRROR PILOT: your ship, upside down, in the workshop's gold.
-  if(S.stage === "mirror" && S.mirror){
-    const m = S.mirror;
-    ctx.save();
-    ctx.translate(m.x, m.y);
-    ctx.rotate(Math.PI);
-    SF.shipart.drawShip(ctx, 0, 0, 62, {
-      color: "#3a3324",
-      levels: SF.shipart.levelsOf(SF.game.profile),
-      t: m.t, idle: false,
-      tune: SF.game.profile && SF.game.profile.tune,
-      hull: SF.game.profile && SF.game.profile.hull,
-    });
-    ctx.restore();
-    if(m.flash > 0){
-      ctx.globalAlpha = Math.min(0.5, m.flash*0.5);
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.arc(m.x, m.y, 34, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    // Its tell, so a dodge is always something you watched it decide.
-    if(m.tell > 0){
-      ctx.strokeStyle = "rgba(232,193,74,0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 30, 0, TAU);
-      ctx.stroke();
-    }
-    /*
-     * The open window, said in green - the game's own colour for "this is
-     * good for you". Guns cold, a target ring, and a countdown arc that runs
-     * out, so a seven-year-old can see the turn coming and see it ending.
-     */
-    if(m.mode === "open"){
-      const k = clamp(m.modeT / 3.0, 0, 1);
-      const pulse = 0.55 + Math.sin(m.t*9)*0.45;
-      ctx.save();
-      ctx.strokeStyle = "rgba(74,222,128," + (0.45 + pulse*0.45).toFixed(2) + ")";
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(m.x, m.y, 40 + pulse*5, 0, TAU); ctx.stroke();
-      // the turn running out
-      ctx.strokeStyle = "rgba(74,222,128,0.95)";
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 52, -Math.PI/2, -Math.PI/2 + TAU*k);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(74,222,128,0.95)";
-      ctx.font = "bold 13px Rajdhani, Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("OPEN!", m.x, m.y - 62);
-      ctx.restore();
-    }
-  }
-
   // THE ROYAL BRUSH: a workshop brush the size of a boss, held nib-down.
   if((S.stage === "brush" || S.stage === "nova") && S.brush){
     const B = S.brush;
@@ -1160,10 +917,8 @@ function drawOver(ctx, timeMs){
     ctx.fillStyle = "#fff";
     ctx.fillText(label, W/2, y - 6);
   };
-  if(S.stage === "mirror" && S.mirror)
-    bar("THE MIRROR PILOT", S.mirror.hp, S.mirror.maxHp, "#e8c14a");
   if((S.stage === "brush") && S.brush)
-    bar("THE ROYAL BRUSH", S.brush.hp, S.brush.maxHp, "#c9b458");
+    bar(T("THE ROYAL BRUSH"), S.brush.hp, S.brush.maxHp, "#c9b458");
 }
 
 /* _state is for the test harness only: the fights are timed and aimed, and a
@@ -1171,30 +926,21 @@ function drawOver(ctx, timeMs){
 /*
  * How far through the act we are, 0..1 - for the mission bar in the HUD.
  *
- * The bar reads boss health, and behind the sky that number stops meaning
- * anything: the Forgery dies, re-forges to FULL, and then stands there
- * invulnerable while the real fight moves in here. Measured on a live run, the
- * readout climbed to 97%, snapped back to 65% and sat there, frozen, for the
- * whole three-act finale - so the longest and strangest fight in the game was
- * also the one place the player was told nothing about how it was going.
- *
- * Each stage owns a slice, and the two that are real fights fill their slice
- * from the thing you are actually shooting.
+ * Once the workshop takes the stage, waves stop being the story - so each
+ * stage owns a slice, and the brush (the one real fight left in here) fills
+ * its slice from the thing you are actually shooting.
  */
-const PROGRESS_AT = { shed:0.00, fakeClear:0.10, titan:0.16,
-                      mirror:0.24, tear:0.55, brush:0.60, nova:0.96, done:1 };
+const PROGRESS_AT = { fakeClear:0.04, tear:0.12, brush:0.16, nova:0.96, done:1 };
 function progress01(){
   if(!S) return 0;
   const base = PROGRESS_AT[S.stage] != null ? PROGRESS_AT[S.stage] : 0;
-  if(S.stage === "mirror" && S.mirror && S.mirror.maxHp)
-    return base + (PROGRESS_AT.tear - base) * (1 - S.mirror.hp/S.mirror.maxHp);
   if(S.stage === "brush" && S.brush && S.brush.maxHp)
     return base + (PROGRESS_AT.nova - base) * (1 - S.brush.hp/S.brush.maxHp);
   return base;
 }
 
 SF.backstage = { _state: () => S,
-                 reset, begin, active, stage, readyForBoss, titanDown, update,
+                 reset, begin, active, stage, readyToClear, update,
                  progress01,
                  drawSky, drawActors, drawOver };
 })();

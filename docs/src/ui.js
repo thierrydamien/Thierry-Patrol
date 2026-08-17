@@ -1511,8 +1511,8 @@ const SECTORS = [
     sub:"their star went out, and something ate it" },      // 28-30
   { at:32, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 32-36
-  { at:37, name:"THE WORKSHOP",    hue:"#22d3ee",
-    sub:"behind the sky, where skies get made" },           // 37-39
+  { at:37, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 37-39
   { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
@@ -1607,13 +1607,13 @@ function renderMissions(){
     const giftIdx = MISSIONS.findIndex(m => m.gift);
     const giftDone = giftIdx >= 0 && profile.missions[MISSIONS[giftIdx].id] &&
                      profile.missions[MISSIONS[giftIdx].id].cleared;
+    // Stars stopped being a key when the gift stop started opening with the
+    // war - so the header sells them as what they are now: the shine.
     goal.textContent = left > 0
-      ? T("{n} more ★ to open {sky} — the sky Papa never finished",
-          { n: left, sky: SF.missions.giftName() })
+      ? T("{n} more ★ to a golden campaign — the hunt knows where", { n: left })
       : giftDone ? T("Every star home, and {sky} painted. Nothing left but the flying.",
                      { sky: SF.missions.GIFT.name })
-                 : T("Every star is home — {sky} is open at the top of the map",
-                     { sky: SF.missions.giftName() });
+                 : T("Every star is home — the whole campaign, gold.");
     goal.classList.toggle("camp-goal-done", left <= 0);
   }
   const debts = starDebts();
@@ -1674,10 +1674,10 @@ function renderMissions(){
       audio.play("uiClick");
       dialog({
         title: SF.missions.giftName(),
-        text: "Papa left one sky unfinished - this one. It has your names pencilled in the corner." +
-              "\n\nEarn EVERY star in the campaign - all " + P.maxStars() + " - and the squadron paints it together." +
-              "\n\n★ " + P.totalStars(profile) + " / " + P.maxStars() + " so far.",
-        okLabel: "WE'LL EARN THEM", cancelLabel: "CLOSE",
+        text: T("Papa left one sky unfinished - this one. It has your names pencilled in the corner.") +
+              "\n\n" + T("Win the war first - beat mission {n} - and the squadron flies up to paint it together.",
+                         { n: SF.missions.GIFT.id - 1 }),
+        okLabel: T("WE'RE ON OUR WAY"), cancelLabel: T("CLOSE"),
       });
     });
     holder.appendChild(btn);
@@ -2170,10 +2170,9 @@ function drawCampaign(){
         ctx.font = "italic bold 13px Rajdhani, Arial, sans-serif";
         ctx.fillText(SF.missions.giftName(), x, y - R - 46);
         // The requirement, in plain kid words, always visible.
-        const have = P.totalStars(profile), want = P.maxStars();
         ctx.fillStyle = "rgba(255,210,63,0.85)";
         ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
-        ctx.fillText(T("★ {have} / {want} — EARN EVERY STAR", { have, want }), x, y - R - 29);
+        ctx.fillText(T("WIN THE WAR FIRST — BEAT MISSION {n}", { n: SF.missions.GIFT.id - 1 }), x, y - R - 29);
         ctx.restore();
       } else {
         // Painted (or ready to be): the disc wears the dawn itself.
@@ -4299,6 +4298,60 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "rgba(255,255,255,0.8)";                     // out of their reach
     ctx.fillRect(W*0.12, 6, 1.6, 1.6); ctx.fillRect(W*0.55, 12, 1.4, 1.4);
     ctx.fillRect(W*0.83, 4, 1.6, 1.6);
+  } else if(art === "starsBack"){
+    /*
+     * The first night, undone. Same composition as "dark" - the farm, the
+     * night - except the sky is FULL again: every stolen star home, and the
+     * workshop's lights finally off, because the house's are on instead.
+     */
+    const d = ctx.createLinearGradient(0, 0, 0, H);
+    d.addColorStop(0, "rgba(7,10,26,0.35)");
+    d.addColorStop(1, "rgba(7,10,26,0.85)");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 90; i++){                     // the sky, refilled
+      const sx = ((Math.sin(i*93.7)*43758.5453) % 1 + 1) % 1 * W;
+      const sy = ((Math.sin(i*57.3)*43758.5453) % 1 + 1) % 1 * H*0.8;
+      const s = i % 7 === 0 ? 2.2 : 1.3;
+      ctx.fillStyle = i % 5 ? "rgba(255,255,255,0.9)" : "rgba(255,232,170,0.95)";
+      ctx.fillRect(sx, sy, s, s);
+    }
+    // one of them, five-pointed and gold: the one they went furthest for
+    ctx.fillStyle = "#ffd76e";
+    ctx.save();
+    ctx.translate(W*0.68, H*0.22);
+    ctx.beginPath();
+    for(let k = 0; k < 10; k++){
+      const a2 = -Math.PI/2 + k*Math.PI/5, rr = k % 2 ? 3 : 7;
+      const px = Math.cos(a2)*rr, py = Math.sin(a2)*rr;
+      if(k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+    const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, 18);
+    halo.addColorStop(0, "rgba(255,214,110,0.5)"); halo.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "#020308";                       // the farm, asleep at last
+    ctx.fillRect(0, H*0.86, W, H*0.14);
+    const hx = W*0.26, hy = H*0.86;
+    const hg = ctx.createRadialGradient(hx + 22, hy, 1, hx + 22, hy, 22);
+    hg.addColorStop(0, "rgba(255,214,110,0.5)"); hg.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(hx + 22, hy, 22, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#000106";
+    ctx.fillRect(hx - 14, hy - 8, 28, 9);            // the workshop, dark tonight
+    ctx.beginPath(); ctx.moveTo(hx - 16, hy - 8); ctx.lineTo(hx, hy - 17);
+    ctx.lineTo(hx + 16, hy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillRect(hx + 14, hy - 6, 16, 7);            // the house, lit
+    ctx.beginPath(); ctx.moveTo(hx + 12, hy - 6); ctx.lineTo(hx + 22, hy - 13);
+    ctx.lineTo(hx + 32, hy - 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(hx + 18, hy - 4.5, 3.6, 4); ctx.fillRect(hx + 24, hy - 4.5, 3.6, 4);
+    // six little ships on the grass, nose up, done for the day
+    ctx.fillStyle = "rgba(190,200,215,0.8)";
+    for(let k = 0; k < 6; k++){
+      const px = W*0.55 + k*13, py = H*0.9;
+      ctx.beginPath(); ctx.moveTo(px, py - 5); ctx.lineTo(px + 3.4, py + 3);
+      ctx.lineTo(px - 3.4, py + 3); ctx.closePath(); ctx.fill();
+    }
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4317,7 +4370,7 @@ function openBriefing(index){
   // The fight's music starts downloading NOW, while somebody reads the brief,
   // instead of in the first second of the mission. Measured: about 300ms from
   // creating the element to sound, and this screen is up for several seconds.
-  if(SF.audio.warm) SF.audio.warm(m.boss ? "boss" : "combat");
+  if(SF.audio.warm) SF.audio.warm(m.boss || m.mirrorDuel || m.backstage ? "boss" : "combat");
 
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
@@ -4332,7 +4385,10 @@ function openBriefing(index){
   if(m.prologue) showStory(SF.storyData.STORY.launchDay);
 
   $("briefNum").textContent = "MISSION " + m.id;
-  $("briefBoss").classList.toggle("hidden", !m.boss);
+  // The badge warns about any boss-SHAPED ending, not just a BOSSES-table
+  // one: the Glass Sea's turned reflection and the workshop's brush both
+  // deserve the same heads-up a titan gets.
+  $("briefBoss").classList.toggle("hidden", !(m.boss || m.mirrorDuel || m.backstage));
   $("briefTitle").textContent = m.name.toUpperCase();
   $("briefSubtitle").textContent = m.subtitle;
 
@@ -5072,15 +5128,18 @@ function showResults(result){
   if(result.sky29Won)
     queueToast({ glyph:"star", name: SF.missions.giftName() + " — the dawn off Papa's last canvas. Wear it well.",
       label:"PAINT WON" });
-  // The 84th star is a door opening, and the door is at the top of the map.
+  // Every star is a lap of honour now, not a key - the gift stop opens with
+  // the war instead. Still worth a toast: 117 of 117 is the family record.
   if(result.allStarsNow)
-    queueToast({ glyph:"star", name:"EVERY STAR IS HOME — " + SF.missions.GIFT.name + " is waiting at the top of the map.",
-      label: SF.missions.giftName() + " UNLOCKED" });
-  // The true curtain lives behind the sky now; the Devourer keeps its own.
-  // Anchoring the old finale to its mission (not to campaignComplete) matters:
+    queueToast({ glyph:"star", name: T("EVERY STAR IS HOME — the whole campaign, gold."),
+      label: T("EVERY STAR") });
+  // Every curtain is anchored to its own MISSION, not to a profile state -
   // with Act 4 in the campaign, a fresh profile would otherwise get the
-  // Devourer's curtain played over the workshop's ending.
-  if(completed && P.campaignComplete(profile)) maybeStory("workshop");
+  // wrong story played over the wrong ending. The campaign's true curtain
+  // is the homecoming at 39; the workshop's painted-sky card belongs to the
+  // bonus level that actually fields the brush now.
+  if(completed && run.mission.sky29) maybeStory("workshop");
+  else if(completed && run.mission.homecoming) maybeStory("homecoming");
   else if(completed && run.missionIndex === DEVOURER_END) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");

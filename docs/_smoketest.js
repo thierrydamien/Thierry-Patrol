@@ -464,17 +464,17 @@ async function run(){
   check("all 14 upgrades defined", SF.config.UPGRADES.length === 14);
   check("upgrade catalogue totals 53 levels", SF.config.MAX_UPGRADE_LEVELS === 53);
   /*
-   * The gift stop is named for the number it sits at, so inserting a level has
-   * to rename it - "SKY 35" printed over the thirty-sixth stop is the kind of
-   * small wrongness a child spots immediately and an adult never does.
+   * The gift stop used to be named for its stop number ("Sky 40"), which was
+   * the only name in the campaign that told you nothing. It is BEHIND THE SKY
+   * now - the workshop's own level, holding everything meta the old finale
+   * carried - and the name lives in the mission data alone (giftName() feeds
+   * the map, the dialog and the toasts, pinned further down).
    */
-  check("the gift stop is named for the stop it is", (() => {
-    // The stop number IS the id since Mission 0 took slot zero - display,
-    // save records and this name all key off the same stable number.
+  check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Sky " + gift.id &&
-           SF.skygen.SKIES[SF.missions.skyOf(M.indexOf(gift))].name === "Sky " + gift.id &&
-           SF.config.PAINTS.some(t => t.name === "SKY " + gift.id);
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 40 &&
+           gift.backstage === true && gift.sky29 === true &&
+           !gift.boss;                       // the Brush is backstage's, not a slot
   })());
   check("41 campaign missions defined, ids sequential from Earth",
     SF.missions.MISSIONS.length === 41 &&
@@ -531,12 +531,21 @@ async function run(){
     SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id] = { cleared:true, stars:{pilot:1} }; });
     return SF.profile.campaignComplete(p);
   })());
-  check("Sky 29 opens on every star, not before", (() => {
+  /*
+   * The gate CHANGED on request: "the fun level accessible after beating
+   * level 39 (no need to collect all stars)". At 117 stars the old gate made
+   * the game's best celebration a stop nobody in the family would ever fly.
+   */
+  check("the gift opens on beating the war, not on every star", (() => {
     const p = SF.profile.load("GATE");
-    SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id] = { cleared:true, stars:{pilot:2} }; });
     const idx = SF.missions.MISSIONS.findIndex(m => m.gift);
+    // Everything cleared EXCEPT 39, with perfect stars: still locked.
+    SF.missions.MISSIONS.forEach(m => {
+      if(!m.gift && m.id !== 39) p.missions[m.id] = { cleared:true, stars:{pilot:3} };
+    });
     const before = SF.missions.isMissionUnlocked(p, idx);
-    SF.missions.MISSIONS.forEach(m => { if(!m.gift) p.missions[m.id].stars.pilot = 3; });
+    // 39 cleared with a single lowly star: open.
+    p.missions[39] = { cleared:true, stars:{pilot:1} };
     return !before && SF.missions.isMissionUnlocked(p, idx);
   })());
   check("the gift level has its own theatre",
@@ -552,10 +561,28 @@ async function run(){
    * the source level because the numbers ARE the design.
    */
   check("the mirror duel breathes, pays out, and scales",
-    (() => { const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+    (() => { const b = fs.readFileSync(path.join(__dirname, "src/mirrorduel.js"), "utf8");
              return /dps \* 3\.2 \* \(diff\.bossHp \|\| 1\)/.test(b) &&   // tier-scaled pool
                     /m\.mode === "open" \? 2 : 1/.test(b) &&            // open guard pays double
                     /mode: "mirror", modeT/.test(b); })());             // the rhythm exists
+  /*
+   * ...and the duel LIVES on the Glass Sea now - the mirror boss at the end
+   * of the mirror level, exactly where the whole mission sets it up. The
+   * helper ghost goes quiet the moment the duel arms: the boss IS the
+   * reflection, so two of them on screen would be a continuity error.
+   */
+  check("the Glass Sea's reflection turns at the end", (() => {
+    const m36 = SF.missions.MISSIONS[36];
+    const b = fs.readFileSync(path.join(__dirname, "src/mirrorduel.js"), "utf8");
+    return m36.mirror === true && m36.mirrorDuel === true && !m36.boss &&
+           /world\.mirror = false/.test(b) &&        // the ghost gun retires
+           /clamp\(W - p\.x, 50, W - 50\)/.test(b) && // it peels off where it flew
+           typeof SF.mirrorduel.readyToClear === "function";
+  })());
+  check("the duel holds the mission open until the glass breaks", (() => {
+    const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+    return /run\.mission\.mirrorDuel && !SF\.mirrorduel\.readyToClear\(\)/.test(g);
+  })());
   /*
    * The paint rule is the last thing the game teaches and the one the whole
    * act turns on: fly through a sketch and it comes out on your side. It
@@ -576,7 +603,7 @@ async function run(){
     (() => { const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
              return /The claim ring/.test(b) &&                 // time you can see
                     /The loaded head, at the nose/.test(b) &&   // paint comes from YOU
-                    /"PAINTED!  " \+ run\.stats\.painted \+ "\/6"/.test(b); })());
+                    /T\("PAINTED!"\) \+ "  " \+ run\.stats\.painted \+ "\/6"/.test(b); })());
   /*
    * The opening card is the only instruction a child actually gets mid-flight,
    * so it is held to kid rules: every mission must have one, it must be short
@@ -794,9 +821,10 @@ async function run(){
     SF.enemyData.ENEMY_TYPES.rival.noLeash === true &&
     /e\.life > 28 && !e\.noLeash/.test(
       fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
-  check("the backstage fight reads the damage field bullets actually carry", (() => {
-    const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
-    // The read sites only - the comment above the first one names the old
+  check("the scripted fights read the damage field bullets actually carry", (() => {
+    const b = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8") +
+              fs.readFileSync(path.join(__dirname, "src/mirrorduel.js"), "utf8");
+    // The read sites only - the comment above one of them names the old
     // field on purpose, so match the expression rather than the string.
     return !/[-+*(]\s*b\.damage/.test(b) && !/b\.damage\s*\|\|/.test(b) &&
            (b.match(/b\.dmg\s*\|\|\s*1/g) || []).length >= 3;
@@ -813,7 +841,10 @@ async function run(){
     const FLAGS = { noGuns:"silentStart", rival:"rivalStart", storm:"stormStart",
       convoy:"convoyStart", trench:"trenchStart", blackout:"blackoutStart",
       wells:"wellsStart", beat:"chorusStart", foundry:"foundryStart",
-      serpent:"serpentStart", backstage:"backstageStart", sky29:"sky29Start",
+      serpent:"serpentStart", sky29:"sky29Start", backstage:"backstageStart",
+      // mirrorDuel teaches at ARM time (mirrorSeen, from the module), not at
+      // launch - the Glass Sea's opener is the mirror rule itself.
+      homecoming:"homecomingStart",
       lentDrones:"dronesStart", bounty:"bountyStart", cover:"coverStart",
       nearMiss:"nearMissStart", ferry:"ferryStart", wrap:"wrapStart",
       limpets:"limpetStart", flare:"flareStart", stampede:"stampedeStart",
@@ -1187,10 +1218,10 @@ async function run(){
   check("every upgrade explains itself in plain words",
     SF.config.UPGRADES.every(u => typeof u.desc === "string" && u.desc.length > 12));
   check("both story acts exist and name real art",
-    ["firstPart","ace","actTwo","campaign","launchDay","skyTaken"].every(k => {
+    ["firstPart","ace","actTwo","campaign","launchDay","skyTaken","homecoming"].every(k => {
       const st = SF.storyData.STORY[k];
       return st && st.panels.length > 0 &&
-        st.panels.every(pn => ["stock","now","crew","sky","dawn","dark"].indexOf(pn.art) >= 0 && pn.text.length > 20);
+        st.panels.every(pn => ["stock","now","crew","sky","dawn","dark","starsBack"].indexOf(pn.art) >= 0 && pn.text.length > 20);
     }));
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
@@ -2127,8 +2158,9 @@ async function run(){
     const keep = p.missions;
     p.missions = {};
     // Cleared everything, but mission 2 is one star short and 3 is two short.
+    // The gift is cleared here too: an uncleared stop is NEW GROUND now that
+    // it opens with the war, and the button would (rightly) chase it first.
     SF.missions.MISSIONS.forEach(m => {
-      if(m.gift) return;
       p.missions[m.id] = { cleared:true, stars:{ pilot:3 }, best:{ pilot:1000 } };
     });
     const m2 = SF.missions.MISSIONS[1], m3 = SF.missions.MISSIONS[2];
@@ -2143,7 +2175,7 @@ async function run(){
     check("an old save without that detail still reports the gap, unnamed",
       SF.profile.missingObjectives(p, m3) === null);
     check("the header states the goal, not just the tally",
-      new RegExp("more ★ to open " + SF.missions.giftName()).test(id("campaignGoal").textContent) &&
+      /more ★ to a golden campaign/.test(id("campaignGoal").textContent) &&
       parseFloat(id("campaignBarFill").style.width) > 0);
     check("the star hunt offers itself only when stars are owed",
       !id("starHuntBtn").classList.contains("hidden") &&
@@ -2190,13 +2222,16 @@ async function run(){
                       /T\("✓ DEFEATED"\)/.test(u) && /T\("READY TO PAINT"\)/.test(u); })());
 
     // A pilot with every star gets neither a hunt button nor a star to chase.
+    // The gift record is wiped: the hunt fixture above cleared it, and a
+    // painted gift flips the header to its "nothing left" line.
     SF.missions.MISSIONS.forEach(m => {
       if(!m.gift) p.missions[m.id] = { cleared:true, stars:{ pilot:3 }, best:{ pilot:1000 } };
     });
+    delete p.missions[SF.missions.GIFT.id];
     SF.ui.renderMissions();
-    check("all 84 home: the hunt puts itself away",
+    check("all stars home: the hunt puts itself away",
       id("starHuntBtn").classList.contains("hidden") &&
-      new RegExp(SF.missions.giftName() + " is open").test(id("campaignGoal").textContent) &&
+      /the whole campaign, gold/.test(id("campaignGoal").textContent) &&
       /FLY MISSION/.test(id("campaignNext").textContent));
 
     p.missions = keep;
@@ -2335,9 +2370,11 @@ async function run(){
   check("the gift stop names itself from the mission data",
     SF.missions.GIFT && SF.missions.GIFT.gift === true &&
     SF.missions.giftName() === SF.missions.GIFT.name.toUpperCase());
-  check("the paint the gift stop awards is named after it",
+  check("the paint the gift stop awards keeps its id and its secrecy",
     (() => { const paint = SF.config.PAINT_BY_ID.sky29;
-             return !!paint && paint.name.toUpperCase() === SF.missions.giftName(); })());
+             // The id is written into the family's saves and must never move;
+             // the display name is Papa's, not the stop number's.
+             return !!paint && paint.secret && paint.name === "PAPA'S DAWN"; })());
   check("the last leg of the route is drawn in pencil",
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /const offMap = !!b\.mission\.gift/.test(u); })());
@@ -5706,6 +5743,134 @@ async function run(){
     });
   })());
 
+  /* ---------- THE RESTRUCTURED ENDING, FLOWN ----------
+   * Three sims, one per moved piece: the Glass Sea's duel, the Long Way
+   * Home's descent, and Behind the Sky's merged show. Each drives the real
+   * mission - director warp, real holds, real results - because every one
+   * of these flows is a chain of hand-offs, and hand-offs are exactly what
+   * source pins cannot prove.
+   */
+  {
+    SF.game.godMode = true;
+    SF.game.profile = SF.ui.getProfile();
+    const untilState = async (cond, cap) => {
+      for(let n = 0; n < cap && !cond(); n += 10) await runFrames(10);
+    };
+    const warpWaves = () => {          // spend the director, sweep the sky
+      const run = SF.game.run;
+      run.director.nextWave = run.mission.waves.length;
+      run.director.pending.length = 0;
+      SF.game.world.enemies.killAll();
+      SF.game.world.enemyBullets.killAll();
+    };
+    const dismissStory = () => {
+      if(!id("storyOverlay").classList.contains("hidden")) clickEl(id("storyBtn"));
+    };
+
+    /* --- the Glass Sea: the reflection helps all level, then turns --- */
+    SF.game.startMission(36, "pilot");
+    id("overlayResults").classList.add("hidden");   // stale from earlier flows
+    SF.game.world.player.invuln = 9999;
+    check("the Glass Sea flies with the helper ghost", SF.game.world.mirror === true);
+    await runFrames(90);
+    warpWaves();
+    await untilState(() => SF.mirrorduel._state() &&
+                           SF.mirrorduel._state().stage === "duel", 300);
+    const duel = SF.mirrorduel._state();
+    check("the last wave falls and the reflection turns",
+      !!duel && duel.stage === "duel" && !!duel.mirror);
+    check("the ghost gun retires the moment the duel arms",
+      SF.game.world.mirror === false);
+    check("the duel holds the level open",
+      SF.game.run.phase === "waves" && !SF.game.run.ended);
+    duel.mirror.hp = 0;
+    await untilState(() => SF.mirrorduel.readyToClear(), 300);
+    check("the glass breaks and the level lets go", SF.mirrorduel.readyToClear());
+    await untilState(() => SF.game.run.ended, 1200);
+    await untilState(() => !id("overlayResults").classList.contains("hidden"), 300);
+    check("the duel hands the mission to the normal ending",
+      !id("overlayResults").classList.contains("hidden") &&
+      SF.game.run.stats.completed === true);
+    dismissStory();
+    clickEl(id("resultsMenuBtn"));
+
+    /* --- the Long Way Home: the Titan, then the descent to the farm --- */
+    SF.game.startMission(39, "pilot");
+    id("overlayResults").classList.add("hidden");
+    SF.game.world.player.invuln = 9999;
+    await runFrames(90);
+    warpWaves();
+    await untilState(() => SF.game.run.bossActive && SF.game.world.boss &&
+                           !SF.game.world.boss.entering, 900);
+    check("the war's last fight is the Titan, in the normal boss slot",
+      SF.game.world.boss && SF.game.world.boss.name === "THE FORGERY" &&
+      SF.game.run.bossActive === true);
+    check("no meta theatre runs at 39 any more",
+      !SF.backstage.active() && SF.homecoming.active() && !SF.homecoming.started());
+    { const bb = SF.game.world.boss;
+      bb.weakPoints.forEach(wp => { wp.hp = 0; wp.destroyed = true;
+        if(wp.disables) bb.disabled[wp.disables] = true; });
+      bb.hp = 1; }
+    await untilState(() => SF.homecoming.started(), 900);
+    check("the Titan falls and the squadron turns for home",
+      SF.homecoming.started() && SF.game.run.bossCleared === true);
+    check("the descent holds the results back",
+      !SF.game.run.ended && SF.game.run.phase === "lap");
+    await untilState(() => SF.homecoming.done(), 900);
+    check("the wheels come down on the farm",
+      SF.homecoming.done() && SF.homecoming._state().touched === true);
+    await untilState(() => SF.game.run.ended, 900);
+    await untilState(() => !id("overlayResults").classList.contains("hidden"), 300);
+    check("the homecoming card turns the campaign's last page",
+      !id("overlayResults").classList.contains("hidden") &&
+      !id("storyOverlay").classList.contains("hidden") &&
+      /EVERY STAR IS HOME/.test(id("storyTitle").textContent) &&
+      !!(SF.ui.getProfile().stories || {}).homecoming);
+    dismissStory();
+    clickEl(id("resultsMenuBtn"));
+    check("beating the war opens the gift, no stars asked",
+      SF.missions.isMissionUnlocked(SF.game.profile, 40));
+
+    /* --- Behind the Sky: parade, pranks, tear, brush, stroke, photo --- */
+    SF.game.startMission(40, "pilot");
+    id("overlayResults").classList.add("hidden");
+    SF.game.world.player.invuln = 9999;
+    check("the bonus level runs both theatres at once",
+      SF.backstage.active() && SF.sky29.active());
+    await runFrames(90);
+    warpWaves();
+    await untilState(() => SF.backstage.stage() === "brush" &&
+                           SF.backstage._state().brush, 900);
+    check("the pranks and the tear lead to the Royal Brush",
+      SF.backstage.stage() === "brush");
+    check("the canvas waits for the workshop before its last stroke",
+      SF.sky29._state().phase === "sketch");
+    SF.backstage._state().brush.hp = 0;
+    await untilState(() => SF.backstage.readyToClear(), 600);
+    check("the brush's star goes up", SF.backstage.readyToClear());
+    await untilState(() => SF.sky29._state().phase === "photo" ||
+                           SF.sky29._state().phase === "done", 900);
+    check("the last stroke only sweeps once the workshop is done",
+      ["photo","done"].includes(SF.sky29._state().phase));
+    await untilState(() => SF.game.run.ended, 900);
+    await untilState(() => !id("overlayResults").classList.contains("hidden"), 300);
+    check("the painted-sky card belongs to the level with the brush",
+      !id("overlayResults").classList.contains("hidden") &&
+      !id("storyOverlay").classList.contains("hidden") &&
+      /THE PAINTED SKY/.test(id("storyTitle").textContent) &&
+      !!(SF.ui.getProfile().stories || {}).workshop);
+    dismissStory();
+    check("painting the sky still pays Papa's dawn",
+      SF.game.profile.sky29Done === true &&
+      SF.game.profile.cosmetics.paints.includes("sky29"));
+    clickEl(id("resultsMenuBtn"));
+    SF.game.godMode = false;
+    // The theatres must not haunt the checks below: squadronDue reads
+    // backstage.active() and a stale "done" stage would mute every arrival.
+    SF.backstage.reset(); SF.sky29.reset();
+    SF.mirrorduel.reset(); SF.homecoming.reset();
+  }
+
   /* ---------- THE FINALE: the Devourer ---------- */
   {
     const { VW, VH } = SF.entityConst;
@@ -5714,11 +5879,14 @@ async function run(){
       D && D.finale === true && D.phases.length === 5 &&
       D.size > SF.missions.BOSSES.leviathan.size * 1.35 &&
       D.fightSeconds > SF.missions.BOSSES.leviathan.fightSeconds);
-    // Two finales now: the Devourer closes act 3 at 23, THE FORGERY closes
-    // the whole campaign at 28.
+    // Two finales now: the Devourer closes act 3, and THE FORGERY - the
+    // welded Titan, the last of them - closes the war at 39. Behind the Sky
+    // is the bonus level after the war and fields no boss slot at all: the
+    // Royal Brush is backstage's actor, not the controller's.
     check("each finale closes its act",
       SF.missions.MISSIONS.find(m => m.name === "The Devourer").boss === "devourer" &&
-      SF.missions.MISSIONS.find(m => m.name === "Behind the Sky").boss === "forgery" &&
+      SF.missions.MISSIONS.find(m => m.name === "The Long Way Home").boss === "forgery" &&
+      SF.missions.MISSIONS.find(m => m.name === "Behind the Sky").boss === undefined &&
       SF.missions.MISSIONS.find(m => m.name === "The Long Dark").boss === undefined);
     check("beating it awards the last tune and the last medal",
       SF.config.TUNES.some(t => t.id === "nova" &&

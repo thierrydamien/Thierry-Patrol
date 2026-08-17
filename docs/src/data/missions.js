@@ -282,7 +282,7 @@ const BOSSES = {
    * remix pool drawn from every earlier fight.
    */
   forgery: {
-    name: "THE FORGERY", epithet: "it plays your game back at you",
+    name: "THE FORGERY", epithet: "every boss you beat, bolted back together",
     forge: true,
     hp: 2400, fightSeconds: 55, size: 300, tint: "#e8c14a", entryY: 190,
     armoured: true,
@@ -1742,9 +1742,13 @@ const MISSIONS = [
      * reach" always has a partner the reflection can.
      */
     id:36, name:"The Glass Sea", subtitle:"two of you",
-    brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good.",
+    brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
+    // The level's last word: when the final wave falls, the reflection peels
+    // off the sky and turns - THE MIRROR PILOT, mirrorduel.js. A mirror boss
+    // at the end of the mirror level; it used to be act two behind the sky.
+    mirrorDuel:true,
     face:"splitter",                  // the one that becomes two, like you
     waves: [
       w(1,   "weaver",      8, "twinColumns"),
@@ -1835,17 +1839,19 @@ const MISSIONS = [
     objectives: ["complete","serpent","rescueAll"],
   },
   {
-    id:39, name:"Behind the Sky", subtitle:"Where the game is made",
-    brief:"The crack goes all the way through, {you} - BEHIND the sky, where skies get painted and ships get drawn. Something in the workshop has woken up, and it has been watching you play. It knows every trick you know.",
-    goal:"The workshop is awake. Fly!",
-    face:"rival",
-    backstage:true,
     /*
-     * Short on purpose, like the Devourer's: the waves are the approach, and
-     * backstage.js owns everything after them - the remixes, the fake
-     * endings, and the three-act boss. What spawns here is a taste of every
-     * act, about to be replayed back at the player in sketch form.
+     * THE WAR'S LAST FIGHT, and then the flight home. The Titan used to be
+     * act one of a three-act meta finale; the family asked for the campaign
+     * to END like a story instead - so the meta moved up to mission 40 and
+     * this one keeps the wall: every boss they ever beat, welded together,
+     * parked between the squadron and Earth. When it falls, homecoming.js
+     * flies the Launch Day sequence backwards, all the way down to the farm.
      */
+    id:39, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
+    goal:"Beat the Titan — then go home.",
+    face:"rival",
+    homecoming:true,
     waves: [
       w(1,   "grunt",   10, "vee"),
       w(9,   "weaver",   8, "twinColumns"),
@@ -1856,20 +1862,23 @@ const MISSIONS = [
       w(47,  "interceptor", 10, "scatter"),
     ],
     boss: "forgery",
-    objectives: ["complete","paintSix","rescueAll"],
+    objectives: ["complete","stripBoss","rescueAll"],
   },
   {
     /*
-     * SKY 29 - the gift level. Gated on every star in the campaign (the gift
-     * itself is excluded from the count - see profile.totalStars), and it is
-     * a celebration, not a test: a parade of everything the family has
-     * already beaten, painting Papa's unfinished canvas as they fly. sky29.js
-     * owns the pencil veil, the last stroke and the squadron photo.
+     * BEHIND THE SKY - the bonus level the war leaves behind, unlocked the
+     * moment mission 39 falls (gift missions stay OFF the star ledger - see
+     * profile.totalStars - so the campaign total never moves). It is a
+     * celebration with a fight in the middle: a parade of everything the
+     * family has beaten, flown over Papa's unfinished canvas, and then the
+     * workshop's own pranks - the fake ending, the tear to blueprint, THE
+     * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
+     * and lines the squadron up for a photo.
      */
-    id:40, name:"Sky 40", subtitle:"the one Papa never finished",
-    brief:"Behind the workshop, one canvas was left on the easel - a sky with your names pencilled in the corner. Every star you earned was a colour, {you}, and you earned ALL of them. Time to paint it. Everyone's coming.",
+    id:40, name:"Behind the Sky", subtitle:"Where the game is made",
+    brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
-    gift:true, sky29:true, coinRain:true,
+    gift:true, sky29:true, backstage:true, coinRain:true,
     waves: [
       w(1,  "grunt",       8, "vee"),
       w(8,  "weaver",      8, "twinColumns"),
@@ -1885,7 +1894,9 @@ const MISSIONS = [
       w(63, "brute",       3, "wall", { elite:1 }),
       w(69, "interceptor", 9, "scatter"),
     ],
-    objectives: ["complete","rescueAll","coinRush"],
+    // rescueAll is owed, not chosen: the parade's carriers shed pods, and
+    // the suite holds every mission with pilots to free to starring it.
+    objectives: ["complete","paintSix","rescueAll"],
   },
 ];
 
@@ -1903,12 +1914,14 @@ function isMissionUnlocked(profile, index){
   if(own && own.cleared) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
-  const prevCleared = !!(record && record.cleared);
-  // The gift stop wants more than the road to it: every star in the campaign.
-  // (totalStars already excludes gift missions, so the bar can actually be met.)
-  if(MISSIONS[index].gift)
-    return prevCleared && SF.profile.totalStars(profile) >= SF.profile.maxStars();
-  return prevCleared;
+  /*
+   * The gift stop unlocks like any other: beat the mission before it. It
+   * used to demand every star in the campaign, and at 117 stars that made
+   * the fun level a stop nobody in the family would ever fly - a trophy is
+   * a poor use of the game's best celebration. The stars still matter: they
+   * gate the harder tiers, and the gift's own stars stay off the ledger.
+   */
+  return !!(record && record.cleared);
 }
 
 /** Total rescue pods a mission can yield: one per hauler, plus free drifters. */
