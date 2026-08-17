@@ -16,35 +16,35 @@
  *     5398  src/data/comms.js
  *     5819  src/data/story.js
  *     5957  src/data/fr.js
- *     7163  src/profile.js
- *     7792  src/cloud.js
- *     8397  src/fx.js
- *     9510  src/input.js
- *     9933  src/entities.js
- *    11145  src/bossart.js
- *    12011  src/bosses.js
- *    12761  src/bossintro.js
- *    12884  src/rewind.js
- *    13415  src/finale.js
- *    13736  src/papadeath.js
- *    14058  src/backstage.js
- *    15007  src/sky29.js
- *    15252  src/mirrorduel.js
- *    15599  src/homecoming.js
- *    15796  src/prologue.js
- *    16262  src/systems.js
- *    16893  src/render.js
- *    21492  src/enemyart.js
- *    22444  src/insignia.js
- *    22689  src/skygen.js
- *    25633  src/shipart.js
- *    26833  src/paintjob.js
- *    26995  src/pilotart.js
- *    27090  src/comms.js
- *    27229  src/game.js
- *    30766  src/workshop.js
- *    31463  src/data/i18nbind.js
- *    31534  src/ui.js
+ *     7231  src/profile.js
+ *     7860  src/cloud.js
+ *     8465  src/fx.js
+ *     9578  src/input.js
+ *    10001  src/entities.js
+ *    11213  src/bossart.js
+ *    12079  src/bosses.js
+ *    12829  src/bossintro.js
+ *    12952  src/rewind.js
+ *    13483  src/finale.js
+ *    13804  src/papadeath.js
+ *    14126  src/backstage.js
+ *    15075  src/sky29.js
+ *    15320  src/mirrorduel.js
+ *    15667  src/homecoming.js
+ *    15864  src/prologue.js
+ *    16330  src/systems.js
+ *    16961  src/render.js
+ *    21563  src/enemyart.js
+ *    22515  src/insignia.js
+ *    22760  src/skygen.js
+ *    25704  src/shipart.js
+ *    26904  src/paintjob.js
+ *    27066  src/pilotart.js
+ *    27161  src/comms.js
+ *    27300  src/game.js
+ *    30837  src/workshop.js
+ *    31534  src/data/i18nbind.js
+ *    31605  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6017,6 +6017,74 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Restart Mission": "Recommencer la mission",
 "Quit to Menu": "Quitter",
 "MISSION COMPLETE": "MISSION RÉUSSIE",
+
+/* ---------------- the results card ----------------
+   The whole ledger is built by string concatenation into innerHTML, so the
+   DOM sweep reaches the static labels but nothing with a number baked into
+   it - those go through T() at the call site and need placeholders here.
+   The card shipped entirely in English for months because only its TITLE
+   was ever a key. */
+"Score": "Score",
+"Money collected": "Argent récolté",
+"Mission bonus ({n} ★)": "Bonus de mission ({n} ★)",
+"included": "inclus",
+"Enemies destroyed": "Ennemis détruits",
+"Pilots rescued": "Pilotes sauvés",
+"Best combo": "Meilleur combo",
+"Flew with you": "Ont volé avec toi",
+"Wallet": "Porte-monnaie",
+"Family record": "Record de la famille",
+"{who} — new best!": "{who} — nouveau record !",
+"none yet — set one!": "aucun pour l'instant — à toi de jouer !",
+"yours, {score}": "à toi, {score}",
+"{who} still holds this": "{who} détient encore le record",
+"Medal earned": "Médaille obtenue",
+"Medals earned": "Médailles obtenues",
+"{name} — collect {money} in MEDALS": "{name} — récupère {money} dans MÉDAILLES",
+"{n} at once! — collect {money} in MEDALS": "{n} d'un coup ! — récupère {money} dans MÉDAILLES",
+"Rush record": "Record du Gant de Fer",
+"Wacky Sky crown": "Couronne du Ciel Farfelu",
+"YOURS": "À TOI",
+"{who} — {n} bosses": "{who} — {n} boss",
+"{who} — {n} pts": "{who} — {n} pts",
+"CONTROL": "CONTRÔLE",
+/* the results subtitle, every branch */
+"Perfect flying, {you}!": "Vol parfait, {you} !",
+"Nice work, {you}!": "Beau travail, {you} !",
+"You got {n}% of the way and kept every coin. Go again?":
+  "Tu as fait {n} % du chemin et tu gardes chaque pièce. On y retourne ?",
+"This one's tough! Grab an upgrade in the ARMORY — even one level helps.":
+  "Celle-ci est coriace ! Prends une amélioration à l'ARSENAL — même un seul niveau aide.",
+"This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first.":
+  "Celle-ci est coriace ! Passe en RECRUE, ou achète d'abord une amélioration à l'ARSENAL.",
+"ALL {n} bosses down, {you}!": "LES {n} boss à terre, {you} !",
+"{n} of {total} bosses down — go again?": "{n} boss sur {total} à terre — on y retourne ?",
+"NEW RECORD! {pts} pts in {time}": "NOUVEAU RECORD ! {pts} pts en {time}",
+"{pts} pts in {time} — your best is {best}": "{pts} pts en {time} — ton record est {best}",
+/* the NEW-part line and its proof */
+"NEW — {name}": "NEUF — {name}",
+"{n} enemy destroyed": "{n} ennemi détruit",
+"{n} enemies destroyed": "{n} ennemis détruits",
+"{money} banked": "{money} en banque",
+"{n} coins grabbed": "{n} pièces attrapées",
+"a faster ship all flight": "un vaisseau plus rapide tout le vol",
+"your drones flew with you": "tes drones ont volé avec toi",
+"and you never lost a life": "et tu n'as jamais perdu de vie",
+"{n} lives lost": "{n} vies perdues",
+"a bomb in your pocket": "une bombe dans la poche",
+"overdrive ready when you needed it": "la surpuissance prête quand il le fallait",
+/* the HUD's double-pay day - canvas text, so it asks for itself */
+"CREDITS": "CRÉDITS",
+"CREDITS ×2": "CRÉDITS ×2",
+/* the three toasts that pop over the results card */
+"TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
+"{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",
+"SECRET FOUND": "SECRET TROUVÉ",
+"SOLAR GOLD — the star's own paint. Yours alone.":
+  "OR SOLAIRE — la peinture de l'étoile elle-même. Rien qu'à toi.",
+"PAINT WON": "PEINTURE GAGNÉE",
+"{sky} — the dawn off Papa's last canvas. Wear it well.":
+  "{sky} — l'aube prise sur la dernière toile de Papa. Porte-la fièrement.",
 "NEXT MISSION": "MISSION SUIVANTE",
 "TRY ON ROOKIE": "ESSAYER EN RECRUE",
 "RETRY": "RÉESSAYER",
@@ -6219,7 +6287,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE DARK": "LES TÉNÈBRES",
 "THE CRACK": "LA FAILLE",
 "THE ROAD HOME": "LA ROUTE DU RETOUR",
-"THE EASEL": "LE CHEVALET",
+"THE EASEL": "LA TOILE",
 
 /* ---------------- mission names ---------------- */
 "Launch Day": "Jour du Décollage",
@@ -6273,7 +6341,7 @@ SF.i18n.register("fr", { name: "Français", s: {
   "C'est le dernier, {you} : tous les vaisseaux que la famille a battus, soudés en un seul mur, garé entre vous et la maison. Dessoude-le. À l'instant où il tombe, l'escadrille met le cap sur la Terre — jusqu'à la ferme.",
 "Beat the Titan — then go home.": "Bats le Titan — puis rentre à la maison.",
 "The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.":
-  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Un canevas attend encore sur le chevalet, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
+  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Une toile attend encore d'être peinte, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
 "every boss you beat, bolted back together": "tous les boss que tu as battus, boulonnés ensemble",
 "PAPA'S DAWN": "L'AUBE DE PAPA",
 "{you} - your reflection! It's off the glass - and it's NOT copying any more!":
@@ -6333,7 +6401,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost.":
   "Les vaisseaux sont rayés, la peinture est écaillée, et personne ne les échangerait pour rien au monde. Papa dit qu'ils ont mérité du repos — presque.",
 "Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map.":
-  "Parce que derrière le ciel, un canevas attend encore sur le chevalet, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
+  "Parce que derrière le ciel, il reste une toile à peindre, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
 "HOME AT LAST": "ENFIN À LA MAISON",
 
 /* ---------------- story pages ----------------
@@ -18355,6 +18423,9 @@ const COIN_BOX = 32;                       // sprite box; face radius stays ~9
  * spin rebakes all eight frames with whichever symbol is now current.
  */
 function coinGlyph(){ return SF.i18n && SF.i18n.lang() === "fr" ? "\u20ac" : "\u00a3"; }
+/* Canvas text is unreachable by the DOM sweep, so the HUD asks for its own
+   translations - the same rule the campaign map lives under. */
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 if(SF.i18n) SF.i18n.onChange(() => { coinPhases.length = 0; });
 function coinSprite(phase){
   if(!coinPhases.length){
@@ -20981,7 +21052,7 @@ function drawHud(ctx, game){
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
-  ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
+  ctx.fillText(run.dailyDouble ? T("CREDITS \u00d72") : T("CREDITS"), VW-PAD-CLEAR, 8);
   glowText(ctx, SF.ui.money(run.money), VW-PAD-CLEAR, 19,
            "700 20px " + FONT, "#ffd23f", "rgba(255,180,40,0.5)", 8, "right");
   ctx.textAlign = "left";
@@ -36544,20 +36615,22 @@ function showResults(result){
   const sub = $("resultSubtitle");
   if(rush){
     sub.textContent = completed
-      ? "ALL " + rushTotal + " bosses down, " + (profile.callsign || profile.name) + "!"
-      : rushBeaten + " of " + rushTotal + " bosses down — go again?";
+      ? T("ALL {n} bosses down, {you}!", { n: rushTotal, you: profile.callsign || profile.name })
+      : T("{n} of {total} bosses down — go again?", { n: rushBeaten, total: rushTotal });
   } else if(endless){
     // A Wacky Sky run never fails - it just has a length and a score.
     const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
     sub.textContent = endlessNewBest
-      ? "NEW RECORD! " + run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s
-      : run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s +
-        " — your best is " + (profile.endlessBest || 0).toLocaleString(numLocale());
+      ? T("NEW RECORD! {pts} pts in {time}",
+           { pts: run.score.toLocaleString(numLocale()), time: m + ":" + s })
+      : T("{pts} pts in {time} — your best is {best}",
+           { pts: run.score.toLocaleString(numLocale()), time: m + ":" + s,
+             best: (profile.endlessBest || 0).toLocaleString(numLocale()) });
   } else if(completed){
     failStreak = null;
     sub.textContent = stars === 3
-      ? "Perfect flying, " + (profile.callsign || profile.name) + "!"
-      : "Nice work, " + (profile.callsign || profile.name) + "!";
+      ? T("Perfect flying, {you}!", { you: profile.callsign || profile.name })
+      : T("Nice work, {you}!", { you: profile.callsign || profile.name });
   } else {
     // Two losses in a row on the same flight earns a real tip instead of the
     // same "go again". Seven-year-olds don't think of turning the difficulty
@@ -36567,9 +36640,10 @@ function showResults(result){
       ? { key: failKey, n: failStreak.n + 1 } : { key: failKey, n: 1 };
     sub.textContent = failStreak.n >= 2
       ? (run.difficulty.id === "rookie"
-          ? "This one's tough! Grab an upgrade in the ARMORY — even one level helps."
-          : "This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first.")
-      : "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
+          ? T("This one's tough! Grab an upgrade in the ARMORY — even one level helps.")
+          : T("This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first."))
+      : T("You got {n}% of the way and kept every coin. Go again?",
+          { n: Math.round(run.progress*100) });
   }
 
   // Advice a seven-year-old can act on is a BUTTON, not a sentence: after two
@@ -36626,12 +36700,12 @@ function showResults(result){
   $("resultLines").innerHTML = `
     <div class="rl"><span>Score</span><b data-countup="${run.score}">0</b></div>
     <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}"${moneyDataAttrs("+")}>${esc("+" + money(0))}</b></div>
-    ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
+    ${run.completionBonus ? `<div class="rl"><span>${esc(T("Mission bonus ({n} ★)", { n: stars }))}</span><b class="money">${esc(T("included"))}</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
     <div class="rl"><span>Pilots rescued</span><b>${(endless || rush) ? s.rescues
       : s.rescues + "/" + s.rescuesTotal}</b></div>
-    ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
+    ${run.maxCombo > 1 ? `<div class="rl"><span>${esc(T("Best combo"))}</span><b>x${run.maxCombo}</b></div>` : ""}
     ${freshGearLine(run)}
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}"${moneyDataAttrs("")}>${esc(money(0))}</b></div>
@@ -36652,15 +36726,16 @@ function showResults(result){
   // says where to go fit it.
   if(result.firstClear && run.mission.boss){
     const wonTune = SF.config.TUNES.find(t => t.unlockMission === run.mission.id);
-    if(wonTune) queueToast({ name: wonTune.name + " tune won! Fit it in MY SHIP",
-      label:"TUNE UNLOCKED" });
+    if(wonTune) queueToast({ name: T("{name} tune won! Fit it in MY SHIP", { name: wonTune.name }),
+      label: T("TUNE UNLOCKED") });
   }
   if(result.vaultWon)
-    queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
-      label:"SECRET FOUND" });
+    queueToast({ glyph:"star", name: T("SOLAR GOLD — the star's own paint. Yours alone."),
+      label: T("SECRET FOUND") });
   if(result.sky29Won)
-    queueToast({ glyph:"star", name: SF.missions.giftName() + " — the dawn off Papa's last canvas. Wear it well.",
-      label:"PAINT WON" });
+    queueToast({ glyph:"star", name: T("{sky} — the dawn off Papa's last canvas. Wear it well.",
+        { sky: SF.missions.giftName() }),
+      label: T("PAINT WON") });
   // Every star is a lap of honour now, not a key - the gift stop opens with
   // the war instead. Still worth a toast: 117 of 117 is the family record.
   if(result.allStarsNow)
@@ -36687,8 +36762,9 @@ function rushRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Rush record</span><b>${mine ? "YOURS" :
-    esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
+  const who = mine ? T("YOURS") : (top.callsign || top.name);
+  return `<div class="rl record"><span>${esc(T("Rush record"))}</span><b>${
+    esc(T("{who} — {n} bosses", { who, n: top.bossRushBest }))}</b></div>`;
 }
 
 /** Who holds the Wacky Sky crown right now - shown after every wacky run. */
@@ -36698,8 +36774,9 @@ function wackyRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Wacky Sky crown</span><b>${mine ? "YOURS" :
-    esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString(numLocale())} pts</b></div>`;
+  const who = mine ? T("YOURS") : (top.callsign || top.name);
+  return `<div class="rl record"><span>${esc(T("Wacky Sky crown"))}</span><b>${
+    esc(T("{who} — {n} pts", { who, n: top.endlessBest.toLocaleString(numLocale()) }))}</b></div>`;
 }
 
 /**
@@ -36731,7 +36808,7 @@ function renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest){
   const useMate = def.speaker === "mate" && !!mate;
   const who = useMate ? mate : null;
   const line = def.lines[Math.floor(Math.random()*def.lines.length)];
-  $("resultCommsWho").textContent = who ? (who.callsign || who.name).toUpperCase() : "CONTROL";
+  $("resultCommsWho").textContent = who ? (who.callsign || who.name).toUpperCase() : T("CONTROL");
   $("resultCommsWho").style.color = who ? who.shipColor : "#7fc4ff";
   $("resultCommsText").textContent = SF.commsData.fill(line, { you: me, mate: mate ? (mate.callsign||mate.name) : "" });
 
@@ -36763,16 +36840,17 @@ function freshGearLine(run){
   const s = run.stats;
   let proof = "";
   if(fg.cat === "guns")
-    proof = s.kills + (s.kills === 1 ? " enemy destroyed" : " enemies destroyed");
-  else if(fg.id === "fortune")  proof = money(Math.round(run.money)) + " banked";
-  else if(fg.id === "magnet")   proof = (s.coins || 0) + " coins grabbed";
-  else if(fg.id === "thrusters")proof = "a faster ship all flight";
-  else if(fg.id === "wingman")  proof = "your drones flew with you";
+    proof = T(s.kills === 1 ? "{n} enemy destroyed" : "{n} enemies destroyed", { n: s.kills });
+  else if(fg.id === "fortune")  proof = T("{money} banked", { money: money(Math.round(run.money)) });
+  else if(fg.id === "magnet")   proof = T("{n} coins grabbed", { n: s.coins || 0 });
+  else if(fg.id === "thrusters")proof = T("a faster ship all flight");
+  else if(fg.id === "wingman")  proof = T("your drones flew with you");
   else if(fg.id === "life" || fg.id === "armor" || fg.id === "shield")
-    proof = s.livesLost === 0 ? "and you never lost a life" : s.livesLost + " lives lost";
-  else if(fg.id === "bomb")     proof = "a bomb in your pocket";
-  else if(fg.id === "overdrive")proof = "overdrive ready when you needed it";
-  return `<div class="rl rl-fresh"><span>NEW — ${esc(fg.name)}</span>` +
+    proof = s.livesLost === 0 ? T("and you never lost a life")
+                              : T("{n} lives lost", { n: s.livesLost });
+  else if(fg.id === "bomb")     proof = T("a bomb in your pocket");
+  else if(fg.id === "overdrive")proof = T("overdrive ready when you needed it");
+  return `<div class="rl rl-fresh"><span>${esc(T("NEW — {name}", { name: fg.name }))}</span>` +
          `<b>${esc(fg.effect)}${proof ? " · " + esc(proof) : ""}</b></div>`;
 }
 
@@ -36819,26 +36897,26 @@ function medalLines(unlocked){
   const list = unlocked || [];
   if(list.length > 2){
     const pay = list.reduce((a, m) => a + (m.pay || 0), 0);
-    return `<div class="rl record"><span>Medals earned</span><b>${list.length} at once! — collect ${money(pay)} in MEDALS</b></div>`;
+    return `<div class="rl record"><span>${esc(T("Medals earned"))}</span><b>${esc(T("{n} at once! — collect {money} in MEDALS", { n: list.length, money: money(pay) }))}</b></div>`;
   }
   return list.map(a =>
-    `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect ${money((a.pay||0))} in MEDALS</b></div>`).join("");
+    `<div class="rl record"><span>${esc(T("Medal earned"))}</span><b>${a.icon} ${esc(T("{name} — collect {money} in MEDALS", { name: a.name, money: money(a.pay||0) }))}</b></div>`).join("");
 }
 
 function recordLine(run, prevBest){
   const me = profile.callsign || profile.name;
   // "New best!" only when there was a real previous score to beat.
   if(prevBest && run.score > prevBest.score){
-    return `<div class="rl record"><span>Family record</span><b>🏆 ${esc(me)} — new best!</b></div>`;
+    return `<div class="rl record"><span>${esc(T("Family record"))}</span><b>🏆 ${esc(T("{who} — new best!", { who: me }))}</b></div>`;
   }
   const best = prevBest || P.familyBest(run.mission.id);
   if(!best || best.score <= 0){
-    return `<div class="rl"><span>Family record</span><b>none yet — set one!</b></div>`;
+    return `<div class="rl"><span>${esc(T("Family record"))}</span><b>${esc(T("none yet — set one!"))}</b></div>`;
   }
   if(best.owner === profile.name){
-    return `<div class="rl"><span>Family record</span><b>🏅 yours, ${best.score.toLocaleString()}</b></div>`;
+    return `<div class="rl"><span>${esc(T("Family record"))}</span><b>🏅 ${esc(T("yours, {score}", { score: best.score.toLocaleString(numLocale()) }))}</b></div>`;
   }
-  return `<div class="rl"><span>${esc(best.name)} still holds this</span><b>${best.score.toLocaleString()}</b></div>`;
+  return `<div class="rl"><span>${esc(T("{who} still holds this", { who: best.name }))}</span><b>${best.score.toLocaleString(numLocale())}</b></div>`;
 }
 
 /* ---------------------------------------------------------

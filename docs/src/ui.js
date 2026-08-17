@@ -5011,20 +5011,22 @@ function showResults(result){
   const sub = $("resultSubtitle");
   if(rush){
     sub.textContent = completed
-      ? "ALL " + rushTotal + " bosses down, " + (profile.callsign || profile.name) + "!"
-      : rushBeaten + " of " + rushTotal + " bosses down — go again?";
+      ? T("ALL {n} bosses down, {you}!", { n: rushTotal, you: profile.callsign || profile.name })
+      : T("{n} of {total} bosses down — go again?", { n: rushBeaten, total: rushTotal });
   } else if(endless){
     // A Wacky Sky run never fails - it just has a length and a score.
     const m = Math.floor((durationSec || 0)/60), s = ("0" + (durationSec || 0)%60).slice(-2);
     sub.textContent = endlessNewBest
-      ? "NEW RECORD! " + run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s
-      : run.score.toLocaleString(numLocale()) + " pts in " + m + ":" + s +
-        " — your best is " + (profile.endlessBest || 0).toLocaleString(numLocale());
+      ? T("NEW RECORD! {pts} pts in {time}",
+           { pts: run.score.toLocaleString(numLocale()), time: m + ":" + s })
+      : T("{pts} pts in {time} — your best is {best}",
+           { pts: run.score.toLocaleString(numLocale()), time: m + ":" + s,
+             best: (profile.endlessBest || 0).toLocaleString(numLocale()) });
   } else if(completed){
     failStreak = null;
     sub.textContent = stars === 3
-      ? "Perfect flying, " + (profile.callsign || profile.name) + "!"
-      : "Nice work, " + (profile.callsign || profile.name) + "!";
+      ? T("Perfect flying, {you}!", { you: profile.callsign || profile.name })
+      : T("Nice work, {you}!", { you: profile.callsign || profile.name });
   } else {
     // Two losses in a row on the same flight earns a real tip instead of the
     // same "go again". Seven-year-olds don't think of turning the difficulty
@@ -5034,9 +5036,10 @@ function showResults(result){
       ? { key: failKey, n: failStreak.n + 1 } : { key: failKey, n: 1 };
     sub.textContent = failStreak.n >= 2
       ? (run.difficulty.id === "rookie"
-          ? "This one's tough! Grab an upgrade in the ARMORY — even one level helps."
-          : "This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first.")
-      : "You got " + Math.round(run.progress*100) + "% of the way and kept every coin. Go again?";
+          ? T("This one's tough! Grab an upgrade in the ARMORY — even one level helps.")
+          : T("This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first."))
+      : T("You got {n}% of the way and kept every coin. Go again?",
+          { n: Math.round(run.progress*100) });
   }
 
   // Advice a seven-year-old can act on is a BUTTON, not a sentence: after two
@@ -5093,12 +5096,12 @@ function showResults(result){
   $("resultLines").innerHTML = `
     <div class="rl"><span>Score</span><b data-countup="${run.score}">0</b></div>
     <div class="rl"><span>Money collected</span><b class="money" data-countup="${run.money}"${moneyDataAttrs("+")}>${esc("+" + money(0))}</b></div>
-    ${run.completionBonus ? `<div class="rl"><span>Mission bonus (${stars} ★)</span><b class="money">included</b></div>` : ""}
+    ${run.completionBonus ? `<div class="rl"><span>${esc(T("Mission bonus ({n} ★)", { n: stars }))}</span><b class="money">${esc(T("included"))}</b></div>` : ""}
     <div class="rl"><span>Enemies destroyed</span><b>${(endless || rush) ? s.kills
       : s.kills + "/" + Math.max(s.spawned, run.director.totalPlanned)}</b></div>
     <div class="rl"><span>Pilots rescued</span><b>${(endless || rush) ? s.rescues
       : s.rescues + "/" + s.rescuesTotal}</b></div>
-    ${run.maxCombo > 1 ? `<div class="rl"><span>Best combo</span><b>x${run.maxCombo}</b></div>` : ""}
+    ${run.maxCombo > 1 ? `<div class="rl"><span>${esc(T("Best combo"))}</span><b>x${run.maxCombo}</b></div>` : ""}
     ${freshGearLine(run)}
     ${crewLine()}
     <div class="rl"><span>Wallet</span><b class="money" data-countup="${profile.money}"${moneyDataAttrs("")}>${esc(money(0))}</b></div>
@@ -5119,15 +5122,16 @@ function showResults(result){
   // says where to go fit it.
   if(result.firstClear && run.mission.boss){
     const wonTune = SF.config.TUNES.find(t => t.unlockMission === run.mission.id);
-    if(wonTune) queueToast({ name: wonTune.name + " tune won! Fit it in MY SHIP",
-      label:"TUNE UNLOCKED" });
+    if(wonTune) queueToast({ name: T("{name} tune won! Fit it in MY SHIP", { name: wonTune.name }),
+      label: T("TUNE UNLOCKED") });
   }
   if(result.vaultWon)
-    queueToast({ glyph:"star", name:"SOLAR GOLD — the star's own paint. Yours alone.",
-      label:"SECRET FOUND" });
+    queueToast({ glyph:"star", name: T("SOLAR GOLD — the star's own paint. Yours alone."),
+      label: T("SECRET FOUND") });
   if(result.sky29Won)
-    queueToast({ glyph:"star", name: SF.missions.giftName() + " — the dawn off Papa's last canvas. Wear it well.",
-      label:"PAINT WON" });
+    queueToast({ glyph:"star", name: T("{sky} — the dawn off Papa's last canvas. Wear it well.",
+        { sky: SF.missions.giftName() }),
+      label: T("PAINT WON") });
   // Every star is a lap of honour now, not a key - the gift stop opens with
   // the war instead. Still worth a toast: 117 of 117 is the family record.
   if(result.allStarsNow)
@@ -5154,8 +5158,9 @@ function rushRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Rush record</span><b>${mine ? "YOURS" :
-    esc(top.callsign || top.name)} — ${top.bossRushBest} boss${top.bossRushBest > 1 ? "es" : ""}</b></div>`;
+  const who = mine ? T("YOURS") : (top.callsign || top.name);
+  return `<div class="rl record"><span>${esc(T("Rush record"))}</span><b>${
+    esc(T("{who} — {n} bosses", { who, n: top.bossRushBest }))}</b></div>`;
 }
 
 /** Who holds the Wacky Sky crown right now - shown after every wacky run. */
@@ -5165,8 +5170,9 @@ function wackyRecordLine(){
   if(!rows.length) return "";
   const top = rows[0];
   const mine = top.name === profile.name;
-  return `<div class="rl record"><span>Wacky Sky crown</span><b>${mine ? "YOURS" :
-    esc(top.callsign || top.name)} — ${top.endlessBest.toLocaleString(numLocale())} pts</b></div>`;
+  const who = mine ? T("YOURS") : (top.callsign || top.name);
+  return `<div class="rl record"><span>${esc(T("Wacky Sky crown"))}</span><b>${
+    esc(T("{who} — {n} pts", { who, n: top.endlessBest.toLocaleString(numLocale()) }))}</b></div>`;
 }
 
 /**
@@ -5198,7 +5204,7 @@ function renderResultComms(run, completed, stars, prevFamilyBest, prevSelfBest){
   const useMate = def.speaker === "mate" && !!mate;
   const who = useMate ? mate : null;
   const line = def.lines[Math.floor(Math.random()*def.lines.length)];
-  $("resultCommsWho").textContent = who ? (who.callsign || who.name).toUpperCase() : "CONTROL";
+  $("resultCommsWho").textContent = who ? (who.callsign || who.name).toUpperCase() : T("CONTROL");
   $("resultCommsWho").style.color = who ? who.shipColor : "#7fc4ff";
   $("resultCommsText").textContent = SF.commsData.fill(line, { you: me, mate: mate ? (mate.callsign||mate.name) : "" });
 
@@ -5230,16 +5236,17 @@ function freshGearLine(run){
   const s = run.stats;
   let proof = "";
   if(fg.cat === "guns")
-    proof = s.kills + (s.kills === 1 ? " enemy destroyed" : " enemies destroyed");
-  else if(fg.id === "fortune")  proof = money(Math.round(run.money)) + " banked";
-  else if(fg.id === "magnet")   proof = (s.coins || 0) + " coins grabbed";
-  else if(fg.id === "thrusters")proof = "a faster ship all flight";
-  else if(fg.id === "wingman")  proof = "your drones flew with you";
+    proof = T(s.kills === 1 ? "{n} enemy destroyed" : "{n} enemies destroyed", { n: s.kills });
+  else if(fg.id === "fortune")  proof = T("{money} banked", { money: money(Math.round(run.money)) });
+  else if(fg.id === "magnet")   proof = T("{n} coins grabbed", { n: s.coins || 0 });
+  else if(fg.id === "thrusters")proof = T("a faster ship all flight");
+  else if(fg.id === "wingman")  proof = T("your drones flew with you");
   else if(fg.id === "life" || fg.id === "armor" || fg.id === "shield")
-    proof = s.livesLost === 0 ? "and you never lost a life" : s.livesLost + " lives lost";
-  else if(fg.id === "bomb")     proof = "a bomb in your pocket";
-  else if(fg.id === "overdrive")proof = "overdrive ready when you needed it";
-  return `<div class="rl rl-fresh"><span>NEW — ${esc(fg.name)}</span>` +
+    proof = s.livesLost === 0 ? T("and you never lost a life")
+                              : T("{n} lives lost", { n: s.livesLost });
+  else if(fg.id === "bomb")     proof = T("a bomb in your pocket");
+  else if(fg.id === "overdrive")proof = T("overdrive ready when you needed it");
+  return `<div class="rl rl-fresh"><span>${esc(T("NEW — {name}", { name: fg.name }))}</span>` +
          `<b>${esc(fg.effect)}${proof ? " · " + esc(proof) : ""}</b></div>`;
 }
 
@@ -5286,26 +5293,26 @@ function medalLines(unlocked){
   const list = unlocked || [];
   if(list.length > 2){
     const pay = list.reduce((a, m) => a + (m.pay || 0), 0);
-    return `<div class="rl record"><span>Medals earned</span><b>${list.length} at once! — collect ${money(pay)} in MEDALS</b></div>`;
+    return `<div class="rl record"><span>${esc(T("Medals earned"))}</span><b>${esc(T("{n} at once! — collect {money} in MEDALS", { n: list.length, money: money(pay) }))}</b></div>`;
   }
   return list.map(a =>
-    `<div class="rl record"><span>Medal earned</span><b>${a.icon} ${esc(a.name)} — collect ${money((a.pay||0))} in MEDALS</b></div>`).join("");
+    `<div class="rl record"><span>${esc(T("Medal earned"))}</span><b>${a.icon} ${esc(T("{name} — collect {money} in MEDALS", { name: a.name, money: money(a.pay||0) }))}</b></div>`).join("");
 }
 
 function recordLine(run, prevBest){
   const me = profile.callsign || profile.name;
   // "New best!" only when there was a real previous score to beat.
   if(prevBest && run.score > prevBest.score){
-    return `<div class="rl record"><span>Family record</span><b>🏆 ${esc(me)} — new best!</b></div>`;
+    return `<div class="rl record"><span>${esc(T("Family record"))}</span><b>🏆 ${esc(T("{who} — new best!", { who: me }))}</b></div>`;
   }
   const best = prevBest || P.familyBest(run.mission.id);
   if(!best || best.score <= 0){
-    return `<div class="rl"><span>Family record</span><b>none yet — set one!</b></div>`;
+    return `<div class="rl"><span>${esc(T("Family record"))}</span><b>${esc(T("none yet — set one!"))}</b></div>`;
   }
   if(best.owner === profile.name){
-    return `<div class="rl"><span>Family record</span><b>🏅 yours, ${best.score.toLocaleString()}</b></div>`;
+    return `<div class="rl"><span>${esc(T("Family record"))}</span><b>🏅 ${esc(T("yours, {score}", { score: best.score.toLocaleString(numLocale()) }))}</b></div>`;
   }
-  return `<div class="rl"><span>${esc(best.name)} still holds this</span><b>${best.score.toLocaleString()}</b></div>`;
+  return `<div class="rl"><span>${esc(T("{who} still holds this", { who: best.name }))}</span><b>${best.score.toLocaleString(numLocale())}</b></div>`;
 }
 
 /* ---------------------------------------------------------

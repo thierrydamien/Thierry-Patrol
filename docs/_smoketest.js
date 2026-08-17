@@ -8268,6 +8268,63 @@ async function run(){
       const s2 = I._packs.fr.s;
       return Object.keys(s2).every(k => typeof s2[k] === "string" && s2[k].trim().length > 0);
     })());
+    /*
+     * THE RESULTS CARD, IN FRENCH, END TO END.
+     *
+     * The whole ledger is concatenated into innerHTML, so the DOM sweep
+     * reaches its static labels but nothing carrying a number - and for
+     * months the entire card read in English behind a French title, because
+     * only the title was ever a key. Reported from the sofa: "pilot rescued,
+     * double score... still in english". This flies a real mission to a real
+     * results card in French and reads back every visible string.
+     */
+    check("the results card speaks French, every line of it", (() => {
+      // The block above finishes in English; ask for French and let the
+      // sweep do its job over the card the last flight left behind.
+      I.setLang("fr");
+      const seen = [];
+      (function walk(el){
+        el.childNodes.forEach(c => {
+          if(c.nodeType === 3){ const t2 = c.textContent.trim(); if(t2) seen.push(t2); }
+          else if(c.nodeType === 1) walk(c);
+        });
+      })(id("overlayResults"));
+      // Every label the card can print, in the language it was asked for.
+      const ENGLISH = ["Score", "Money collected", "Enemies destroyed", "Pilots rescued",
+        "Best combo", "Flew with you", "Wallet", "Family record", "Medal earned",
+        "Medals earned", "included", "Rush record", "Wacky Sky crown", "CONTROL",
+        "none yet — set one!"];
+      const hit = ENGLISH.filter(e => seen.some(t2 => t2 === e && e !== "Score"));
+      if(hit.length) console.log("  UNTRANSLATED ON RESULTS:", hit.join(" | "));
+      return hit.length === 0 && seen.length > 6;
+    })());
+    /*
+     * ...and the labels themselves must exist as keys. The check above only
+     * sees the branches THIS run happened to print; this one holds the whole
+     * table, including the record states and the modes a normal flight never
+     * reaches.
+     */
+    check("every results-card label has a French entry", (() => {
+      const s2 = I._packs.fr.s;
+      const NEED = ["Score", "Money collected", "Mission bonus ({n} ★)", "included",
+        "Enemies destroyed", "Pilots rescued", "Best combo", "Flew with you", "Wallet",
+        "Family record", "{who} — new best!", "none yet — set one!", "yours, {score}",
+        "{who} still holds this", "Medal earned", "Medals earned",
+        "{name} — collect {money} in MEDALS", "{n} at once! — collect {money} in MEDALS",
+        "Rush record", "Wacky Sky crown", "YOURS", "{who} — {n} bosses", "{who} — {n} pts",
+        "CONTROL", "Perfect flying, {you}!", "Nice work, {you}!", "NEW — {name}",
+        "CREDITS", "CREDITS ×2", "TUNE UNLOCKED", "SECRET FOUND", "PAINT WON"];
+      const missing = NEED.filter(k => !s2[k]);
+      if(missing.length) console.log("  NO FRENCH FOR:", missing.join(" | "));
+      return missing.length === 0;
+    })());
+    /*
+     * The HUD's double-pay label is canvas text, so no sweep can reach it -
+     * it has to ask for its own translation, like the campaign map does.
+     */
+    check("the HUD's double-pay day asks for its own translation",
+      /T\("CREDITS \\u00d72"\) : T\("CREDITS"\)/.test(
+        fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     I.setLang("en");
   }
 

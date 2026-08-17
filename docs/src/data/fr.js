@@ -61,6 +61,74 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Restart Mission": "Recommencer la mission",
 "Quit to Menu": "Quitter",
 "MISSION COMPLETE": "MISSION RÉUSSIE",
+
+/* ---------------- the results card ----------------
+   The whole ledger is built by string concatenation into innerHTML, so the
+   DOM sweep reaches the static labels but nothing with a number baked into
+   it - those go through T() at the call site and need placeholders here.
+   The card shipped entirely in English for months because only its TITLE
+   was ever a key. */
+"Score": "Score",
+"Money collected": "Argent récolté",
+"Mission bonus ({n} ★)": "Bonus de mission ({n} ★)",
+"included": "inclus",
+"Enemies destroyed": "Ennemis détruits",
+"Pilots rescued": "Pilotes sauvés",
+"Best combo": "Meilleur combo",
+"Flew with you": "Ont volé avec toi",
+"Wallet": "Porte-monnaie",
+"Family record": "Record de la famille",
+"{who} — new best!": "{who} — nouveau record !",
+"none yet — set one!": "aucun pour l'instant — à toi de jouer !",
+"yours, {score}": "à toi, {score}",
+"{who} still holds this": "{who} détient encore le record",
+"Medal earned": "Médaille obtenue",
+"Medals earned": "Médailles obtenues",
+"{name} — collect {money} in MEDALS": "{name} — récupère {money} dans MÉDAILLES",
+"{n} at once! — collect {money} in MEDALS": "{n} d'un coup ! — récupère {money} dans MÉDAILLES",
+"Rush record": "Record du Gant de Fer",
+"Wacky Sky crown": "Couronne du Ciel Farfelu",
+"YOURS": "À TOI",
+"{who} — {n} bosses": "{who} — {n} boss",
+"{who} — {n} pts": "{who} — {n} pts",
+"CONTROL": "CONTRÔLE",
+/* the results subtitle, every branch */
+"Perfect flying, {you}!": "Vol parfait, {you} !",
+"Nice work, {you}!": "Beau travail, {you} !",
+"You got {n}% of the way and kept every coin. Go again?":
+  "Tu as fait {n} % du chemin et tu gardes chaque pièce. On y retourne ?",
+"This one's tough! Grab an upgrade in the ARMORY — even one level helps.":
+  "Celle-ci est coriace ! Prends une amélioration à l'ARSENAL — même un seul niveau aide.",
+"This one's tough! Drop to ROOKIE, or buy an upgrade in the ARMORY first.":
+  "Celle-ci est coriace ! Passe en RECRUE, ou achète d'abord une amélioration à l'ARSENAL.",
+"ALL {n} bosses down, {you}!": "LES {n} boss à terre, {you} !",
+"{n} of {total} bosses down — go again?": "{n} boss sur {total} à terre — on y retourne ?",
+"NEW RECORD! {pts} pts in {time}": "NOUVEAU RECORD ! {pts} pts en {time}",
+"{pts} pts in {time} — your best is {best}": "{pts} pts en {time} — ton record est {best}",
+/* the NEW-part line and its proof */
+"NEW — {name}": "NEUF — {name}",
+"{n} enemy destroyed": "{n} ennemi détruit",
+"{n} enemies destroyed": "{n} ennemis détruits",
+"{money} banked": "{money} en banque",
+"{n} coins grabbed": "{n} pièces attrapées",
+"a faster ship all flight": "un vaisseau plus rapide tout le vol",
+"your drones flew with you": "tes drones ont volé avec toi",
+"and you never lost a life": "et tu n'as jamais perdu de vie",
+"{n} lives lost": "{n} vies perdues",
+"a bomb in your pocket": "une bombe dans la poche",
+"overdrive ready when you needed it": "la surpuissance prête quand il le fallait",
+/* the HUD's double-pay day - canvas text, so it asks for itself */
+"CREDITS": "CRÉDITS",
+"CREDITS ×2": "CRÉDITS ×2",
+/* the three toasts that pop over the results card */
+"TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
+"{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",
+"SECRET FOUND": "SECRET TROUVÉ",
+"SOLAR GOLD — the star's own paint. Yours alone.":
+  "OR SOLAIRE — la peinture de l'étoile elle-même. Rien qu'à toi.",
+"PAINT WON": "PEINTURE GAGNÉE",
+"{sky} — the dawn off Papa's last canvas. Wear it well.":
+  "{sky} — l'aube prise sur la dernière toile de Papa. Porte-la fièrement.",
 "NEXT MISSION": "MISSION SUIVANTE",
 "TRY ON ROOKIE": "ESSAYER EN RECRUE",
 "RETRY": "RÉESSAYER",
@@ -263,7 +331,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE DARK": "LES TÉNÈBRES",
 "THE CRACK": "LA FAILLE",
 "THE ROAD HOME": "LA ROUTE DU RETOUR",
-"THE EASEL": "LE CHEVALET",
+"THE EASEL": "LA TOILE",
 
 /* ---------------- mission names ---------------- */
 "Launch Day": "Jour du Décollage",
@@ -317,7 +385,7 @@ SF.i18n.register("fr", { name: "Français", s: {
   "C'est le dernier, {you} : tous les vaisseaux que la famille a battus, soudés en un seul mur, garé entre vous et la maison. Dessoude-le. À l'instant où il tombe, l'escadrille met le cap sur la Terre — jusqu'à la ferme.",
 "Beat the Titan — then go home.": "Bats le Titan — puis rentre à la maison.",
 "The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.":
-  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Un canevas attend encore sur le chevalet, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
+  "La guerre est finie — mais la fissure traverse tout, {you} : DERRIÈRE le ciel, là où les ciels se peignent et où les vaisseaux se dessinent. Une toile attend encore d'être peinte, avec vos noms au crayon dans le coin. Monte, apprends au pinceau de l'atelier à qui appartient ce ciel, et peignez le dernier de Papa tous ensemble.",
 "every boss you beat, bolted back together": "tous les boss que tu as battus, boulonnés ensemble",
 "PAPA'S DAWN": "L'AUBE DE PAPA",
 "{you} - your reflection! It's off the glass - and it's NOT copying any more!":
@@ -377,7 +445,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The ships are scratched, the paint is chipped, and nobody would trade them for anything. Papa says they've earned a rest - almost.":
   "Les vaisseaux sont rayés, la peinture est écaillée, et personne ne les échangerait pour rien au monde. Papa dit qu'ils ont mérité du repos — presque.",
 "Because behind the sky, one canvas is still on the easel, {you}. When you're ready - it's at the very top of the map.":
-  "Parce que derrière le ciel, un canevas attend encore sur le chevalet, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
+  "Parce que derrière le ciel, il reste une toile à peindre, {you}. Quand tu seras prêt — c'est tout en haut de la carte.",
 "HOME AT LAST": "ENFIN À LA MAISON",
 
 /* ---------------- story pages ----------------

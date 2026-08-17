@@ -1463,6 +1463,9 @@ const COIN_BOX = 32;                       // sprite box; face radius stays ~9
  * spin rebakes all eight frames with whichever symbol is now current.
  */
 function coinGlyph(){ return SF.i18n && SF.i18n.lang() === "fr" ? "\u20ac" : "\u00a3"; }
+/* Canvas text is unreachable by the DOM sweep, so the HUD asks for its own
+   translations - the same rule the campaign map lives under. */
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 if(SF.i18n) SF.i18n.onChange(() => { coinPhases.length = 0; });
 function coinSprite(phase){
   if(!coinPhases.length){
@@ -4089,7 +4092,7 @@ function drawHud(ctx, game){
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,210,63,0.55)";
   ctx.font = "bold 9px Rajdhani, Arial, sans-serif";
-  ctx.fillText(run.dailyDouble ? "CREDITS \u00d72" : "CREDITS", VW-PAD-CLEAR, 8);
+  ctx.fillText(run.dailyDouble ? T("CREDITS \u00d72") : T("CREDITS"), VW-PAD-CLEAR, 8);
   glowText(ctx, SF.ui.money(run.money), VW-PAD-CLEAR, 19,
            "700 20px " + FONT, "#ffd23f", "rgba(255,180,40,0.5)", 8, "right");
   ctx.textAlign = "left";
