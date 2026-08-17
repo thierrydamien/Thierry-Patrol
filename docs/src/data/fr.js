@@ -274,6 +274,10 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Fly through 6 practice rings": "Passer dans 6 anneaux d'entraînement",
 "Target Balloon": "Ballon Cible",
 "Over the Farm": "Au-dessus de la Ferme",
+// A map label, not prose: "TERRE" the way an atlas writes it. "LA TERRE" is
+// what you would say in a sentence, and it was wide enough here to run into
+// the next stop's name.
+"EARTH": "TERRE",
 "WORKSHOP": "ATELIER",
 "THE SKY GOES OUT": "LE CIEL S'ÉTEINT",
 "{who}'S CHUTE — CATCH HIM!": "LE PARACHUTE DE {who} — RATTRAPE-LE !",

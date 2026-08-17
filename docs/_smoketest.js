@@ -1233,6 +1233,50 @@ async function run(){
    */
   check("the campaign opens on a generated sky, like the rest of it",
     !SF.skygen.SKIES[0].photo && (SF.skygen.SKIES[0].props || []).length >= 3);
+  /*
+   * ONE EARTH, AND IT IS OURS.
+   *
+   * The campaign begins on Earth and the whole story is getting its sky
+   * back, so every place that shows our own planet has to show the SAME
+   * one. Before Launch Day existed these were an amber giant on the menu, a
+   * grey crescent over the first patrol, a banded blue giant on the stop
+   * whose own comment called it "the family's own world", and a pink disc
+   * with a balloon in it on the map.
+   */
+  check("every world that means home is the same Earth", (() => {
+    const s2 = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const u2 = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+    const earthsIn = k => (SF.skygen.SKIES[k].props || []).filter(pr => pr.earth);
+    const homes = SF.skygen.SKIES
+      .map((k, i) => (k.props || []).some(pr => pr.earth) ? i : -1).filter(i => i >= 0);
+    return /const EARTH_LIT = /.test(s2) &&
+           // the menu's world, hazed back so it can't own a dead corner
+           /lit:EARTH_LIT, dark:EARTH_DARK, earth:true, haze:/.test(s2) &&
+           // only the two near-home skies carry it, and one each
+           homes.join() === "0,2" &&
+           earthsIn(0).length === 1 && earthsIn(2).length === 1 &&
+           // lit, never a crescent - a sliver is not recognisable as home
+           earthsIn(0).concat(earthsIn(2)).every(pr =>
+             pr.lit === SF.skygen.EARTH_LIT && !pr.crescent) &&
+           // ...and Launch Day's stop on the map draws that same planet
+           /node\.mission\.prologue && SF\.skygen\.earthSprite/.test(u2);
+  })());
+  /*
+   * The map repaints every frame, so a per-pixel planet render per frame
+   * would cost the map its frame rate on the machine this is played on.
+   * Baked once per size, and the same instance handed back after that.
+   */
+  check("the map's Earth is baked once, not every frame", (() => {
+    const a = SF.skygen.earthSprite(64), b = SF.skygen.earthSprite(64);
+    return a === b && a.width > 64 && SF.skygen.earthSprite(48) !== a;
+  })());
+  /*
+   * Canvas text is invisible to the DOM sweep, so the map's strap has to ask
+   * for its own translation - the same rule the sector rail learned.
+   */
+  check("the map says EARTH in the reader's language",
+    !!SF.i18n._packs.fr.s["EARTH"] &&
+    /T\("EARTH"\)/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")));
   check("no sky in the campaign is a photograph",
     SF.skygen.SKIES.every(k => !k.photo && (k.props || []).length >= 1));
   /*

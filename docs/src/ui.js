@@ -2297,8 +2297,26 @@ function drawCampaign(){
       ctx.fillText(String(node.mission.id), bx2, by2 + 8);
     } else {
       const face = missionFace(node.mission);
+      /*
+       * LAUNCH DAY'S STOP IS THE PLANET.
+       *
+       * Every other stop is a coloured disc with the level's enemy inside it,
+       * which is right for a place you go to fight and wrong for the one
+       * place in the game you already live. The map never said where Earth
+       * was; it just showed a pink disc with a balloon in it. So this stop
+       * draws our own world instead - the same painter as the menu's backdrop
+       * and the sky over First Patrol, so all three read as one place - and
+       * it wears its name on a strap, because a blue-and-white marble is
+       * only obvious to somebody who has already seen one from orbit.
+       */
+      const earth = node.mission.prologue && SF.skygen.earthSprite
+        ? SF.skygen.earthSprite(Math.round(R*2)) : null;
       const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
-      if(unlocked){
+      // Earth's own disc is space, not a mission colour: the globe is drawn
+      // over the top of it and only its soft atmosphere reaches the rim, so
+      // whatever backs it has to look like the sky behind a planet.
+      if(earth){ g.addColorStop(0, "#0b1224"); g.addColorStop(1, "#05070f"); }
+      else if(unlocked){
         g.addColorStop(0, boss ? "#ff7a90" : face.c0);
         g.addColorStop(1, boss ? "#7a1226" : face.c1);
       }
@@ -2310,7 +2328,13 @@ function drawCampaign(){
       else { g.addColorStop(0, "#242a3e"); g.addColorStop(1, "#12151f"); }
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
-      if(!unlocked){
+      if(earth){
+        ctx.save();
+        if(!unlocked) ctx.globalAlpha = 0.5;
+        ctx.drawImage(earth, x - earth.width/2, y - earth.height/2);
+        ctx.restore();
+      }
+      if(!unlocked && !earth){
         ctx.save();
         ctx.beginPath(); ctx.arc(x, y, R-2, 0, Math.PI*2); ctx.clip();
         ctx.strokeStyle = "rgba(150,166,215,0.16)";
@@ -2326,7 +2350,9 @@ function drawCampaign(){
       // The mission's own enemy, riding inside the disc. Clipped to the rim so
       // eighteen stops stay eighteen tidy circles, and kept faint so it reads
       // as the stop's character rather than competing with its number.
-      const sprite = face.enemy && (unlocked ? enemySil(face.enemy)
+      // ...and Earth carries no enemy silhouette. The whole point of the stop
+      // is that nothing has attacked yet.
+      const sprite = !earth && face.enemy && (unlocked ? enemySil(face.enemy)
                                              : enemySilPencil(face.enemy));
       if(sprite){
         ctx.save();
@@ -2383,7 +2409,10 @@ function drawCampaign(){
      * Tucked inside the hull's own upper silhouette instead, which is dark
      * on every boss, so they are countable and belong to the right stop.
      */
-    const starY = hull ? y - R + 10 : y - R - (boss ? 26 : 10);
+    // Earth wears a strap like a boss does, so its pips move up out of the
+    // way exactly like a boss's do.
+    const strapped = boss || node.mission.prologue;
+    const starY = hull ? y - R + 10 : y - R - (strapped ? 26 : 10);
     if(unlocked){                                  // stars earned, on the rim
       // Drawn pips, not font glyphs: the text star rendered as a smudge over
       // the nebula and clashed with every other star the game draws.
@@ -2425,6 +2454,38 @@ function drawCampaign(){
       ctx.fillStyle = "#fff";
       ctx.textBaseline = "middle";
       ctx.fillText(label, x + skullW/2, by + h/2 + 1);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+    }
+    /*
+     * ...and Launch Day says EARTH, in the planet's own blue. The globe is
+     * drawn well enough to be recognised by anybody who has seen a photograph
+     * from orbit, which is not the audience - a seven-year-old reading the
+     * map needs to be told, once, where this stop is.
+     */
+    if(node.mission.prologue){
+      ctx.save();
+      const label = T("EARTH"), padX = 10, h = 19;
+      ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
+      const w = ctx.measureText(label).width + padX*2;
+      const bx = x - w/2, by = y - R - 20;
+      ctx.fillStyle = "#12518c";
+      ctx.beginPath();
+      ctx.moveTo(bx + h/2, by);
+      ctx.lineTo(bx + w - h/2, by);
+      ctx.quadraticCurveTo(bx + w, by, bx + w, by + h/2);
+      ctx.quadraticCurveTo(bx + w, by + h, bx + w - h/2, by + h);
+      ctx.lineTo(bx + h/2, by + h);
+      ctx.quadraticCurveTo(bx, by + h, bx, by + h/2);
+      ctx.quadraticCurveTo(bx, by, bx + h/2, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(168,214,255,0.85)";
+      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, by + h/2 + 1);
       ctx.textBaseline = "alphabetic";
       ctx.restore();
     }

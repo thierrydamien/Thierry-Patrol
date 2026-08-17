@@ -16,33 +16,33 @@
  *     5382  src/data/comms.js
  *     5788  src/data/story.js
  *     5912  src/data/fr.js
- *     7047  src/profile.js
- *     7676  src/cloud.js
- *     8281  src/fx.js
- *     9394  src/input.js
- *     9817  src/entities.js
- *    11029  src/bossart.js
- *    11895  src/bosses.js
- *    12645  src/bossintro.js
- *    12768  src/rewind.js
- *    13299  src/finale.js
- *    13620  src/papadeath.js
- *    13942  src/backstage.js
- *    15145  src/sky29.js
- *    15386  src/prologue.js
- *    15852  src/systems.js
- *    16483  src/render.js
- *    21082  src/enemyart.js
- *    22034  src/insignia.js
- *    22279  src/skygen.js
- *    25085  src/shipart.js
- *    26285  src/paintjob.js
- *    26447  src/pilotart.js
- *    26542  src/comms.js
- *    26681  src/game.js
- *    30166  src/workshop.js
- *    30863  src/data/i18nbind.js
- *    30934  src/ui.js
+ *     7051  src/profile.js
+ *     7680  src/cloud.js
+ *     8285  src/fx.js
+ *     9398  src/input.js
+ *     9821  src/entities.js
+ *    11033  src/bossart.js
+ *    11899  src/bosses.js
+ *    12649  src/bossintro.js
+ *    12772  src/rewind.js
+ *    13303  src/finale.js
+ *    13624  src/papadeath.js
+ *    13946  src/backstage.js
+ *    15149  src/sky29.js
+ *    15390  src/prologue.js
+ *    15856  src/systems.js
+ *    16487  src/render.js
+ *    21086  src/enemyart.js
+ *    22038  src/insignia.js
+ *    22283  src/skygen.js
+ *    25227  src/shipart.js
+ *    26427  src/paintjob.js
+ *    26589  src/pilotart.js
+ *    26684  src/comms.js
+ *    26823  src/game.js
+ *    30308  src/workshop.js
+ *    31005  src/data/i18nbind.js
+ *    31076  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6185,6 +6185,10 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Fly through 6 practice rings": "Passer dans 6 anneaux d'entraînement",
 "Target Balloon": "Ballon Cible",
 "Over the Farm": "Au-dessus de la Ferme",
+// A map label, not prose: "TERRE" the way an atlas writes it. "LA TERRE" is
+// what you would say in a sentence, and it was wide enough here to run into
+// the next stop's name.
+"EARTH": "TERRE",
 "WORKSHOP": "ATELIER",
 "THE SKY GOES OUT": "LE CIEL S'ÉTEINT",
 "{who}'S CHUTE — CATCH HIM!": "LE PARACHUTE DE {who} — RATTRAPE-LE !",
@@ -22304,6 +22308,21 @@ const TAU = Math.PI*2;
    `clouds` are the emission colours, `dust` the dark lanes
    that give a nebula its structure, `star` tints the suns.
    --------------------------------------------------------- */
+/*
+ * ONE EARTH, THREE SCREENS.
+ *
+ * Our own planet now has to appear in the menu's backdrop, in the sky over
+ * the first patrol, and on Launch Day's stop on the map - and a child has to
+ * read all three as the SAME world, not as three blue planets. So the
+ * palette lives here, once, and everything that draws Earth takes it from
+ * this pair. The night hint and the atmosphere's rim glow are both derived
+ * from `lit` inside the painter, which is why Earth's limb goes blue.
+ *
+ * Declared above the table on purpose: SKIES is built the moment this file
+ * loads, so anything it names has to exist by then.
+ */
+const EARTH_LIT = "#5b9bd5", EARTH_DARK = "#0a1a30";
+
 const SKIES = [
   /*
    * THE WORKSHOP, AND THE CAMPAIGN'S OLDEST SECRET.
@@ -22332,8 +22351,18 @@ const SKIES = [
      * gets the far wall, the lamp, and a moon low enough to fly over. Nothing
      * sits where the first wave will come down.
      */
+    /*
+     * And the world hanging in it is HOME, because of where this mission
+     * sits in the story now. Launch Day happens on Earth; First Patrol is
+     * the very next thing that happens, minutes after the squadron went
+     * wheels-up chasing the people who took the sky. An anonymous grey
+     * crescent hung there before Earth existed in this game and read as
+     * "somewhere in space" - which is the one thing this flight is not.
+     * Lit rather than crescent, and low, so it is unmistakably our planet
+     * and still well clear of where the first wave comes down.
+     */
     props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
-            {k:"planet", x:0.74, y:0.72, r:0.150, lit:"#6b6787", dark:"#191627", crescent:true},
+            {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true},
             {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
             {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
 
@@ -22368,7 +22397,15 @@ const SKIES = [
      * second copy of itself across the TOP of the frame - two home planets at
      * once, which reads as a mistake rather than as scrolling.
      */
-    props:[ {k:"planet", x:0.50, y:0.78, r:0.34, lit:"#8cc7f2", dark:"#04101f", bands:true},
+    /*
+     * ...and this one is Earth as well, because the paragraph above always
+     * said it was - "the family's own world" - and until Launch Day existed
+     * there was nothing to hold it to. A banded blue giant was a fine guess
+     * at home when home was never seen up close; now that a child has flown
+     * over its fields, the world on this stop has to be the same one. The
+     * aurora above keeps its place: our pole is where auroras happen.
+     */
+    props:[ {k:"planet", x:0.50, y:0.78, r:0.34, lit:EARTH_LIT, dark:EARTH_DARK, earth:true},
             // Tucked down onto the world's shoulder rather than hung in open
             // sky: at full size the curtains read as grey bars floating in the
             // middle of the frame, and what sells them is being ATTACHED to
@@ -23142,6 +23179,45 @@ function drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr){
         // a colour, not a landscape - so the landscape is not computed. This
         // is most of a crescent's disc, and most of the old cost.
         r = (Dk[0] + Lt[0]) * 0.5; g = (Dk[1] + Lt[1]) * 0.5; b = (Dk[2] + Lt[2]) * 0.5;
+      } else if(p.earth){
+        /*
+         * EARTH, and only Earth.
+         *
+         * Every other world here takes its colours from the sky it hangs in,
+         * because every other world is a mood. This one is a place the family
+         * actually lives, and it has to be recognised - by a seven-year-old,
+         * at a glance, in three different sizes on three different screens -
+         * so it ignores the palette and paints the four cues in the order a
+         * child reads them: blue ocean, white weather, green-and-tan land,
+         * and ice at both ends.
+         */
+        const e = fbm3(qx*1.05, qy*1.05, qz*1.05, seed, 5);
+        const SEA = 0.47;
+        if(e < SEA){
+          const t = sstep(SEA - 0.15, SEA, e);       // deep water up onto the shelf
+          r = 16 + 30*t; g = 54 + 66*t; b = 108 + 62*t;
+        } else {
+          const t = Math.min(1, (e - SEA)/0.24);     // green lowland into dry tan
+          r = 58 + 126*t; g = 108 + 54*t; b = 46 + 44*t;
+          if(t > 0.86){ const s2 = (t - 0.86)/0.14;  // and bare ground up top
+            r += (222-r)*s2; g += (220-g)*s2; b += (206-b)*s2; }
+        }
+        const ice = sstep(0.72, 0.88, Math.abs(lat));
+        r += (238-r)*ice; g += (245-g)*ice; b += (252-b)*ice;
+        // The weather. One layer of swirled white is the whole difference
+        // between a blue marble and a blue ball.
+        const cl = fbm3(qx*1.7 + 40, qy*1.7 + 40, qz*1.7 + 40, seed + 91, 4);
+        const cf = sstep(0.50, 0.74, cl) * 0.9;
+        r += (250-r)*cf; g += (252-g)*cf; b += (255-b)*cf;
+        /*
+         * ...and one knob to push the whole world back into the distance.
+         * The menu's copy sits in a corner where nothing happens, at a
+         * hundred times the area of anything near it, and brightness times
+         * area is what pulls an eye across a frame - the amber giant it
+         * replaced was hazed for exactly this reason and Earth is brighter.
+         */
+        if(p.haze){ const hz = p.haze;
+          r += (Dk[0]-r)*hz; g += (Dk[1]-g)*hz; b += (Dk[2]-b)*hz; }
       } else if(gas){
         const warp = fbm3(qx*0.9, qy*0.9, qz*0.9, seed, 2) - 0.5;
         let tt = lat*bandN*Math.PI + warp*twist*1.7;
@@ -23296,6 +23372,28 @@ function drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr){
   });
 }
 
+/*
+ * The two places that are not part of a generated sky take Earth as a
+ * baked sprite. The campaign map redraws every frame, so a per-pixel planet
+ * render per frame is out of the question; this bakes once per size and the
+ * map just blits it. Fixed seed, because this is a specific world rather
+ * than a roll - Earth looks the same every time you open the map.
+ */
+const earthCache = {};
+function earthSprite(d){
+  const key = Math.max(8, Math.round(d));
+  if(earthCache[key]) return earthCache[key];
+  const S = Math.round(key*1.3);                 // room for the atmosphere
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const c2 = cv.getContext("2d");
+  if(c2) drawPlanet(c2, S, S, { x:0.5, y:0.5, r:(key*0.5)/S, earth:true,
+                                lit:EARTH_LIT, dark:EARTH_DARK },
+                    m32(20260817), [-0.52, -0.5], 1);
+  earthCache[key] = cv;
+  return cv;
+}
+
 function drawPlanetInk(ctx, W, H, p, rand, lightDir){
   const cx = p.x*W, cy = p.y*H, r = p.r*W;
   // Unit vector toward the sky's bright core - the nebula is the light source,
@@ -23389,6 +23487,41 @@ function drawPlanetInk(ctx, W, H, p, rand, lightDir){
       ctx.fillStyle = sg;
       ctx.beginPath(); ctx.arc(0, 0, r*0.14, 0, TAU); ctx.fill();
       ctx.restore();
+    }
+
+    if(p.earth){
+      /*
+       * Earth without a pixel buffer. The HD painter above is the real one;
+       * this is what a browser that will not hand back an ImageData gets,
+       * and it still has to say "that's us" - so it draws the same four
+       * cues by hand: land masses, weather over them, and both ice caps.
+       */
+      for(let i = 0; i < 7; i++){                       // continents
+        const a = rand()*TAU, d = Math.sqrt(rand())*r*0.72;
+        const bx = cx + Math.cos(a)*d, by = yy + Math.sin(a)*d*0.9;
+        const br = r*(0.16 + rand()*0.20);
+        ctx.fillStyle = rand() < 0.45 ? "rgba(150,138,74,0.85)" : "rgba(74,124,58,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(bx, by, br, br*(0.55 + rand()*0.5), rand()*TAU, 0, TAU);
+        ctx.fill();
+      }
+      for(let i = 0; i < 9; i++){                       // weather over the top
+        const a = rand()*TAU, d = Math.sqrt(rand())*r*0.86;
+        const bx = cx + Math.cos(a)*d, by = yy + Math.sin(a)*d*0.92;
+        const br = r*(0.10 + rand()*0.17);
+        const cg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        cg.addColorStop(0, "rgba(255,255,255,0.7)");
+        cg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = cg;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.fill();
+      }
+      [-1, 1].forEach(s => {                            // both caps
+        const g2 = ctx.createRadialGradient(cx, yy + s*r, 0, cx, yy + s*r, r*0.5);
+        g2.addColorStop(0, "rgba(244,250,255,0.9)");
+        g2.addColorStop(1, "rgba(244,250,255,0)");
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(cx, yy + s*r, r*0.5, 0, TAU); ctx.fill();
+      });
     }
 
     if(p.craters){
@@ -25043,8 +25176,17 @@ function buildTitle(W, H, dpr = 1, topH = 0){
      * with the terminator running across it, and a band of weather to look
      * at now that there is enough resolution to see any.
      */
+    /*
+     * ...and the world below is OURS. It was an anonymous amber giant, which
+     * made the home screen a view of nowhere in particular; the campaign now
+     * opens on Earth and ends up flying home, so the planet the last buttons
+     * sit on should be the one the family took off from. Hazed a quarter of
+     * the way back into the sky's own deep tone for the reason the amber one
+     * was: it is the largest thing on the menu and it lives in a corner where
+     * nothing happens, so it must not be the brightest thing there too.
+     */
     { k:"planet", x:0.13, y:(H + 0.07*u)/H, r:rx(0.24),
-      lit:"#997535", dark:"#33251a", bands:true },
+      lit:EARTH_LIT, dark:EARTH_DARK, earth:true, haze:0.26 },
     // A ringed neighbour, small and high right: the "designed" note that says
     // somebody chose this view.
     { k:"planet", x:0.87, y:(0.21*vh)/H, r:rx(0.10),
@@ -25077,7 +25219,7 @@ function isSurface(missionIndex){
   return !!(SKIES[missionIndex % SKIES.length] || {}).surface;
 }
 
-SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES };
+SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES, earthSprite, EARTH_LIT };
 })();
 
 
@@ -33230,8 +33372,26 @@ function drawCampaign(){
       ctx.fillText(String(node.mission.id), bx2, by2 + 8);
     } else {
       const face = missionFace(node.mission);
+      /*
+       * LAUNCH DAY'S STOP IS THE PLANET.
+       *
+       * Every other stop is a coloured disc with the level's enemy inside it,
+       * which is right for a place you go to fight and wrong for the one
+       * place in the game you already live. The map never said where Earth
+       * was; it just showed a pink disc with a balloon in it. So this stop
+       * draws our own world instead - the same painter as the menu's backdrop
+       * and the sky over First Patrol, so all three read as one place - and
+       * it wears its name on a strap, because a blue-and-white marble is
+       * only obvious to somebody who has already seen one from orbit.
+       */
+      const earth = node.mission.prologue && SF.skygen.earthSprite
+        ? SF.skygen.earthSprite(Math.round(R*2)) : null;
       const g = ctx.createRadialGradient(x-R*0.3, y-R*0.4, R*0.15, x, y, R);
-      if(unlocked){
+      // Earth's own disc is space, not a mission colour: the globe is drawn
+      // over the top of it and only its soft atmosphere reaches the rim, so
+      // whatever backs it has to look like the sky behind a planet.
+      if(earth){ g.addColorStop(0, "#0b1224"); g.addColorStop(1, "#05070f"); }
+      else if(unlocked){
         g.addColorStop(0, boss ? "#ff7a90" : face.c0);
         g.addColorStop(1, boss ? "#7a1226" : face.c1);
       }
@@ -33243,7 +33403,13 @@ function drawCampaign(){
       else { g.addColorStop(0, "#242a3e"); g.addColorStop(1, "#12151f"); }
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
-      if(!unlocked){
+      if(earth){
+        ctx.save();
+        if(!unlocked) ctx.globalAlpha = 0.5;
+        ctx.drawImage(earth, x - earth.width/2, y - earth.height/2);
+        ctx.restore();
+      }
+      if(!unlocked && !earth){
         ctx.save();
         ctx.beginPath(); ctx.arc(x, y, R-2, 0, Math.PI*2); ctx.clip();
         ctx.strokeStyle = "rgba(150,166,215,0.16)";
@@ -33259,7 +33425,9 @@ function drawCampaign(){
       // The mission's own enemy, riding inside the disc. Clipped to the rim so
       // eighteen stops stay eighteen tidy circles, and kept faint so it reads
       // as the stop's character rather than competing with its number.
-      const sprite = face.enemy && (unlocked ? enemySil(face.enemy)
+      // ...and Earth carries no enemy silhouette. The whole point of the stop
+      // is that nothing has attacked yet.
+      const sprite = !earth && face.enemy && (unlocked ? enemySil(face.enemy)
                                              : enemySilPencil(face.enemy));
       if(sprite){
         ctx.save();
@@ -33316,7 +33484,10 @@ function drawCampaign(){
      * Tucked inside the hull's own upper silhouette instead, which is dark
      * on every boss, so they are countable and belong to the right stop.
      */
-    const starY = hull ? y - R + 10 : y - R - (boss ? 26 : 10);
+    // Earth wears a strap like a boss does, so its pips move up out of the
+    // way exactly like a boss's do.
+    const strapped = boss || node.mission.prologue;
+    const starY = hull ? y - R + 10 : y - R - (strapped ? 26 : 10);
     if(unlocked){                                  // stars earned, on the rim
       // Drawn pips, not font glyphs: the text star rendered as a smudge over
       // the nebula and clashed with every other star the game draws.
@@ -33358,6 +33529,38 @@ function drawCampaign(){
       ctx.fillStyle = "#fff";
       ctx.textBaseline = "middle";
       ctx.fillText(label, x + skullW/2, by + h/2 + 1);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+    }
+    /*
+     * ...and Launch Day says EARTH, in the planet's own blue. The globe is
+     * drawn well enough to be recognised by anybody who has seen a photograph
+     * from orbit, which is not the audience - a seven-year-old reading the
+     * map needs to be told, once, where this stop is.
+     */
+    if(node.mission.prologue){
+      ctx.save();
+      const label = T("EARTH"), padX = 10, h = 19;
+      ctx.font = "bold 12px Rajdhani, Arial, sans-serif";
+      const w = ctx.measureText(label).width + padX*2;
+      const bx = x - w/2, by = y - R - 20;
+      ctx.fillStyle = "#12518c";
+      ctx.beginPath();
+      ctx.moveTo(bx + h/2, by);
+      ctx.lineTo(bx + w - h/2, by);
+      ctx.quadraticCurveTo(bx + w, by, bx + w, by + h/2);
+      ctx.quadraticCurveTo(bx + w, by + h, bx + w - h/2, by + h);
+      ctx.lineTo(bx + h/2, by + h);
+      ctx.quadraticCurveTo(bx, by + h, bx, by + h/2);
+      ctx.quadraticCurveTo(bx, by, bx + h/2, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(168,214,255,0.85)";
+      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, by + h/2 + 1);
       ctx.textBaseline = "alphabetic";
       ctx.restore();
     }
