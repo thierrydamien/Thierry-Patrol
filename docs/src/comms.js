@@ -82,18 +82,36 @@ function say(event, vars){
   if(!state.enabled) return;
   const def = COMMS[event];
   if(!def || !state.self) return;
+  /*
+   * MISSION 0'S RADIO BELONGS TO PAPA. Generic control chatter ("lost the
+   * chain", pickup callouts) talking over the story beats made the level
+   * read as a normal mission with a voice-over fighting it. While the
+   * prologue runs, control stays off the air entirely; the brothers may
+   * banter through the flight check and the raid, but once the theft
+   * starts, everyone but the workshop goes quiet - menace is silence.
+   */
+  if(SF.prologue && SF.prologue.active() && !/^prologue/.test(event)){
+    const st = SF.prologue._s && SF.prologue._s();
+    if(def.speaker === "control") return;
+    if(def.speaker === "mate" && st && st.theftAt) return;
+  }
   const last = state.lastAt[event];
   if(last != null && state.now - last < def.cooldown) return;
   if(state.active && state.active.life < MIN_GAP) return;
   // A "mate" line with nobody else in the house comes from control instead.
   const useMate = def.speaker === "mate" && !!state.mate;
+  // The workshop is Papa's bench on the ground - control-shaped, but with
+  // its own name and the workbench gold, so Mission 0's voice reads as
+  // family rather than air traffic. Translated here because the panel is
+  // canvas text, which the DOM sweep can never reach.
+  const isWorkshop = def.speaker === "workshop";
   const who = useMate ? state.mate : null;
   const line = def.lines[Math.floor(Math.random()*def.lines.length)];
   state.lastAt[event] = state.now;
   state.active = {
     text: fill(line, Object.assign({}, state.vars, vars)),
-    speaker: who ? who.name : "CONTROL",
-    color: who ? who.color : "#7fc4ff",
+    speaker: who ? who.name : (isWorkshop && SF.i18n ? SF.i18n.t("WORKSHOP") : isWorkshop ? "WORKSHOP" : "CONTROL"),
+    color: who ? who.color : (isWorkshop ? "#ffd23f" : "#7fc4ff"),
     levels: who ? who.levels : state.self.levels,
     shipColor: who ? who.color : state.self.color,
     pilot: who ? (who.pilot || null) : state.self.pilot,

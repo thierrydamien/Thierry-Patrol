@@ -118,6 +118,10 @@ const OBJECTIVES = {
   roundUp:   { label:"Flatten 15 ships with the herd", icon:"🐂",
                test: s => (s.crushed || 0) >= 15,
                progress: s => (s.crushed || 0) + "/15" },
+  /* --- the prologue --- */
+  rings:     { label:"Fly through 6 practice rings", icon:"⭕",
+               test: s => (s.ringsHit || 0) >= 6,
+               progress: s => (s.ringsHit || 0) + "/6" },
   twin20:    { label:"Let your reflection get 100 kills", icon:"🪞",
                test: s => (s.mirrorKills || 0) >= 100,
                progress: s => (s.mirrorKills || 0) + "/100" },
@@ -370,6 +374,63 @@ function w(t, type, n, form, opts){
 }
 
 const MISSIONS = [
+  /*
+   * MISSION 0 - the morning the game starts, and the only one on Earth.
+   *
+   * The campaign always began in space with no word on why a family was up
+   * there. This is the why: launch day at the farm, a flight check that
+   * turns into the first raid, and the sky going out overhead. Everything a
+   * new pilot needs to learn is taught by the STORY asking for it - the
+   * rings are Papa's flight check, the balloons are gunnery practice, the
+   * bomb is used because the workshop shouts for it, and the first rescue
+   * is a brother, by name. No tutorial voice ever says "now try moving".
+   *
+   * Engineering shape:
+   *  - id:0, so it DISPLAYS as Mission 0 and every existing mission keeps
+   *    its number, its save record and its place in family lore ("mission
+   *    21 is the limpets one"). Nothing in any saved profile moves.
+   *  - `prologue:true` hands the script to prologue.js, the same contract
+   *    backstage/sky29 use: waves stay engine-standard so kills, stars and
+   *    the director behave; the module owns rings, cinematics and pacing.
+   *  - Excluded from the campaign's star arithmetic exactly like the gift
+   *    stop (see profile.js): maxStars stays 117, so a family member one
+   *    star from the Sky 29 gate is not suddenly three further away.
+   *  - sky:40 - the one Earth sky, appended at the END of skygen's list so
+   *    no saved Drawing Board sky changes underneath its painting.
+   */
+  {
+    id:0, name:"Launch Day", subtitle:"The last morning on Earth",
+    brief:"Papa's new ships fly their first check this morning. Follow the practice rings, pop the target balloons - and keep one eye on the sky. Something is wrong with it today.",
+    goal:"Fly the checks. Then look up.",
+    prologue:true, sky:40,
+    // The brothers fly the check with you - same loan as First Patrol, so a
+    // new pilot's very first minute is already "we", not "I".
+    lentDrones:2,
+    // One drifter: Marc bails out of the clipped trainer mid-story. The
+    // prologue script spawns him at the story beat (podTimes is emptied in
+    // prologue.begin), but the accounting stays engine-standard so the
+    // rescue counts, the star reads 1/1, and "PILOT RESCUED" is real.
+    podDrops:1,
+    objectives: ["complete","rings","rescueAll"],
+    /*
+     * The wave clock is the story clock. 0-40s is the flight check (no
+     * enemies - prologue owns it), then gunnery, then the raid. Balloons
+     * are soft (see systems.js): a seven-year-old WILL fly into one, and
+     * the flight check is not allowed to cost a life.
+     */
+    waves: [
+      // Gunnery practice: three flights of target balloons.
+      w(42,  "balloon", 5, "arc"),
+      w(54,  "balloon", 6, "scatter"),
+      w(66,  "balloon", 5, "vee"),
+      // One scout, alone - the "...that's not one of ours" beat.
+      w(82,  "grunt", 1, "column"),
+      // The raid proper. Still only grunts: Earth difficulty is the story
+      // saying "you can do this", not the game pretending it is hard.
+      w(96,  "grunt", 3, "vee"),
+      w(108, "grunt", 6, "vee"),
+    ],
+  },
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
     brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves - and the squadron is flying this one with you. Watch out for rocks, and for the pink one: it draws a line at you before it shoots, so just move off the line.",
@@ -1831,6 +1892,15 @@ const MISSIONS = [
 /** Missions unlock one at a time; stars gate the harder difficulty tiers instead. */
 function isMissionUnlocked(profile, index){
   if(index === 0) return true;
+  /*
+   * A mission you have already cleared is never locked. Before Mission 0
+   * existed this could not happen - the chain only grew at the far end.
+   * Now it can: a veteran who cleared the whole campaign has never flown
+   * the new first stop, and without this line First Patrol would be the
+   * only locked mission on their map, sitting between two cleared ones.
+   */
+  const own = profile.missions && profile.missions[MISSIONS[index].id];
+  if(own && own.cleared) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
   const prevCleared = !!(record && record.cleared);
@@ -1870,6 +1940,24 @@ const GIFT = MISSIONS.find(m => m.gift) || MISSIONS[MISSIONS.length - 1];
 /** The gift stop's name in caps, for the places that shout it. */
 function giftName(){ return (GIFT.name || "").toUpperCase(); }
 
+/*
+ * WHICH SKY A MISSION FLIES OVER.
+ *
+ * This used to be "mission index IS sky index", and inserting Mission 0
+ * broke that identity for good: the Earth sky is appended at SKIES[40]
+ * because the family's Drawing Board saves hold bare sky indices, and
+ * repainting their drawings onto shifted bases is not an acceptable cost
+ * of a prologue. So the mapping is explicit. Every mission that predates
+ * Mission 0 gets its historical index back from its (stable) id; anything
+ * new says `sky:` outright. skygen itself stays sky-indexed - the Drawing
+ * Board feeds it raw sky indices and must keep doing so.
+ */
+MISSIONS.forEach(m => { if(m.sky === undefined) m.sky = m.id - 1; });
+function skyOf(index){
+  const m = MISSIONS[index];
+  return m ? m.sky : index;
+}
+
 SF.missions = { MISSIONS, BOSSES, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount,
-                GIFT, giftName };
+                GIFT, giftName, skyOf };
 })();

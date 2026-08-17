@@ -420,12 +420,18 @@ function starsForMission(p, missionId){
  * "84 stars", the gift is what 84 unlocks, and letting it mint three more
  * would turn "every star" into a number that changes the moment you reach it.
  */
+/*
+ * The gift stop and the prologue both live OUTSIDE the star economy. The
+ * gift always did; Mission 0 joins it so that adding a tutorial does not
+ * move the Sky 29 gate for a family member already 116/117 - its stars
+ * still show on its own map node, they just gate nothing.
+ */
 function totalStars(p){
-  return MISSIONS.reduce((n,m) => n + (m.gift ? 0 : starsForMission(p, m.id)), 0);
+  return MISSIONS.reduce((n,m) => n + (m.gift || m.prologue ? 0 : starsForMission(p, m.id)), 0);
 }
 /** The bar the gift stop asks for: three per real mission. */
 function maxStars(){
-  return MISSIONS.filter(m => !m.gift).length * 3;
+  return MISSIONS.filter(m => !m.gift && !m.prologue).length * 3;
 }
 /** Index of the hardest difficulty this pilot has ever completed a mission on. */
 function hardestCleared(p){
@@ -443,7 +449,9 @@ function difficultyUnlocked(p, difficulty){
 function campaignComplete(p){
   // The gift stop is a bonus ON completion, not part of it: the workshop
   // curtain must fall when Behind the Sky does, whether or not Sky 29 is done.
-  return MISSIONS.every(m => m.gift || (p.missions[m.id] && p.missions[m.id].cleared));
+  // The prologue is a doorway, not a destination: campaign completion is
+  // about the war, and the war is over whether or not you replayed Earth.
+  return MISSIONS.every(m => m.gift || m.prologue || (p.missions[m.id] && p.missions[m.id].cleared));
 }
 
 /* ---------------------------------------------------------

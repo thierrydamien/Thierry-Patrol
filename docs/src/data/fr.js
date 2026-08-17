@@ -266,6 +266,41 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE EASEL": "LE CHEVALET",
 
 /* ---------------- mission names ---------------- */
+"Launch Day": "Jour du Décollage",
+"The last morning on Earth": "Le dernier matin sur Terre",
+"Papa's new ships fly their first check this morning. Follow the practice rings, pop the target balloons - and keep one eye on the sky. Something is wrong with it today.":
+  "Les nouveaux vaisseaux de Papa font leur premier vol d'essai ce matin. Suis les anneaux d'entraînement, éclate les ballons cibles — et garde un œil sur le ciel. Il a quelque chose qui cloche aujourd'hui.",
+"Fly the checks. Then look up.": "Fais les essais. Puis lève les yeux.",
+"Fly through 6 practice rings": "Passer dans 6 anneaux d'entraînement",
+"Target Balloon": "Ballon Cible",
+"Over the Farm": "Au-dessus de la Ferme",
+"WORKSHOP": "ATELIER",
+"THE SKY GOES OUT": "LE CIEL S'ÉTEINT",
+"{who}'S CHUTE — CATCH HIM!": "LE PARACHUTE DE {who} — RATTRAPE-LE !",
+"Morning, {you}. Ships are fuelled and the sky is ours. Fly the practice rings for me.":
+  "Bonjour, {you}. Les vaisseaux sont pleins et le ciel est à nous. Passe dans les anneaux d'entraînement pour moi.",
+"Right through the middle of the ring, {you}. Nice and easy.":
+  "En plein milieu de l'anneau, {you}. Tout en douceur.",
+"Six for six. That's proper flying, {you}.":
+  "Six sur six. Ça, c'est du pilotage, {you}.",
+"Guns are live. Pop the balloons - they don't mind.":
+  "Canons armés. Éclate les ballons — ils ne t'en voudront pas.",
+"Hold on. That one is not ours.":
+  "Attends. Celui-là n'est pas à nous.",
+"Raiders. Over OUR farm. Guns free, squadron.":
+  "Des pillards. Au-dessus de NOTRE ferme. Feu à volonté, escadrille.",
+"Too many in one bunch - press your BOMB, {you}!":
+  "Trop d'un coup — appuie sur ta BOMBE, {you} !",
+"{who}'s trainer got clipped - catch that parachute!":
+  "L'avion d'entraînement de {who} est touché — rattrape ce parachute !",
+"Got him. Good catch, {you}.":
+  "On le tient. Bien rattrapé, {you}.",
+"They are pulling the stars out of our sky...":
+  "Ils arrachent les étoiles de notre ciel...",
+"Nobody steals the family's sky. Go get them back.":
+  "Personne ne vole le ciel de la famille. Allez les récupérer.",
+"Full throttle, straight up. Wheels up, squadron!":
+  "Pleins gaz, droit vers le haut. Décollage, escadrille !",
 "First Patrol": "Première Patrouille",
 "Weaving Through": "Slalom",
 "The Anchor": "L'Ancre",

@@ -26,6 +26,7 @@
     "src/papadeath.js",
     "src/backstage.js",
     "src/sky29.js",
+    "src/prologue.js",
     "src/systems.js",
     "src/render.js",
     "src/enemyart.js",

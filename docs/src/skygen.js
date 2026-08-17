@@ -533,6 +533,32 @@ const SKIES = [
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
             {k:"planet", x:0.16, y:0.62, r:0.06, lit:"#ffb6a3", dark:"#4a1d2e", craters:true},
             {k:"sun",    x:0.86, y:0.14, r:0.03, color:"#ffe9a8"} ] },
+
+  /*
+   * OVER THE FARM - Earth, dawn, the morning the campaign starts.
+   *
+   * Appended at the END of the list on purpose: the campaign's sky lookup
+   * goes through mission.sky now (see missions.js), and the family's saved
+   * Drawing Board skies store a bare SKIES index - inserting at the front
+   * would repaint every drawing they have ever made onto the wrong base.
+   *
+   * The one sky in the game with weather instead of space: the wash is a
+   * dawn - gold low, rose through the middle, morning blue up top - and
+   * `surface:true` keeps the stars and comets out of it, because this is
+   * the only morning the game spends under an atmosphere. The ground is
+   * the same painter as the Red Canyon floor wearing field colours, and
+   * the sun sits low and heavy the way it does at six in the morning.
+   */
+  { name:"Over the Farm", surface:true,
+    /*
+     * A surface sky IS the ground seen from above (the Red Canyon set the
+     * rule), so there is no horizon to hang a sun on - the dawn has to live
+     * in the land itself: long-shadow gold-green fields under a warm wash,
+     * bright enough that Earth reads as morning next to the Canyon's dusk.
+     */
+    clouds:["#f0b168","#dd8f7e","#7f9cc8"], dust:"#18220f", star:"#fff2d8",
+    lum:1.3, density:0.8, stars:0, bright:0,
+    props:[ {k:"ground", x:0.50, y:0.50, n:40, lit:"#b3b869", dark:"#2c3617"} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */

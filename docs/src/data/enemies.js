@@ -519,6 +519,18 @@ const BEHAVIOURS = {
    fire: null, or { pattern, every:[min,max], speed, count }
    --------------------------------------------------------- */
 const ENEMY_TYPES = {
+  /*
+   * The prologue's gunnery target: Papa's striped practice balloon, floated
+   * up from the farm. `soft` is honoured in the collision layer - flying
+   * into one pops it and costs nothing, because the flight check is the one
+   * part of the game that is never allowed to hurt. It fires nothing, it
+   * chases nobody, it descends at walking pace and pops in one shot.
+   */
+  balloon: {
+    name:"Target Balloon", behaviour:"dive", hp:1, r:15, size:44, speed:46,
+    score:5, money:2, tint:"#ff6b7f",
+    fire:null, soft:true,
+  },
   grunt: {
     name:"Grunt", behaviour:"dive", hp:1, r:13, size:42, speed:138,
     /*

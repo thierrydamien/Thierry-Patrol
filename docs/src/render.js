@@ -211,7 +211,10 @@ function initBackground(missionIndex){
    * is deliberate: the paintings look better than anything generated, and the
    * generated ones stop all eight levels looking identical.
    */
-  const idx = missionIndex || 0;
+  // Mission index and sky index parted ways when Mission 0 arrived (the
+  // Earth sky lives at the END of the list; see missions.js skyOf). All
+  // three lookups below are sky-indexed, so translate exactly once, here.
+  const idx = SF.missions.skyOf(missionIndex || 0);
   if(idx !== skyIndex){
     skyPhoto = SF.skygen.photoFor(idx);
     // Built at device resolution (4th arg) and blitted back down to VW x VH;

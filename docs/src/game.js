@@ -339,6 +339,7 @@ function startMission(missionIndex, difficultyId){
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.backstage.reset();                   // the workshop sleeps until asked
   if(mission.backstage) SF.backstage.begin();
+  SF.prologue.reset();                    // Earth sleeps until Mission 0 asks
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
@@ -584,6 +585,10 @@ function startMission(missionIndex, difficultyId){
     ended: false,
   };
 
+  // Mission 0's script starts once the run is real: begin() edits the run's
+  // own pod schedule, so it cannot live in the reset block with the others.
+  if(mission.prologue) SF.prologue.begin(game.run, game.world);
+
   /*
    * First flight of the day pays double. It is the "come back tomorrow" hook:
    * one banner, one doubled payScale, and a date on the profile. Deliberately
@@ -679,6 +684,7 @@ function startMission(missionIndex, difficultyId){
              : mission.beat ? "chorusStart"
              : mission.foundry ? "foundryStart"
              : mission.serpent ? "serpentStart"
+             : mission.prologue ? "prologueStart"
              : mission.backstage ? "backstageStart"
              : mission.sky29 ? "sky29Start"
              : mission.ferry ? "ferryStart"
@@ -1718,6 +1724,10 @@ function update(dt, timeMs){
       // Behind the Sky: the first fake ending plays out before the boss may
       // arrive - backstage.js says when the workshop is ready.
       if(run.mission.backstage && !SF.backstage.readyForBoss()){ /* hold */ }
+      // Mission 0: the raid is swept, but the story is mid-sentence - the
+      // chute, the theft and the climb happen HERE, in the hold. prologue.js
+      // raises readyToEnd() when the family is out of the atmosphere.
+      else if(run.mission.prologue && !SF.prologue.readyToEnd()){ /* hold */ }
       else if(run.mission.boss){
         run.bossActive = true;
         run.bossSpawned = true;
@@ -2909,6 +2919,7 @@ function update(dt, timeMs){
 
   // Behind the Sky: the workshop's whole theatre lives in backstage.js.
   if(run.mission.backstage) SF.backstage.update(dt, run, game.world, simMs);
+  if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
 
@@ -3262,6 +3273,7 @@ function draw(timeMs){
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
+  SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.

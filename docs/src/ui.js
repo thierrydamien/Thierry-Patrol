@@ -664,7 +664,7 @@ function renderMenu(){
     $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("wackySub", !open ? T("opens after Mission {n}", { n: WACKY_AFTER + 1 })
+    setSub("wackySub", !open ? T("opens after Mission {n}", { n: WACKY_AFTER })
       : rivals.length
         ? T("beat {who}'s {pts} pts", { who: rivals[0].callsign || rivals[0].name,
                                         pts: rivals[0].endlessBest.toLocaleString(numLocale()) })
@@ -676,7 +676,7 @@ function renderMenu(){
                                          profile.missions[id].cleared).length;
     $("rushBtn").classList.toggle("locked", bosses === 0);
     setSub("rushSub", bosses === 0
-      ? T("beat the Mission {n} boss first", { n: RUSH_AFTER + 1 })
+      ? T("beat the Mission {n} boss first", { n: RUSH_AFTER })
       : T(bosses > 1 ? "{n} bosses in the queue · best {best} down"
                      : "{n} boss in the queue · best {best} down",
           { n: bosses, best: profile.bossRushBest || 0 }));
@@ -1487,33 +1487,33 @@ function campaignLayout(){
 const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const SECTORS = [
   { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
-    sub:"our own sky, and how to fly in it" },              // 1-3
-  { at:3,  name:"THE BELT",        hue:"#f5a623",
+    sub:"our own sky, and how to fly in it" },              // 0-3 (Earth joins the home sector)
+  { at:4,  name:"THE BELT",        hue:"#f5a623",
     sub:"rocks, raiders and the first big one" },           // 4-6
-  { at:6,  name:"THE STORM",       hue:"#7cc4ff",
+  { at:7,  name:"THE STORM",       hue:"#7cc4ff",
     sub:"wild wind, and friends to get out" },              // 7-8
-  { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
+  { at:9,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
     sub:"guard the hauler, then carry the load yourself" }, // 9-12
-  { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
+  { at:13, name:"ENEMY SPACE",     hue:"#f472b6",
     sub:"behind their lines, where nobody is friendly" },   // 13-17
-  { at:17, name:"WARDEN'S REACH",  hue:"#34d399",
+  { at:18, name:"WARDEN'S REACH",  hue:"#34d399",
     sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
-  { at:21, name:"THE TRENCHES",    hue:"#8ab4f8",
+  { at:22, name:"THE TRENCHES",    hue:"#8ab4f8",
     sub:"straight down the middle of their fortress" },     // 22-25
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:25, name:"THEIR STAR",      hue:"#fb7185",
+  { at:26, name:"THEIR STAR",      hue:"#fb7185",
     sub:"over their sun, and the last big ship" },          // 26-27
-  { at:27, name:"THE DARK",        hue:"#64748b",
+  { at:28, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 28-30
-  { at:31, name:"THE CRACK",       hue:"#a78bfa",
+  { at:32, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 32-36
-  { at:36, name:"THE WORKSHOP",    hue:"#22d3ee",
+  { at:37, name:"THE WORKSHOP",    hue:"#22d3ee",
     sub:"behind the sky, where skies get made" },           // 37-39
-  { at:39, name:"THE EASEL",       hue:"#ffd23f",
+  { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
 
@@ -2087,7 +2087,8 @@ function drawCampaign(){
     ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "1.5px";
     ctx.globalAlpha *= 0.8;
-    ctx.fillText(T("SECTOR {n} · STOPS {a}-{b}", { n: si+1, a: st.from+1, b: st.to+1 }), lx, ly - 15);
+    // Stop numbers are mission ids, and id == index since Mission 0 took slot 0.
+    ctx.fillText(T("SECTOR {n} · STOPS {a}-{b}", { n: si+1, a: st.from, b: st.to }), lx, ly - 15);
     ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
 
     if(state === "perfect"){                 // a mastered stretch gets a glow
@@ -4338,14 +4339,15 @@ function drawBriefHero(index){
   if(!ctx) return;
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
-  const photo = SF.skygen.photoFor(index);
+  const skyIx = SF.missions.skyOf(index);   // Mission 0 flies the appended Earth sky
+  const photo = SF.skygen.photoFor(skyIx);
   const art = photo && SF.render.isReady() ? SF.render.assets[photo] : null;
   if(art){
     const iw = art.naturalWidth || 400, ih = art.naturalHeight || 500;
     const cover = Math.max(W/iw, H/ih);
     ctx.drawImage(art, (W - iw*cover)/2, (H - ih*cover)/2, iw*cover, ih*cover);
   } else {
-    const sky = SF.skygen.build(index, W, Math.round(W*1.25));
+    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25));
     if(sky) ctx.drawImage(sky, 0, -(Math.round(W*1.25) - H)*0.45);
   }
   // The in-game skies are deliberately near-black so bullets read on them;
@@ -4370,7 +4372,7 @@ function drawBriefHero(index){
  * levels have been inserted ahead of this gate over the game's life, and each
  * time the literal "3" quietly came to mean a different mission.
  */
-const WACKY_AFTER = 3;                       // stop four, by index
+const WACKY_AFTER = 4;                       // Mission 4, by index - Earth shifted every index up one
 function wackyUnlocked(p){
   const m = MISSIONS[WACKY_AFTER];
   const rec = m && p && p.missions && p.missions[m.id];

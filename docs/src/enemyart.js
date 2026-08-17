@@ -471,6 +471,40 @@ const SHAPES = {
   },
 
   /* --- the plain shooters: a family of darts, growing heavier --- */
+  /*
+   * The practice balloon is deliberately NOT a ship: a round striped canopy
+   * with a bullseye and a little string tail. It must read as "target, not
+   * threat" from across the room - so no hull(), no thruster, no cockpit,
+   * nothing that says machine. Just fairground.
+   */
+  balloon(ctx, S, p){
+    const R = S*0.34;
+    // canopy: base tint with a lighter crown, like every hull piece
+    const g = ctx.createLinearGradient(-R, -R, R*0.8, R);
+    g.addColorStop(0, p.lit); g.addColorStop(0.5, p.base); g.addColorStop(1, p.shade);
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R, 0, TAU);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.02; ctx.stroke();
+    // two horizontal stripes, clipped to the canopy
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.985, 0, TAU); ctx.clip();
+    ctx.fillStyle = p.trim;
+    ctx.fillRect(-R, -S*0.04 - R*0.42, R*2, R*0.24);
+    ctx.fillRect(-R, -S*0.04 + R*0.22, R*2, R*0.24);
+    ctx.restore();
+    // the bullseye - what the guns are FOR
+    ctx.fillStyle = "#fff7e6";
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.30, 0, TAU); ctx.fill();
+    ctx.fillStyle = p.deep;
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.16, 0, TAU); ctx.fill();
+    // knot and string tail (drawn nose-down like everything else, so the
+    // tail trails UP the screen as it descends)
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.018;
+    ctx.beginPath();
+    ctx.moveTo(0, -S*0.04 - R);
+    ctx.quadraticCurveTo(S*0.06, -S*0.52, -S*0.03, -S*0.62);
+    ctx.stroke();
+  },
   grunt(ctx, S, p){
     hull(ctx, [0,S*0.44, S*0.20,S*0.02, S*0.30,-S*0.20, 0,-S*0.30,
                -S*0.30,-S*0.20, -S*0.20,S*0.02], p, S);

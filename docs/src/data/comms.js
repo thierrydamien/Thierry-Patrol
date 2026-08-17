@@ -20,6 +20,48 @@ const COMMS = {
     "Skies are yours, {you}. Show them.",
     "Good hunting, {you}.",
   ]},
+  /*
+   * MISSION 0 - the workshop on the radio. Papa's voice, warm and brief:
+   * every line either asks for the next thing or names what just happened.
+   * One line per event on purpose - a scripted story beat should say ITS
+   * line, not roll dice.
+   */
+  prologueStart: { speaker:"workshop", cooldown:999, lines:[
+    "Morning, {you}. Ships are fuelled and the sky is ours. Fly the practice rings for me.",
+  ]},
+  prologueRingsNudge: { speaker:"workshop", cooldown:999, lines:[
+    "Right through the middle of the ring, {you}. Nice and easy.",
+  ]},
+  prologueRingsDone: { speaker:"workshop", cooldown:999, lines:[
+    "Six for six. That's proper flying, {you}.",
+  ]},
+  prologueBalloons: { speaker:"workshop", cooldown:999, lines:[
+    "Guns are live. Pop the balloons - they don't mind.",
+  ]},
+  prologueShadow: { speaker:"workshop", cooldown:999, lines:[
+    "Hold on. That one is not ours.",
+  ]},
+  prologueRaid: { speaker:"workshop", cooldown:999, lines:[
+    "Raiders. Over OUR farm. Guns free, squadron.",
+  ]},
+  prologueBomb: { speaker:"workshop", cooldown:999, lines:[
+    "Too many in one bunch - press your BOMB, {you}!",
+  ]},
+  prologueRescue: { speaker:"workshop", cooldown:999, lines:[
+    "{who}'s trainer got clipped - catch that parachute!",
+  ]},
+  prologueRescued: { speaker:"workshop", cooldown:999, lines:[
+    "Got him. Good catch, {you}.",
+  ]},
+  prologueTheft: { speaker:"workshop", cooldown:999, lines:[
+    "They are pulling the stars out of our sky...",
+  ]},
+  prologueTheft2: { speaker:"workshop", cooldown:999, lines:[
+    "Nobody steals the family's sky. Go get them back.",
+  ]},
+  prologueAscent: { speaker:"workshop", cooldown:999, lines:[
+    "Full throttle, straight up. Wheels up, squadron!",
+  ]},
   pickupShield: { speaker:"control", cooldown:9, lines:[
     "Shield online!", "Shields back up, {you}.", "That's a fresh shield.",
   ]},

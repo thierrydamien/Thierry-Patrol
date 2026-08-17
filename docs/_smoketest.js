@@ -469,15 +469,28 @@ async function run(){
    * small wrongness a child spots immediately and an adult never does.
    */
   check("the gift stop is named for the stop it is", (() => {
+    // The stop number IS the id since Mission 0 took slot zero - display,
+    // save records and this name all key off the same stable number.
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    const at = M.indexOf(gift) + 1;
-    return !!gift && gift.name === "Sky " + at &&
-           SF.skygen.SKIES[M.indexOf(gift)].name === "Sky " + at &&
-           SF.config.PAINTS.some(t => t.name === "SKY " + at);
+    return !!gift && gift.name === "Sky " + gift.id &&
+           SF.skygen.SKIES[SF.missions.skyOf(M.indexOf(gift))].name === "Sky " + gift.id &&
+           SF.config.PAINTS.some(t => t.name === "SKY " + gift.id);
   })());
-  check("40 campaign missions defined, ids sequential",
-    SF.missions.MISSIONS.length === 40 &&
-    SF.missions.MISSIONS.every((m, i) => m.id === i + 1));
+  check("41 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 41 &&
+    SF.missions.MISSIONS.every((m, i) => m.id === i));
+  /*
+   * The sky contract, after Mission 0: every mission points at its own sky
+   * explicitly, the pre-Earth missions kept their historical painting, and
+   * Earth's dawn was APPENDED so no saved Drawing Board sky re-bases.
+   */
+  check("every mission kept its painting; Earth's dawn was appended", (() => {
+    const M = SF.missions.MISSIONS;
+    return M.every(m => m.prologue ? m.sky === 40 : m.sky === m.id - 1) &&
+           SF.skygen.SKIES.length === 41 &&
+           SF.skygen.SKIES[40].surface === true &&
+           SF.skygen.SKIES[40].props.some(pr => pr.k === "ground");
+  })());
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
    * ledger ("every star" must stay a bar you can actually reach); it never
@@ -579,7 +592,8 @@ async function run(){
    * there is no mission two. So it gets its own rules, asserted.
    */
   {
-    const m1 = SF.missions.MISSIONS[0];
+    // First Patrol's curriculum pins: id 1, no longer index 0 - Earth is.
+    const m1 = SF.missions.MISSIONS.find(m => m.id === 1);
     check("the first flight starts shooting in the first two seconds",
       m1.waves[0].t <= 2);
     check("the first rescue lands inside the first half-minute",
@@ -653,14 +667,15 @@ async function run(){
       OWN.some(k => !!m[k]) || m.waves.some(wv => wv.tether) ||
       m.waves.filter(wv => wv.elite).length >= 4);
   })());
-  check("the first six each teach their own thing", (() => {
+  check("the first seven each teach their own thing", (() => {
     const M = SF.missions.MISSIONS;
-    return M[0].lentDrones === 2 &&   // 1: you are not flying this alone
-           M[1].bounty === true &&    // 2: pick ONE moving target out of a crowd
-           M[2].waves.some(w => w.tether) &&  // 3: read the GAP, not the ships
-           M[3].cover === true &&     // 4: they shoot back - so use the rocks
-           !!M[4].boss &&             // 5: the first boss
-           M[5].nearMiss === true;    // 6: nerve - wait, THEN swerve
+    return M[0].prologue === true &&  // 0: Earth - why the family flies at all
+           M[1].lentDrones === 2 &&   // 1: you are not flying this alone
+           M[2].bounty === true &&    // 2: pick ONE moving target out of a crowd
+           M[3].waves.some(w => w.tether) &&  // 3: read the GAP, not the ships
+           M[4].cover === true &&     // 4: they shoot back - so use the rocks
+           !!M[5].boss &&             // 5: the first boss
+           M[6].nearMiss === true;    // 6: nerve - wait, THEN swerve
   })());
   check("every wave references a real enemy type",
     SF.missions.MISSIONS.every(m => m.waves.every(w => !!SF.enemyData.ENEMY_TYPES[w.type])));
@@ -1866,7 +1881,7 @@ async function run(){
   clickEl(id("playBtn"));
   check("the campaign map has a stop for every mission",
     qa("#campaignNodes .map-node").length === SF.missions.MISSIONS.length);
-  check("only mission 1 is unlocked at the start",
+  check("only the first stop - Earth - is unlocked at the start",
     qa("#campaignNodes .map-node.locked").length === SF.missions.MISSIONS.length - 1);
   /* The five-line UP NEXT card is gone - "a bit useless" - because every line
      of it was already drawn on the map a few pixels above: the next stop is
@@ -1880,7 +1895,7 @@ async function run(){
     check("there is still a one-tap way into the next mission",
       !!nb && nb.tagName === "BUTTON");
     check("the button names the mission you are about to fly",
-      /FLY MISSION 1\b/.test(nb.querySelector("b").textContent) &&
+      /FLY MISSION 0\b/.test(nb.querySelector("b").textContent) &&
       nb.querySelector("span").textContent === SF.missions.MISSIONS[0].name);
     /* A button, not a card: one label and one name, and short enough to sit on
        a single line of a phone. The card it replaced ran to five lines. */
@@ -1889,7 +1904,7 @@ async function run(){
     clickEl(nb);
     check("tapping it briefs that mission",
       id("screen-briefing").classList.contains("active") &&
-      id("briefNum").textContent === "MISSION 1");
+      id("briefNum").textContent === "MISSION 0");
     SF.ui.renderMissions(); SF.ui.show("screen-missions");
   }
 
@@ -1956,11 +1971,19 @@ async function run(){
     };
 
     const fresh = openOn([]);
-    const mid   = openOn([1,2,3,4,5,6,7,8,9]);
+    /*
+     * A veteran of the old campaign has never flown Earth. Their cleared
+     * missions unlock THEMSELVES (see isMissionUnlocked), so the map still
+     * targets their real frontier - mission 10's successor - rather than
+     * dragging the whole family back to the tutorial. Earth stays open
+     * behind them, one stop down, whenever they want the story.
+     */
+    const vet   = openOn([1,2,3,4,5,6,7,8,9]);
+    const mid   = openOn([0,1,2,3,4,5,6,7,8,9]);
     const done  = openOn(SF.missions.MISSIONS.map(m => m.id), true);
 
     check("the campaign targets the first mission you have not cleared",
-      fresh.mission === 1 && mid.mission === 10 &&
+      fresh.mission === 1 && vet.mission === 11 && mid.mission === 11 &&
       done.mission === SF.missions.MISSIONS.length);
     check("it opens with that mission on screen, whoever you are",
       fresh.onScreen && mid.onScreen && done.onScreen);
@@ -2486,28 +2509,59 @@ async function run(){
   check("overdrive button visible too", !id("overdriveBtn").classList.contains("hidden"));
 
   await runFrames(120);   // past the 2.2s briefing banner
-  // Cumulative, not "alive right this frame": between two waves the field is
-  // legitimately empty, and asserting on one instant made this flap whenever
-  // anything else touched the RNG stream.
-  check("mission spawns enemies", SF.game.run.director.spawnedCount > 0);
   /*
-   * SOMETHING greeted the pilot - not necessarily the generic bucket. Mission 1
-   * lends the squadron, so it now opens with `dronesStart`, and this used to
-   * name `missionStart` specifically. The contract that matters is that the
-   * radio speaks at launch and that what it says is the mission's own rule.
+   * The first flight is EARTH now, and its first forty seconds are the
+   * flight check: no enemies, on purpose. The old "spawns within two
+   * seconds" truth moved to First Patrol's own data pin; what this flow
+   * verifies is the whole Mission 0 script, start to results.
    */
+  check("the prologue owns the frame and is not ready to end",
+    SF.prologue.active() && !SF.prologue.readyToEnd());
   check("comms greeted the pilot by name at launch", (() => {
     const said = SF.comms._state.lastAt;
     const openers = Object.keys(said).filter(k => /Start$/.test(k) || k === "missionStart");
     return openers.length > 0;
   })());
-  check("the mission that lends you drones says so on the radio",
-    SF.comms._state.lastAt.dronesStart !== undefined);
+  check("the workshop opened Mission 0, not generic control",
+    SF.comms._state.lastAt.prologueStart !== undefined);
   check("player auto-fires without any input", SF.game.world.bullets.countAlive() > 0);
-  // Mission 1 lends the squadron: nobody's first ninety seconds are flown
-  // alone, whatever the pilot has or hasn't bought.
-  check("the first patrol flies with lent drones",
+  // Earth lends the squadron too: the brothers fly the check with you.
+  check("the first flight flies with lent drones",
     SF.game.world.player.drones >= 2);
+
+  /*
+   * FLY THE CHECK. The bot steers by teleport: every few frames it parks
+   * the ship on the oldest waiting ring, exactly the motion a child's thumb
+   * makes, minus the child. Rings arrive one at a time for ~36 seconds.
+   */
+  for(let leg = 0; leg < 46; leg++){
+    const st = SF.prologue._s();
+    const pl = SF.game.world.player;
+    if(!st || !pl) break;
+    if(st.t > 42 || (SF.game.run.stats.ringsHit || 0) >= 8) break;
+    const open = st.rings.find(r => !r.hit && !r.gone && r.x !== undefined);
+    if(open){
+      // The wander-bot's held arrow keys drag the ship off a single-frame
+      // teleport before the hit can land - so hold it there for three.
+      for(let k = 0; k < 3; k++){
+        pl.x = open.x; pl.y = open.y; pl.vx = 0; pl.vy = 0;
+        await runFrames(1);
+      }
+    }
+    await runFrames(30);
+  }
+  check("the flight check counts rings as they are flown",
+    (SF.game.run.stats.ringsHit || 0) >= 6);
+  /*
+   * Every gate on the course must be REACHABLE: the ship is clamped to
+   * y >= 250 (entities.js PLAY_TOP), and the first draft of the course
+   * parked three rings above that ceiling - gates a child could stare at
+   * and never touch. Caught by this very bot, kept as a pin.
+   */
+  check("every practice ring sits inside the ship's flight envelope",
+    SF.prologue._spots.every(([fx, fy]) =>
+      fy*SF.entityConst.VH > 250 + 30 && fy*SF.entityConst.VH < SF.entityConst.VH - 60 &&
+      fx > 0.1 && fx < 0.9));
 
   // Tallying the hooks as well as the buzzes: the rumble table was tuned off
   // these counts (guns 4/s, kills 0.6/s), so the numbers it was tuned against
@@ -2516,7 +2570,25 @@ async function run(){
   SF.audio.play = (n, a) => { hooks[n] = (hooks[n]||0) + 1; return realPlay(n, a); };
   const vibesAtStart = vibrations.length, clockAtStart = fakeNow;
 
-  await runFrames(4200);   // mission 1 runs ~1m45 now
+  // Balloons and the raid: park mid-field and let the guns speak. Then
+  // catch the chute the moment it exists - the story holds for the catch.
+  {
+    const pl = SF.game.world.player;
+    pl.x = SF.entityConst.VW/2; pl.y = SF.entityConst.VH*0.72;
+    let caught = false;
+    for(let leg = 0; leg < 210 && !SF.prologue.readyToEnd(); leg++){
+      await runFrames(60);
+      const pods = SF.game.world.pickups.items.filter(k => k.alive && k.kind === "rescue");
+      if(pods.length){ pl.x = pods[0].x; pl.y = pods[0].y; caught = true; }
+    }
+    check("Marc's chute went out, and the bot caught it", caught &&
+      (SF.game.run.stats.rescues || 0) >= 1);
+    check("the theft played before the game would end",
+      SF.prologue._s().theftAt > 0);
+    // The script has ended; let the AREA CLEAR banner and the results card
+    // actually land before asserting on them.
+    await runFrames(900);
+  }
 
   SF.audio.play = realPlay;
   const vibeRate = (vibrations.length - vibesAtStart) / ((fakeNow - clockAtStart) / 1000);
@@ -2528,17 +2600,24 @@ async function run(){
   // rather than reasoned about, and pinned in both directions. This bot is in
   // god mode and never takes a hit, so everything counted is the core loop.
   check("the motor punctuates a mission instead of running through it", vibeRate < 2.5);
-  check("the core loop is felt, not just the rare events", vibrations.length - vibesAtStart > 40);
-  console.log("Mission 1 sim ->", SF.game.run.phase, "spawned:", SF.game.run.stats.spawned,
+  /*
+   * Earth is QUIET by design - a flight check, one raid, one rescue - so
+   * the "core loop is felt" bar sits at its measured density (12 buzzes on
+   * this deterministic bot), not at a combat mission's. The busy-mission
+   * density keeps its own bar in the interaction sims further down.
+   */
+  check("the core loop is felt, not just the rare events", vibrations.length - vibesAtStart > 9);
+  check("the raid actually spawned and was swept", SF.game.run.stats.spawned >= 20);
+  console.log("Mission 0 sim ->", SF.game.run.phase, "spawned:", SF.game.run.stats.spawned,
     "kills:", SF.game.run.stats.kills, "enemies left:", SF.game.world.enemies.countAlive(),
     "state:", SF.game.state);
-  check("no runtime errors during mission 1", errors.length === 0);
+  check("no runtime errors during mission 0", errors.length === 0);
   check("comms reacted to more than one kind of event",
     Object.keys(SF.comms._state.lastAt).length >= 2);
   check("comms never leaves a panel stuck on screen",
     !SF.comms.current() || SF.comms.current().life <= SF.comms.current().max);
   const res1 = !id("overlayResults").classList.contains("hidden");
-  check("mission 1 reached the results screen", res1);
+  check("mission 0 reached the results screen", res1);
   check("results show 3 star slots", qa("#resultStars .rs").length === 3);
   check("results name the family record", /record|to beat/i.test(id("resultLines").textContent));
   // Celebrations must be earned: a first-ever completion with nothing beaten
@@ -2564,15 +2643,25 @@ async function run(){
   check("wingmen fly under a squadmate's name",
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));
   const marc = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
-  check("mission 1 recorded as cleared", !!(marc.missions && marc.missions[1] && marc.missions[1].cleared));
-  check("earned at least one star", SF.profile.totalStars(marc) >= 1);
+  check("mission 0 recorded as cleared", !!(marc.missions && marc.missions[0] && marc.missions[0].cleared));
+  check("earned stars on the record itself", (() => {
+    const st = marc.missions[0] && marc.missions[0].stars;
+    return !!st && Object.values(st).some(v => v >= 1);
+  })());
+  /*
+   * ...and those stars gate NOTHING. The prologue sits outside the star
+   * ledger exactly like the gift stop, so adding a tutorial did not move
+   * the Sky 29 gate for a pilot already at 116/117.
+   */
+  check("Earth's stars stay off the campaign ledger",
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 117);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
 
   /* ---------- mission 2 unlocked by finishing 1 ---------- */
   clickEl(id("resultsMenuBtn"));
-  check("mission 2 unlocked after clearing mission 1",
+  check("First Patrol unlocked after clearing Earth",
     !qa("#campaignNodes .map-node")[1].classList.contains("locked"));
 
   /* ---------- the interactions that make a wave a puzzle ---------- */
@@ -3288,7 +3377,7 @@ async function run(){
     // WANTED (mission 2): the director rings exactly one ship per salvo, and
     // killing it pays five times. Both halves, because a marker nobody is
     // paid for is decoration and a payout nobody can see is accounting.
-    SF.game.startMission(1, "pilot");   // index 1 == mission 2
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.bounty), "pilot");
     await runFrames(60);
     check("the wanted level rings one ship per salvo, and only one", (() => {
       const dir = SF.game.run.director;
@@ -3917,10 +4006,12 @@ async function run(){
      */
     check("the level with walls is the level on a planet", (() => {
       const i = M.indexOf(by("The Narrows"));
-      return SF.skygen.isSurface(i) && SF.skygen.SKIES[i].stars === 0 &&
-             (SF.skygen.SKIES[i].props || []).some(pr => pr.k === "ground") &&
-             // ...and no OTHER mission is accidentally flown over ground.
-             M.filter((m, k) => SF.skygen.isSurface(k)).length === 1;
+      const si = SF.missions.skyOf(i);
+      return SF.skygen.isSurface(si) && SF.skygen.SKIES[si].stars === 0 &&
+             (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
+             // ...and the ONLY other mission over ground is Earth itself.
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 2 &&
+             SF.skygen.isSurface(SF.missions.skyOf(0));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -5818,8 +5909,7 @@ async function run(){
       Array.from(qa(".tune-card.on")).some(c => /FALCON/.test(c.textContent)));
     check("locked tunes say which boss to beat, and refuse to fit", (() => {
       const viperCard = Array.from(qa(".tune-card")).find(c => /VIPER/.test(c.textContent));
-      const viperAt = SF.missions.MISSIONS.findIndex(m =>
-        m.id === SF.config.TUNES.find(t => t.id === "viper").unlockMission) + 1;
+      const viperAt = SF.config.TUNES.find(t => t.id === "viper").unlockMission;
       if(!viperCard || !new RegExp("beat Mission " + viperAt).test(viperCard.textContent)) return false;
       clickEl(viperCard);
       return SF.profile.load("Tuner").tune === "falcon";   // unchanged
@@ -7770,7 +7860,7 @@ async function run(){
       I.t("__nothing will ever translate this__") === "__nothing will ever translate this__");
 
     check("switching language rewrites the data tables", (() => {
-      const m = SF.missions.MISSIONS[0];
+      const m = SF.missions.MISSIONS.find(x => x.id === 1);
       const en = m.name;
       I.setLang("fr");
       const fr = m.name;

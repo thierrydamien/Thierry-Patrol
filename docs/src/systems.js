@@ -490,6 +490,18 @@ function resolve(world, ctxObj, dt){
         // "invisible wall" feeling of bouncing off a sprite. A rock is not a
         // fair trade: it costs you a life and is still there afterwards, which
         // is what makes a boulder something you actually have to fly around.
+        /*
+         * SOFT targets pop and cost nothing. The prologue's practice
+         * balloons are the only thing that sets this: a seven-year-old on
+         * their very first flight WILL steer into one, and the flight
+         * check must never answer that with damage. The pop still counts
+         * as a kill, so ramming balloons is playing, not cheating.
+         */
+        if(e.type && e.type.soft){
+          e.hp = 0;
+          ctxObj.onEnemyKilled(e, null, true);
+          break;
+        }
         if(!e.hazard){
           e.hp = 0;
           ctxObj.onEnemyKilled(e, null, true);

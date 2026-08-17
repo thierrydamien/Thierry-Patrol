@@ -4,44 +4,45 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       47  src/core.js
- *      217  src/i18n.js
- *      416  src/icons.js
- *      982  src/haptics.js
- *     1161  src/audio.js
- *     1859  src/data/config.js
- *     2328  src/data/enemies.js
- *     3187  src/data/missions.js
- *     5065  src/wacky.js
- *     5281  src/data/comms.js
- *     5645  src/data/story.js
- *     5742  src/data/fr.js
- *     6768  src/profile.js
- *     7389  src/cloud.js
- *     7994  src/fx.js
- *     9107  src/input.js
- *     9530  src/entities.js
- *    10742  src/bossart.js
- *    11608  src/bosses.js
- *    12358  src/bossintro.js
- *    12481  src/rewind.js
- *    13012  src/finale.js
- *    13333  src/papadeath.js
- *    13655  src/backstage.js
- *    14858  src/sky29.js
- *    15099  src/systems.js
- *    15718  src/render.js
- *    20314  src/enemyart.js
- *    21232  src/insignia.js
- *    21477  src/skygen.js
- *    23921  src/shipart.js
- *    25121  src/paintjob.js
- *    25283  src/pilotart.js
- *    25378  src/comms.js
- *    25499  src/game.js
- *    28972  src/workshop.js
- *    29669  src/data/i18nbind.js
- *    29736  src/ui.js
+ *       48  src/core.js
+ *      218  src/i18n.js
+ *      417  src/icons.js
+ *      983  src/haptics.js
+ *     1162  src/audio.js
+ *     1860  src/data/config.js
+ *     2329  src/data/enemies.js
+ *     3200  src/data/missions.js
+ *     5166  src/wacky.js
+ *     5382  src/data/comms.js
+ *     5788  src/data/story.js
+ *     5885  src/data/fr.js
+ *     6946  src/profile.js
+ *     7575  src/cloud.js
+ *     8180  src/fx.js
+ *     9293  src/input.js
+ *     9716  src/entities.js
+ *    10928  src/bossart.js
+ *    11794  src/bosses.js
+ *    12544  src/bossintro.js
+ *    12667  src/rewind.js
+ *    13198  src/finale.js
+ *    13519  src/papadeath.js
+ *    13841  src/backstage.js
+ *    15044  src/sky29.js
+ *    15285  src/prologue.js
+ *    15651  src/systems.js
+ *    16282  src/render.js
+ *    20881  src/enemyart.js
+ *    21833  src/insignia.js
+ *    22078  src/skygen.js
+ *    24548  src/shipart.js
+ *    25748  src/paintjob.js
+ *    25910  src/pilotart.js
+ *    26005  src/comms.js
+ *    26144  src/game.js
+ *    29629  src/workshop.js
+ *    30326  src/data/i18nbind.js
+ *    30393  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2846,6 +2847,18 @@ const BEHAVIOURS = {
    fire: null, or { pattern, every:[min,max], speed, count }
    --------------------------------------------------------- */
 const ENEMY_TYPES = {
+  /*
+   * The prologue's gunnery target: Papa's striped practice balloon, floated
+   * up from the farm. `soft` is honoured in the collision layer - flying
+   * into one pops it and costs nothing, because the flight check is the one
+   * part of the game that is never allowed to hurt. It fires nothing, it
+   * chases nobody, it descends at walking pace and pops in one shot.
+   */
+  balloon: {
+    name:"Target Balloon", behaviour:"dive", hp:1, r:15, size:44, speed:46,
+    score:5, money:2, tint:"#ff6b7f",
+    fire:null, soft:true,
+  },
   grunt: {
     name:"Grunt", behaviour:"dive", hp:1, r:13, size:42, speed:138,
     /*
@@ -3304,6 +3317,10 @@ const OBJECTIVES = {
   roundUp:   { label:"Flatten 15 ships with the herd", icon:"🐂",
                test: s => (s.crushed || 0) >= 15,
                progress: s => (s.crushed || 0) + "/15" },
+  /* --- the prologue --- */
+  rings:     { label:"Fly through 6 practice rings", icon:"⭕",
+               test: s => (s.ringsHit || 0) >= 6,
+               progress: s => (s.ringsHit || 0) + "/6" },
   twin20:    { label:"Let your reflection get 100 kills", icon:"🪞",
                test: s => (s.mirrorKills || 0) >= 100,
                progress: s => (s.mirrorKills || 0) + "/100" },
@@ -3556,6 +3573,63 @@ function w(t, type, n, form, opts){
 }
 
 const MISSIONS = [
+  /*
+   * MISSION 0 - the morning the game starts, and the only one on Earth.
+   *
+   * The campaign always began in space with no word on why a family was up
+   * there. This is the why: launch day at the farm, a flight check that
+   * turns into the first raid, and the sky going out overhead. Everything a
+   * new pilot needs to learn is taught by the STORY asking for it - the
+   * rings are Papa's flight check, the balloons are gunnery practice, the
+   * bomb is used because the workshop shouts for it, and the first rescue
+   * is a brother, by name. No tutorial voice ever says "now try moving".
+   *
+   * Engineering shape:
+   *  - id:0, so it DISPLAYS as Mission 0 and every existing mission keeps
+   *    its number, its save record and its place in family lore ("mission
+   *    21 is the limpets one"). Nothing in any saved profile moves.
+   *  - `prologue:true` hands the script to prologue.js, the same contract
+   *    backstage/sky29 use: waves stay engine-standard so kills, stars and
+   *    the director behave; the module owns rings, cinematics and pacing.
+   *  - Excluded from the campaign's star arithmetic exactly like the gift
+   *    stop (see profile.js): maxStars stays 117, so a family member one
+   *    star from the Sky 29 gate is not suddenly three further away.
+   *  - sky:40 - the one Earth sky, appended at the END of skygen's list so
+   *    no saved Drawing Board sky changes underneath its painting.
+   */
+  {
+    id:0, name:"Launch Day", subtitle:"The last morning on Earth",
+    brief:"Papa's new ships fly their first check this morning. Follow the practice rings, pop the target balloons - and keep one eye on the sky. Something is wrong with it today.",
+    goal:"Fly the checks. Then look up.",
+    prologue:true, sky:40,
+    // The brothers fly the check with you - same loan as First Patrol, so a
+    // new pilot's very first minute is already "we", not "I".
+    lentDrones:2,
+    // One drifter: Marc bails out of the clipped trainer mid-story. The
+    // prologue script spawns him at the story beat (podTimes is emptied in
+    // prologue.begin), but the accounting stays engine-standard so the
+    // rescue counts, the star reads 1/1, and "PILOT RESCUED" is real.
+    podDrops:1,
+    objectives: ["complete","rings","rescueAll"],
+    /*
+     * The wave clock is the story clock. 0-40s is the flight check (no
+     * enemies - prologue owns it), then gunnery, then the raid. Balloons
+     * are soft (see systems.js): a seven-year-old WILL fly into one, and
+     * the flight check is not allowed to cost a life.
+     */
+    waves: [
+      // Gunnery practice: three flights of target balloons.
+      w(42,  "balloon", 5, "arc"),
+      w(54,  "balloon", 6, "scatter"),
+      w(66,  "balloon", 5, "vee"),
+      // One scout, alone - the "...that's not one of ours" beat.
+      w(82,  "grunt", 1, "column"),
+      // The raid proper. Still only grunts: Earth difficulty is the story
+      // saying "you can do this", not the game pretending it is hard.
+      w(96,  "grunt", 3, "vee"),
+      w(108, "grunt", 6, "vee"),
+    ],
+  },
   {
     id:1, name:"First Patrol", subtitle:"Learn the ropes",
     brief:"Fly with your finger or the arrow keys. Your guns shoot all by themselves - and the squadron is flying this one with you. Watch out for rocks, and for the pink one: it draws a line at you before it shoots, so just move off the line.",
@@ -5017,6 +5091,15 @@ const MISSIONS = [
 /** Missions unlock one at a time; stars gate the harder difficulty tiers instead. */
 function isMissionUnlocked(profile, index){
   if(index === 0) return true;
+  /*
+   * A mission you have already cleared is never locked. Before Mission 0
+   * existed this could not happen - the chain only grew at the far end.
+   * Now it can: a veteran who cleared the whole campaign has never flown
+   * the new first stop, and without this line First Patrol would be the
+   * only locked mission on their map, sitting between two cleared ones.
+   */
+  const own = profile.missions && profile.missions[MISSIONS[index].id];
+  if(own && own.cleared) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
   const prevCleared = !!(record && record.cleared);
@@ -5056,8 +5139,26 @@ const GIFT = MISSIONS.find(m => m.gift) || MISSIONS[MISSIONS.length - 1];
 /** The gift stop's name in caps, for the places that shout it. */
 function giftName(){ return (GIFT.name || "").toUpperCase(); }
 
+/*
+ * WHICH SKY A MISSION FLIES OVER.
+ *
+ * This used to be "mission index IS sky index", and inserting Mission 0
+ * broke that identity for good: the Earth sky is appended at SKIES[40]
+ * because the family's Drawing Board saves hold bare sky indices, and
+ * repainting their drawings onto shifted bases is not an acceptable cost
+ * of a prologue. So the mapping is explicit. Every mission that predates
+ * Mission 0 gets its historical index back from its (stable) id; anything
+ * new says `sky:` outright. skygen itself stays sky-indexed - the Drawing
+ * Board feeds it raw sky indices and must keep doing so.
+ */
+MISSIONS.forEach(m => { if(m.sky === undefined) m.sky = m.id - 1; });
+function skyOf(index){
+  const m = MISSIONS[index];
+  return m ? m.sky : index;
+}
+
 SF.missions = { MISSIONS, BOSSES, OBJECTIVES, isMissionUnlocked, rescueCount, enemyCount,
-                GIFT, giftName };
+                GIFT, giftName, skyOf };
 })();
 
 
@@ -5299,6 +5400,48 @@ const COMMS = {
     "You're clear for launch, {you}.",
     "Skies are yours, {you}. Show them.",
     "Good hunting, {you}.",
+  ]},
+  /*
+   * MISSION 0 - the workshop on the radio. Papa's voice, warm and brief:
+   * every line either asks for the next thing or names what just happened.
+   * One line per event on purpose - a scripted story beat should say ITS
+   * line, not roll dice.
+   */
+  prologueStart: { speaker:"workshop", cooldown:999, lines:[
+    "Morning, {you}. Ships are fuelled and the sky is ours. Fly the practice rings for me.",
+  ]},
+  prologueRingsNudge: { speaker:"workshop", cooldown:999, lines:[
+    "Right through the middle of the ring, {you}. Nice and easy.",
+  ]},
+  prologueRingsDone: { speaker:"workshop", cooldown:999, lines:[
+    "Six for six. That's proper flying, {you}.",
+  ]},
+  prologueBalloons: { speaker:"workshop", cooldown:999, lines:[
+    "Guns are live. Pop the balloons - they don't mind.",
+  ]},
+  prologueShadow: { speaker:"workshop", cooldown:999, lines:[
+    "Hold on. That one is not ours.",
+  ]},
+  prologueRaid: { speaker:"workshop", cooldown:999, lines:[
+    "Raiders. Over OUR farm. Guns free, squadron.",
+  ]},
+  prologueBomb: { speaker:"workshop", cooldown:999, lines:[
+    "Too many in one bunch - press your BOMB, {you}!",
+  ]},
+  prologueRescue: { speaker:"workshop", cooldown:999, lines:[
+    "{who}'s trainer got clipped - catch that parachute!",
+  ]},
+  prologueRescued: { speaker:"workshop", cooldown:999, lines:[
+    "Got him. Good catch, {you}.",
+  ]},
+  prologueTheft: { speaker:"workshop", cooldown:999, lines:[
+    "They are pulling the stars out of our sky...",
+  ]},
+  prologueTheft2: { speaker:"workshop", cooldown:999, lines:[
+    "Nobody steals the family's sky. Go get them back.",
+  ]},
+  prologueAscent: { speaker:"workshop", cooldown:999, lines:[
+    "Full throttle, straight up. Wheels up, squadron!",
   ]},
   pickupShield: { speaker:"control", cooldown:9, lines:[
     "Shield online!", "Shields back up, {you}.", "That's a fresh shield.",
@@ -6007,6 +6150,41 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE EASEL": "LE CHEVALET",
 
 /* ---------------- mission names ---------------- */
+"Launch Day": "Jour du Décollage",
+"The last morning on Earth": "Le dernier matin sur Terre",
+"Papa's new ships fly their first check this morning. Follow the practice rings, pop the target balloons - and keep one eye on the sky. Something is wrong with it today.":
+  "Les nouveaux vaisseaux de Papa font leur premier vol d'essai ce matin. Suis les anneaux d'entraînement, éclate les ballons cibles — et garde un œil sur le ciel. Il a quelque chose qui cloche aujourd'hui.",
+"Fly the checks. Then look up.": "Fais les essais. Puis lève les yeux.",
+"Fly through 6 practice rings": "Passer dans 6 anneaux d'entraînement",
+"Target Balloon": "Ballon Cible",
+"Over the Farm": "Au-dessus de la Ferme",
+"WORKSHOP": "ATELIER",
+"THE SKY GOES OUT": "LE CIEL S'ÉTEINT",
+"{who}'S CHUTE — CATCH HIM!": "LE PARACHUTE DE {who} — RATTRAPE-LE !",
+"Morning, {you}. Ships are fuelled and the sky is ours. Fly the practice rings for me.":
+  "Bonjour, {you}. Les vaisseaux sont pleins et le ciel est à nous. Passe dans les anneaux d'entraînement pour moi.",
+"Right through the middle of the ring, {you}. Nice and easy.":
+  "En plein milieu de l'anneau, {you}. Tout en douceur.",
+"Six for six. That's proper flying, {you}.":
+  "Six sur six. Ça, c'est du pilotage, {you}.",
+"Guns are live. Pop the balloons - they don't mind.":
+  "Canons armés. Éclate les ballons — ils ne t'en voudront pas.",
+"Hold on. That one is not ours.":
+  "Attends. Celui-là n'est pas à nous.",
+"Raiders. Over OUR farm. Guns free, squadron.":
+  "Des pillards. Au-dessus de NOTRE ferme. Feu à volonté, escadrille.",
+"Too many in one bunch - press your BOMB, {you}!":
+  "Trop d'un coup — appuie sur ta BOMBE, {you} !",
+"{who}'s trainer got clipped - catch that parachute!":
+  "L'avion d'entraînement de {who} est touché — rattrape ce parachute !",
+"Got him. Good catch, {you}.":
+  "On le tient. Bien rattrapé, {you}.",
+"They are pulling the stars out of our sky...":
+  "Ils arrachent les étoiles de notre ciel...",
+"Nobody steals the family's sky. Go get them back.":
+  "Personne ne vole le ciel de la famille. Allez les récupérer.",
+"Full throttle, straight up. Wheels up, squadron!":
+  "Pleins gaz, droit vers le haut. Décollage, escadrille !",
 "First Patrol": "Première Patrouille",
 "Weaving Through": "Slalom",
 "The Anchor": "L'Ancre",
@@ -7187,12 +7365,18 @@ function starsForMission(p, missionId){
  * "84 stars", the gift is what 84 unlocks, and letting it mint three more
  * would turn "every star" into a number that changes the moment you reach it.
  */
+/*
+ * The gift stop and the prologue both live OUTSIDE the star economy. The
+ * gift always did; Mission 0 joins it so that adding a tutorial does not
+ * move the Sky 29 gate for a family member already 116/117 - its stars
+ * still show on its own map node, they just gate nothing.
+ */
 function totalStars(p){
-  return MISSIONS.reduce((n,m) => n + (m.gift ? 0 : starsForMission(p, m.id)), 0);
+  return MISSIONS.reduce((n,m) => n + (m.gift || m.prologue ? 0 : starsForMission(p, m.id)), 0);
 }
 /** The bar the gift stop asks for: three per real mission. */
 function maxStars(){
-  return MISSIONS.filter(m => !m.gift).length * 3;
+  return MISSIONS.filter(m => !m.gift && !m.prologue).length * 3;
 }
 /** Index of the hardest difficulty this pilot has ever completed a mission on. */
 function hardestCleared(p){
@@ -7210,7 +7394,9 @@ function difficultyUnlocked(p, difficulty){
 function campaignComplete(p){
   // The gift stop is a bonus ON completion, not part of it: the workshop
   // curtain must fall when Behind the Sky does, whether or not Sky 29 is done.
-  return MISSIONS.every(m => m.gift || (p.missions[m.id] && p.missions[m.id].cleared));
+  // The prologue is a doorway, not a destination: campaign completion is
+  // about the war, and the war is over whether or not you replayed Earth.
+  return MISSIONS.every(m => m.gift || m.prologue || (p.missions[m.id] && p.missions[m.id].cleared));
 }
 
 /* ---------------------------------------------------------
@@ -15095,6 +15281,372 @@ SF.sky29 = { _state: () => S,
 })();
 
 
+;/* ===== src/prologue.js ===== */
+/*
+ * THE PROLOGUE - Mission 0, the only level on Earth.
+ *
+ * Every campaign before this one started in space with no word on why a
+ * family was up there in home-built ships. This module is the why, played
+ * rather than told: launch day over the farm, a flight check that turns
+ * into the first raid, and the sky going out in the middle of the morning.
+ *
+ * It is also the tutorial, and the rule that shaped every beat is that THE
+ * STORY DOES THE TEACHING. Nobody says "now try moving" - Papa's workshop
+ * asks for a flight check, and the flight check is the movement tutorial.
+ * The gunnery targets are balloons because a first shot should hit
+ * something that cannot shoot back. The bomb is taught at the exact moment
+ * a bomb is the answer, and the first rescue is a brother with a name, so
+ * the game's dearest mechanic - flying into a drifting person - lands as
+ * family before it lands as scoring.
+ *
+ * Same contract as backstage.js and sky29.js: a mission flag (`prologue`)
+ * plus one module that owns the script. The waves stay engine-standard so
+ * kills, stars, comms and the director all behave; this file owns the
+ * rings, the eclipse, the thief silhouette, the ascent, and WHEN the
+ * mission is allowed to end.
+ *
+ * Determinism note: everything here keys off fixed constants and the
+ * script clock - no seeded draws, no Math.random in the sim path. The only
+ * randomness is the baked starfield for the ascent, which is cosmetic and
+ * drawn from Math.random at begin().
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const { clamp, TAU } = SF.core;
+
+/* The script clock's fixed marks, in seconds from mission start.
+   The wave times in missions.js are the OTHER half of this timeline -
+   balloons at 42/54/66, the lone scout at 82, the raid at 96/108. */
+const RING_FIRST   = 4;      // first practice ring appears
+const RING_EVERY   = 4;      // one ring at a time, this far apart
+const RING_COUNT   = 8;      // eight offered, six needed - forgiving on purpose
+const RINGS_END    = 40;     // unflown rings leave; gunnery begins
+const SHADOW_AT    = 78;     // the light starts going wrong
+const RAID_AT      = 94;     // comms: guns free
+const BOMB_AT      = 108;    // the six-ship vee - and the bomb lesson
+const THEFT_HOLD   = 16;     // how long the thief takes to cross the sky
+const ASCENT_SECS  = 11;     // the climb out of the atmosphere
+
+/* Ring stations, as fractions of the field. Spread wide enough that a kid
+   has to actually steer, never so low they fight the player's thumb, and
+   FIXED - a flight check is a course someone laid out, not weather.
+
+   Every station lives INSIDE the ship's real envelope: the player is
+   clamped to y in [PLAY_TOP=250, VH-34] (see entities.js), and the first
+   draft parked three rings above that ceiling - a course with gates the
+   aircraft cannot reach. The smoke suite pins the envelope now. */
+const RING_SPOTS = [
+  [0.30, 0.40], [0.68, 0.46], [0.46, 0.36], [0.78, 0.55],
+  [0.22, 0.52], [0.58, 0.62], [0.36, 0.66], [0.72, 0.38],
+];
+
+let S = null;                // the whole script state; null = not running
+
+function reset(){ S = null; }
+
+function begin(run, world){
+  S = {
+    t: 0,
+    run, world,
+    vw: 0, vh: 0,            // learned from the first update/draw
+    rings: [],               // { fx, fy, x, y, born, hit, gone }
+    nextRing: 0,
+    nudged: false, aced: false,
+    gunsCalled: false, shadowCalled: false, raidCalled: false,
+    bombCalled: false,
+    podAt: 0,                // when Marc's chute went out (0 = not yet)
+    rescuedCalled: false,
+    theftAt: 0,              // when the thief entered (0 = not yet)
+    theftLine2: false,
+    ascentAt: 0,             // when the climb began (0 = not yet)
+    done: false,
+    veil: 0,                 // 0..1 eclipse darkness, eased every frame
+    veilTarget: 0,
+    // The ascent's stars: baked once, cosmetic, Math.random by design.
+    stars: Array.from({ length: 90 }, () => ({
+      x: Math.random(), y: Math.random(),
+      r: 0.6 + Math.random()*1.4, tw: Math.random()*TAU,
+    })),
+    whoName: rescueName(),
+  };
+  // Marc bails out on the script's say-so, not the director's: the engine
+  // timing formula would drop him mid-flight-check.
+  run.podTimes.length = 0;
+}
+
+/* The name on the parachute. Another pilot from THIS device's family if
+   there is one - the rescue should be somebody at the table - with the
+   lore brother as the fallback for a brand-new install. */
+function rescueName(){
+  try {
+    const me = SF.game.profile && (SF.game.profile.callsign || SF.game.profile.name);
+    const others = SF.profile.listNames().filter(n => n !== me);
+    if(others.length) return others[0];
+  } catch(e){}
+  return "Marc";
+}
+
+function active(){ return !!S; }
+function readyToEnd(){ return !S || S.done; }
+
+/* ---------------------------------------------------------
+   UPDATE - the script itself
+   --------------------------------------------------------- */
+function update(dt, run, world, simMs, VW, VH){
+  if(!S) return;
+  S.t += dt;
+  S.vw = VW; S.vh = VH;
+  const T = S.t;
+  const say = (ev, vars) => SF.comms.say(ev, vars);
+  const p = world.player;
+
+  // The eclipse never snaps - the light drains, it doesn't switch.
+  S.veil += (S.veilTarget - S.veil) * Math.min(1, dt*1.6);
+
+  /* ---- the flight check ---- */
+  if(S.nextRing < RING_COUNT && T >= RING_FIRST + S.nextRing*RING_EVERY && T < RINGS_END - 2){
+    const [fx, fy] = RING_SPOTS[S.nextRing];
+    S.rings.push({ fx, fy, born: T, hit: false, gone: false });
+    S.nextRing++;
+  }
+  const hits = run.stats.ringsHit || 0;
+  for(const r of S.rings){
+    if(r.hit || r.gone || !p) continue;
+    r.x = r.fx*VW; r.y = r.fy*VH + Math.sin((T - r.born)*1.4)*6;
+    const dx = p.x - r.x, dy = p.y - r.y;
+    if(dx*dx + dy*dy < 40*40){
+      r.hit = true; r.hitAt = T;
+      run.stats.ringsHit = hits + 1;
+      SF.audio.play("star", false, r.x);
+      SF.fx.ring(r.x, r.y, 52, "#ffd23f", 4, 0.5);
+      SF.fx.text(r.x, r.y - 34, (run.stats.ringsHit) + "/6", "#ffd23f", 15, true);
+    }
+  }
+  if(T >= RINGS_END){
+    for(const r of S.rings) if(!r.hit && !r.gone){ r.gone = true; r.goneAt = T; }
+  }
+  if(!S.nudged && T > 24 && hits < 3){ S.nudged = true; say("prologueRingsNudge"); }
+  if(!S.aced && hits >= 6){ S.aced = true; say("prologueRingsDone"); }
+
+  /* ---- gunnery ---- */
+  if(!S.gunsCalled && T >= RINGS_END + 1.2){ S.gunsCalled = true; say("prologueBalloons"); }
+
+  /* ---- the sky goes wrong ---- */
+  if(!S.shadowCalled && T >= SHADOW_AT){
+    S.shadowCalled = true;
+    S.veilTarget = 0.34;
+    SF.audio.play("bossWake");
+    say("prologueShadow");
+  }
+  if(!S.raidCalled && T >= RAID_AT){
+    S.raidCalled = true;
+    S.veilTarget = 0.44;
+    say("prologueRaid");
+  }
+  if(!S.bombCalled && T >= BOMB_AT){
+    S.bombCalled = true;
+    /* The lesson only works if the button exists: a brand-new pilot owns no
+       bombs, so the workshop hands one over - same grant the bomb pickup
+       makes, so the button appears and shines the same way. */
+    if(p && (p.bombs || 0) < 1){
+      p.bombsMax = Math.max(p.bombsMax || 0, 1);
+      p.bombs = 1;
+    }
+    say("prologueBomb");
+  }
+
+  /* ---- Marc's chute, once the raid is swept ---- */
+  const swept = run.director && run.director.finishedSpawning && world.countEnemies() === 0;
+  if(!S.podAt && swept && T > BOMB_AT + 3){
+    S.podAt = T;
+    world.spawnPickup("rescue", VW*0.5, -24);
+    SF.fx.text(VW/2, VH*0.2, SF.i18n
+      ? SF.i18n.t("{who}'S CHUTE — CATCH HIM!", { who: S.whoName.toUpperCase() })
+      : S.whoName.toUpperCase() + "'S CHUTE — CATCH HIM!", "#ffd23f", 17, true);
+    say("prologueRescue", { who: S.whoName });
+  }
+  if(S.podAt && !S.rescuedCalled && (run.stats.rescues || 0) > 0){
+    S.rescuedCalled = true;
+    say("prologueRescued", { who: S.whoName });
+  }
+
+  /* ---- the theft ---- */
+  // Enter once the chute is resolved: caught (the good path) or missed and
+  // gone (the story must not wait forever on a pickup off the bottom).
+  if(S.podAt && !S.theftAt){
+    const caught = (run.stats.rescues || 0) > 0;
+    const given  = T - S.podAt > 14;
+    if((caught && T - S.podAt > 2.5) || given){
+      S.theftAt = T;
+      S.veilTarget = 0.78;
+      SF.audio.play("alarm");
+      say("prologueTheft");
+      if(SF.i18n) run.bannerText = SF.i18n.t("THE SKY GOES OUT");
+      else run.bannerText = "THE SKY GOES OUT";
+      run.bannerSub = "";
+      run.bannerColor = "#9db4ff";
+      run.bannerUntil = simMs + 2600;
+    }
+  }
+  if(S.theftAt && !S.theftLine2 && T - S.theftAt > 9){
+    S.theftLine2 = true;
+    say("prologueTheft2");
+  }
+
+  /* ---- the ascent ---- */
+  if(S.theftAt && !S.ascentAt && T - S.theftAt > THEFT_HOLD){
+    S.ascentAt = T;
+    say("prologueAscent");
+    SF.audio.play("overdrive");
+    SF.fx.push(1.10, ASCENT_SECS*0.7, 0.4, 0.3);
+  }
+  if(S.ascentAt && !S.done && T - S.ascentAt > ASCENT_SECS){
+    S.done = true;           // game.js may now run AREA CLEAR -> results
+  }
+}
+
+/* ---------------------------------------------------------
+   DRAW - everything behind the ships
+   --------------------------------------------------------- */
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+  S.vw = VW; S.vh = VH;
+  const T = S.t;
+
+  /* The eclipse: one veil, drawn over the sky and under everything alive.
+     Blue-black rather than black - the light DRAINS, it doesn't turn off. */
+  if(S.veil > 0.005){
+    ctx.fillStyle = "rgba(7,10,26," + (S.veil * 0.9).toFixed(3) + ")";
+    ctx.fillRect(0, 0, VW, VH);
+  }
+
+  /* The ascent: stars arriving through the last of the atmosphere, and
+     speed streaks that say STRAIGHT UP without taking the controls. */
+  if(S.ascentAt){
+    const k = clamp((T - S.ascentAt) / ASCENT_SECS, 0, 1);
+    // space floods down from the top of the frame
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, "rgba(4,5,18," + (0.85*k).toFixed(3) + ")");
+    g.addColorStop(0.55, "rgba(6,8,24," + (0.55*k).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(10,14,34," + (0.25*k).toFixed(3) + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VW, VH);
+    // the stars fade in brightest-first, like real dusk
+    const sa = clamp((k - 0.25) / 0.6, 0, 1);
+    if(sa > 0){
+      for(const st of S.stars){
+        const tw = 0.6 + Math.sin(timeMs/700 + st.tw)*0.4;
+        ctx.globalAlpha = sa * tw * (st.r > 1.4 ? 0.9 : 0.55);
+        ctx.fillStyle = "#eef2ff";
+        ctx.fillRect(st.x*VW, st.y*VH*0.9, st.r, st.r);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // climb streaks
+    const streaks = 14;
+    ctx.strokeStyle = "rgba(210,225,255," + (0.16*Math.sin(Math.min(1,k*2)*Math.PI)).toFixed(3) + ")";
+    ctx.lineWidth = 2;
+    for(let i = 0; i < streaks; i++){
+      const x = ((i*0.618 + 0.13) % 1) * VW;
+      const len = 40 + (i%4)*22;
+      const y = ((timeMs*0.9 + i*173) % (VH + 160)) - 80;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + len); ctx.stroke();
+    }
+  }
+
+  /* The thief: a mile of hull crossing the morning, dragging the family's
+     stars behind it in cages. Pure silhouette - menace is stillness, and
+     nothing sells "bigger than anything you will fight today" like a shape
+     with no detail at all.
+
+     A silhouette needs light BEHIND it to exist: the first cut drew black
+     hull on eclipse-black ground and the whole beat was invisible. So the
+     eclipse leaves one strip of morning behind the thief - the last of the
+     daylight, exactly where the shape crosses - and the ship reads the way
+     a storm front does, as the thing the light stops at. */
+  if(S.theftAt && !S.ascentAt){
+    const k = clamp((T - S.theftAt) / THEFT_HOLD, 0, 1.15);
+    const y = VH * 0.24;
+    // the dying band of daylight the silhouette crosses
+    const inK = clamp((T - S.theftAt) / 1.4, 0, 1);           // the band arrives
+    const glow = ctx.createLinearGradient(0, y - VH*0.15, 0, y + VH*0.16);
+    glow.addColorStop(0, "rgba(240,177,104,0)");
+    glow.addColorStop(0.45, "rgba(240,177,104," + (0.34*inK).toFixed(3) + ")");
+    glow.addColorStop(0.55, "rgba(221,143,126," + (0.30*inK).toFixed(3) + ")");
+    glow.addColorStop(1, "rgba(221,143,126,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, y - VH*0.15, VW, VH*0.31);
+
+    const x = VW * (-0.45 + k * 1.8);          // right across, unhurried
+    const L = VW * 0.72;                        // its length on screen
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "rgba(6,7,16,0.98)";
+    // the long hull, nose left, keel towers below
+    ctx.beginPath();
+    ctx.moveTo(-L*0.5, 0);
+    ctx.lineTo(-L*0.34, -L*0.05);
+    ctx.lineTo( L*0.30, -L*0.055);
+    ctx.lineTo( L*0.5,  -L*0.014);
+    ctx.lineTo( L*0.44,  L*0.034);
+    ctx.lineTo(-L*0.40,  L*0.04);
+    ctx.closePath(); ctx.fill();
+    for(let i = 0; i < 4; i++){
+      const tx = -L*0.28 + i*L*0.17;
+      ctx.fillRect(tx, -L*0.095, L*0.032, L*0.055);
+    }
+    // three cages on cables, each with a caught star guttering inside -
+    // the same gold as the score stars, because they ARE the stars.
+    for(let i = 0; i < 3; i++){
+      const cx = -L*0.30 + i*L*0.25;
+      const cy = L*0.13 + Math.sin(timeMs/600 + i*2.1)*4;
+      ctx.strokeStyle = "rgba(6,7,16,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, L*0.04); ctx.lineTo(cx, cy); ctx.stroke();
+      ctx.strokeRect(cx - 13, cy, 26, 22);
+      const flick = 0.55 + Math.sin(timeMs/130 + i*1.7)*0.45;
+      // the glow first, then the star, so the cage bars read against it
+      const halo = ctx.createRadialGradient(cx, cy + 11, 0, cx, cy + 11, 26);
+      halo.addColorStop(0, "rgba(255,210,63," + (0.5*flick).toFixed(3) + ")");
+      halo.addColorStop(1, "rgba(255,210,63,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(cx - 26, cy - 15, 52, 52);
+      ctx.fillStyle = "rgba(255,224,120," + (0.9*flick).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(cx, cy + 11, 5, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* The practice rings, over the veil and under the ships. */
+  for(const r of S.rings){
+    if(r.hit && T - (r.hitAt || 0) > 0.6) continue;
+    let x = r.fx*VW, y = r.fy*VH + Math.sin((T - r.born)*1.4)*6, a = 1, rad = 34;
+    const age = T - r.born;
+    if(age < 0.5){ a = age/0.5; rad = 34 + (1 - a)*20; }          // arrive
+    if(r.hit){ const k = (T - r.hitAt)/0.6; a = 1 - k; rad = 34 + k*26; }
+    if(r.gone){ const k = clamp((T - r.goneAt)/0.8, 0, 1); y -= k*k*VH*0.6; a = 1 - k; }
+    if(a <= 0) continue;
+    const pulse = 1 + Math.sin(timeMs/300 + r.born)*0.05;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = "#ffd23f";
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(x, y, rad*pulse, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = a*0.35;
+    ctx.strokeStyle = "#fff3c4";
+    ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.arc(x, y, rad*pulse, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+SF.prologue = { reset, begin, active, readyToEnd, update, drawSky,
+                _s: () => S,     // the smoke suite steers the flight check
+                _spots: RING_SPOTS };
+})();
+
+
 ;/* ===== src/systems.js ===== */
 /*
  * The two systems that drive a mission: the wave director (what spawns, when,
@@ -15588,6 +16140,18 @@ function resolve(world, ctxObj, dt){
         // "invisible wall" feeling of bouncing off a sprite. A rock is not a
         // fair trade: it costs you a life and is still there afterwards, which
         // is what makes a boulder something you actually have to fly around.
+        /*
+         * SOFT targets pop and cost nothing. The prologue's practice
+         * balloons are the only thing that sets this: a seven-year-old on
+         * their very first flight WILL steer into one, and the flight
+         * check must never answer that with damage. The pop still counts
+         * as a kill, so ramming balloons is playing, not cheating.
+         */
+        if(e.type && e.type.soft){
+          e.hp = 0;
+          ctxObj.onEnemyKilled(e, null, true);
+          break;
+        }
         if(!e.hazard){
           e.hp = 0;
           ctxObj.onEnemyKilled(e, null, true);
@@ -15928,7 +16492,10 @@ function initBackground(missionIndex){
    * is deliberate: the paintings look better than anything generated, and the
    * generated ones stop all eight levels looking identical.
    */
-  const idx = missionIndex || 0;
+  // Mission index and sky index parted ways when Mission 0 arrived (the
+  // Earth sky lives at the END of the list; see missions.js skyOf). All
+  // three lookups below are sky-indexed, so translate exactly once, here.
+  const idx = SF.missions.skyOf(missionIndex || 0);
   if(idx !== skyIndex){
     skyPhoto = SF.skygen.photoFor(idx);
     // Built at device resolution (4th arg) and blitted back down to VW x VH;
@@ -20784,6 +21351,40 @@ const SHAPES = {
   },
 
   /* --- the plain shooters: a family of darts, growing heavier --- */
+  /*
+   * The practice balloon is deliberately NOT a ship: a round striped canopy
+   * with a bullseye and a little string tail. It must read as "target, not
+   * threat" from across the room - so no hull(), no thruster, no cockpit,
+   * nothing that says machine. Just fairground.
+   */
+  balloon(ctx, S, p){
+    const R = S*0.34;
+    // canopy: base tint with a lighter crown, like every hull piece
+    const g = ctx.createLinearGradient(-R, -R, R*0.8, R);
+    g.addColorStop(0, p.lit); g.addColorStop(0.5, p.base); g.addColorStop(1, p.shade);
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R, 0, TAU);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.02; ctx.stroke();
+    // two horizontal stripes, clipped to the canopy
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.985, 0, TAU); ctx.clip();
+    ctx.fillStyle = p.trim;
+    ctx.fillRect(-R, -S*0.04 - R*0.42, R*2, R*0.24);
+    ctx.fillRect(-R, -S*0.04 + R*0.22, R*2, R*0.24);
+    ctx.restore();
+    // the bullseye - what the guns are FOR
+    ctx.fillStyle = "#fff7e6";
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.30, 0, TAU); ctx.fill();
+    ctx.fillStyle = p.deep;
+    ctx.beginPath(); ctx.arc(0, -S*0.04, R*0.16, 0, TAU); ctx.fill();
+    // knot and string tail (drawn nose-down like everything else, so the
+    // tail trails UP the screen as it descends)
+    ctx.strokeStyle = p.line; ctx.lineWidth = S*0.018;
+    ctx.beginPath();
+    ctx.moveTo(0, -S*0.04 - R);
+    ctx.quadraticCurveTo(S*0.06, -S*0.52, -S*0.03, -S*0.62);
+    ctx.stroke();
+  },
   grunt(ctx, S, p){
     hull(ctx, [0,S*0.44, S*0.20,S*0.02, S*0.30,-S*0.20, 0,-S*0.30,
                -S*0.30,-S*0.20, -S*0.20,S*0.02], p, S);
@@ -22009,6 +22610,32 @@ const SKIES = [
             {k:"galaxy", x:0.20, y:0.18, r:0.26},
             {k:"planet", x:0.16, y:0.62, r:0.06, lit:"#ffb6a3", dark:"#4a1d2e", craters:true},
             {k:"sun",    x:0.86, y:0.14, r:0.03, color:"#ffe9a8"} ] },
+
+  /*
+   * OVER THE FARM - Earth, dawn, the morning the campaign starts.
+   *
+   * Appended at the END of the list on purpose: the campaign's sky lookup
+   * goes through mission.sky now (see missions.js), and the family's saved
+   * Drawing Board skies store a bare SKIES index - inserting at the front
+   * would repaint every drawing they have ever made onto the wrong base.
+   *
+   * The one sky in the game with weather instead of space: the wash is a
+   * dawn - gold low, rose through the middle, morning blue up top - and
+   * `surface:true` keeps the stars and comets out of it, because this is
+   * the only morning the game spends under an atmosphere. The ground is
+   * the same painter as the Red Canyon floor wearing field colours, and
+   * the sun sits low and heavy the way it does at six in the morning.
+   */
+  { name:"Over the Farm", surface:true,
+    /*
+     * A surface sky IS the ground seen from above (the Red Canyon set the
+     * rule), so there is no horizon to hang a sun on - the dawn has to live
+     * in the land itself: long-shadow gold-green fields under a warm wash,
+     * bright enough that Earth reads as morning next to the Canyon's dusk.
+     */
+    clouds:["#f0b168","#dd8f7e","#7f9cc8"], dust:"#18220f", star:"#fff2d8",
+    lum:1.3, density:0.8, stars:0, bright:0,
+    props:[ {k:"ground", x:0.50, y:0.50, n:40, lit:"#b3b869", dark:"#2c3617"} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -25459,18 +26086,36 @@ function say(event, vars){
   if(!state.enabled) return;
   const def = COMMS[event];
   if(!def || !state.self) return;
+  /*
+   * MISSION 0'S RADIO BELONGS TO PAPA. Generic control chatter ("lost the
+   * chain", pickup callouts) talking over the story beats made the level
+   * read as a normal mission with a voice-over fighting it. While the
+   * prologue runs, control stays off the air entirely; the brothers may
+   * banter through the flight check and the raid, but once the theft
+   * starts, everyone but the workshop goes quiet - menace is silence.
+   */
+  if(SF.prologue && SF.prologue.active() && !/^prologue/.test(event)){
+    const st = SF.prologue._s && SF.prologue._s();
+    if(def.speaker === "control") return;
+    if(def.speaker === "mate" && st && st.theftAt) return;
+  }
   const last = state.lastAt[event];
   if(last != null && state.now - last < def.cooldown) return;
   if(state.active && state.active.life < MIN_GAP) return;
   // A "mate" line with nobody else in the house comes from control instead.
   const useMate = def.speaker === "mate" && !!state.mate;
+  // The workshop is Papa's bench on the ground - control-shaped, but with
+  // its own name and the workbench gold, so Mission 0's voice reads as
+  // family rather than air traffic. Translated here because the panel is
+  // canvas text, which the DOM sweep can never reach.
+  const isWorkshop = def.speaker === "workshop";
   const who = useMate ? state.mate : null;
   const line = def.lines[Math.floor(Math.random()*def.lines.length)];
   state.lastAt[event] = state.now;
   state.active = {
     text: fill(line, Object.assign({}, state.vars, vars)),
-    speaker: who ? who.name : "CONTROL",
-    color: who ? who.color : "#7fc4ff",
+    speaker: who ? who.name : (isWorkshop && SF.i18n ? SF.i18n.t("WORKSHOP") : isWorkshop ? "WORKSHOP" : "CONTROL"),
+    color: who ? who.color : (isWorkshop ? "#ffd23f" : "#7fc4ff"),
     levels: who ? who.levels : state.self.levels,
     shipColor: who ? who.color : state.self.color,
     pilot: who ? (who.pilot || null) : state.self.pilot,
@@ -25837,6 +26482,7 @@ function startMission(missionIndex, difficultyId){
   SF.finale.reset();                      // no intro/fleet/death left running
   SF.backstage.reset();                   // the workshop sleeps until asked
   if(mission.backstage) SF.backstage.begin();
+  SF.prologue.reset();                    // Earth sleeps until Mission 0 asks
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
@@ -26082,6 +26728,10 @@ function startMission(missionIndex, difficultyId){
     ended: false,
   };
 
+  // Mission 0's script starts once the run is real: begin() edits the run's
+  // own pod schedule, so it cannot live in the reset block with the others.
+  if(mission.prologue) SF.prologue.begin(game.run, game.world);
+
   /*
    * First flight of the day pays double. It is the "come back tomorrow" hook:
    * one banner, one doubled payScale, and a date on the profile. Deliberately
@@ -26177,6 +26827,7 @@ function startMission(missionIndex, difficultyId){
              : mission.beat ? "chorusStart"
              : mission.foundry ? "foundryStart"
              : mission.serpent ? "serpentStart"
+             : mission.prologue ? "prologueStart"
              : mission.backstage ? "backstageStart"
              : mission.sky29 ? "sky29Start"
              : mission.ferry ? "ferryStart"
@@ -27216,6 +27867,10 @@ function update(dt, timeMs){
       // Behind the Sky: the first fake ending plays out before the boss may
       // arrive - backstage.js says when the workshop is ready.
       if(run.mission.backstage && !SF.backstage.readyForBoss()){ /* hold */ }
+      // Mission 0: the raid is swept, but the story is mid-sentence - the
+      // chute, the theft and the climb happen HERE, in the hold. prologue.js
+      // raises readyToEnd() when the family is out of the atmosphere.
+      else if(run.mission.prologue && !SF.prologue.readyToEnd()){ /* hold */ }
       else if(run.mission.boss){
         run.bossActive = true;
         run.bossSpawned = true;
@@ -28407,6 +29062,7 @@ function update(dt, timeMs){
 
   // Behind the Sky: the workshop's whole theatre lives in backstage.js.
   if(run.mission.backstage) SF.backstage.update(dt, run, game.world, simMs);
+  if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
 
@@ -28760,6 +29416,7 @@ function draw(timeMs){
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
+  SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -30399,7 +31056,7 @@ function renderMenu(){
     $("wackyBtn").classList.toggle("locked", !open);
     const rivals = P.listNames().map(P.load).filter(q => (q.endlessBest || 0) > 0)
       .sort((a,b) => b.endlessBest - a.endlessBest);
-    setSub("wackySub", !open ? T("opens after Mission {n}", { n: WACKY_AFTER + 1 })
+    setSub("wackySub", !open ? T("opens after Mission {n}", { n: WACKY_AFTER })
       : rivals.length
         ? T("beat {who}'s {pts} pts", { who: rivals[0].callsign || rivals[0].name,
                                         pts: rivals[0].endlessBest.toLocaleString(numLocale()) })
@@ -30411,7 +31068,7 @@ function renderMenu(){
                                          profile.missions[id].cleared).length;
     $("rushBtn").classList.toggle("locked", bosses === 0);
     setSub("rushSub", bosses === 0
-      ? T("beat the Mission {n} boss first", { n: RUSH_AFTER + 1 })
+      ? T("beat the Mission {n} boss first", { n: RUSH_AFTER })
       : T(bosses > 1 ? "{n} bosses in the queue · best {best} down"
                      : "{n} boss in the queue · best {best} down",
           { n: bosses, best: profile.bossRushBest || 0 }));
@@ -31222,33 +31879,33 @@ function campaignLayout(){
 const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const SECTORS = [
   { at:0,  name:"HOME PATROL",     hue:"#6ee7a8",
-    sub:"our own sky, and how to fly in it" },              // 1-3
-  { at:3,  name:"THE BELT",        hue:"#f5a623",
+    sub:"our own sky, and how to fly in it" },              // 0-3 (Earth joins the home sector)
+  { at:4,  name:"THE BELT",        hue:"#f5a623",
     sub:"rocks, raiders and the first big one" },           // 4-6
-  { at:6,  name:"THE STORM",       hue:"#7cc4ff",
+  { at:7,  name:"THE STORM",       hue:"#7cc4ff",
     sub:"wild wind, and friends to get out" },              // 7-8
-  { at:8,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
+  { at:9,  name:"THE SUPPLY ROAD", hue:"#fbbf24",
     sub:"guard the hauler, then carry the load yourself" }, // 9-12
-  { at:12, name:"ENEMY SPACE",     hue:"#f472b6",
+  { at:13, name:"ENEMY SPACE",     hue:"#f472b6",
     sub:"behind their lines, where nobody is friendly" },   // 13-17
-  { at:17, name:"WARDEN'S REACH",  hue:"#34d399",
+  { at:18, name:"WARDEN'S REACH",  hue:"#34d399",
     sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
-  { at:21, name:"THE TRENCHES",    hue:"#8ab4f8",
+  { at:22, name:"THE TRENCHES",    hue:"#8ab4f8",
     sub:"straight down the middle of their fortress" },     // 22-25
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:25, name:"THEIR STAR",      hue:"#fb7185",
+  { at:26, name:"THEIR STAR",      hue:"#fb7185",
     sub:"over their sun, and the last big ship" },          // 26-27
-  { at:27, name:"THE DARK",        hue:"#64748b",
+  { at:28, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 28-30
-  { at:31, name:"THE CRACK",       hue:"#a78bfa",
+  { at:32, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 32-36
-  { at:36, name:"THE WORKSHOP",    hue:"#22d3ee",
+  { at:37, name:"THE WORKSHOP",    hue:"#22d3ee",
     sub:"behind the sky, where skies get made" },           // 37-39
-  { at:39, name:"THE EASEL",       hue:"#ffd23f",
+  { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
 
@@ -31822,7 +32479,8 @@ function drawCampaign(){
     ctx.font = "bold 10px Rajdhani, Arial, sans-serif";
     ctx.letterSpacing = "1.5px";
     ctx.globalAlpha *= 0.8;
-    ctx.fillText(T("SECTOR {n} · STOPS {a}-{b}", { n: si+1, a: st.from+1, b: st.to+1 }), lx, ly - 15);
+    // Stop numbers are mission ids, and id == index since Mission 0 took slot 0.
+    ctx.fillText(T("SECTOR {n} · STOPS {a}-{b}", { n: si+1, a: st.from, b: st.to }), lx, ly - 15);
     ctx.globalAlpha = state === "locked" ? 0.55 : 0.92;
 
     if(state === "perfect"){                 // a mastered stretch gets a glow
@@ -34073,14 +34731,15 @@ function drawBriefHero(index){
   if(!ctx) return;
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
-  const photo = SF.skygen.photoFor(index);
+  const skyIx = SF.missions.skyOf(index);   // Mission 0 flies the appended Earth sky
+  const photo = SF.skygen.photoFor(skyIx);
   const art = photo && SF.render.isReady() ? SF.render.assets[photo] : null;
   if(art){
     const iw = art.naturalWidth || 400, ih = art.naturalHeight || 500;
     const cover = Math.max(W/iw, H/ih);
     ctx.drawImage(art, (W - iw*cover)/2, (H - ih*cover)/2, iw*cover, ih*cover);
   } else {
-    const sky = SF.skygen.build(index, W, Math.round(W*1.25));
+    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25));
     if(sky) ctx.drawImage(sky, 0, -(Math.round(W*1.25) - H)*0.45);
   }
   // The in-game skies are deliberately near-black so bullets read on them;
@@ -34105,7 +34764,7 @@ function drawBriefHero(index){
  * levels have been inserted ahead of this gate over the game's life, and each
  * time the literal "3" quietly came to mean a different mission.
  */
-const WACKY_AFTER = 3;                       // stop four, by index
+const WACKY_AFTER = 4;                       // Mission 4, by index - Earth shifted every index up one
 function wackyUnlocked(p){
   const m = MISSIONS[WACKY_AFTER];
   const rec = m && p && p.missions && p.missions[m.id];
