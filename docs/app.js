@@ -21,30 +21,30 @@
  *     8471  src/fx.js
  *     9584  src/input.js
  *    10007  src/entities.js
- *    11219  src/bossart.js
- *    12085  src/bosses.js
- *    12835  src/bossintro.js
- *    12958  src/rewind.js
- *    13489  src/finale.js
- *    13810  src/papadeath.js
- *    14132  src/backstage.js
- *    15081  src/sky29.js
- *    15326  src/mirrorduel.js
- *    15673  src/homecoming.js
- *    15870  src/prologue.js
- *    16336  src/systems.js
- *    16967  src/render.js
- *    21580  src/enemyart.js
- *    22532  src/insignia.js
- *    22777  src/skygen.js
- *    25721  src/shipart.js
- *    26921  src/paintjob.js
- *    27083  src/pilotart.js
- *    27178  src/comms.js
- *    27317  src/game.js
- *    30880  src/workshop.js
- *    31577  src/data/i18nbind.js
- *    31648  src/ui.js
+ *    11246  src/bossart.js
+ *    12112  src/bosses.js
+ *    12862  src/bossintro.js
+ *    12985  src/rewind.js
+ *    13516  src/finale.js
+ *    13837  src/papadeath.js
+ *    14159  src/backstage.js
+ *    15108  src/sky29.js
+ *    15353  src/mirrorduel.js
+ *    15700  src/homecoming.js
+ *    15897  src/prologue.js
+ *    16363  src/systems.js
+ *    16994  src/render.js
+ *    21607  src/enemyart.js
+ *    22559  src/insignia.js
+ *    22804  src/skygen.js
+ *    25748  src/shipart.js
+ *    26948  src/paintjob.js
+ *    27110  src/pilotart.js
+ *    27205  src/comms.js
+ *    27344  src/game.js
+ *    30907  src/workshop.js
+ *    31604  src/data/i18nbind.js
+ *    31675  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -10265,6 +10265,8 @@ function hpPowerScale(diff, dps){
 
 class World {
   constructor(){
+    this.players = [];     // seat 0 is `player`; co-op adds seat 1
+    this.player  = null;
     this.bullets      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:3,dmg:1,pierce:0,homing:0,tier:0,age:0,fromDrone:false }), 320);
     this.enemyBullets = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,r:4,kind:"bolt",age:0 }), 400);
     /*
@@ -10304,6 +10306,11 @@ class World {
     this.enemies.killAll();
     this.pickups.killAll();
     this.boss = null;
+    // Both seats go with the old mission: a stale second ship would keep
+    // being drawn, keep being shot at, and keep collecting coins for a pilot
+    // who is no longer playing.
+    this.players = [];
+    this.player = null;
     this.haulers = [];     // the Convoy's escort targets
     this.silent = false;   // set per mission by startMission (noGuns runs)
     this.silentClock = 0; this.lastSilentShot = -99;
@@ -10442,12 +10449,31 @@ class World {
       recoil: 0,
       trail: [],
     };
-    this.player = p;
+    /*
+     * TWO SEATS.
+     *
+     * `players` is the list; `player` is still the first of them, and stays a
+     * real property so that all ninety-odd existing reads of world.player -
+     * the camera, the magnet, every boss aiming at "the" ship - keep working
+     * untouched. Solo is a list of one and behaves exactly as it always has.
+     * Co-op appends a second and the loops below run twice.
+     */
+    p.seat = this.players.length;
+    this.players.push(p);
+    if(p.seat === 0) this.player = p;
     return p;
   }
 
-  updatePlayer(dt, timeMs){
-    const p = this.player;
+  /** Every seat currently flying - the list co-op iterates. */
+  livePlayers(){
+    const out = [];
+    for(let i = 0; i < this.players.length; i++)
+      if(this.players[i] && this.players[i].alive) out.push(this.players[i]);
+    return out;
+  }
+
+  updatePlayer(dt, timeMs, who, inputState){
+    const p = who || this.player;
     if(!p || !p.alive) return;
 
     // Launch: the ship rockets up from below the screen to its station,
@@ -10489,7 +10515,7 @@ class World {
       return;
     }
 
-    const input = SF.input.state;
+    const input = inputState || SF.input.state;
 
     // Acceleration-based movement: the ship has weight and carries a little
     // momentum, which reads far better than teleporting to the finger.
@@ -10590,7 +10616,7 @@ class World {
       return;
     p.cooldown -= dt;
     if(p.cooldown <= 0){
-      this.fireWeapons(timeMs);
+      this.fireWeapons(timeMs, p);
       let interval = p.fireInterval;
       if(timeMs < p.tempRapidUntil) interval *= 0.55;
       if(timeMs < p.overdriveUntil) interval *= 0.5;
@@ -10598,8 +10624,9 @@ class World {
     }
   }
 
-  fireWeapons(timeMs){
-    const p = this.player;
+  fireWeapons(timeMs, who){
+    const p = who || this.player;
+    if(!p || !p.alive) return;
     const overdrive = timeMs < p.overdriveUntil;
     const spreadLvl = timeMs < p.tempSpreadUntil ? Math.max(p.spreadLvl, 3) : p.spreadLvl;
     const homing = timeMs < p.tempHomingUntil ? 3 : p.homingLvl;
