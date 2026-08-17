@@ -1470,6 +1470,41 @@ async function run(){
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
+  /*
+   * EVERYTHING CLICKABLE HAS TO BE CLICKABLE IN FULLSCREEN TOO.
+   *
+   * Fullscreen takes pointer lock, so the OS cursor is gone and the game
+   * hit-tests its own reticle against INTERACTIVE - "button, a, input,
+   * select, textarea, [role=button]" - and synthesises the press. A plain
+   * div with a click listener matches none of that, so the pilot cards were
+   * visible, looked pressable, and did nothing: you had to leave fullscreen
+   * to change pilot. Same for the garage's ship canvas.
+   *
+   * Pinned against the selector input.js actually uses rather than against
+   * the attribute, so any future markup that satisfies the hit test passes.
+   */
+  {
+    const INTERACTIVE = "button, a, input, select, textarea, [role=button]";
+    const src = fs.readFileSync(path.join(__dirname, "src/input.js"), "utf8");
+    check("the fullscreen cursor's target list is still what this pins against",
+      src.indexOf('const INTERACTIVE = "' + INTERACTIVE + '"') > -1);
+    check("a pilot card can be pressed by the fullscreen cursor",
+      Array.from(qa("#profileGrid .profile-card")).every(c => c.matches(INTERACTIVE)));
+    check("...and so can the garage's ship", (() => {
+      const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+      const tag = /<canvas id="hangarCanvas"[\s\S]*?>/.exec(h);
+      return !!tag && /role="button"/.test(tag[0]);
+    })());
+    /*
+     * And the synthesised click has to carry WHERE it happened. This was
+     * el.click(), which fires at 0,0 - fine for a button, useless for the
+     * garage ship, which is hit-tested against the tap position inside its
+     * canvas and so never matched in fullscreen.
+     */
+    check("a synthesised press carries the cursor position, not 0,0",
+      /new MouseEvent\("click", base\)/.test(src) &&
+      /clientX:lockX, clientY:lockY/.test(src));
+  }
   {
     clickEl(id("addProfileBtn"));
     await sleep(10);

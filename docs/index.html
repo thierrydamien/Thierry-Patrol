@@ -202,7 +202,11 @@
          header over it. -->
     <div class="armory-top">
       <div class="armory-stage">
-        <canvas id="hangarCanvas" class="hangar-canvas" width="620" height="360"></canvas>
+        <!-- role=button because tapping the ship jumps to its next upgrade,
+             and in fullscreen the game's own cursor only presses things that
+             match "button, a, input, select, textarea, [role=button]". -->
+        <canvas id="hangarCanvas" class="hangar-canvas" width="620" height="360"
+                role="button" aria-label="Your ship"></canvas>
         <div id="hangarCompareLabels" class="hangar-labels hidden">
           <span>STOCK</span><span>YOURS</span>
         </div>

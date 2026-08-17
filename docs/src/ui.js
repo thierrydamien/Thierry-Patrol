@@ -551,6 +551,19 @@ function renderProfiles(){
     const rank = P.rankFor(p);
     const card = document.createElement("div");
     card.className = "profile-card";
+    /*
+     * A pilot card IS a button, and saying so is what makes it work.
+     *
+     * In fullscreen the game owns the cursor (pointer lock), so a click is
+     * resolved by hit-testing our own reticle against INTERACTIVE - "button,
+     * a, input, select, textarea, [role=button]". A bare div with a listener
+     * matches none of that, so in fullscreen you could see the pilot cards
+     * and pressing one did nothing at all; you had to leave fullscreen to
+     * change pilot. Marking it up as what it already behaves like fixes the
+     * fullscreen cursor, keyboard focus and screen readers in one go.
+     */
+    card.setAttribute("role", "button");
+    card.tabIndex = 0;
     card.innerHTML = `
       <div class="pc-art"><canvas width="132" height="132"></canvas>
         <span class="pc-patch"></span></div>

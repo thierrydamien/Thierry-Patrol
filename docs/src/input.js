@@ -182,7 +182,19 @@ function press(el){
     el.dispatchEvent(new PointerEvent("pointerup", pe));
   } catch(e){ /* PointerEvent constructor missing: the click below still lands */ }
   if(el.focus) el.focus();
-  if(el.click) el.click();
+  /*
+   * The click has to carry WHERE it happened.
+   *
+   * This was el.click(), which synthesises a click at 0,0 - fine for a button,
+   * which only cares that it was pressed, and useless for anything that reads
+   * the coordinates. The garage's ship is hit-tested against the tap position
+   * inside its canvas, so in fullscreen it was being told every tap landed in
+   * the top-left corner and never matched. A dispatched MouseEvent runs the
+   * same activation behaviour as .click() and carries the cursor with it.
+   */
+  try {
+    el.dispatchEvent(new MouseEvent("click", base));
+  } catch(e){ if(el.click) el.click(); }
 }
 
 function keyDown(e){

@@ -20,28 +20,28 @@
  *     7389  src/cloud.js
  *     7994  src/fx.js
  *     9052  src/input.js
- *     9463  src/entities.js
- *    10675  src/bossart.js
- *    11541  src/bosses.js
- *    12291  src/bossintro.js
- *    12414  src/rewind.js
- *    12936  src/finale.js
- *    13257  src/papadeath.js
- *    13579  src/backstage.js
- *    14782  src/sky29.js
- *    15023  src/systems.js
- *    15642  src/render.js
- *    20238  src/enemyart.js
- *    21156  src/insignia.js
- *    21401  src/skygen.js
- *    23805  src/shipart.js
- *    25005  src/paintjob.js
- *    25167  src/pilotart.js
- *    25262  src/comms.js
- *    25383  src/game.js
- *    28836  src/workshop.js
- *    29533  src/data/i18nbind.js
- *    29600  src/ui.js
+ *     9475  src/entities.js
+ *    10687  src/bossart.js
+ *    11553  src/bosses.js
+ *    12303  src/bossintro.js
+ *    12426  src/rewind.js
+ *    12948  src/finale.js
+ *    13269  src/papadeath.js
+ *    13591  src/backstage.js
+ *    14794  src/sky29.js
+ *    15035  src/systems.js
+ *    15654  src/render.js
+ *    20250  src/enemyart.js
+ *    21168  src/insignia.js
+ *    21413  src/skygen.js
+ *    23817  src/shipart.js
+ *    25017  src/paintjob.js
+ *    25179  src/pilotart.js
+ *    25274  src/comms.js
+ *    25395  src/game.js
+ *    28848  src/workshop.js
+ *    29545  src/data/i18nbind.js
+ *    29612  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -9233,7 +9233,19 @@ function press(el){
     el.dispatchEvent(new PointerEvent("pointerup", pe));
   } catch(e){ /* PointerEvent constructor missing: the click below still lands */ }
   if(el.focus) el.focus();
-  if(el.click) el.click();
+  /*
+   * The click has to carry WHERE it happened.
+   *
+   * This was el.click(), which synthesises a click at 0,0 - fine for a button,
+   * which only cares that it was pressed, and useless for anything that reads
+   * the coordinates. The garage's ship is hit-tested against the tap position
+   * inside its canvas, so in fullscreen it was being told every tap landed in
+   * the top-left corner and never matched. A dispatched MouseEvent runs the
+   * same activation behaviour as .click() and carries the cursor with it.
+   */
+  try {
+    el.dispatchEvent(new MouseEvent("click", base));
+  } catch(e){ if(el.click) el.click(); }
 }
 
 function keyDown(e){
@@ -30150,6 +30162,19 @@ function renderProfiles(){
     const rank = P.rankFor(p);
     const card = document.createElement("div");
     card.className = "profile-card";
+    /*
+     * A pilot card IS a button, and saying so is what makes it work.
+     *
+     * In fullscreen the game owns the cursor (pointer lock), so a click is
+     * resolved by hit-testing our own reticle against INTERACTIVE - "button,
+     * a, input, select, textarea, [role=button]". A bare div with a listener
+     * matches none of that, so in fullscreen you could see the pilot cards
+     * and pressing one did nothing at all; you had to leave fullscreen to
+     * change pilot. Marking it up as what it already behaves like fixes the
+     * fullscreen cursor, keyboard focus and screen readers in one go.
+     */
+    card.setAttribute("role", "button");
+    card.tabIndex = 0;
     card.innerHTML = `
       <div class="pc-art"><canvas width="132" height="132"></canvas>
         <span class="pc-patch"></span></div>
