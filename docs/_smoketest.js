@@ -489,7 +489,7 @@ async function run(){
     return M.every(m => m.prologue ? m.sky === 40 : m.sky === m.id - 1) &&
            SF.skygen.SKIES.length === 41 &&
            SF.skygen.SKIES[40].surface === true &&
-           SF.skygen.SKIES[40].props.some(pr => pr.k === "ground");
+           SF.skygen.SKIES[40].props.some(pr => pr.k === "fields");
   })());
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star

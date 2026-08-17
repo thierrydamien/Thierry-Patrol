@@ -59,6 +59,33 @@ const RING_SPOTS = [
 
 let S = null;                // the whole script state; null = not running
 
+/*
+ * One cumulus, baked soft: a spine of overlapping radial blobs, white on
+ * top, dawn-warmed underneath. Big and blurry on purpose - a cloud with a
+ * readable edge would fight every bullet drawn over it.
+ */
+function bakeCloud(){
+  const w = 300, h = 150;
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const c = cv.getContext("2d");
+  if(!c) return cv;
+  const blobs = 9 + Math.floor(Math.random()*5);
+  for(let i = 0; i < blobs; i++){
+    const t = i/(blobs - 1);
+    const bx = w*0.14 + t*w*0.72 + (Math.random() - 0.5)*w*0.08;
+    const by = h*0.52 + Math.sin(t*Math.PI)* -h*0.16 + (Math.random() - 0.5)*h*0.10;
+    const br = h*(0.20 + Math.random()*0.16) * (0.7 + Math.sin(t*Math.PI)*0.5);
+    const g = c.createRadialGradient(bx, by - br*0.15, 0, bx, by, br);
+    g.addColorStop(0, "rgba(255,250,240,0.85)");
+    g.addColorStop(0.55, "rgba(250,230,205,0.45)");
+    g.addColorStop(1, "rgba(244,203,160,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(bx, by, br, 0, Math.PI*2); c.fill();
+  }
+  return cv;
+}
+
 function reset(){ S = null; }
 
 function begin(run, world){
@@ -84,6 +111,24 @@ function begin(run, world){
       x: Math.random(), y: Math.random(),
       r: 0.6 + Math.random()*1.4, tw: Math.random()*TAU,
     })),
+    /*
+     * THE CLOUD DECK - what makes Earth read as ATMOSPHERE, not a texture.
+     * A handful of soft cumulus sprites drift between the ship and the
+     * fields, each baked once here (Math.random: pure decoration) and
+     * blitted per frame. They ride below the eclipse veil, so the theft
+     * dims them with everything else; during the ascent they stream away
+     * downward and the deck breaks - the moment the sky becomes space.
+     */
+    clouds: Array.from({ length: 7 }, (_, i) => ({
+      spr: bakeCloud(),
+      fx: (i*0.61 + Math.random()*0.2) % 1,
+      y: Math.random(),
+      sc: 0.8 + Math.random()*0.9,
+      v: 55 + Math.random()*60,
+      a: 0.45 + Math.random()*0.35,
+    })),
+    birds: [],
+    nextFlock: 7,
     whoName: rescueName(),
   };
   // Marc bails out on the script's say-so, not the director's: the engine
@@ -119,6 +164,36 @@ function update(dt, run, world, simMs, VW, VH){
 
   // The eclipse never snaps - the light drains, it doesn't switch.
   S.veil += (S.veilTarget - S.veil) * Math.min(1, dt*1.6);
+
+  /* ---- the weather ---- */
+  const ascW = S.ascentAt ? clamp((T - S.ascentAt) / ASCENT_SECS, 0, 1) : 0;
+  for(const cl of S.clouds){
+    // the deck tears past once the climb starts, and thins to nothing
+    cl.y += (cl.v * (1 + ascW*9) * dt) / Math.max(1, VH);
+    if(cl.y > 1.25){ cl.y -= 1.5; cl.fx = (cl.fx + 0.37) % 1; }
+  }
+  if(T < RINGS_END + 10 && T > 2){
+    S.nextFlock -= dt;
+    if(S.nextFlock <= 0){
+      S.nextFlock = 8 + Math.random()*4;
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const fy = (0.30 + Math.random()*0.22);
+      const n = 5 + Math.floor(Math.random()*3);
+      for(let i = 0; i < n; i++){
+        S.birds.push({
+          x: (dir > 0 ? -30 : VW + 30) - dir*(i%3)*16,
+          y: fy*VH + (i - n/2)*9 + (i%2)*5,
+          vx: dir * (62 + Math.random()*14),
+          flap: Math.random()*TAU,
+        });
+      }
+    }
+  }
+  for(let i = S.birds.length - 1; i >= 0; i--){
+    const bd = S.birds[i];
+    bd.x += bd.vx*dt;
+    if(bd.x < -60 || bd.x > VW + 60) S.birds.splice(i, 1);
+  }
 
   /* ---- the flight check ---- */
   if(S.nextRing < RING_COUNT && T >= RING_FIRST + S.nextRing*RING_EVERY && T < RINGS_END - 2){
@@ -229,6 +304,31 @@ function drawSky(ctx, timeMs, VW, VH){
   if(!S) return;
   S.vw = VW; S.vh = VH;
   const T = S.t;
+
+  /* The morning traffic: birds under the cloud deck, both under the ship -
+     we are the highest thing over the farm until the raiders come. */
+  if(S.birds.length){
+    ctx.strokeStyle = "rgba(22,28,14,0.85)";
+    ctx.lineWidth = 2;
+    for(const bd of S.birds){
+      const f = Math.sin(timeMs/90 + bd.flap)*3.4;
+      ctx.beginPath();
+      ctx.moveTo(bd.x - 5, bd.y - f);
+      ctx.quadraticCurveTo(bd.x, bd.y + 2, bd.x + 5, bd.y - f);
+      ctx.stroke();
+    }
+  }
+  {
+    const ascW = S.ascentAt ? clamp((S.t - S.ascentAt) / ASCENT_SECS, 0, 1) : 0;
+    for(const cl of S.clouds){
+      const alpha = cl.a * (1 - Math.min(1, ascW*1.6));
+      if(alpha <= 0.01) continue;
+      const w = 300*cl.sc, h = 150*cl.sc;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(cl.spr, cl.fx*VW - w/2, cl.y*VH - h/2, w, h);
+    }
+    ctx.globalAlpha = 1;
+  }
 
   /* The eclipse: one veil, drawn over the sky and under everything alive.
      Blue-black rather than black - the light DRAINS, it doesn't turn off. */

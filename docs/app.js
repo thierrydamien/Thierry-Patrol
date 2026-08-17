@@ -30,19 +30,19 @@
  *    13841  src/backstage.js
  *    15044  src/sky29.js
  *    15285  src/prologue.js
- *    15651  src/systems.js
- *    16282  src/render.js
- *    20881  src/enemyart.js
- *    21833  src/insignia.js
- *    22078  src/skygen.js
- *    24548  src/shipart.js
- *    25748  src/paintjob.js
- *    25910  src/pilotart.js
- *    26005  src/comms.js
- *    26144  src/game.js
- *    29629  src/workshop.js
- *    30326  src/data/i18nbind.js
- *    30393  src/ui.js
+ *    15751  src/systems.js
+ *    16382  src/render.js
+ *    20981  src/enemyart.js
+ *    21933  src/insignia.js
+ *    22178  src/skygen.js
+ *    24805  src/shipart.js
+ *    26005  src/paintjob.js
+ *    26167  src/pilotart.js
+ *    26262  src/comms.js
+ *    26401  src/game.js
+ *    29886  src/workshop.js
+ *    30583  src/data/i18nbind.js
+ *    30650  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -15343,6 +15343,33 @@ const RING_SPOTS = [
 
 let S = null;                // the whole script state; null = not running
 
+/*
+ * One cumulus, baked soft: a spine of overlapping radial blobs, white on
+ * top, dawn-warmed underneath. Big and blurry on purpose - a cloud with a
+ * readable edge would fight every bullet drawn over it.
+ */
+function bakeCloud(){
+  const w = 300, h = 150;
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const c = cv.getContext("2d");
+  if(!c) return cv;
+  const blobs = 9 + Math.floor(Math.random()*5);
+  for(let i = 0; i < blobs; i++){
+    const t = i/(blobs - 1);
+    const bx = w*0.14 + t*w*0.72 + (Math.random() - 0.5)*w*0.08;
+    const by = h*0.52 + Math.sin(t*Math.PI)* -h*0.16 + (Math.random() - 0.5)*h*0.10;
+    const br = h*(0.20 + Math.random()*0.16) * (0.7 + Math.sin(t*Math.PI)*0.5);
+    const g = c.createRadialGradient(bx, by - br*0.15, 0, bx, by, br);
+    g.addColorStop(0, "rgba(255,250,240,0.85)");
+    g.addColorStop(0.55, "rgba(250,230,205,0.45)");
+    g.addColorStop(1, "rgba(244,203,160,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(bx, by, br, 0, Math.PI*2); c.fill();
+  }
+  return cv;
+}
+
 function reset(){ S = null; }
 
 function begin(run, world){
@@ -15368,6 +15395,24 @@ function begin(run, world){
       x: Math.random(), y: Math.random(),
       r: 0.6 + Math.random()*1.4, tw: Math.random()*TAU,
     })),
+    /*
+     * THE CLOUD DECK - what makes Earth read as ATMOSPHERE, not a texture.
+     * A handful of soft cumulus sprites drift between the ship and the
+     * fields, each baked once here (Math.random: pure decoration) and
+     * blitted per frame. They ride below the eclipse veil, so the theft
+     * dims them with everything else; during the ascent they stream away
+     * downward and the deck breaks - the moment the sky becomes space.
+     */
+    clouds: Array.from({ length: 7 }, (_, i) => ({
+      spr: bakeCloud(),
+      fx: (i*0.61 + Math.random()*0.2) % 1,
+      y: Math.random(),
+      sc: 0.8 + Math.random()*0.9,
+      v: 55 + Math.random()*60,
+      a: 0.45 + Math.random()*0.35,
+    })),
+    birds: [],
+    nextFlock: 7,
     whoName: rescueName(),
   };
   // Marc bails out on the script's say-so, not the director's: the engine
@@ -15403,6 +15448,36 @@ function update(dt, run, world, simMs, VW, VH){
 
   // The eclipse never snaps - the light drains, it doesn't switch.
   S.veil += (S.veilTarget - S.veil) * Math.min(1, dt*1.6);
+
+  /* ---- the weather ---- */
+  const ascW = S.ascentAt ? clamp((T - S.ascentAt) / ASCENT_SECS, 0, 1) : 0;
+  for(const cl of S.clouds){
+    // the deck tears past once the climb starts, and thins to nothing
+    cl.y += (cl.v * (1 + ascW*9) * dt) / Math.max(1, VH);
+    if(cl.y > 1.25){ cl.y -= 1.5; cl.fx = (cl.fx + 0.37) % 1; }
+  }
+  if(T < RINGS_END + 10 && T > 2){
+    S.nextFlock -= dt;
+    if(S.nextFlock <= 0){
+      S.nextFlock = 8 + Math.random()*4;
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const fy = (0.30 + Math.random()*0.22);
+      const n = 5 + Math.floor(Math.random()*3);
+      for(let i = 0; i < n; i++){
+        S.birds.push({
+          x: (dir > 0 ? -30 : VW + 30) - dir*(i%3)*16,
+          y: fy*VH + (i - n/2)*9 + (i%2)*5,
+          vx: dir * (62 + Math.random()*14),
+          flap: Math.random()*TAU,
+        });
+      }
+    }
+  }
+  for(let i = S.birds.length - 1; i >= 0; i--){
+    const bd = S.birds[i];
+    bd.x += bd.vx*dt;
+    if(bd.x < -60 || bd.x > VW + 60) S.birds.splice(i, 1);
+  }
 
   /* ---- the flight check ---- */
   if(S.nextRing < RING_COUNT && T >= RING_FIRST + S.nextRing*RING_EVERY && T < RINGS_END - 2){
@@ -15513,6 +15588,31 @@ function drawSky(ctx, timeMs, VW, VH){
   if(!S) return;
   S.vw = VW; S.vh = VH;
   const T = S.t;
+
+  /* The morning traffic: birds under the cloud deck, both under the ship -
+     we are the highest thing over the farm until the raiders come. */
+  if(S.birds.length){
+    ctx.strokeStyle = "rgba(22,28,14,0.85)";
+    ctx.lineWidth = 2;
+    for(const bd of S.birds){
+      const f = Math.sin(timeMs/90 + bd.flap)*3.4;
+      ctx.beginPath();
+      ctx.moveTo(bd.x - 5, bd.y - f);
+      ctx.quadraticCurveTo(bd.x, bd.y + 2, bd.x + 5, bd.y - f);
+      ctx.stroke();
+    }
+  }
+  {
+    const ascW = S.ascentAt ? clamp((S.t - S.ascentAt) / ASCENT_SECS, 0, 1) : 0;
+    for(const cl of S.clouds){
+      const alpha = cl.a * (1 - Math.min(1, ascW*1.6));
+      if(alpha <= 0.01) continue;
+      const w = 300*cl.sc, h = 150*cl.sc;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(cl.spr, cl.fx*VW - w/2, cl.y*VH - h/2, w, h);
+    }
+    ctx.globalAlpha = 1;
+  }
 
   /* The eclipse: one veil, drawn over the sky and under everything alive.
      Blue-black rather than black - the light DRAINS, it doesn't turn off. */
@@ -22635,7 +22735,7 @@ const SKIES = [
      */
     clouds:["#f0b168","#dd8f7e","#7f9cc8"], dust:"#18220f", star:"#fff2d8",
     lum:1.3, density:0.8, stars:0, bright:0,
-    props:[ {k:"ground", x:0.50, y:0.50, n:40, lit:"#b3b869", dark:"#2c3617"} ] },
+    props:[ {k:"fields", x:0.50, y:0.50, dark:"#2a3418"} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -23757,6 +23857,162 @@ function drawVortex(ctx, W, H, p, rand){
  * render.js): stars streaming over a canyon floor is the one detail that would
  * put the whole thing back in space.
  */
+/*
+ * FARMLAND, from altitude - Mission 0's Earth.
+ *
+ * The canyon painter above makes rock; run in green it made a night swamp.
+ * What sells "home" from a cockpit is the thing every child has seen from a
+ * plane window: a PATCHWORK - fields in different stages of the season, some
+ * cut gold, some young green, stitched with hedgerows, one dirt road
+ * wandering through, and copses of trees throwing morning shadows.
+ *
+ * Same two disciplines as the canyon: drawn once (never through `tiled`),
+ * and periodic in H by construction - the patch grid divides H exactly, the
+ * road completes whole cycles, and every copse near an edge is repeated at
+ * the far one, so the scroll never shows a seam. The dawn itself is baked
+ * in last: a warm wash from the key-light corner, so the land agrees with
+ * every lit hull in the game about where the sun is.
+ */
+function drawFields(ctx, W, H, p, rand){
+  const ROWS = 12, COLS = 6;
+  const ch = H/ROWS;
+  /*
+   * Columns are jittered - a regular grid reads as a chessboard, and no
+   * farm was ever surveyed that neatly. Rows stay exact divisions of H so
+   * the wrap seam lands on a hedgerow; all the irregularity is horizontal,
+   * where the scroll can never expose it.
+   */
+  const edges = [0];
+  { let acc = 0;
+    const raw = [];
+    for(let c = 0; c < COLS; c++){ const w = 0.6 + rand()*0.9; raw.push(w); acc += w; }
+    let x = 0;
+    for(let c = 0; c < COLS; c++){ x += raw[c]/acc*W; edges.push(x); } }
+  // The season's palette: young green to cut gold, all dawn-warmed.
+  const CROPS = ["#7f9a4e", "#94a75a", "#6b8a46", "#a8a55e", "#b3a765",
+                 "#87975a", "#758f4a", "#9fa864"];
+  const wrapY = (y, r, draw) => {
+    draw(y);
+    if(y - r < 0) draw(y + H);
+    if(y + r > H) draw(y - H);
+  };
+  ctx.save();
+  ctx.fillStyle = p.dark || "#2a3418";
+  ctx.fillRect(-2, -2, W + 4, H + 4);
+  /*
+   * The patches. Geometry stays ON the grid so row 0 and row H are the same
+   * line of hedgerows and the wrap is invisible; all the variety lives in
+   * colour, and in a soft within-patch gradient that reads as the lie of
+   * the land rather than flat paint.
+   */
+  let prevCrop = null;
+  for(let r = 0; r < ROWS; r++){
+    for(let c = 0; c < COLS; c++){
+      const x0 = edges[c], x1 = edges[c+1], cw = x1 - x0;
+      // A third of the time a field runs on into its neighbour - crops come
+      // in runs, and the runs are what stop the land reading as tiles.
+      const crop = (prevCrop && rand() < 0.35) ? prevCrop
+                 : CROPS[Math.floor(rand()*CROPS.length)];
+      prevCrop = crop;
+      // mixA takes HEXES and returns rgba() - never feed its output back in.
+      const g = ctx.createLinearGradient(x0, r*ch, x1, (r+1)*ch);
+      g.addColorStop(0, mixA(crop, "#ffd9a0", 0.22, 1));   // dawn-touched corner
+      g.addColorStop(1, mixA(crop, "#20300f", 0.38, 1));   // the shaded end
+      ctx.fillStyle = g;
+      ctx.globalAlpha = 0.86 + rand()*0.14;
+      ctx.fillRect(x0, r*ch, cw + 1, ch + 1);
+      // a few patches carry plough lines - thin darker rows along one axis
+      if(rand() < 0.3){
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = "#1e2812";
+        ctx.lineWidth = 1.4;
+        const horiz = rand() < 0.5, lines = 4 + Math.floor(rand()*3);
+        for(let l = 1; l <= lines; l++){
+          ctx.beginPath();
+          if(horiz){
+            const y = r*ch + (ch*l)/(lines+1);
+            ctx.moveTo(x0 + 3, y); ctx.lineTo(x1 - 3, y);
+          } else {
+            const x = x0 + (cw*l)/(lines+1);
+            ctx.moveTo(x, r*ch + 3); ctx.lineTo(x, (r+1)*ch - 3);
+          }
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  // Hedgerows: the stitching. Dark seams on the grid, slightly irregular in
+  // thickness so they read as grown, not drawn.
+  ctx.strokeStyle = "rgba(24,32,14,0.85)";
+  for(let r = 0; r <= ROWS; r++){
+    ctx.lineWidth = 2 + rand()*2.4;
+    ctx.beginPath(); ctx.moveTo(0, r*ch); ctx.lineTo(W, r*ch); ctx.stroke();
+  }
+  for(let c = 0; c <= COLS; c++){
+    ctx.lineWidth = 2 + rand()*2.4;
+    ctx.beginPath(); ctx.moveTo(edges[c], 0); ctx.lineTo(edges[c], H); ctx.stroke();
+  }
+  /*
+   * The road: one dirt lane wandering the whole strip, whole cycles over H
+   * (the canyon channel's trick) so its ends meet across the wrap. A pale
+   * cut with a darker edge - a road is a scar, not a river.
+   */
+  {
+    const wob = W*(0.10 + rand()*0.06);
+    const mid = W*(0.34 + rand()*0.3);
+    const phase = rand()*TAU;
+    const k1 = (TAU/H)*1, k2 = (TAU/H)*3;
+    const xAt = y => mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.3;
+    const lane = (off, wpx, col) => {
+      ctx.strokeStyle = col; ctx.lineWidth = wpx;
+      ctx.beginPath();
+      for(let y = -8; y <= H + 8; y += 8){
+        const x = xAt(y) + off;
+        if(y === -8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    lane(2.5, W*0.020, "rgba(30,36,18,0.8)");     // the shaded bank
+    lane(0,   W*0.014, "#8d7f57");                 // the dust itself
+  }
+  /*
+   * Copses: clusters of trees, each a dark crown with one lit arc on the
+   * key-light side, throwing a soft long shadow the OTHER way - the morning
+   * light, drawn twice so it cannot be missed.
+   */
+  const copses = 14;
+  for(let i = 0; i < copses; i++){
+    const bx = rand()*W, by = rand()*H, n = 3 + Math.floor(rand()*4);
+    wrapY(by, 40, y => {
+      for(let t = 0; t < n; t++){
+        const tx = bx + (rand() - 0.5)*46, ty = y + (rand() - 0.5)*34;
+        const tr = 6 + rand()*7;
+        ctx.fillStyle = "rgba(18,26,10,0.5)";                    // long shadow
+        ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#2c3d1c";                               // the crown
+        ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(255,214,140,0.5)";               // lit rim
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
+      }
+    });
+  }
+  /*
+   * And the dawn itself: warm on the key-light side, cool on the far side -
+   * and varying ONLY in x. This texture wraps vertically, and the canyon
+   * above already learned the lesson the hard way: anything baked that
+   * darkens toward a horizontal edge scrolls past as a seam band, once per
+   * wrap, forever. A left-to-right wash has no top or bottom to disagree.
+   */
+  const dawn = ctx.createLinearGradient(0, 0, W, 0);
+  dawn.addColorStop(0, "rgba(255,196,120,0.26)");
+  dawn.addColorStop(0.55, "rgba(255,196,120,0.06)");
+  dawn.addColorStop(1, "rgba(30,44,80,0.16)");
+  ctx.fillStyle = dawn;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -24436,6 +24692,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         else if(pr.k === "station") drawStation(px, W, H, pr, rand);
         else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
         else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
+        else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
       });
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";
