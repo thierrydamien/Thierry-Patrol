@@ -539,12 +539,12 @@ function resolve(world, ctxObj, dt){
            */
           if(e.type && e.type.soft){
             e.hp = 0;
-            ctxObj.onEnemyKilled(e, null, true);
+            ctxObj.onEnemyKilled(e, null, true, false, p);
             break;
           }
           if(!e.hazard){
             e.hp = 0;
-            ctxObj.onEnemyKilled(e, null, true);
+            ctxObj.onEnemyKilled(e, null, true, false, p);
           } else {
             fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
             fx.shake(10);

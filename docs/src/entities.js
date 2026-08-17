@@ -442,6 +442,14 @@ class World {
       levels: loadout.levels || {},
       recoil: 0,
       trail: [],
+      /*
+       * THIS PILOT'S OWN TAKE. The run keeps the team totals - the results
+       * card, the objectives and the progress bar all read those and are
+       * unchanged - and these are what gets banked into each pilot's OWN
+       * profile at the end, because in co-op the money and the medals are
+       * personal even though the mission is shared.
+       */
+      purse: 0, coinsGot: 0, killsGot: 0, rescuesGot: 0,
     };
     /*
      * TWO SEATS.
@@ -638,6 +646,7 @@ class World {
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false;
+      b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
@@ -650,6 +659,7 @@ class World {
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false;
+      b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
     }
@@ -1192,26 +1202,45 @@ class World {
         }
         if(dm < p.r + 20){
           it.alive = false;
-          onCollect(it);
+          onCollect(it, false, p);   // the twin is seat one's, so this is too
           continue;
         }
       }
-      if(p && p.alive){
-        const dx = p.x - it.x, dy = p.y - it.y;
-        const d = Math.hypot(dx, dy);
+      /*
+       * WHOSE COIN IS IT?
+       *
+       * In co-op the money is not shared - each pilot banks what they
+       * actually caught - so a pickup has to have an owner, and the rule is
+       * the plain one a child would expect: it goes to whoever reaches it.
+       * Only the NEAREST seat pulls, too. Two magnets dragging the same coin
+       * in opposite directions would leave it shivering between the ships
+       * and reaching neither, which is the sort of thing that reads as the
+       * game being broken rather than as a rule.
+       */
+      let near = null, nearD = Infinity;
+      for(let s = 0; s < this.players.length; s++){
+        const q = this.players[s];
+        if(!q || !q.alive) continue;
+        const d2 = (q.x-it.x)*(q.x-it.x) + (q.y-it.y)*(q.y-it.y);
+        if(d2 < nearD){ nearD = d2; near = q; }
+      }
+      if(near){
+        const q = near;
+        const dx = q.x - it.x, dy = q.y - it.y;
+        const d = Math.sqrt(nearD);
         // SUPER MAGNET: the tractor beam is the whole sky, and it does not
         // weaken with distance - coins streak in from the corners the moment
         // they exist. Loud, free money, and the reason it can't share a sky
         // with BOUNCY COINS (see wacky.js CONFLICTS).
         const vac = this.mods.vacuum;
-        const range = vac ? 4000 : p.magnetRange + (it.kind === "coin" ? 20 : 0);
+        const range = vac ? 4000 : q.magnetRange + (it.kind === "coin" ? 20 : 0);
         if(d < range && d > 0.01){       // tractor beam
           const pull = (vac ? 1500 : (1 - d/range) * 900) * dt;
           it.vx += dx/d * pull; it.vy += dy/d * pull;
         }
-        if(d < p.r + 20){
+        if(d < q.r + 20){
           it.alive = false;
-          onCollect(it);
+          onCollect(it, false, q);
           continue;
         }
       }

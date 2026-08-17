@@ -21,30 +21,30 @@
  *     8471  src/fx.js
  *     9584  src/input.js
  *    10045  src/entities.js
- *    11284  src/bossart.js
- *    12150  src/bosses.js
- *    12900  src/bossintro.js
- *    13023  src/rewind.js
- *    13554  src/finale.js
- *    13875  src/papadeath.js
- *    14197  src/backstage.js
- *    15146  src/sky29.js
- *    15391  src/mirrorduel.js
- *    15738  src/homecoming.js
- *    15935  src/prologue.js
- *    16401  src/systems.js
- *    17049  src/render.js
- *    21662  src/enemyart.js
- *    22614  src/insignia.js
- *    22859  src/skygen.js
- *    25803  src/shipart.js
- *    27003  src/paintjob.js
- *    27165  src/pilotart.js
- *    27260  src/comms.js
- *    27399  src/game.js
- *    30992  src/workshop.js
- *    31689  src/data/i18nbind.js
- *    31760  src/ui.js
+ *    11313  src/bossart.js
+ *    12179  src/bosses.js
+ *    12929  src/bossintro.js
+ *    13052  src/rewind.js
+ *    13583  src/finale.js
+ *    13904  src/papadeath.js
+ *    14226  src/backstage.js
+ *    15175  src/sky29.js
+ *    15420  src/mirrorduel.js
+ *    15767  src/homecoming.js
+ *    15964  src/prologue.js
+ *    16430  src/systems.js
+ *    17078  src/render.js
+ *    21691  src/enemyart.js
+ *    22643  src/insignia.js
+ *    22888  src/skygen.js
+ *    25832  src/shipart.js
+ *    27032  src/paintjob.js
+ *    27194  src/pilotart.js
+ *    27289  src/comms.js
+ *    27428  src/game.js
+ *    31183  src/workshop.js
+ *    31880  src/data/i18nbind.js
+ *    31951  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -10486,6 +10486,14 @@ class World {
       levels: loadout.levels || {},
       recoil: 0,
       trail: [],
+      /*
+       * THIS PILOT'S OWN TAKE. The run keeps the team totals - the results
+       * card, the objectives and the progress bar all read those and are
+       * unchanged - and these are what gets banked into each pilot's OWN
+       * profile at the end, because in co-op the money and the medals are
+       * personal even though the mission is shared.
+       */
+      purse: 0, coinsGot: 0, killsGot: 0, rescuesGot: 0,
     };
     /*
      * TWO SEATS.
@@ -10682,6 +10690,7 @@ class World {
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false;
+      b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
@@ -10694,6 +10703,7 @@ class World {
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false;
+      b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
     }
@@ -11236,26 +11246,45 @@ class World {
         }
         if(dm < p.r + 20){
           it.alive = false;
-          onCollect(it);
+          onCollect(it, false, p);   // the twin is seat one's, so this is too
           continue;
         }
       }
-      if(p && p.alive){
-        const dx = p.x - it.x, dy = p.y - it.y;
-        const d = Math.hypot(dx, dy);
+      /*
+       * WHOSE COIN IS IT?
+       *
+       * In co-op the money is not shared - each pilot banks what they
+       * actually caught - so a pickup has to have an owner, and the rule is
+       * the plain one a child would expect: it goes to whoever reaches it.
+       * Only the NEAREST seat pulls, too. Two magnets dragging the same coin
+       * in opposite directions would leave it shivering between the ships
+       * and reaching neither, which is the sort of thing that reads as the
+       * game being broken rather than as a rule.
+       */
+      let near = null, nearD = Infinity;
+      for(let s = 0; s < this.players.length; s++){
+        const q = this.players[s];
+        if(!q || !q.alive) continue;
+        const d2 = (q.x-it.x)*(q.x-it.x) + (q.y-it.y)*(q.y-it.y);
+        if(d2 < nearD){ nearD = d2; near = q; }
+      }
+      if(near){
+        const q = near;
+        const dx = q.x - it.x, dy = q.y - it.y;
+        const d = Math.sqrt(nearD);
         // SUPER MAGNET: the tractor beam is the whole sky, and it does not
         // weaken with distance - coins streak in from the corners the moment
         // they exist. Loud, free money, and the reason it can't share a sky
         // with BOUNCY COINS (see wacky.js CONFLICTS).
         const vac = this.mods.vacuum;
-        const range = vac ? 4000 : p.magnetRange + (it.kind === "coin" ? 20 : 0);
+        const range = vac ? 4000 : q.magnetRange + (it.kind === "coin" ? 20 : 0);
         if(d < range && d > 0.01){       // tractor beam
           const pull = (vac ? 1500 : (1 - d/range) * 900) * dt;
           it.vx += dx/d * pull; it.vy += dy/d * pull;
         }
-        if(d < p.r + 20){
+        if(d < q.r + 20){
           it.alive = false;
-          onCollect(it);
+          onCollect(it, false, q);
           continue;
         }
       }
@@ -16939,12 +16968,12 @@ function resolve(world, ctxObj, dt){
            */
           if(e.type && e.type.soft){
             e.hp = 0;
-            ctxObj.onEnemyKilled(e, null, true);
+            ctxObj.onEnemyKilled(e, null, true, false, p);
             break;
           }
           if(!e.hazard){
             e.hp = 0;
-            ctxObj.onEnemyKilled(e, null, true);
+            ctxObj.onEnemyKilled(e, null, true, false, p);
           } else {
             fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
             fx.shake(10);
@@ -27519,6 +27548,14 @@ function resize(){
    job. 150 fits the widest readout (a six-figure score) with margin. */
 const WING_MIN = 150;
 
+/*
+ * CO-OP REVIVE. Long enough that going down still stings and the survivor has
+ * a moment alone with the sky; short enough that a seven-year-old is never
+ * sat watching their sibling play. It costs the survivor a life, which is
+ * what stops "two pilots" from meaning "twice the lives, half the risk".
+ */
+const REVIVE_MS = 5000;
+
 /* ---------------------------------------------------------
    LOADOUT - profile upgrades become concrete ship stats.
    --------------------------------------------------------- */
@@ -27796,7 +27833,10 @@ function startMission(missionIndex, difficultyId){
    */
   if(mission.lentDrones)
     loadout.drones = Math.max(loadout.drones, mission.lentDrones);
-  game.world.createPlayer(loadout);
+  // `acct` is the book this seat's own coins, kills and medals go into. Solo
+  // it is simply the one profile playing, which is what every counter that
+  // used to say `game.profile` outright already meant.
+  game.world.createPlayer(loadout).acct = profile;
   /*
    * SEAT TWO. Their own profile, so their own hull, paint, upgrades and
    * callsign come with them - a co-op flight is two real pilots, not one
@@ -27811,6 +27851,7 @@ function startMission(missionIndex, difficultyId){
       const l2 = buildLoadout(mate, difficulty);
       if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
       const p2 = game.world.createPlayer(l2);
+      p2.acct = mate;
       p2.x = p2.targetX = VW*0.66;
       game.world.player.x = game.world.player.targetX = VW*0.34;
     }
@@ -28254,15 +28295,52 @@ function endMission(completed){
     co.hits     = co.hits*decay + (run.stats.hitsTaken || 0);
   }
 
-  profile.money += run.money;
-  profile.lifetimeMoney += run.money;
-  profile.totalKills += run.stats.kills;
-  profile.rescues += run.stats.rescues;
-  if(run.maxCombo > profile.maxCombo) profile.maxCombo = run.maxCombo;
-  if(completed){
-    profile.missionsCompleted++;
-    if(run.stats.damageTaken === 0) profile.flawlessMissions++;
-  }
+  /*
+   * PAYING TWO PILOTS OUT OF ONE FLIGHT.
+   *
+   * "My kids will want to play together but have achievements and coin for
+   * their own account" - so a co-op patrol is banked twice, and each child's
+   * half is the half they actually flew.
+   *
+   *   COINS are earned where they were caught. Every pickup credits the seat
+   *   that reached it (`purse`), so racing your brother to a falling coin
+   *   means something. Whatever is left over in `run.money` after both purses
+   *   is money the MISSION paid, not a pilot: the completion bonus, the
+   *   halfway bonus, a souvenir head. That residue is paid to each of them in
+   *   FULL rather than halved - two children who finished a patrol have each
+   *   finished a patrol, and splitting it would make flying together cost
+   *   pocket money.
+   *
+   *   KILLS and RESCUES are already tallied per seat, under the same guards
+   *   as the mission's own counters, so the two tallies add up to exactly the
+   *   mission total with nothing lost between them.
+   *
+   *   THE COMBO stays shared. One run, one combo chain, fed by both guns -
+   *   which quietly makes co-op the easiest place to set a combo record, and
+   *   that is a feature.
+   *
+   * Solo there is no mate, `run.money - purse` is precisely the bonus money,
+   * and every line below resolves to the single-profile arithmetic this has
+   * always done. Not a coin moves.
+   */
+  const mate = game.coopMate;
+  const seats = game.world.players || [];
+  const purses = seats.reduce((n, p) => n + (p.purse || 0), 0);
+  const shared = Math.max(0, Math.round(run.money - purses));
+  const bank = (prof, p) => {
+    const cash = mate ? Math.round((p ? p.purse : 0) + shared) : run.money;
+    prof.money += cash;
+    prof.lifetimeMoney += cash;
+    prof.totalKills += (mate && p) ? p.killsGot : run.stats.kills;
+    prof.rescues    += (mate && p) ? p.rescuesGot : run.stats.rescues;
+    if(run.maxCombo > prof.maxCombo) prof.maxCombo = run.maxCombo;
+    if(completed){
+      prof.missionsCompleted++;
+      if(run.stats.damageTaken === 0) prof.flawlessMissions++;
+    }
+  };
+  bank(profile, seats[0]);
+  if(mate) bank(mate, seats[1]);
   // The Wacky Sky keeps its own book: one all-time best score and one
   // longest run, no campaign record, no lastMission (the campaign hint must
   // keep pointing at a real map stop).
@@ -28324,8 +28402,25 @@ function endMission(completed){
       : [];
     P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0,
                     run.score, completed, metIds);
+    /*
+     * ...and the same entry in seat two's own book. They flew the same sky and
+     * ticked the same stars, so the mission is cleared on BOTH maps - a child
+     * who only ever plays alongside their sibling still has a campaign of
+     * their own that moves. The score is the run's, which is shared, so the
+     * record chips they compete over stay honest: a co-op number is a number
+     * two of them made, and it lands on both.
+     */
+    if(mate){
+      mate.lastMission = run.mission.id;
+      mate.lastDifficulty = run.difficulty.id;
+      P.recordMission(mate, run.mission.id, run.difficulty.id, completed ? stars : 0,
+                      run.score, completed, metIds);
+    }
   }
   const unlocked = P.checkAchievements(profile);
+  // Seat two's medals are checked against seat two's own lifetime numbers,
+  // which is the whole point of banking them separately above.
+  if(mate){ P.checkAchievements(mate); P.save(mate); }
 
   // A Daily Patrol never "fails" - the run simply ends, so its sound is a
   // fanfare on a new best and a neutral chime otherwise.
@@ -28368,9 +28463,21 @@ const callbacks = {
    * star, with three carriers deliberately diving toward the flame - becomes
    * unreachable through no fault of the player.
    */
-  onEnemyKilled(e, bullet, byRamming, noPay){
+  onEnemyKilled(e, bullet, byRamming, noPay, who){
     const run = game.run;
     e.alive = false;
+    /*
+     * WHOSE KILL. In co-op two children are shooting into the same sky and
+     * each one takes their tally home to their own account, so every kill
+     * has to name a pilot. A shot carries its firer (`bullet.owner`, stamped
+     * at the muzzle); a ram names the seat that did the ramming. Anything
+     * else - a hauler someone flew into, a ship the star burned, a crate the
+     * ox squashed - has no author, and falls to seat one.
+     *
+     * Solo, every one of those three answers is the same single player, so
+     * this is inert for one pilot and the numbers are unchanged.
+     */
+    const killer = who || (bullet && bullet.owner) || game.world.player;
     /*
      * `!e.fromBoss` as well as `e.counted`. A boss add is spawned outside the
      * WaveDirector, so it never increments `spawnedCount` - but it arrived here
@@ -28380,7 +28487,15 @@ const callbacks = {
      * the kill side did not, so the ratio could be inflated past 100% by
      * farming adds - the mirror image of the bug that made it unreachable.
      */
-    if(e.counted && !e.fromBoss){ run.stats.kills++; }
+    /*
+     * The per-pilot tally sits under the SAME guard, deliberately. A lifetime
+     * kill count has always meant "counted kills" - what the mission bar
+     * counts - so seat one's private tally must mean the same word, or a solo
+     * flight would suddenly bank a different number than it did yesterday.
+     * Under this guard the two seats' tallies add up to exactly run.stats.kills
+     * and the split is lossless.
+     */
+    if(e.counted && !e.fromBoss){ run.stats.kills++; if(killer) killer.killsGot++; }
     /*
      * A rope is cut the moment one of its two ends dies - counted HERE rather
      * than at the snap, because only this side knows the player did it. The
@@ -28519,10 +28634,13 @@ const callbacks = {
     run.comboTimer = 1.4;
     if(run.combo > run.maxCombo) run.maxCombo = run.combo;
     const comboMult = 1 + Math.min(Math.floor(run.combo/4), 5)*0.4;   // caps at x3
-    const scoreMult = comboMult * run.difficulty.pay * (simMs < game.world.player.tempScoreUntil ? 2 : 1);
+    // The killer's own boosts pay the killer's own kill: a SCORE x2 one child
+    // picked up must not quietly double the other one's shooting.
+    const payer = killer || game.world.player;
+    const scoreMult = comboMult * run.difficulty.pay * (simMs < payer.tempScoreUntil ? 2 : 1);
 
     run.score += Math.round(e.score * scoreMult);
-    let coin = Math.max(1, Math.round(e.money * run.payScale * game.world.player.moneyMult * comboMult));
+    let coin = Math.max(1, Math.round(e.money * run.payScale * payer.moneyMult * comboMult));
     // A WANTED ship pays five times, loudly. Picking one target out of a
     // moving crowd is a skill, and this is the level that pays for it.
     if(e.bounty){
@@ -28616,7 +28734,8 @@ const callbacks = {
         }
       });
       // Killed outside the scan, so the list can't change under the loop.
-      caught.forEach(o => { run.chainCount++; callbacks.onEnemyKilled(o, null, false); });
+      // The cascade belongs to whoever lit it, all the way down.
+      caught.forEach(o => { run.chainCount++; callbacks.onEnemyKilled(o, null, false, false, killer); });
       // ...and once the whole cascade has resolved, how big it was.
       if(first && run.chainCount >= 2){
         fx.text(e.x, e.y - 34, "CHAIN ×" + (run.chainCount + 1) + "!", "#fb923c", 21, true);
@@ -28787,6 +28906,22 @@ const callbacks = {
       fx.flash(1, "255,60,40");
       fx.hitStop(160);
       audio.play("bossExplode");
+      /*
+       * IN CO-OP THE SKY DOES NOT END WITH ONE PILOT. While a wingman is
+       * still up there the patrol continues, and the one who went down waits
+       * to be pulled back in rather than watching the rest of the level.
+       * Solo, livePlayers() is empty the moment the only ship dies, so this
+       * branch is never taken and the flight ends exactly as it always has.
+       */
+      if(game.world.livePlayers().length){
+        run.down = run.down || [];
+        run.down.push({ p, at: simMs + REVIVE_MS });
+        run.bannerText = seatName(p) + " IS DOWN";
+        run.bannerSub = "hold on — bringing them back";
+        run.bannerColor = "#ff5d73";
+        run.bannerUntil = simMs + 2600;
+        return;
+      }
       /*
        * Then the tape: "that's not fair" is nearly always "I never saw it".
        * Started BEFORE endMission so the UI finds it running and parks the
@@ -29064,6 +29199,16 @@ function finalBossBlast(boss){
 function pilotName(){
   const p = game.profile;
   return ((p && (p.callsign || p.name)) || "PILOT").toUpperCase();
+}
+
+/*
+ * The name of whoever is in a given SEAT, which in co-op is not always the
+ * profile that started the flight. A callsign lives on the account, not on
+ * the ship, so this goes through the seat's own book.
+ */
+function seatName(p){
+  const a = p && p.acct;
+  return ((a && (a.callsign || a.name)) || "WINGMAN").toUpperCase();
 }
 
 /* ---------------------------------------------------------
@@ -29433,6 +29578,45 @@ function update(dt, timeMs){
     run.bannerUntil = timeMs + 2000;
     audio.play("waveClear");
     SF.comms.say("halfway");
+  }
+
+  /*
+   * BRINGING A WINGMAN BACK. The survivor pays a life for it, so the pair
+   * cannot simply trade deaths forever - once whoever is still up is on their
+   * last life, nobody comes back and the next hit ends the patrol for both.
+   * The list is only ever non-empty in co-op, so solo skips the whole thing.
+   */
+  if(run.down && run.down.length){
+    for(let i = run.down.length - 1; i >= 0; i--){
+      const d = run.down[i];
+      if(timeMs < d.at) continue;
+      // The donor is whoever can best afford it, so the pair aren't stopped
+      // by the wrong pilot happening to be the poor one.
+      let donor = null;
+      const live = game.world.livePlayers();
+      for(let k = 0; k < live.length; k++)
+        if(live[k].lives > 1 && (!donor || live[k].lives > donor.lives)) donor = live[k];
+      if(!donor){ d.at = timeMs + 1000; continue; }   // ask again in a second
+      donor.lives--;
+      const p = d.p;
+      run.down.splice(i, 1);
+      p.alive = true;
+      p.lives = 1;
+      p.shield = 0;
+      p.invuln = Math.max(p.invulnTime, 2);           // long enough to get clear
+      p.x = p.targetX = clamp(donor.x + 46, 30, VW - 30);
+      p.y = p.targetY = clamp(donor.y + 34, 40, VH - 40);
+      p.vx = 0; p.vy = 0;
+      fx.ring(p.x, p.y, 90, p.color, 5, 0.5);
+      fx.ring(p.x, p.y, 50, "#ffd23f", 3, 0.35);
+      fx.sparks(p.x, p.y, 18, p.color, 220);
+      fx.text(p.x, p.y - 40, "BACK IN!", p.color, 20, true);
+      audio.play("rescue");
+      run.bannerText = seatName(p) + " IS BACK";
+      run.bannerSub = seatName(donor) + " gave up a life";
+      run.bannerColor = "#4ade80";
+      run.bannerUntil = timeMs + 2200;
+    }
   }
 
   game.world.updatePlayer(dt, timeMs);
@@ -30665,16 +30849,19 @@ function checkCloseCall(){
   }
 }
 
-function onPickupCollected(item, lost){
+function onPickupCollected(item, lost, who){
   const run = game.run;
-  const p = game.world.player;
+  // `who` is the seat that reached it. Solo passes none and gets seat zero.
+  const p = who || game.world.player;
   if(lost){
     if(item.kind === "rescue") fx.text(VW/2, VH*0.55, "PILOT LOST", "#ff5d73", 18, true);
     return;
   }
   if(item.kind === "coin"){
-    run.money += item.value;
+    run.money += item.value;         // the run's total: results, objectives
     run.stats.coins++;
+    p.purse += item.value;           // ...and this pilot's own, for the bank
+    p.coinsGot++;
     audio.play("coin");
     fx.sparks(item.x, item.y, 3, "#ffd23f", 90);
   } else if(item.kind === "supply"){
@@ -30689,7 +30876,8 @@ function onPickupCollected(item, lost){
     // Souvenirs from the Star Vault. Worth real money, and worth a giggle.
     run.stats.papaHeads = (run.stats.papaHeads || 0) + 1;
     run.score += 400;
-    run.money += Math.round(60 * p.moneyMult);
+    { const paid = Math.round(60 * p.moneyMult);
+      run.money += paid; p.purse += paid; }
     audio.play("papaBoing");
     fx.sparks(item.x, item.y, 12, "#ffd23f", 200);
     // Same voice as the send-off: Papa talks to his kids in French.
@@ -30707,14 +30895,17 @@ function onPickupCollected(item, lost){
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;
     run.score += 150;
-    run.money += Math.round(25 * p.moneyMult);
+    { const paid = Math.round(25 * p.moneyMult);
+      run.money += paid; p.purse += paid; }
     audio.play("star", run.stats.stars % 5);
     fx.sparks(item.x, item.y, 10, "#ffd23f", 190);
     fx.text(item.x, item.y - 14, "★", "#ffd23f", 20, true);
   } else if(item.kind === "rescue"){
     run.stats.rescues++;
+    p.rescuesGot++;                  // the pilot who caught the chute
     run.score += Math.round(150 * run.difficulty.pay);
-    run.money += Math.round(40 * run.difficulty.pay * p.moneyMult);
+    { const paid = Math.round(40 * run.difficulty.pay * p.moneyMult);
+      run.money += paid; p.purse += paid; }
     audio.play("rescue");
     fx.ring(item.x, item.y, 40, "#ffd23f", 3, 0.4);
     fx.text(item.x, item.y-18, "PILOT RESCUED", "#ffd23f", 17, true);
@@ -30722,7 +30913,7 @@ function onPickupCollected(item, lost){
   } else {
     const def = item.data;
     const now = simMs;
-    game.profile.powerupsCollected++;
+    (p.acct || game.profile).powerupsCollected++;
     audio.play("pickup");
     fx.text(p.x, p.y-34, def.label + "!", def.color, 19, true);
     if(def.id === "rapid") p.tempRapidUntil = now + 9000;

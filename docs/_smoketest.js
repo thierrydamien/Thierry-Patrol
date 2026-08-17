@@ -874,7 +874,11 @@ async function run(){
   })());
   check("boss adds never count as kills they were not spawned for", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
-    return /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; \}/.test(g);
+    // Both tallies, one guard. The mission's counter and the per-pilot one a
+    // co-op flight banks into a child's own account have to mean the same
+    // word, or a solo run would bank a different lifetime number than the
+    // progress bar showed - and the two seats' shares would not add up.
+    return /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; if\(killer\) killer\.killsGot\+\+; \}/.test(g);
   })());
   check("a scripted set piece is not dragged off by the safety leash",
     SF.enemyData.ENEMY_TYPES.serpent.noLeash === true &&
@@ -1173,7 +1177,7 @@ async function run(){
     const split = g.slice(g.indexOf("const split = e.type.splitsInto;"),
                           g.indexOf("fx.ring(e.x, e.y, 34"));
     return /uncounted:\s*true/.test(split) &&
-           /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; \}/.test(g);
+           /if\(e\.counted && !e\.fromBoss\)\{ run\.stats\.kills\+\+; if\(killer\) killer\.killsGot\+\+; \}/.test(g);
   })());
   check("the Star Vault stays out of the campaign ledger", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
@@ -8690,6 +8694,149 @@ async function run(){
              !/min-height:\s*([0-3]?\d)px/.test(seg) &&    // nothing dropped under 40
              !/\.diff-card|\.kit-item|\.ghost-btn/.test(seg);
     })());
+  }
+
+  /* ---------- two pilots, two accounts ----------
+   * "My kids will want to play together but have achievements and coin for
+   * their own account." That is the whole brief for co-op, and it is an
+   * accounting claim, so it gets flown rather than pattern-matched: two real
+   * profiles, one sky, and then the books opened afterwards.
+   *
+   * Last in the file on purpose. This block starts and ends missions and
+   * writes two new profiles into the save, and P.familyBest scans every
+   * profile there is - run earlier it would move records that a dozen
+   * assertions above read.
+   */
+  {
+    const P = SF.profile;
+    const G = SF.game;
+    const VWn = SF.entityConst.VW;
+    const closeCard = () => id("overlayResults").classList.add("hidden");
+    const mk = name => {
+      const q = P.blank(name);
+      q.missionsVer = 99;          // current, so no migration rewrites the ledger
+      P.save(q);
+      return q;
+    };
+    mk("CoopA"); mk("CoopB");
+    G.godMode = false;
+
+    /* --- solo: the baseline none of this may move --- */
+    G.coopWith = null;
+    G.profile = P.load("CoopA");
+    closeCard();
+    G.startMission(1, "pilot");
+    await runFrames(400);
+    const solo = G.world.player;
+    check("solo, the pilot's own tally IS the mission's tally",
+      G.run.stats.kills > 0 && solo.killsGot === G.run.stats.kills);
+    const soloBank = G.profile.money, soloKills = G.profile.totalKills;
+    G.endMission(true);
+    await runFrames(8);
+    {
+      const a = P.load("CoopA");
+      check("solo still banks the whole run, to the coin",
+        a.money - soloBank === G.run.money && a.totalKills - soloKills === G.run.stats.kills);
+    }
+    closeCard();
+
+    /* --- and now two of them --- */
+    G.coopWith = "CoopB";
+    G.profile = P.load("CoopA");
+    G.startMission(1, "pilot");
+    await runFrames(10, true);
+    const w = G.world;
+    const p1 = w.players[0], p2 = w.players[1];
+    check("a co-op flight puts two ships in the sky, each with its own book",
+      w.players.length === 2 && w.player === p1 &&
+      p1.acct && p1.acct.name === "CoopA" && p2.acct && p2.acct.name === "CoopB");
+
+    // Parked far apart, so "whoever reaches it" has an unambiguous answer.
+    // Only once the launch is over: through introFly the autopilot owns both
+    // ships' positions and would fly them straight back off any mark.
+    await runFrames(45, true);
+    const park = (p, x, y) => { p.x = p.targetX = x; p.y = p.targetY = y; p.vx = p.vy = 0; };
+    park(p1, VWn*0.12, 660);
+    park(p2, VWn*0.88, 240);
+    {
+      const a0 = p1.purse, b0 = p2.purse;
+      const coin = w.spawnPickup("coin", p2.x, p2.y - 8, { value: 77 });
+      coin.vx = 0;
+      await runFrames(14, true);
+      check("a coin caught by seat two is seat two's money, and only theirs",
+        !coin.alive && p2.purse === b0 + 77 && p1.purse === a0);
+    }
+    {
+      // A kill by seat two's gun. Guns are automatic, so parking a grunt in
+      // front of seat two and waiting is the honest way to make one happen.
+      const k1 = p1.killsGot, k2 = p2.killsGot;
+      const e = w.spawnEnemy("grunt", p2.x, p2.y - 150,
+                             { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+      e.vx = 0; e.vy = 0; e.hp = 1;
+      await runFrames(40, true);
+      check("a kill by seat two's gun is seat two's kill",
+        !e.alive && p2.killsGot === k2 + 1 && p1.killsGot === k1);
+    }
+    {
+      /*
+       * One pilot going down does not end the patrol, and the other one buys
+       * them back in with a life of their own. Without this a seven-year-old
+       * sits and watches their sibling finish the level.
+       */
+      w.enemies.killAll(); w.enemyBullets.killAll();   // a clean sky to measure in
+      p1.lives = 3;
+      p2.lives = 1; p2.shield = 0; p2.invuln = 0;
+      const donorBefore = p1.lives;
+      const ram = w.spawnEnemy("grunt", p2.x, p2.y,
+                               { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+      ram.vx = 0; ram.vy = 0;
+      await runFrames(6, true);
+      check("in co-op the sky does not end with one pilot",
+        !p2.alive && !G.run.ended && G.state === "playing" &&
+        w.livePlayers().length === 1);
+      /*
+       * The wait is nearly six seconds of a live mission, and the two ships
+       * are parked. Anything the director sends over in the meantime would
+       * take a life off the donor and the arithmetic below would be
+       * measuring the wrong thing, so the survivor sits it out untouchable.
+       */
+      p1.invuln = 1e9;
+      await runFrames(170, true);                 // past the five-second wait
+      p1.invuln = 0;
+      check("the survivor buys their wingman back in, and pays for it",
+        p2.alive && p2.lives === 1 && p1.lives === donorBefore - 1 &&
+        (!G.run.down || G.run.down.length === 0));
+    }
+    {
+      // The books. Each pilot's coins are their own; the mission's own money
+      // - completion bonus, halfway bonus - is paid to both in full.
+      const aBefore = P.load("CoopA"), bBefore = P.load("CoopB");
+      const aM = aBefore.money, bM = bBefore.money;
+      const aK = aBefore.totalKills, bK = bBefore.totalKills;
+      const aC = aBefore.missionsCompleted, bC = bBefore.missionsCompleted;
+      const purse1 = p1.purse, purse2 = p2.purse, got1 = p1.killsGot, got2 = p2.killsGot;
+      G.endMission(true);
+      await runFrames(8);
+      const run = G.run;
+      const a = P.load("CoopA"), b = P.load("CoopB");
+      const shared = run.money - (purse1 + purse2);
+      check("each pilot banks their own coins plus the mission's, in full",
+        shared > 0 &&
+        a.money - aM === Math.round(purse1 + shared) &&
+        b.money - bM === Math.round(purse2 + shared));
+      check("the two seats' kills add up to the mission's, with none lost",
+        got1 + got2 === run.stats.kills &&
+        a.totalKills - aK === got1 && b.totalKills - bK === got2);
+      check("both children get the mission on their own map",
+        a.missionsCompleted - aC === 1 && b.missionsCompleted - bC === 1 &&
+        !!(a.missions[run.mission.id] && a.missions[run.mission.id].cleared) &&
+        !!(b.missions[run.mission.id] && b.missions[run.mission.id].cleared));
+    }
+    closeCard();
+    G.coopWith = null;
+    G.coopMate = null;
+    SF.input.setCoop(false);
+    G.run.ended = true; G.state = "idle";
   }
 
   /* ---------- report ---------- */
