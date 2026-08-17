@@ -1301,9 +1301,14 @@ const callbacks = {
     return res;                 // the collision layer needs to know what fell
   },
 
-  onPlayerHit(source, ent){
+  /*
+   * `who` is the seat that was hit. Solo never passes one and gets seat zero,
+   * exactly as before; in co-op the life has to come off the pilot who
+   * actually flew into the thing, not off whoever happens to be seat one.
+   */
+  onPlayerHit(source, ent, who){
     const run = game.run;
-    const p = game.world.player;
+    const p = who || game.world.player;
     if(!p || !p.alive || p.invuln > 0) return;
     // Every contact, absorbed or not. The garage's coach reads this to notice
     // "you're taking a lot of hits" - a shield eating them is still evidence.

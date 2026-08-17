@@ -1154,7 +1154,9 @@ async function run(){
   check("a hit the shield ate is not damage taken", (() => {
     const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
     // damageTaken must be incremented BELOW the shield branch, not above it
-    const hit = g.indexOf("onPlayerHit(source, ent)");
+    // Prefix, not the whole signature: co-op added a `who` seat argument and
+    // an exact match made an unrelated parameter change look like a bug.
+    const hit = g.indexOf("onPlayerHit(source, ent");
     const shield = g.indexOf("if(p.shield > 0){", hit);
     const dmg = g.indexOf("run.stats.damageTaken++", hit);
     return hit > 0 && shield > 0 && dmg > shield;
@@ -6805,11 +6807,15 @@ async function run(){
       !/rewind\.begin/.test(
         fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8")
           .split("function endMission")[1].split("EVENT CALLBACKS")[0]));
-    check("the collision layer hands over WHAT hit you, not just a word",
-      /onPlayerHit\("collision", e\)/.test(
-        fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8")) &&
-      /onPlayerHit\("bullet", b\)/.test(
-        fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8")));
+    check("the collision layer hands over WHAT hit you, and WHO it hit", (() => {
+      const sy = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+      // The entity is still named (a hit has a cause), and every report now
+      // also names the seat, so in co-op the life comes off the right pilot.
+      return /onPlayerHit\("collision", e, p\)/.test(sy) &&
+             /onPlayerHit\("bullet", b, p\)/.test(sy) &&
+             /onPlayerHit\("boss", boss, p\)/.test(sy) &&
+             /const seats = world\.livePlayers\(\);/.test(sy);
+    })());
 
     closeCard();
     SF.game.run.ended = true; SF.game.state = "idle";

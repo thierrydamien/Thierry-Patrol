@@ -455,113 +455,13 @@ function resolve(world, ctxObj, dt){
     }
   }
 
-  /* --- everything that can hurt the player --- */
-  const p = world.player;
-  if(!p || !p.alive) return;
-  const invulnerable = p.invuln > 0 || ctxObj.godMode;
-
-  if(!invulnerable){
-    for(let i=0;i<enemies.length;i++){
-      const e = enemies[i];
-      if(!e.alive) continue;
-      /*
-       * A Limpet that has hold of you is not a collision. It is riding the
-       * hull by design, and it must never cost a life - a clinger that kills
-       * is just a Kamikaze in a hat, and it would kill EVERY frame it stayed
-       * on. This one line skips both the near-miss test and the ram branch,
-       * which is exactly right: the ride is not a dodge either.
-       */
-      if(e.attached) continue;
-      const rr = e.r + p.r;
-      const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
-      /*
-       * NEAR MISS (mission flag): a diver that goes past your wingtip without
-       * touching you pays for it. The lesson of the kamikaze level is "let
-       * them come, THEN swerve", and nothing teaches that like being paid for
-       * cutting it fine. Claimed once per ship, and only for things that
-       * actually dive - a grunt drifting past is not a dodge.
-       */
-      if(ctxObj.onGraze && !e.grazed && e.diver && d2 < (rr+22)*(rr+22) && d2 >= rr*rr){
-        e.grazed = true;
-        ctxObj.onGraze(e);
-      }
-      if(d2 < rr*rr){
-        // Ramming an enemy destroys it too - a fair trade, and it stops the
-        // "invisible wall" feeling of bouncing off a sprite. A rock is not a
-        // fair trade: it costs you a life and is still there afterwards, which
-        // is what makes a boulder something you actually have to fly around.
-        /*
-         * SOFT targets pop and cost nothing. The prologue's practice
-         * balloons are the only thing that sets this: a seven-year-old on
-         * their very first flight WILL steer into one, and the flight
-         * check must never answer that with damage. The pop still counts
-         * as a kill, so ramming balloons is playing, not cheating.
-         */
-        if(e.type && e.type.soft){
-          e.hp = 0;
-          ctxObj.onEnemyKilled(e, null, true);
-          break;
-        }
-        if(!e.hazard){
-          e.hp = 0;
-          ctxObj.onEnemyKilled(e, null, true);
-        } else {
-          fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
-          fx.shake(10);
-        }
-        ctxObj.onPlayerHit("collision", e);
-        break;
-      }
-    }
-  }
-
   /*
-   * THE ANCHOR (mission flag): the cable between a pair is solid.
-   *
-   * Its own pass, gated on the world flag, so no other level in the campaign
-   * pays a single distance test for a mechanic it does not use - the same deal
-   * `cover` gets below. Only the LEAD of each pair is walked, so a cable is
-   * considered once rather than once per end.
-   *
-   * Touching it costs a life and leaves both ships flying. That is deliberate
-   * and it is the difference between this and ramming: a ship you fly into
-   * dies with you, which makes ramming a trade a child will happily keep
-   * making. A cable is not a trade. It is a wall with a ship at each end, and
-   * the only two ways past it are round it or through one of the ends.
+   * Rocks stopping their bullets is about the SKY, not about any one pilot,
+   * so it runs once and above the per-seat pass below. (It used to sit inside
+   * the player block and was therefore skipped while you were respawning -
+   * bullets sailed through boulders for those two seconds. Running it here
+   * fixes that by construction.)
    */
-  if(world.tethered && !invulnerable && p.alive){
-    const rr = p.r + SF.tether.R;
-    for(let i=0;i<enemies.length;i++){
-      const e = enemies[i];
-      if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
-      // The drawn cable hangs, so the measured one has to hang identically:
-      // the curve is walked as TETHER_STEPS straight pieces, which tracks the
-      // painted quadratic to well under a pixel at the spans this game flies.
-      const c = SF.tether.curve(e, TCURVE);
-      SF.tether.at(c, 0, TA);
-      let hit = false;
-      for(let k = 1; k <= TETHER_STEPS && !hit; k++){
-        SF.tether.at(c, k/TETHER_STEPS, TB);
-        const sx = TB.x - TA.x, sy = TB.y - TA.y;
-        const len2 = sx*sx + sy*sy;
-        let u = 0;
-        if(len2 > 0.0001){
-          u = ((p.x - TA.x)*sx + (p.y - TA.y)*sy) / len2;
-          u = u < 0 ? 0 : u > 1 ? 1 : u;
-        }
-        const dx = p.x - (TA.x + sx*u), dy = p.y - (TA.y + sy*u);
-        hit = dx*dx + dy*dy < rr*rr;
-        TA.x = TB.x; TA.y = TB.y;
-      }
-      if(hit){
-        fx.sparks(p.x, p.y, 14, "#a5f3fc", 220);
-        fx.shake(10);
-        ctxObj.onPlayerHit("tether", e);
-        break;
-      }
-    }
-  }
-
   const ebs = world.enemyBullets.items;
   /*
    * COVER (mission flag): rocks stop their bullets. Everywhere else a boulder
@@ -586,40 +486,157 @@ function resolve(world, ctxObj, dt){
       }
     }
   }
-  /*
-   * SWEPT, like the player's own rounds are.
+  /* --- everything that can hurt a pilot, once per seat ---
    *
-   * This tested only where the bullet ENDED the frame - the exact mistake the
-   * comment on sweep() above was written about, fixed in the player-to-enemy
-   * direction and never applied coming back the other way. Their aimed shots
-   * fly at 300px/s, and difficulty.speed multiplies that: 540px/s on NIGHTMARE.
-   * The frame clamp floors dt at 20fps, so a step there is 27px against 18px of
-   * bullet-plus-ship overlap - the round teleports from in-front-of to behind
-   * the ship without ever registering.
-   *
-   * It fails in the player's FAVOUR, which is why nobody reported it, and that
-   * is precisely what makes it worth fixing: it means a tired iPad quietly
-   * plays an easier game than a fresh one, and "take no damage at all" is a
-   * star you are likelier to win on the slower device.
+   * Co-op puts two ships in the same sky and each has to be hit on its own
+   * terms: its own invulnerability after a respawn, its own contact with a
+   * rammer, its own bullet. `livePlayers` is a list of one in solo, so this
+   * loop is exactly the old code path with an extra iteration that never
+   * happens. Everything below reads `p` - the seat being tested - and hands
+   * that seat to onPlayerHit, so the life comes off the right pilot.
    */
-  for(let i=0;i<ebs.length;i++){
-    const b = ebs[i];
-    if(!b.alive) continue;
-    const bpx = b.x - (b.vx || 0)*dt, bpy = b.y - (b.vy || 0)*dt;
-    if(sweep(b, bpx, bpy, p.x, p.y, b.r + p.r)){
-      b.alive = false;
-      if(!invulnerable) ctxObj.onPlayerHit("bullet", b);
-      break;
-    }
-  }
+  const seats = world.livePlayers();
+  for(let s = 0; s < seats.length; s++){
+    const p = seats[s];
+    const invulnerable = p.invuln > 0 || ctxObj.godMode;
 
-  const boss = world.boss;
-  if(boss && boss.alive && !invulnerable){
-    const rr = boss.r + p.r;
-    if((boss.x-p.x)*(boss.x-p.x) + (boss.y-p.y)*(boss.y-p.y) < rr*rr){
-      ctxObj.onPlayerHit("boss", boss);
-    } else if(SF.bosses.beamHits(boss, p.x, p.y)){
-      ctxObj.onPlayerHit("beam", boss);
+    if(!invulnerable){
+      for(let i=0;i<enemies.length;i++){
+        const e = enemies[i];
+        if(!e.alive) continue;
+        /*
+         * A Limpet that has hold of you is not a collision. It is riding the
+         * hull by design, and it must never cost a life - a clinger that kills
+         * is just a Kamikaze in a hat, and it would kill EVERY frame it stayed
+         * on. This one line skips both the near-miss test and the ram branch,
+         * which is exactly right: the ride is not a dodge either.
+         */
+        if(e.attached) continue;
+        const rr = e.r + p.r;
+        const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
+        /*
+         * NEAR MISS (mission flag): a diver that goes past your wingtip without
+         * touching you pays for it. The lesson of the kamikaze level is "let
+         * them come, THEN swerve", and nothing teaches that like being paid for
+         * cutting it fine. Claimed once per ship, and only for things that
+         * actually dive - a grunt drifting past is not a dodge.
+         */
+        if(ctxObj.onGraze && !e.grazed && e.diver && d2 < (rr+22)*(rr+22) && d2 >= rr*rr){
+          e.grazed = true;
+          ctxObj.onGraze(e);
+        }
+        if(d2 < rr*rr){
+          // Ramming an enemy destroys it too - a fair trade, and it stops the
+          // "invisible wall" feeling of bouncing off a sprite. A rock is not a
+          // fair trade: it costs you a life and is still there afterwards, which
+          // is what makes a boulder something you actually have to fly around.
+          /*
+           * SOFT targets pop and cost nothing. The prologue's practice
+           * balloons are the only thing that sets this: a seven-year-old on
+           * their very first flight WILL steer into one, and the flight
+           * check must never answer that with damage. The pop still counts
+           * as a kill, so ramming balloons is playing, not cheating.
+           */
+          if(e.type && e.type.soft){
+            e.hp = 0;
+            ctxObj.onEnemyKilled(e, null, true);
+            break;
+          }
+          if(!e.hazard){
+            e.hp = 0;
+            ctxObj.onEnemyKilled(e, null, true);
+          } else {
+            fx.sparks(p.x, p.y, 12, "#cbd5e1", 200);
+            fx.shake(10);
+          }
+          ctxObj.onPlayerHit("collision", e, p);
+          break;
+        }
+      }
+    }
+
+    /*
+     * THE ANCHOR (mission flag): the cable between a pair is solid.
+     *
+     * Its own pass, gated on the world flag, so no other level in the campaign
+     * pays a single distance test for a mechanic it does not use - the same deal
+     * `cover` gets below. Only the LEAD of each pair is walked, so a cable is
+     * considered once rather than once per end.
+     *
+     * Touching it costs a life and leaves both ships flying. That is deliberate
+     * and it is the difference between this and ramming: a ship you fly into
+     * dies with you, which makes ramming a trade a child will happily keep
+     * making. A cable is not a trade. It is a wall with a ship at each end, and
+     * the only two ways past it are round it or through one of the ends.
+     */
+    if(world.tethered && !invulnerable && p.alive){
+      const rr = p.r + SF.tether.R;
+      for(let i=0;i<enemies.length;i++){
+        const e = enemies[i];
+        if(!e.alive || !e.tetherLead || !SF.tether.live(e)) continue;
+        // The drawn cable hangs, so the measured one has to hang identically:
+        // the curve is walked as TETHER_STEPS straight pieces, which tracks the
+        // painted quadratic to well under a pixel at the spans this game flies.
+        const c = SF.tether.curve(e, TCURVE);
+        SF.tether.at(c, 0, TA);
+        let hit = false;
+        for(let k = 1; k <= TETHER_STEPS && !hit; k++){
+          SF.tether.at(c, k/TETHER_STEPS, TB);
+          const sx = TB.x - TA.x, sy = TB.y - TA.y;
+          const len2 = sx*sx + sy*sy;
+          let u = 0;
+          if(len2 > 0.0001){
+            u = ((p.x - TA.x)*sx + (p.y - TA.y)*sy) / len2;
+            u = u < 0 ? 0 : u > 1 ? 1 : u;
+          }
+          const dx = p.x - (TA.x + sx*u), dy = p.y - (TA.y + sy*u);
+          hit = dx*dx + dy*dy < rr*rr;
+          TA.x = TB.x; TA.y = TB.y;
+        }
+        if(hit){
+          fx.sparks(p.x, p.y, 14, "#a5f3fc", 220);
+          fx.shake(10);
+          ctxObj.onPlayerHit("tether", e, p);
+          break;
+        }
+      }
+    }
+
+    /*
+     * SWEPT, like the player's own rounds are.
+     *
+     * This tested only where the bullet ENDED the frame - the exact mistake the
+     * comment on sweep() above was written about, fixed in the player-to-enemy
+     * direction and never applied coming back the other way. Their aimed shots
+     * fly at 300px/s, and difficulty.speed multiplies that: 540px/s on NIGHTMARE.
+     * The frame clamp floors dt at 20fps, so a step there is 27px against 18px of
+     * bullet-plus-ship overlap - the round teleports from in-front-of to behind
+     * the ship without ever registering.
+     *
+     * It fails in the player's FAVOUR, which is why nobody reported it, and that
+     * is precisely what makes it worth fixing: it means a tired iPad quietly
+     * plays an easier game than a fresh one, and "take no damage at all" is a
+     * star you are likelier to win on the slower device.
+     */
+    for(let i=0;i<ebs.length;i++){
+      const b = ebs[i];
+      if(!b.alive) continue;
+      const bpx = b.x - (b.vx || 0)*dt, bpy = b.y - (b.vy || 0)*dt;
+      if(sweep(b, bpx, bpy, p.x, p.y, b.r + p.r)){
+        b.alive = false;
+        if(!invulnerable) ctxObj.onPlayerHit("bullet", b, p);
+        break;
+      }
+    }
+
+    const boss = world.boss;
+    if(boss && boss.alive && !invulnerable){
+      const rr = boss.r + p.r;
+      if((boss.x-p.x)*(boss.x-p.x) + (boss.y-p.y)*(boss.y-p.y) < rr*rr){
+        ctxObj.onPlayerHit("boss", boss, p);
+      } else if(SF.bosses.beamHits(boss, p.x, p.y)){
+        ctxObj.onPlayerHit("beam", boss, p);
+      }
     }
   }
 }
