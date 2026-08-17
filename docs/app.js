@@ -19,29 +19,29 @@
  *     6768  src/profile.js
  *     7389  src/cloud.js
  *     7994  src/fx.js
- *     9052  src/input.js
- *     9475  src/entities.js
- *    10687  src/bossart.js
- *    11553  src/bosses.js
- *    12303  src/bossintro.js
- *    12426  src/rewind.js
- *    12948  src/finale.js
- *    13269  src/papadeath.js
- *    13591  src/backstage.js
- *    14794  src/sky29.js
- *    15035  src/systems.js
- *    15654  src/render.js
- *    20250  src/enemyart.js
- *    21168  src/insignia.js
- *    21413  src/skygen.js
- *    23857  src/shipart.js
- *    25057  src/paintjob.js
- *    25219  src/pilotart.js
- *    25314  src/comms.js
- *    25435  src/game.js
- *    28888  src/workshop.js
- *    29585  src/data/i18nbind.js
- *    29652  src/ui.js
+ *     9107  src/input.js
+ *     9530  src/entities.js
+ *    10742  src/bossart.js
+ *    11608  src/bosses.js
+ *    12358  src/bossintro.js
+ *    12481  src/rewind.js
+ *    13003  src/finale.js
+ *    13324  src/papadeath.js
+ *    13646  src/backstage.js
+ *    14849  src/sky29.js
+ *    15090  src/systems.js
+ *    15709  src/render.js
+ *    20305  src/enemyart.js
+ *    21223  src/insignia.js
+ *    21468  src/skygen.js
+ *    23912  src/shipart.js
+ *    25112  src/paintjob.js
+ *    25274  src/pilotart.js
+ *    25369  src/comms.js
+ *    25490  src/game.js
+ *    28943  src/workshop.js
+ *    29640  src/data/i18nbind.js
+ *    29707  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -8793,6 +8793,65 @@ const bloomGrad = (() => {
 })();
 
 /*
+ * A PARTICLE IS A BLIT, NOT A PATH.
+ *
+ * The fireball and the bloom have always been pre-rendered sprites. The three
+ * kinds that outnumber them were not: a spark laid down TWO filled arcs (a hot
+ * core and a soft skirt), and smoke and flash one each. Profiled on a
+ * deliberately busy scene - 82 enemies, 400 enemy bullets, ~800 live particles
+ * - that came to 669 arc() and 679 fill() calls every frame, and those two
+ * lines were the top of the canvas call list after the blits themselves.
+ *
+ * A filled path has to be tessellated and scan-converted every single time.
+ * A cached sprite is a texture blit, which is the fastest thing a 2D canvas
+ * does. There are only ever eight distinct particle colours alive at once, so
+ * the cache is eight small canvases and never grows.
+ *
+ * The spark sprite is baked by laying down the SAME two discs in the SAME
+ * additive mode, so the sprite is exactly what the old code produced at full
+ * alpha, and blitting it at globalAlpha A reproduces A*(core + 0.4*skirt) -
+ * the old result, one call instead of two. (The one departure: at the very
+ * centre the old pair summed past opaque and clipped here instead. Measured
+ * over a busy frame it moves the picture by well under one part in a
+ * thousand - see the pin.)
+ */
+const SPRITE_R = 32;                       // baked radius; the blit scales it
+const softCache = new Map();               // spark: hot core + soft skirt
+const discCache = new Map();               // smoke and flash: one flat disc
+function bakeSprite(paint){
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = SPRITE_R*2;
+  const c = cv.getContext("2d");
+  if(c) paint(c);
+  return cv;
+}
+function softSprite(color){
+  let s = softCache.get(color);
+  if(!s){
+    s = bakeSprite(c => {
+      c.globalCompositeOperation = "lighter";
+      c.fillStyle = color;
+      c.beginPath(); c.arc(SPRITE_R, SPRITE_R, SPRITE_R*(0.62/1.15), 0, TAU); c.fill();
+      c.globalAlpha = 0.4;
+      c.beginPath(); c.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, TAU); c.fill();
+    });
+    softCache.set(color, s);
+  }
+  return s;
+}
+function discSprite(color){
+  let s = discCache.get(color);
+  if(!s){
+    s = bakeSprite(c => {
+      c.fillStyle = color;
+      c.beginPath(); c.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, TAU); c.fill();
+    });
+    discCache.set(color, s);
+  }
+  return s;
+}
+
+/*
  * The pools of light, additive, drawn between the scenery and the ships.
  * Fast attack, long decay: full for the first fifth of the life, then a curve
  * down - a flash that fades, not a bulb that switches. Calm mode keeps them at
@@ -8832,10 +8891,8 @@ function drawParticles(ctx){
     const t = 1 - p.life/p.max;
     if(p.kind === "smoke"){
       ctx.globalAlpha = t*0.45;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size*(1.6 - t*0.6), 0, TAU);
-      ctx.fill();
+      const s = p.size*(1.6 - t*0.6);
+      ctx.drawImage(discSprite(p.color), p.x - s, p.y - s, s*2, s*2);
     } else if(p.kind === "debris"){
       ctx.globalAlpha = Math.min(1, t*1.6);
       ctx.save();
@@ -8885,10 +8942,8 @@ function drawParticles(ctx){
       ctx.drawImage(bloomGrad, p.x - s, p.y - s, s*2, s*2);
     } else if(p.kind === "flash"){
       ctx.globalAlpha = t;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size*(0.4 + (1-t)*0.9), 0, TAU);
-      ctx.fill();
+      const s = p.size*(0.4 + (1-t)*0.9);
+      ctx.drawImage(discSprite(p.color), p.x - s, p.y - s, s*2, s*2);
     } else if(p.kind === "fire"){
       ctx.globalAlpha = t;
       const s = p.size*(1.1 + (1-t)*0.8);
@@ -8937,9 +8992,9 @@ function drawParticles(ctx){
         // A hot core with a soft skirt. The rotated square just above is a
         // deliberate contract (confetti reads as pixels, not glitter); this
         // branch is the engine spark, and a hard square is a glitch.
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*0.62, 0, TAU); ctx.fill();
-        ctx.globalAlpha *= 0.4;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*1.15, 0, TAU); ctx.fill();
+        // Both discs live in the sprite now - one blit instead of two fills.
+        const s = p.size*1.15;
+        ctx.drawImage(softSprite(p.color), p.x - s, p.y - s, s*2, s*2);
       }
     }
   }

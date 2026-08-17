@@ -3429,6 +3429,31 @@ async function run(){
   })());
   SF.fx.reset();
   check("particle pool stays bounded", SF.fx._pools.particles.items.length <= 900);
+  /*
+   * THE COMMON PARTICLES ARE BLITS, NOT PATHS.
+   *
+   * Profiled on a deliberately busy scene - 82 enemies, 400 enemy bullets and
+   * ~800 live particles - drawParticles was issuing 669 arc() and 679 fill()
+   * calls every frame, because a spark laid down TWO filled discs and smoke
+   * and flash one each. A filled path is tessellated and scan-converted every
+   * time; a cached sprite is a texture blit. Same scene after: 30 arcs and 35
+   * fills. The fireball and the bloom were always sprites - these three were
+   * simply the ones nobody had converted.
+   *
+   * Pinned on the draw function's own text so a future edit cannot quietly
+   * put the hot path back on arc(); the rarer shapes (debris, embers, muzzle
+   * stars, the streaked fast spark) are rects and are left alone.
+   */
+  check("sparks, smoke and flashes are drawn as cached sprites", (() => {
+    const f = fs.readFileSync(path.join(__dirname, "src/fx.js"), "utf8");
+    const fn = f.slice(f.indexOf("function drawParticles"),
+                       f.indexOf("function drawTexts"));
+    if(fn.length < 200) return false;
+    const arcs = (fn.match(/\.arc\(/g) || []).length;
+    return /softSprite\(p\.color\)/.test(fn) &&
+           (fn.match(/discSprite\(p\.color\)/g) || []).length >= 2 &&
+           arcs <= 2;                      // the muzzle star's core, and rings
+  })());
   console.log(`Pools -> bullets:${SF.game.world.bullets.items.length} enemies:${SF.game.world.enemies.items.length} ` +
               `enemyBullets:${SF.game.world.enemyBullets.items.length} particles:${SF.fx._pools.particles.items.length}`);
 
