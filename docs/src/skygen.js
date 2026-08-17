@@ -696,10 +696,36 @@ function drawPlanet(ctx, W, H, p, rand, lightDir, dpr){
   drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr || 1);
 }
 
+/*
+ * How big a sprite a planet is allowed to bake into.
+ *
+ * The disc is drawn one pixel at a time, so this caps the loop - and it used
+ * to be a flat 384, which is fine for a moon and ruinous for anything large.
+ * Measured on the menu sky at 1500x860 on a 3x screen, the sprite each prop
+ * got against the size it was blitted at:
+ *
+ *     moon          1x    crisp
+ *     ringed        2.6x
+ *     galaxy        5.7x
+ *     amber giant   9.2x  <- a 384px disc stretched across 2838 device px
+ *
+ * That last one is the whole reason the big planet read as an out-of-focus
+ * smudge rather than a world: every bit of surface the renderer computed was
+ * being smeared nine times its own width. A galaxy survives it because a
+ * galaxy IS a blur; a planet has a limb, and a limb has to be sharp.
+ *
+ * So the cap scales with the body instead of being flat, bounded at both
+ * ends: never below the old 384, so nothing gets worse, and never above 960,
+ * because the loop is O(S^2) and this is baked on the menu's critical path.
+ */
+function spriteCapFor(extL, dpr){
+  return Math.max(384, Math.min(704, Math.ceil(extL*2*dpr)));
+}
 function drawPlanetHD(ctx, W, H, p, rand, lightDir, dpr){
   const rL = p.r * W;                                    // logical radius
   const extL = rL * (p.rings ? 1.95 : 1.25);             // sprite half-extent
-  const scale = Math.min(dpr, 384 / (2*extL)) || 1;      // device px per logical
+  const cap = spriteCapFor(extL, dpr);
+  const scale = Math.min(dpr, cap / (2*extL)) || 1;      // device px per logical
   const S = Math.max(8, Math.ceil(extL * 2 * scale));    // sprite size, device px
   const R = rL * scale;                                  // disc radius, device px
   const c = S / 2;
@@ -2363,8 +2389,22 @@ function buildTitle(W, H, dpr = 1, topH = 0){
      * furthest thing in the picture - and cools it slightly on the way, so
      * the distance reads as distance rather than as dimming.
      */
-    { k:"planet", x:0.12, y:(H + 0.31*u)/H, r:rx(0.55),
-      lit:"#997535", dark:"#25180f" },
+    /*
+     * SMALLER, AND ACTUALLY A SPHERE.
+     *
+     * At r=0.55 with its centre a third of a screen below the bottom edge,
+     * the only part of this you ever saw was a very shallow arc - and a
+     * shallow arc does not read as a ball, it reads as a wall across the
+     * corner. It was also the single worst victim of the flat sprite cap
+     * above, stretched nine times its own resolution, so what the wall was
+     * made of was mush.
+     *
+     * Half the radius and a much smaller drop, so a real curved limb shows
+     * with the terminator running across it, and a band of weather to look
+     * at now that there is enough resolution to see any.
+     */
+    { k:"planet", x:0.13, y:(H + 0.07*u)/H, r:rx(0.24),
+      lit:"#997535", dark:"#33251a", bands:true },
     // A ringed neighbour, small and high right: the "designed" note that says
     // somebody chose this view.
     { k:"planet", x:0.87, y:(0.21*vh)/H, r:rx(0.10),

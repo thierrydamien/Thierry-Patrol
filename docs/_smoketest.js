@@ -407,18 +407,46 @@ async function run(){
            /1400 \* sky\.stars \* areaK/.test(s);    // dust: still per area
   })());
   /*
-   * And the thing furthest away must not be the brightest thing in frame.
-   * The amber giant is drawn at r=0.55 where the little moon is r=0.055 - a
-   * hundred times the area - so at #d9a441 it was the loudest object on the
-   * menu after the wordmark, in a corner where nothing happens.
+   * And the BIGGEST thing in frame must not also be the brightest, because
+   * what pulls an eye across a picture is brightness times area. The menu's
+   * amber giant is the widest body on the screen by a distance, and at
+   * #d9a441 it was also the loudest object after the wordmark, sitting in a
+   * corner where nothing happens.
+   *
+   * Written against whichever planet is largest rather than against a
+   * radius, because that radius has already changed once and the rule is
+   * about the relationship, not the number.
    */
-  check("the menu's distant giant is dimmer than the planet in front of it", (() => {
+  check("the menu's biggest planet is not also its brightest", (() => {
     const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
     const lum = h => { const v = parseInt(h.slice(1), 16);
       return 0.299*((v>>16)&255) + 0.587*((v>>8)&255) + 0.114*(v&255); };
-    const giant = /r:rx\(0\.55\),\s*\n\s*lit:"(#[0-9a-f]{6})"/.exec(s);
-    const ringed = /lit:"(#[0-9a-f]{6})", dark:"#241245", rings:true/.exec(s);
-    return !!giant && !!ringed && lum(giant[1]) < lum(ringed[1]);
+    const block = s.slice(s.indexOf("function buildTitle("));
+    const re = /k:"planet"[\s\S]{0,400}?r:rx\(([\d.]+)\)[\s\S]{0,600}?lit:"(#[0-9a-f]{6})"/g;
+    const found = [];
+    let m; while((m = re.exec(block))) found.push({ r:+m[1], lit:lum(m[2]) });
+    if(found.length < 3) return false;
+    const biggest = found.reduce((a, b) => b.r > a.r ? b : a);
+    return found.every(f => f === biggest || f.lit >= biggest.lit);
+  })());
+  /*
+   * A PLANET IS ONLY AS SHARP AS THE SPRITE IT WAS BAKED INTO.
+   *
+   * The disc is computed one pixel at a time into an offscreen sprite, and
+   * that sprite was capped at a flat 384px however large the body was drawn.
+   * Measured on the menu at 1500x860 on a 3x screen, against the size each
+   * body is actually blitted at: the moon came out 1:1 and looked it, the
+   * ringed planet 2.6x, and the amber giant 9.2x - a 384px disc smeared
+   * across 2838 device pixels, which is precisely why it read as an
+   * out-of-focus smudge rather than a world. A galaxy survives that because
+   * a galaxy IS a blur; a planet has a limb, and a limb has to be sharp.
+   */
+  check("a big planet is not baked into a small sprite", (() => {
+    const s = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    return /function spriteCapFor\(extL, dpr\)/.test(s) &&
+           /Math\.ceil\(extL\*2\*dpr\)/.test(s) &&        // tracks the drawn size
+           /cap \/ \(2\*extL\)/.test(s) &&                // and is what limits scale
+           !/Math\.min\(dpr, 384 \/ \(2\*extL\)\)/.test(s);
   })());
   check("the loading screen is the title card, not a bare LOADING",
     (() => { const h = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
