@@ -325,6 +325,43 @@
 
   <!-- ===================== GAME ===================== -->
   <section id="screen-game" class="screen">
+    <!--
+      THE WINGS. On a landscape screen the playfield is 0.8 as wide as it is
+      tall, so half a laptop display was black bar - and the HUD was crammed
+      on top of the game anyway. These two panels live in that dead space and
+      take the readouts off the playfield. Absolutely positioned on purpose:
+      they must not participate in the flex layout, because the frame's size
+      is computed from the section's full width and a sibling that took room
+      would fight it. Hidden entirely unless there is real space for them, so
+      phones and portrait tablets are untouched.
+
+      They are DOM rather than canvas for two reasons: the touch mapping reads
+      the canvas rect to steer the ship and must not learn about margins, and
+      DOM text is reached by the translation sweep for free - which is exactly
+      the bug the results card just had.
+    -->
+    <aside id="hudLeft" class="hud-wing left hidden" aria-hidden="true">
+      <div class="hw-card hw-pilot">
+        <canvas id="hwShip" class="hw-ship" width="132" height="92"></canvas>
+        <div class="hw-name" id="hwName"></div>
+        <div class="hw-label">Score</div>
+        <div class="hw-score" id="hwScore">000000</div>
+        <div class="hw-label">Wallet</div>
+        <div class="hw-money" id="hwMoney"></div>
+        <div class="hw-label">Lives</div>
+        <div class="hw-lives" id="hwLives"></div>
+      </div>
+    </aside>
+    <aside id="hudRight" class="hud-wing right hidden" aria-hidden="true">
+      <div class="hw-card hw-mission">
+        <div class="hw-num" id="hwNum"></div>
+        <div class="hw-title" id="hwTitle"></div>
+        <div class="hw-diff" id="hwDiff"></div>
+        <div class="hw-bar"><i id="hwBarFill"></i></div>
+        <div class="hw-prog" id="hwProg"></div>
+      </div>
+      <div class="hw-card hw-objectives" id="hwObjectives"></div>
+    </aside>
     <div class="game-frame">
       <canvas id="game"></canvas>
 

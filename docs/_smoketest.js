@@ -217,6 +217,7 @@ async function run(){
     SF.field.refresh();
     check("removing the insets restores the original field", SF.entityConst.VW === before);
 
+
     /*
      * Landscape windows are not phones waiting to be rotated. A desktop
      * window or landscape iPad never turns, so the height binds and the
@@ -234,6 +235,66 @@ async function run(){
     defineSize(390, 620);
     check("a portrait phone still gets a phone-shaped field",
       SF.field.measure() >= 380 && SF.field.measure() < 640);
+    /*
+     * THE HUD WINGS.
+     *
+     * The playfield is tuned at four fifths as wide as it is tall, so on a
+     * landscape screen it can only ever fill the middle - measured, a MacBook
+     * Air drew the game on 47% of its display and stacked the score, wallet,
+     * lives, mission bar and objectives ON TOP of the action anyway. The
+     * wings take those readouts into the space that was already empty.
+     *
+     * Two rules keep this safe. They appear only where there is real room, so
+     * a phone is untouched and keeps the only HUD it has ever had. And the
+     * canvas is still EXACTLY the playfield - the wings are out of flow
+     * entirely - because the touch mapping reads the canvas rect to steer the
+     * ship, and a canvas that grew past the field would put every thumb in
+     * the wrong place.
+     */
+    {
+      const frame = q(".game-frame"), left = id("hudLeft"), right = id("hudRight");
+      const wingsOn = () => !!(left && !left.classList.contains("hidden"));
+      defineSize(1470, 856);                       // a laptop: room to spare
+      SF.game.resize();
+      const wideOn = wingsOn(), wideGut = parseInt(left.style.width, 10);
+      defineSize(393, 715);                        // a phone: no room at all
+      SF.game.resize();
+      const narrowOn = wingsOn();
+      check("the wings open on a laptop and stay shut on a phone",
+        wideOn && !narrowOn && wideGut >= 150 && SF.game.wideHud === false);
+      check("a phone keeps the only HUD it has",
+        right.classList.contains("hidden") &&
+        right.getAttribute("aria-hidden") === "true");
+      /*
+       * The canvas must never grow into the wings: input.js maps a pointer
+       * through the canvas's own rect, so the drawn field and the canvas have
+       * to stay the same rectangle. This is the pin that stops a future
+       * "let the HUD draw in the margins" change from breaking steering.
+       */
+      defineSize(1470, 856);
+      SF.game.resize();
+      check("the canvas is still exactly the playfield, wings or no wings",
+        Math.abs(parseFloat(frame.style.width) - parseFloat(frame.style.height)*
+          (SF.entityConst.VW/800)) < 1.5);
+      check("the wings sit outside the frame, never inside it", (() => {
+        const css = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+        const blk = css.slice(css.indexOf(".hud-wing{"), css.indexOf(".hw-card{"));
+        return /position:absolute/.test(blk) && /pointer-events:none/.test(blk);
+      })());
+      check("the canvas HUD stands down when the wings take over", (() => {
+        const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+        return /const wide = !!SF\.game\.wideHud;/.test(r) &&
+               /if\(!wide && run\.objectiveDefs\.length\)/.test(r) &&
+               /let oy = wide \? 16 :/.test(r);
+      })());
+      check("every wing label speaks French", (() => {
+        const s2 = SF.i18n._packs.fr.s;
+        return ["Score", "Wallet", "Lives", "MISSION {n}", "MISSION {n}%", "BOSS FIGHT"]
+          .every(k => !!s2[k]);
+      })());
+      defineSize(1920, 1040);
+      SF.game.resize();
+    }
 
     /*
      * "I don't want the extra space to just be empty because enemies aren't

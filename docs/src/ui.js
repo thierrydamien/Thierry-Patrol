@@ -4973,6 +4973,79 @@ function renderPauseState(){
 }
 
 /** Keeps the two ability buttons in sync with what the ship has left. */
+/*
+ * THE HUD WINGS, kept in step.
+ *
+ * Runs every frame during play, so it writes only what CHANGED - a DOM write
+ * per field per frame would be sixty layout invalidations a second for values
+ * that move a handful of times a mission. `wingWas` is the last thing put on
+ * screen; anything equal to it is skipped.
+ *
+ * The ship portrait is the exception: it is a canvas, painted once per pilot
+ * rather than per frame, because it only changes when the loadout does.
+ */
+const wingWas = {};
+function syncHudWings(){
+  const g = SF.game;
+  if(!g.wideHud || !$("hudLeft") || $("hudLeft").classList.contains("hidden")) return;
+  const run = g.run, p = g.world.player;
+  if(!run || !p) return;
+  const set = (id, v) => {
+    if(wingWas[id] === v) return;
+    wingWas[id] = v;
+    const el = $(id);
+    if(el) el.textContent = v;
+  };
+  const who = profile ? (profile.callsign || profile.name) : "";
+  set("hwName", who);
+  set("hwScore", String(run.score).padStart(6, "0"));
+  set("hwMoney", money(run.money));
+  // Hearts, and a count once there are more than a row's worth.
+  const lives = Math.max(0, p.lives | 0);
+  set("hwLives", lives > 5 ? "♥ ×" + lives : "♥".repeat(lives) || "—");
+  set("hwNum", T("MISSION {n}", { n: run.mission.id }));
+  set("hwTitle", run.mission.name.toUpperCase());
+  const diffEl = $("hwDiff");
+  if(diffEl && wingWas.hwDiffName !== run.difficulty.name){
+    wingWas.hwDiffName = run.difficulty.name;
+    diffEl.textContent = run.difficulty.name;
+    diffEl.style.color = run.difficulty.color;
+  }
+  const pct = Math.round(clamp(run.progress, 0, 1)*100);
+  set("hwProg", run.bossActive ? T("BOSS FIGHT") : T("MISSION {n}%", { n: pct }));
+  if(wingWas.hwBar !== pct){
+    wingWas.hwBar = pct;
+    const fill = $("hwBarFill");
+    if(fill) fill.style.width = pct + "%";
+  }
+  // The objective list: same text the chip used to draw, rebuilt only when a
+  // star actually ticks over.
+  const objs = (run.objectiveDefs || []).map(def =>
+    (def.test(run.stats) ? "★ " : "☆ ") + def.label + "  " + def.progress(run.stats));
+  const key = objs.join("|");
+  if(wingWas.hwObj !== key){
+    wingWas.hwObj = key;
+    const box = $("hwObjectives");
+    if(box) box.innerHTML = objs.map((t, i) =>
+      `<div class="${run.objectiveDefs[i].test(run.stats) ? "met" : ""}">${esc(t)}</div>`).join("");
+  }
+  // The pilot's own ship, painted once - it only moves when the loadout does.
+  const shipKey = (profile ? profile.name + profile.shipColor + profile.hull + profile.tune : "") +
+                  SF.shipart.ownedCount(SF.shipart.levelsOf(profile || {}));
+  if(wingWas.hwShip !== shipKey){
+    wingWas.hwShip = shipKey;
+    const cv = $("hwShip"), c2 = cv && cv.getContext("2d");
+    if(c2 && profile){
+      c2.clearRect(0, 0, cv.width, cv.height);
+      SF.shipart.drawShip(c2, cv.width/2, cv.height/2 + 4, 74, {
+        color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
+        t: 0.6, idle: false, tune: profile.tune, hull: profile.hull });
+    }
+  }
+}
+/** Wipes the memo so the next sync repaints everything (new mission, new pilot). */
+function resetHudWings(){ for(const k in wingWas) delete wingWas[k]; }
+
 function syncAbilityButtons(force){
   const p = SF.game.world.player;
   const playing = SF.game.state === "playing" || SF.game.state === "paused";
@@ -5925,7 +5998,8 @@ if("serviceWorker" in navigator){
   try { navigator.serviceWorker.register("sw.js"); } catch(e){}
 }
 
-SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
+SF.ui = { show, togglePause, syncAbilityButtons, syncHudWings, resetHudWings,
+          renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile,

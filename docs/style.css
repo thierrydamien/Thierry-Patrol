@@ -2002,3 +2002,61 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
   .rail-stop { width:auto; flex:0 0 auto; padding:6px 11px; min-height:44px;
                background: rgba(0,0,0,0.3); }
 }
+
+/* ---------------------------------------------------------
+   THE HUD WINGS
+   The playfield is tuned at 640x800 - four fifths as wide as it is tall -
+   so on any landscape screen it can only ever fill the middle. Measured, a
+   MacBook Air was drawing the game on 47% of its display and stacking the
+   score, wallet, lives, mission bar and objectives ON TOP of the action for
+   the privilege. The wings put those in the space that was already empty.
+
+   Sizing is done in JS (see game.js resize) because it depends on the frame's
+   measured width; everything here is presentation only. Nothing in this block
+   may affect the frame's layout - the wings are out of flow entirely.
+   --------------------------------------------------------- */
+.hud-wing{
+  position:absolute; top:0; bottom:0; width:0;
+  display:flex; flex-direction:column; justify-content:flex-start; gap:12px;
+  padding:18px 12px; box-sizing:border-box;
+  pointer-events:none;                 /* never steal a tap meant for the sky */
+  overflow:hidden; z-index:2;
+}
+.hud-wing.left{ left:0; align-items:flex-end; text-align:right; }
+.hud-wing.right{ right:0; align-items:flex-start; text-align:left; }
+.hud-wing.hidden{ display:none; }
+.hw-card{
+  width:100%; max-width:230px;
+  background:linear-gradient(180deg, rgba(8,13,30,0.82), rgba(6,10,24,0.55));
+  border:1px solid rgba(110,200,255,0.16);
+  border-radius:14px; padding:12px 14px; box-sizing:border-box;
+}
+.hw-label{
+  font:700 9px Rajdhani, Arial, sans-serif; letter-spacing:0.14em;
+  color:rgba(140,200,255,0.55); text-transform:uppercase; margin-top:9px;
+}
+.hw-ship{ width:132px; height:92px; display:block; margin:0 auto; }
+.hw-name{
+  font:700 15px Rajdhani, Arial, sans-serif; letter-spacing:0.06em;
+  color:#eaf4ff; text-align:center; margin-top:2px;
+}
+.hw-score{ font:700 26px Rajdhani, Arial, sans-serif; color:#fff; line-height:1.05; }
+.hw-money{ font:700 20px Rajdhani, Arial, sans-serif; color:#ffd23f; line-height:1.1; }
+.hw-lives{ font:700 17px Rajdhani, Arial, sans-serif; color:#ff5d73; letter-spacing:0.06em; }
+.hw-num{ font:700 10px Rajdhani, Arial, sans-serif; letter-spacing:0.16em; color:rgba(140,200,255,0.6); }
+.hw-title{ font:700 17px Rajdhani, Arial, sans-serif; color:#7fc4ff; line-height:1.15; margin-top:1px; }
+.hw-diff{ font:700 11px Rajdhani, Arial, sans-serif; letter-spacing:0.1em; margin-top:3px; }
+.hw-bar{
+  height:7px; border-radius:4px; margin-top:10px; overflow:hidden;
+  background:rgba(255,255,255,0.10);
+}
+.hw-bar > i{
+  display:block; height:100%; width:0%; border-radius:4px;
+  background:linear-gradient(90deg,#4ade80,#a7f3d0);
+  transition:width 0.25s linear;
+}
+.hw-prog{ font:700 10px Rajdhani, Arial, sans-serif; letter-spacing:0.08em;
+  color:rgba(190,220,255,0.75); margin-top:5px; }
+.hw-objectives{ font:600 12px Rajdhani, Arial, sans-serif; color:rgba(215,230,255,0.8); }
+.hw-objectives div{ margin:3px 0; line-height:1.25; }
+.hw-objectives div.met{ color:#ffd23f; }

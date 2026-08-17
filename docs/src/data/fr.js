@@ -120,6 +120,12 @@ SF.i18n.register("fr", { name: "Français", s: {
 /* the HUD's double-pay day - canvas text, so it asks for itself */
 "CREDITS": "CRÉDITS",
 "CREDITS ×2": "CRÉDITS ×2",
+/* the wide-screen HUD wings - DOM, so the sweep reaches the static labels,
+   but the two with a number in them ask through T() like everything else */
+"MISSION {n}": "MISSION {n}",
+"MISSION {n}%": "MISSION {n} %",
+"BOSS FIGHT": "COMBAT DE BOSS",
+"Lives": "Vies",
 /* the three toasts that pop over the results card */
 "TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
 "{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",

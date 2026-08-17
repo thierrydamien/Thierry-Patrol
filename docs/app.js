@@ -16,35 +16,35 @@
  *     5398  src/data/comms.js
  *     5819  src/data/story.js
  *     5957  src/data/fr.js
- *     7231  src/profile.js
- *     7860  src/cloud.js
- *     8465  src/fx.js
- *     9578  src/input.js
- *    10001  src/entities.js
- *    11213  src/bossart.js
- *    12079  src/bosses.js
- *    12829  src/bossintro.js
- *    12952  src/rewind.js
- *    13483  src/finale.js
- *    13804  src/papadeath.js
- *    14126  src/backstage.js
- *    15075  src/sky29.js
- *    15320  src/mirrorduel.js
- *    15667  src/homecoming.js
- *    15864  src/prologue.js
- *    16330  src/systems.js
- *    16961  src/render.js
- *    21563  src/enemyart.js
- *    22515  src/insignia.js
- *    22760  src/skygen.js
- *    25704  src/shipart.js
- *    26904  src/paintjob.js
- *    27066  src/pilotart.js
- *    27161  src/comms.js
- *    27300  src/game.js
- *    30837  src/workshop.js
- *    31534  src/data/i18nbind.js
- *    31605  src/ui.js
+ *     7237  src/profile.js
+ *     7866  src/cloud.js
+ *     8471  src/fx.js
+ *     9584  src/input.js
+ *    10007  src/entities.js
+ *    11219  src/bossart.js
+ *    12085  src/bosses.js
+ *    12835  src/bossintro.js
+ *    12958  src/rewind.js
+ *    13489  src/finale.js
+ *    13810  src/papadeath.js
+ *    14132  src/backstage.js
+ *    15081  src/sky29.js
+ *    15326  src/mirrorduel.js
+ *    15673  src/homecoming.js
+ *    15870  src/prologue.js
+ *    16336  src/systems.js
+ *    16967  src/render.js
+ *    21580  src/enemyart.js
+ *    22532  src/insignia.js
+ *    22777  src/skygen.js
+ *    25721  src/shipart.js
+ *    26921  src/paintjob.js
+ *    27083  src/pilotart.js
+ *    27178  src/comms.js
+ *    27317  src/game.js
+ *    30880  src/workshop.js
+ *    31577  src/data/i18nbind.js
+ *    31648  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6076,6 +6076,12 @@ SF.i18n.register("fr", { name: "Français", s: {
 /* the HUD's double-pay day - canvas text, so it asks for itself */
 "CREDITS": "CRÉDITS",
 "CREDITS ×2": "CRÉDITS ×2",
+/* the wide-screen HUD wings - DOM, so the sweep reaches the static labels,
+   but the two with a number in them ask through T() like everything else */
+"MISSION {n}": "MISSION {n}",
+"MISSION {n}%": "MISSION {n} %",
+"BOSS FIGHT": "COMBAT DE BOSS",
+"Lives": "Vies",
 /* the three toasts that pop over the results card */
 "TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
 "{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",
@@ -21000,6 +21006,14 @@ function drawHud(ctx, game){
      centre, wallet right, with lives and the mission bar on a second row -
      rather than everything crammed into one phone-width strip. */
   const PAD = Math.round(VW*0.03), TOP_H = 84;
+  /*
+   * On a wide screen the whole top strip and the objective chip have moved
+   * off the playfield into the side wings (see index.html, game.js resize).
+   * What stays on the canvas is what belongs OVER the action - the banners,
+   * the boss bar, the power-up timers and the comms panel.
+   */
+  const wide = !!SF.game.wideHud;
+  if(!wide){
   // Glass panel: a gradient that fades out rather than a hard slab, with a
   // single cyan hairline - the game's HUD accent - underneath.
   if(!hudPanelGrad){
@@ -21114,6 +21128,7 @@ function drawHud(ctx, game){
   ctx.font = "10px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "right";
   ctx.fillText(run.bossActive ? "BOSS FIGHT" : "MISSION " + Math.round(prog*100) + "%", VW-PAD, 58);
+  }   // end of the on-canvas top strip
   ctx.textAlign = "left";
 
   // Live objective tracker. It used to collapse to a three-star strip after
@@ -21127,8 +21142,10 @@ function drawHud(ctx, game){
   const oySize = intro ? 12 : 11;
   const oLH = oySize + 3;
   ctx.font = oySize + "px Rajdhani, Arial, sans-serif";
-  let oy = run.bossActive ? 158 : TOP_H + 34;
-  if(run.objectiveDefs.length){
+  // With the strip gone the timers start at the top of the sky instead of
+  // underneath a chip that is no longer there.
+  let oy = wide ? 16 : (run.bossActive ? 158 : TOP_H + 34);
+  if(!wide && run.objectiveDefs.length){
     let chipW = 0;
     for(let i=0;i<run.objectiveDefs.length;i++){
       const def = run.objectiveDefs[i];
@@ -27393,7 +27410,32 @@ function resize(){
   canvas.height = Math.round(h*dpr);
   scale = canvas.width / VW;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  /*
+   * THE WINGS. The field is tuned at four fifths as wide as it is tall, so on
+   * a landscape screen it can only ever fill the middle - measured, a MacBook
+   * Air drew the game on 47% of its display and stacked the whole HUD on top
+   * of the action anyway. Whatever is left either side is handed to two DOM
+   * panels that take those readouts off the playfield.
+   *
+   * They stay hidden unless there is REAL room. A cramped wing is worse than
+   * no wing: the readouts would be unreadable and the canvas HUD - which is
+   * still the only HUD a phone gets - would have been switched off to make
+   * way for them. Phones and portrait tablets therefore see no change at all.
+   */
+  const gutter = Math.floor((availW - w)/2);
+  const wide = gutter >= WING_MIN;
+  game.wideHud = wide;
+  const wings = [document.getElementById("hudLeft"), document.getElementById("hudRight")];
+  wings.forEach(el => {
+    if(!el) return;
+    el.classList.toggle("hidden", !wide);
+    el.setAttribute("aria-hidden", wide ? "false" : "true");
+    if(wide) el.style.width = gutter + "px";
+  });
 }
+/* Below this the panels are too narrow to read, so the canvas HUD keeps the
+   job. 150 fits the widest readout (a six-figure score) with margin. */
+const WING_MIN = 150;
 
 /* ---------------------------------------------------------
    LOADOUT - profile upgrades become concrete ship stats.
@@ -28694,6 +28736,7 @@ function applySupply(def, loud){
     p.shield = Math.max(p.shield, Math.max(1, p.shieldMax));
   }
   if(SF.ui && SF.ui.syncAbilityButtons) SF.ui.syncAbilityButtons(true);
+  if(SF.ui && SF.ui.resetHudWings) SF.ui.resetHudWings();   // new mission, repaint the wings
   return loud;
 }
 
@@ -30789,7 +30832,7 @@ function frame(now){
       SF.render.updateBackground(dt);
     }
     draw(simMs);
-    if(SF.ui) SF.ui.syncAbilityButtons();
+    if(SF.ui){ SF.ui.syncAbilityButtons(); SF.ui.syncHudWings(); }
   } else if(game.state === "paused"){
     // simMs deliberately does NOT advance here. This is the whole fix.
     /*
@@ -36577,6 +36620,79 @@ function renderPauseState(){
 }
 
 /** Keeps the two ability buttons in sync with what the ship has left. */
+/*
+ * THE HUD WINGS, kept in step.
+ *
+ * Runs every frame during play, so it writes only what CHANGED - a DOM write
+ * per field per frame would be sixty layout invalidations a second for values
+ * that move a handful of times a mission. `wingWas` is the last thing put on
+ * screen; anything equal to it is skipped.
+ *
+ * The ship portrait is the exception: it is a canvas, painted once per pilot
+ * rather than per frame, because it only changes when the loadout does.
+ */
+const wingWas = {};
+function syncHudWings(){
+  const g = SF.game;
+  if(!g.wideHud || !$("hudLeft") || $("hudLeft").classList.contains("hidden")) return;
+  const run = g.run, p = g.world.player;
+  if(!run || !p) return;
+  const set = (id, v) => {
+    if(wingWas[id] === v) return;
+    wingWas[id] = v;
+    const el = $(id);
+    if(el) el.textContent = v;
+  };
+  const who = profile ? (profile.callsign || profile.name) : "";
+  set("hwName", who);
+  set("hwScore", String(run.score).padStart(6, "0"));
+  set("hwMoney", money(run.money));
+  // Hearts, and a count once there are more than a row's worth.
+  const lives = Math.max(0, p.lives | 0);
+  set("hwLives", lives > 5 ? "♥ ×" + lives : "♥".repeat(lives) || "—");
+  set("hwNum", T("MISSION {n}", { n: run.mission.id }));
+  set("hwTitle", run.mission.name.toUpperCase());
+  const diffEl = $("hwDiff");
+  if(diffEl && wingWas.hwDiffName !== run.difficulty.name){
+    wingWas.hwDiffName = run.difficulty.name;
+    diffEl.textContent = run.difficulty.name;
+    diffEl.style.color = run.difficulty.color;
+  }
+  const pct = Math.round(clamp(run.progress, 0, 1)*100);
+  set("hwProg", run.bossActive ? T("BOSS FIGHT") : T("MISSION {n}%", { n: pct }));
+  if(wingWas.hwBar !== pct){
+    wingWas.hwBar = pct;
+    const fill = $("hwBarFill");
+    if(fill) fill.style.width = pct + "%";
+  }
+  // The objective list: same text the chip used to draw, rebuilt only when a
+  // star actually ticks over.
+  const objs = (run.objectiveDefs || []).map(def =>
+    (def.test(run.stats) ? "★ " : "☆ ") + def.label + "  " + def.progress(run.stats));
+  const key = objs.join("|");
+  if(wingWas.hwObj !== key){
+    wingWas.hwObj = key;
+    const box = $("hwObjectives");
+    if(box) box.innerHTML = objs.map((t, i) =>
+      `<div class="${run.objectiveDefs[i].test(run.stats) ? "met" : ""}">${esc(t)}</div>`).join("");
+  }
+  // The pilot's own ship, painted once - it only moves when the loadout does.
+  const shipKey = (profile ? profile.name + profile.shipColor + profile.hull + profile.tune : "") +
+                  SF.shipart.ownedCount(SF.shipart.levelsOf(profile || {}));
+  if(wingWas.hwShip !== shipKey){
+    wingWas.hwShip = shipKey;
+    const cv = $("hwShip"), c2 = cv && cv.getContext("2d");
+    if(c2 && profile){
+      c2.clearRect(0, 0, cv.width, cv.height);
+      SF.shipart.drawShip(c2, cv.width/2, cv.height/2 + 4, 74, {
+        color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
+        t: 0.6, idle: false, tune: profile.tune, hull: profile.hull });
+    }
+  }
+}
+/** Wipes the memo so the next sync repaints everything (new mission, new pilot). */
+function resetHudWings(){ for(const k in wingWas) delete wingWas[k]; }
+
 function syncAbilityButtons(force){
   const p = SF.game.world.player;
   const playing = SF.game.state === "playing" || SF.game.state === "paused";
@@ -37529,7 +37645,8 @@ if("serviceWorker" in navigator){
   try { navigator.serviceWorker.register("sw.js"); } catch(e){}
 }
 
-SF.ui = { show, togglePause, syncAbilityButtons, renderMissions, renderArmory, renderProfiles,
+SF.ui = { show, togglePause, syncAbilityButtons, syncHudWings, resetHudWings,
+          renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile,

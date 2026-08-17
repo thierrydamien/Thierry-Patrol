@@ -4040,6 +4040,14 @@ function drawHud(ctx, game){
      centre, wallet right, with lives and the mission bar on a second row -
      rather than everything crammed into one phone-width strip. */
   const PAD = Math.round(VW*0.03), TOP_H = 84;
+  /*
+   * On a wide screen the whole top strip and the objective chip have moved
+   * off the playfield into the side wings (see index.html, game.js resize).
+   * What stays on the canvas is what belongs OVER the action - the banners,
+   * the boss bar, the power-up timers and the comms panel.
+   */
+  const wide = !!SF.game.wideHud;
+  if(!wide){
   // Glass panel: a gradient that fades out rather than a hard slab, with a
   // single cyan hairline - the game's HUD accent - underneath.
   if(!hudPanelGrad){
@@ -4154,6 +4162,7 @@ function drawHud(ctx, game){
   ctx.font = "10px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "right";
   ctx.fillText(run.bossActive ? "BOSS FIGHT" : "MISSION " + Math.round(prog*100) + "%", VW-PAD, 58);
+  }   // end of the on-canvas top strip
   ctx.textAlign = "left";
 
   // Live objective tracker. It used to collapse to a three-star strip after
@@ -4167,8 +4176,10 @@ function drawHud(ctx, game){
   const oySize = intro ? 12 : 11;
   const oLH = oySize + 3;
   ctx.font = oySize + "px Rajdhani, Arial, sans-serif";
-  let oy = run.bossActive ? 158 : TOP_H + 34;
-  if(run.objectiveDefs.length){
+  // With the strip gone the timers start at the top of the sky instead of
+  // underneath a chip that is no longer there.
+  let oy = wide ? 16 : (run.bossActive ? 158 : TOP_H + 34);
+  if(!wide && run.objectiveDefs.length){
     let chipW = 0;
     for(let i=0;i<run.objectiveDefs.length;i++){
       const def = run.objectiveDefs[i];

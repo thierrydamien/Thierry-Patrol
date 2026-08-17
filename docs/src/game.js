@@ -94,7 +94,32 @@ function resize(){
   canvas.height = Math.round(h*dpr);
   scale = canvas.width / VW;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  /*
+   * THE WINGS. The field is tuned at four fifths as wide as it is tall, so on
+   * a landscape screen it can only ever fill the middle - measured, a MacBook
+   * Air drew the game on 47% of its display and stacked the whole HUD on top
+   * of the action anyway. Whatever is left either side is handed to two DOM
+   * panels that take those readouts off the playfield.
+   *
+   * They stay hidden unless there is REAL room. A cramped wing is worse than
+   * no wing: the readouts would be unreadable and the canvas HUD - which is
+   * still the only HUD a phone gets - would have been switched off to make
+   * way for them. Phones and portrait tablets therefore see no change at all.
+   */
+  const gutter = Math.floor((availW - w)/2);
+  const wide = gutter >= WING_MIN;
+  game.wideHud = wide;
+  const wings = [document.getElementById("hudLeft"), document.getElementById("hudRight")];
+  wings.forEach(el => {
+    if(!el) return;
+    el.classList.toggle("hidden", !wide);
+    el.setAttribute("aria-hidden", wide ? "false" : "true");
+    if(wide) el.style.width = gutter + "px";
+  });
 }
+/* Below this the panels are too narrow to read, so the canvas HUD keeps the
+   job. 150 fits the widest readout (a six-figure score) with margin. */
+const WING_MIN = 150;
 
 /* ---------------------------------------------------------
    LOADOUT - profile upgrades become concrete ship stats.
@@ -1395,6 +1420,7 @@ function applySupply(def, loud){
     p.shield = Math.max(p.shield, Math.max(1, p.shieldMax));
   }
   if(SF.ui && SF.ui.syncAbilityButtons) SF.ui.syncAbilityButtons(true);
+  if(SF.ui && SF.ui.resetHudWings) SF.ui.resetHudWings();   // new mission, repaint the wings
   return loud;
 }
 
@@ -3490,7 +3516,7 @@ function frame(now){
       SF.render.updateBackground(dt);
     }
     draw(simMs);
-    if(SF.ui) SF.ui.syncAbilityButtons();
+    if(SF.ui){ SF.ui.syncAbilityButtons(); SF.ui.syncHudWings(); }
   } else if(game.state === "paused"){
     // simMs deliberately does NOT advance here. This is the whole fix.
     /*
