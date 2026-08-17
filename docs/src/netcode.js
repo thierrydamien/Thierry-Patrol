@@ -257,9 +257,18 @@ async function join(code, me){
  */
 function card(p){
   if(!p) return null;
+  // ...plus how far along the campaign they are, as one number. Two players
+  // progress together, so the other device's map has to know what this pilot
+  // can already fly - but it has no business seeing their save to find out.
+  let reach = 0;
+  if(SF.missions){
+    const M = SF.missions.MISSIONS;
+    for(let i = 0; i < M.length; i++)
+      if(SF.missions.isMissionUnlocked(p, i)) reach = i;
+  }
   return { name: p.name, callsign: p.callsign || p.name, shipColor: p.shipColor,
            hull: p.hull, tune: p.tune, decal: p.decal, badge: p.badge,
-           upgrades: Object.assign({}, p.upgrades),
+           upgrades: Object.assign({}, p.upgrades), reach,
            levels: SF.shipart ? SF.shipart.levelsOf(p) : {} };
 }
 

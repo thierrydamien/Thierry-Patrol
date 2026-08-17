@@ -8866,6 +8866,69 @@ async function run(){
         !!(a.missions[run.mission.id] && a.missions[run.mission.id].cleared) &&
         !!(b.missions[run.mission.id] && b.missions[run.mission.id].cleared));
     }
+
+    /* --- carried forward, without a hole left behind --- */
+    {
+      /*
+       * Two players progress together, so a level is open if EITHER of them
+       * has reached it - holding the older sibling to the younger one's
+       * progress is the reliable way to stop them playing together at all.
+       *
+       * The trap is what that does to the carried child's map. Clearing
+       * mission 30 records it on their ledger, and the plain unlock chain
+       * then opens 31 while leaving 5 to 29 shut: a hole in the middle of a
+       * campaign, and the stops behind it unreachable without a second co-op
+       * flight to each one. `reached` is what closes it.
+       */
+      const U = SF.missions.isMissionUnlocked;
+      const ahead = P.blank("Ahead");
+      ahead.missionsVer = 99;
+      for(let i = 0; i <= 12; i++)
+        ahead.missions[SF.missions.MISSIONS[i].id] = { cleared:true, stars:{}, best:{} };
+      const behind = P.blank("Behind");
+      behind.missionsVer = 99;
+      behind.missions[SF.missions.MISSIONS[0].id] = { cleared:true, stars:{}, best:{} };
+      check("a pilot's own map still stops where they stopped",
+        U(ahead, 12) && !U(ahead, 15) && U(behind, 1) && !U(behind, 4));
+
+      // Carried to 12, the way endMission books it.
+      behind.reached = 12;
+      let holes = 0;
+      for(let i = 0; i <= 12; i++) if(!U(behind, i)) holes++;
+      check("being carried opens the road behind you, with no locked island",
+        holes === 0 && U(behind, 12));
+      check("...and opens nothing past where they were actually taken",
+        !U(behind, 14));
+      /*
+       * ...and the one big button on their menu still points at the next
+       * thing they can actually do. Carried to 12 with everything from 1 up
+       * unflown, "the newest unlocked stop" would aim a seven-year-old's
+       * only obvious control at a level eleven ahead of anything they have
+       * played.
+       */
+      check("a carried pilot's menu points at the next stop they owe, not the far end",
+        (() => {
+          P.save(behind);
+          const grid = qa("#profileGrid .profile-card");
+          SF.ui.renderProfiles();
+          const card = qa("#profileGrid .profile-card")
+            .find(c => /BEHIND/i.test(c.textContent));
+          if(!card) return false;
+          clickEl(card);
+          const sub = id("playSub").textContent;
+          return sub === SF.missions.MISSIONS[1].name && grid.length >= 0;
+        })());
+      check("being carried is not the same as having flown it", (() => {
+        // No cleared marks, no stars, no score for the stops they skipped:
+        // those are still theirs to go back and do properly, alone.
+        let claimed = 0;
+        for(let i = 1; i <= 12; i++){
+          const rec = behind.missions[SF.missions.MISSIONS[i].id];
+          if(rec && rec.cleared) claimed++;
+        }
+        return claimed === 0 && P.totalStars(behind) === 0;
+      })());
+    }
     closeCard();
 
     /* --- the way in: TWO PLAYERS on the pilot screen --- */
@@ -8903,6 +8966,24 @@ async function run(){
             id("screen-menu").classList.contains("active") &&
             !id("menuMate").classList.contains("hidden") &&
             /COOPB/i.test(id("menuMate").textContent));
+          /*
+           * ...and the map is the two campaigns together. CoopB is given a
+           * ledger reaching stop 9; CoopA's own stops well short of it. Paired,
+           * the map opens to the further of the two - the older sibling is not
+           * held to the younger one's progress, which is the whole reason
+           * anybody agrees to play together twice.
+           */
+          {
+            const far = P.load("CoopB");
+            for(let i = 0; i <= 9; i++)
+              far.missions[SF.missions.MISSIONS[i].id] = { cleared:true, stars:{}, best:{} };
+            P.save(far);
+            const solo = SF.missions.isMissionUnlocked(P.load("CoopA"), 9);
+            SF.ui.renderMissions();
+            const node = qa("#campaignNodes .map-node")[9];
+            check("paired, the map opens as far as the FURTHER pilot has got",
+              !solo && !!node && !node.classList.contains("locked"));
+          }
           SF.ui.renderMissions();
           clickEl(qa("#campaignNodes .map-node")[0]);
           check("the briefing shows the pair and says who steers what",

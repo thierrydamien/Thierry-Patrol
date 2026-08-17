@@ -1912,6 +1912,20 @@ function isMissionUnlocked(profile, index){
    */
   const own = profile.missions && profile.missions[MISSIONS[index].id];
   if(own && own.cleared) return true;
+  /*
+   * CARRIED FORWARD. Two players progress together, so a child flown to
+   * mission 30 by their older brother has mission 30 on their ledger - and
+   * the chain above would then open 31 while leaving 5 to 29 shut. A hole in
+   * the middle of a campaign is not "you jumped ahead", it reads as the game
+   * being broken, and the stops behind it become unreachable without a
+   * second co-op flight to each one.
+   *
+   * `reached` is the furthest stop a pilot has actually been taken to, and it
+   * opens the map up to there. It grants nothing else: no cleared marks, no
+   * stars, no score. The skipped levels sit open and unflown, which is
+   * exactly right - they can go back and fly them properly, alone.
+   */
+  if((profile.reached || 0) >= index) return true;
   const prev = MISSIONS[index-1];
   const record = profile.missions && profile.missions[prev.id];
   /*

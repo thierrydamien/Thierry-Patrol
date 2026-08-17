@@ -1010,6 +1010,9 @@ function endMission(completed){
     const metIds = completed
       ? (run.objectiveIds || []).filter((id, i) => run.objectiveDefs[i].test(run.stats))
       : [];
+    // Been here, so the map is open to here - whatever the chain behind it
+    // says. See isMissionUnlocked: no hole is left in a carried campaign.
+    profile.reached = Math.max(profile.reached || 0, run.missionIndex | 0);
     P.recordMission(profile, run.mission.id, run.difficulty.id, completed ? stars : 0,
                     run.score, completed, metIds);
     /*
@@ -1019,10 +1022,15 @@ function endMission(completed){
      * their own that moves. The score is the run's, which is shared, so the
      * record chips they compete over stay honest: a co-op number is a number
      * two of them made, and it lands on both.
+     *
+     * `reached` is what stops that generosity from breaking their map. Being
+     * carried to stop 30 opens the road as far as 30 - it does not mark 5 to
+     * 29 cleared, so those stay open and unflown, waiting to be done properly.
      */
-    if(mate){
+    if(mate && !mate.remote){
       mate.lastMission = run.mission.id;
       mate.lastDifficulty = run.difficulty.id;
+      mate.reached = Math.max(mate.reached || 0, run.missionIndex | 0);
       P.recordMission(mate, run.mission.id, run.difficulty.id, completed ? stars : 0,
                       run.score, completed, metIds);
     }
@@ -1041,7 +1049,8 @@ function endMission(completed){
     SF.netcode.send({
       t: "C", k: "end",
       completed: !!completed, stars,
-      missionId: run.mission.id, difficultyId: run.difficulty.id,
+      missionId: run.mission.id, missionIndex: run.missionIndex | 0,
+      difficultyId: run.difficulty.id,
       campaign: !(run.mission.endless || run.mission.bossRush ||
                   run.mission.vault || run.mission.custom),
       score: run.score, maxCombo: run.maxCombo,
@@ -1852,6 +1861,7 @@ function bankRemoteResult(m){
   if(m.campaign){
     prof.lastMission = m.missionId;
     prof.lastDifficulty = m.difficultyId;
+    prof.reached = Math.max(prof.reached || 0, m.missionIndex | 0);
     P.recordMission(prof, m.missionId, m.difficultyId, m.completed ? m.stars : 0,
                     m.score, !!m.completed, m.metIds || []);
   }

@@ -124,6 +124,10 @@ function blank(name){
     sky29Done: false,   // true once Sky 29 is painted - its paint pays out once
     // missions: { [missionId]: { cleared:true, stars:{ [difficultyId]: 0..3 }, best:{ [difficultyId]: score } } }
     missions: {},
+    // The furthest stop this pilot has been TAKEN to, by a wingman further
+    // along than they are. Opens the map that far and nothing else - see
+    // isMissionUnlocked. Absent on every save written before two-player.
+    reached: 0,
     lastMission: 1, lastDifficulty: "pilot",
     highscore: 0,
     totalKills: 0, bossesDefeated: 0, maxCombo: 0, lifetimeMoney: 0,

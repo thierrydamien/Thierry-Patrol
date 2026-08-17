@@ -559,6 +559,58 @@ function startTitleLoop(){
  */
 let sessionMate = null;
 let pairPick = null;
+
+/**
+ * The other pilot in this session, whichever way they are sitting. Same
+ * device: their real save. Across the wire: a card, which carries how far
+ * along the campaign they are and nothing else of their ledger.
+ */
+function coopPartner(){
+  if(SF.netcode.live()){
+    const c = SF.netcode.mate();
+    return c ? { reached: c.reach || 0, missions: {} } : null;
+  }
+  return sessionMate ? P.load(sessionMate) : null;
+}
+/*
+ * WHAT THIS SESSION MAY FLY. Two players progress together, so a stop is open
+ * if EITHER of them has reached it.
+ *
+ * The alternative - only what both have unlocked - holds the older sibling to
+ * the younger one's progress every time they play together, and the reliable
+ * result of that is the older one not wanting to play together. Being carried
+ * costs the younger pilot nothing they had: they keep every coin and medal
+ * they earn up there, and `reached` opens the road behind them so the stops
+ * they skipped are still theirs to fly properly, alone.
+ */
+function sessionUnlocked(index){
+  if(isMissionUnlocked(profile, index)) return true;
+  const mate = coopPartner();
+  return !!(mate && isMissionUnlocked(mate, index));
+}
+
+/**
+ * THE STOP TO POINT AT: the first one open and not yet cleared, and only the
+ * far end of the map when there is nothing left unfinished.
+ *
+ * This used to be the LAST unlocked stop, which is the same thing right up
+ * until somebody is carried. A child flown to mission 30 by their brother has
+ * a map open to 30 with everything from 5 up unflown, and "the newest stop"
+ * then aims their one big button at a level twenty-five ahead of anything
+ * they have played. The first thing they have not done is the honest answer,
+ * and for a pilot working through the campaign in order it is the same
+ * answer it always was.
+ */
+function nextStop(){
+  let last = 0;
+  for(let i = 0; i < MISSIONS.length; i++){
+    if(!sessionUnlocked(i)) continue;
+    last = i;
+    const rec = profile.missions && profile.missions[MISSIONS[i].id];
+    if(!(rec && rec.cleared) && !MISSIONS[i].gift) return i;
+  }
+  return last;
+}
 /* Set while the picker is asking which pilot this tablet is bringing to a
    two-device game. Same shape as pairPick: one tap, then the lobby. */
 let netPick = false;
@@ -728,8 +780,7 @@ function renderMenu(){
   }
 
   // Each button says what it is *for* right now, not just where it goes.
-  let nextMission = 0;
-  for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) nextMission = i;
+  const nextMission = nextStop();
   const A = SF.shipart, levels = A.levelsOf(profile), part = A.nextPart(levels);
   setSub("playSub", MISSIONS[nextMission].name);
   // The Wacky Sky opens once the basics are learned - see wackyUnlocked.
@@ -1612,7 +1663,7 @@ function starDebts(){
   MISSIONS.forEach((m, i) => {
     // The gift's own stars are outside the 84 (see profile.totalStars), so
     // hunting them would tell a pilot they are short when they are not.
-    if(m.gift || !isMissionUnlocked(profile, i)) return;
+    if(m.gift || !sessionUnlocked(i)) return;
     const earned = P.starsForMission(profile, m.id);
     const total = (m.objectives || []).length;
     if(earned >= total) return;
@@ -1649,7 +1700,7 @@ function sectorStats(si){
     starMax += (m.objectives || []).length;
     stars += P.starsForMission(profile, m.id);
     if(rec && rec.cleared) done++;
-    if(isMissionUnlocked(profile, i)) reached = true;
+    if(sessionUnlocked(i)) reached = true;
   }
   return { from, to, done, total, stars, starMax, reached,
            cleared: total > 0 && done === total,
@@ -1734,7 +1785,7 @@ function renderMissions(){
   const holder = $("campaignNodes");
   holder.innerHTML = "";
   nodes.forEach(node => {
-    const unlocked = isMissionUnlocked(profile, node.index);
+    const unlocked = sessionUnlocked(node.index);
     const earned = P.starsForMission(profile, node.mission.id);
     const btn = document.createElement("button");
     btn.className = "map-node" + (unlocked ? "" : " locked") + (earned === 3 ? " perfect" : "");
@@ -1774,8 +1825,10 @@ function renderMissions(){
    * description of one. The map keeps the storytelling; the button just goes
    * there.
    */
-  let next = 0;
-  for(let i=0;i<MISSIONS.length;i++) if(isMissionUnlocked(profile, i)) next = i;
+  // The first stop still owed rather than the far end of the map - the two
+  // are the same answer for a pilot flying the campaign in order, and only
+  // differ for one who has been carried past a stretch. See nextStop.
+  const next = nextStop();
   /*
    * The button used to always point at the newest unlocked stop, which is
    * exactly right until the campaign is finished - then it is stuck on the
@@ -1823,13 +1876,13 @@ function renderSectorRail(){
   // where it was used only to pick a scroll target - so the rail knew the
   // answer and never said it.
   let here = null;
-  SECTORS.forEach((sec, si) => { if(isMissionUnlocked(profile, sec.at)) here = si; });
+  SECTORS.forEach((sec, si) => { if(sessionUnlocked(sec.at)) here = si; });
   // Top of the screen is the END of the route, so the rail reads top-down in
   // the same order the map does.
   SECTORS.forEach((sec, si) => {
     const b = document.createElement("button");
     const st = sectorStats(si);
-    const unlocked = isMissionUnlocked(profile, sec.at);
+    const unlocked = sessionUnlocked(sec.at);
     b.className = "rail-stop" + (unlocked ? "" : " locked") +
                   (st.perfect ? " perfect" : st.cleared ? " cleared" : "") +
                   (si === here ? " here" : "");
@@ -1999,7 +2052,7 @@ function drawCampaign(){
 
   // How far along the route the player has actually got.
   let reached = 0;
-  for(let i=0;i<nodes.length;i++) if(isMissionUnlocked(profile, i)) reached = i;
+  for(let i=0;i<nodes.length;i++) if(sessionUnlocked(i)) reached = i;
 
   /*
    * The route: travelled stretches are lit, the rest is a faint dashed plan -
@@ -2203,7 +2256,7 @@ function drawCampaign(){
   const owes = {};
   if(starHunt) starDebts().forEach(d => { owes[d.mission.id] = d; });
   nodes.forEach((node, i) => {
-    const unlocked = isMissionUnlocked(profile, i);
+    const unlocked = sessionUnlocked(i);
     const earned = P.starsForMission(profile, node.mission.id);
     const debt = owes[node.mission.id];
     if(starHunt){
@@ -4757,7 +4810,7 @@ function launch(index, difficultyId){
    * MISSIONS if `hasNext` were ever computed wrongly upstream.
    */
   if(typeof index === "number"){
-    if(index < 0 || index >= MISSIONS.length || !isMissionUnlocked(profile, index)){
+    if(index < 0 || index >= MISSIONS.length || !sessionUnlocked(index)){
       renderMissions();
       show("screen-missions");
       if(MISSIONS[index]) queueToast({ glyph:"lock", label:"LOCKED",
