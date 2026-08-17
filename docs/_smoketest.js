@@ -236,6 +236,49 @@ async function run(){
     check("a portrait phone still gets a phone-shaped field",
       SF.field.measure() >= 380 && SF.field.measure() < 720);
     /*
+     * HOW WIDE THE SKY MAY BE DEPENDS ON HOW MANY ARE FLYING, and that is a
+     * measured rule rather than a taste. Bot-flying eight seeded missions:
+     * one pilot at 720 kills 51% and lets 33% escape, and at 900 that falls
+     * to 37% and 46% - nearly half of everything gets past them. Holding the
+     * enemy COUNT flat barely helps (39%/42%), because the cost is not
+     * density, it is that one ship can only be in one place. Two pilots at
+     * 900 land on 57%/27%, almost exactly where one used to be at 640.
+     *
+     * So the second seat buys the extra sky, and nobody else pays for it.
+     */
+    {
+      const wasMate = SF.game.coopMate;
+      defineSize(1470, 856);
+      const alone = SF.field.measure();
+      SF.game.coopMate = { name:"Someone" };
+      const pair = SF.field.measure();
+      SF.game.coopMate = wasMate;
+      const back = SF.field.measure();
+      check("a second pilot buys a wider sky, and one pilot is not made to fly it",
+        alone === 720 && pair === 900 && back === 720);
+    }
+    /*
+     * ...and no screen may be widened out of its HUD. The field is chosen to
+     * leave the wings their margin, so this walks the real devices and checks
+     * the panels survive on every one of them - a rule stated as arithmetic
+     * rather than as a number somebody picked, because picking a number is
+     * how a landscape iPad lost its wings by one pixel the first time.
+     */
+    {
+      const wasMate = SF.game.coopMate;
+      SF.game.coopMate = { name:"Someone" };          // the widest case
+      const WING_MIN = SF.entityConst.WING_MIN;
+      const kept = [[1024, 744], [1366, 1024], [1470, 856], [1280, 720], [1920, 1040]]
+        .every(([w, h]) => {
+          defineSize(w, h);
+          const vw = SF.field.measure();
+          const frameW = h * (vw/800);
+          return Math.floor((w - frameW)/2) >= WING_MIN;
+        });
+      SF.game.coopMate = wasMate;
+      check("no screen is ever widened out of its own HUD", kept);
+    }
+    /*
      * THE HUD WINGS.
      *
      * The playfield is tuned at four fifths as wide as it is tall, so on a
@@ -311,7 +354,7 @@ async function run(){
     check("a vee's wings widen with the field too",
       span(F.vee(8, 640)) > span(F.vee(8, 400)) * 1.05);
     check("every formation stays inside the widest field there is",
-      Object.keys(F).every(k => F[k](12, 720).every(sl => sl.x >= 0 && sl.x <= 720)));
+      Object.keys(F).every(k => F[k](12, 900).every(sl => sl.x >= 0 && sl.x <= 900)));
     check("a wide field tops the wave counts up to hold enemies-per-area", (() => {
       // Direct: build a director on a desktop-measured field and compare.
       defineSize(1920, 1040);
@@ -2535,7 +2578,9 @@ async function run(){
        an aspect of 0.51), so a 0.50 field fills it. */
     check("a tall phone gets a field shaped like the phone", (() => {
       const src = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
-      const m = src.match(/Math\.max\((\d+), Math\.min\((\d+),/);
+      // The FLOOR only - the ceiling is no longer a literal, it depends on
+      // how many pilots are flying and on the room the HUD needs.
+      const m = src.match(/Math\.max\((\d+), Math\.min\(/);
       if(!m) return false;
       const floor = +m[1];
       // An iPhone 14's real box is 390x763, which asks for ~409. The clamp has
@@ -8813,6 +8858,28 @@ async function run(){
     }
     {
       /*
+       * THE SKY KNOWS THERE ARE TWO OF THEM.
+       *
+       * Every behaviour aims at `ctx.player`, which used to be seat one for
+       * the whole frame - so the second child was invisible to the AI. This
+       * parks a chaser right beside seat two, far from seat one, and asks who
+       * it goes for.
+       */
+      w.enemies.killAll();
+      park(p1, VWn*0.10, 660);
+      park(p2, VWn*0.90, 300);
+      const chaser = w.spawnEnemy("grunt", p2.x, 120,
+                                  { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+      const before = Math.abs(chaser.x - p2.x);
+      await runFrames(30, true);
+      // Whatever it does, it must be reasoning about the ship it is next to.
+      check("an enemy hunts the nearest ship, not always seat one",
+        Math.abs(chaser.x - p2.x) <= before + 8 &&
+        Math.abs(chaser.x - p2.x) < Math.abs(chaser.x - p1.x));
+      w.enemies.killAll();
+    }
+    {
+      /*
        * One pilot going down does not end the patrol, and the other one buys
        * them back in with a life of their own. Without this a seven-year-old
        * sits and watches their sibling finish the level.
@@ -9078,6 +9145,41 @@ async function run(){
       touch("pointerup", 81, px(0.25), py(0.7));
       SF.input.clearMovement();
       cv.getBoundingClientRect = realRect;
+    }
+
+    {
+      /*
+       * THE REPORTED BUG, flown. "Player 2 is inside circle but it's not
+       * registered." Level 0's flight check is a mission OBJECTIVE, and it
+       * only ever tested seat one - so a child could fly clean through a ring,
+       * watch it stay lit, and be told 4/6 while their brother did all the
+       * scoring. Every level mechanic had the same shape.
+       */
+      G.coopWith = "CoopB";
+      G.profile = P.load("CoopA");
+      id("overlayResults").classList.add("hidden");
+      G.startMission(0, "pilot");                 // Launch Day: the rings
+      await runFrames(45, true);                  // past the launch autopilot
+      const q1 = G.world.players[0], q2 = G.world.players[1];
+      let flown = false;
+      for(let t = 0; t < 200 && !flown; t++){
+        const ring = ((SF.prologue._s() || {}).rings || [])
+          .find(r => !r.hit && !r.gone && r.x != null);
+        if(ring){
+          // Seat ONE parked far away; seat two put through the hoop.
+          q1.x = q1.targetX = 20; q1.y = q1.targetY = 700;
+          q2.x = q2.targetX = ring.x; q2.y = q2.targetY = ring.y;
+          await runFrames(3, true);
+          flown = !!ring.hit;
+        }
+        if(!flown) await runFrames(6, true);
+      }
+      check("seat two flying through a ring is a ring flown",
+        flown && (G.run.stats.ringsHit || 0) > 0);
+      G.run.ended = true; G.state = "idle";
+      G.world.reset();
+      SF.prologue.reset();
+      id("overlayResults").classList.add("hidden");
     }
 
     closeCard();

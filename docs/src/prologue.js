@@ -202,13 +202,26 @@ function update(dt, run, world, simMs, VW, VH){
     S.nextRing++;
   }
   const hits = run.stats.ringsHit || 0;
+  /*
+   * EITHER SHIP FLIES THE RING. The flight check is the mission's objective,
+   * and in co-op it was only ever testing seat one - so a child could fly
+   * clean through a ring, watch it stay lit, and be told 4/6 while their
+   * brother did all the scoring. Solo, livePlayers() is a list of one and
+   * this is exactly what it always was.
+   */
+  const seats = world.livePlayers ? world.livePlayers() : (p ? [p] : []);
   for(const r of S.rings){
-    if(r.hit || r.gone || !p) continue;
+    if(r.hit || r.gone) continue;
     r.x = r.fx*VW; r.y = r.fy*VH + Math.sin((T - r.born)*1.4)*6;
-    const dx = p.x - r.x, dy = p.y - r.y;
-    if(dx*dx + dy*dy < 40*40){
+    let through = null;
+    for(let s = 0; s < seats.length; s++){
+      const q = seats[s];
+      const dx = q.x - r.x, dy = q.y - r.y;
+      if(dx*dx + dy*dy < 40*40){ through = q; break; }
+    }
+    if(through){
       r.hit = true; r.hitAt = T;
-      run.stats.ringsHit = hits + 1;
+      run.stats.ringsHit = (run.stats.ringsHit || 0) + 1;
       SF.audio.play("star", false, r.x);
       SF.fx.ring(r.x, r.y, 52, "#ffd23f", 4, 0.5);
       SF.fx.text(r.x, r.y - 34, (run.stats.ringsHit) + "/6", "#ffd23f", 15, true);

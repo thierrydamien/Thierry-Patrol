@@ -100,7 +100,14 @@ class WaveDirector {
    * double the traffic.
    */
   waveSize(wave){
-    const widthTopUp = clamp(VW / 600, 1, 1.2);
+    /*
+     * Enemies-per-area, held level as the field grows. The cap is the widest
+     * field there is rather than a literal: pinned to 1.2 it saturated at
+     * VW 720, so every pixel past that was extra sky with no extra traffic in
+     * it - the game quietly getting easier on exactly the big screens the
+     * field was widened for.
+     */
+    const widthTopUp = clamp(VW / 600, 1, SF.entityConst.FIELD_MAX / 600);
     return Math.max(1, Math.round(wave.n * this.density * widthTopUp));
   }
 

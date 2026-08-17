@@ -21,31 +21,31 @@
  *     8543  src/fx.js
  *     9656  src/input.js
  *    10150  src/entities.js
- *    11437  src/bossart.js
- *    12303  src/bosses.js
- *    13053  src/bossintro.js
- *    13176  src/rewind.js
- *    13707  src/finale.js
- *    14028  src/papadeath.js
- *    14350  src/backstage.js
- *    15299  src/sky29.js
- *    15544  src/mirrorduel.js
- *    15891  src/homecoming.js
- *    16088  src/prologue.js
- *    16554  src/systems.js
- *    17202  src/render.js
- *    21830  src/enemyart.js
- *    22782  src/insignia.js
- *    23027  src/skygen.js
- *    25971  src/shipart.js
- *    27171  src/paintjob.js
- *    27333  src/pilotart.js
- *    27428  src/comms.js
- *    27567  src/netcode.js
- *    28089  src/game.js
- *    31982  src/workshop.js
- *    32679  src/data/i18nbind.js
- *    32750  src/ui.js
+ *    11527  src/bossart.js
+ *    12393  src/bosses.js
+ *    13143  src/bossintro.js
+ *    13266  src/rewind.js
+ *    13797  src/finale.js
+ *    14118  src/papadeath.js
+ *    14440  src/backstage.js
+ *    15389  src/sky29.js
+ *    15634  src/mirrorduel.js
+ *    15981  src/homecoming.js
+ *    16178  src/prologue.js
+ *    16657  src/systems.js
+ *    17312  src/render.js
+ *    21940  src/enemyart.js
+ *    22892  src/insignia.js
+ *    23137  src/skygen.js
+ *    26081  src/shipart.js
+ *    27281  src/paintjob.js
+ *    27443  src/pilotart.js
+ *    27538  src/comms.js
+ *    27677  src/netcode.js
+ *    28199  src/game.js
+ *    32135  src/workshop.js
+ *    32832  src/data/i18nbind.js
+ *    32903  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -10224,6 +10224,35 @@ function tetherAt(c, u, out){
  * formations, boss patrol limits, spawn margins and the HUD are all expressed
  * relative to VW/VH.
  */
+/*
+ * How much room the HUD wings need either side before they are worth showing.
+ * game.js reads this through SF.entityConst: the field's width is now decided
+ * BY it, so the two cannot be allowed to drift apart.
+ */
+const WING_MIN = 150;
+/*
+ * HOW WIDE THE SKY MAY BE, and it depends on how many are flying.
+ *
+ * Measured, bot-flying eight seeded missions a minute each on a laptop:
+ *
+ *            solo killed/escaped     co-op killed/escaped
+ *   640          53% / 32%                79% / 12%
+ *   720          51% / 33%                72% / 16%
+ *   900          37% / 46%                57% / 27%
+ *
+ * Holding enemies-per-AREA level does not hold DIFFICULTY level, because one
+ * ship can only be in one place: widen the sky and more of it is unguarded at
+ * any moment, whatever the density. So 720 is where one pilot stops breaking
+ * even - at 900 nearly half of everything escapes them - while two pilots at
+ * 900 land almost exactly where one pilot used to be at 640, which is the
+ * "too easy with 2 planes" complaint answered with a number.
+ *
+ * FIELD_MAX is the absolute ceiling and what the density top-up is pinned to
+ * (see waveSize), so a wider field always brings its own traffic.
+ */
+const FIELD_MAX  = 900;      // two pilots
+const FIELD_SOLO = 720;      // one
+
 function pickFieldWidth(){
   /*
    * Match the field to the box it will actually be drawn in, measured - not
@@ -10319,7 +10348,38 @@ function pickFieldWidth(){
    * 1920 monitor, and gets essentially all of the difficulty back that 780
    * does.
    */
-  return Math.round(Math.max(380, Math.min(720, 800 * (w / Math.max(1, h)))));
+  /*
+   * ...AND THE CEILING IS THE HUD's, not a number picked in advance.
+   *
+   * 720 was chosen because 780 dropped a landscape iPad's gutter to 149px
+   * against the 150 the HUD wings need - so the readouts would have jumped
+   * back on top of the action on the very device the widening was for. But
+   * that is an argument about ONE screen, and applying its answer everywhere
+   * left a MacBook and a monitor flying a field far narrower than they could
+   * comfortably hold.
+   *
+   * So the constraint is stated instead of guessed: take the widest field
+   * that still leaves WING_MIN either side, and let each screen answer for
+   * itself. A landscape iPad lands on ~778 - the widest it can be and keep
+   * its panels - and a 1470x856 laptop is limited by FIELD_MAX rather than by
+   * its margins. The rule cannot silently cost anyone their HUD again.
+   *
+   * A window with no room for wings at all (a phone) falls back to filling
+   * the glass, because there is no HUD out there to protect.
+   */
+  const fill  = 800 * (w / Math.max(1, h));
+  const wings = 800 * ((w - 2*WING_MIN) / Math.max(1, h));
+  const seats = (SF.game && SF.game.coopMate) ? 2 : 1;
+  const ceiling = seats > 1 ? FIELD_MAX : FIELD_SOLO;
+  const want  = wings >= 640 ? Math.min(fill, wings) : fill;
+  /*
+   * FLOOR, not round. Rounding a wings-limited width UP puts it back past the
+   * very constraint it was computed from: an iPad Pro asked for 832.8, got
+   * 833, and its gutter came out at 149 against a 150 minimum - losing the
+   * HUD by one pixel. A field a pixel narrower than it could be costs
+   * nothing; a field a pixel wider costs the whole HUD.
+   */
+  return Math.floor(Math.max(380, Math.min(ceiling, want)));
 }
 
 const VH = 800;
@@ -11152,9 +11212,38 @@ class World {
     if(this.silent) this.silentClock += dt;   // paces the shared-shot throttle
     const items = this.enemies.items;
     this.applyGuardianShields();
+    /*
+     * WHO IS THIS ONE HUNTING?
+     *
+     * Every behaviour aims at `ctx.player`, and that used to be seat one for
+     * the whole frame - so in co-op the second child was invisible to the AI.
+     * Nothing chased them, nothing led its shots at them, nothing dived at
+     * them. They flew through the level as a ghost while their brother took
+     * the entire sky's attention, which is both unfair and boring.
+     *
+     * Each enemy now picks the nearest ship it can see, per frame. Solo there
+     * is one seat, `nearestSeat` returns it every time, and this is precisely
+     * the old behaviour with a loop of length one around it.
+     */
+    const seats = this.livePlayers();
+    // With nobody left alive the behaviours still get the ship they were
+    // aiming at, dead or not - which is what they were handed before, and
+    // several of them read its position through the death sequence.
+    const soloSeat = seats.length === 1 ? seats[0] : this.player;
     for(let i=0;i<items.length;i++){
       const e = items[i];
       if(!e.alive) continue;
+      if(seats.length > 1){
+        let best = null, bestD = Infinity;
+        for(let s = 0; s < seats.length; s++){
+          const q = seats[s];
+          const d = (q.x-e.x)*(q.x-e.x) + (q.y-e.y)*(q.y-e.y);
+          if(d < bestD){ bestD = d; best = q; }
+        }
+        ctxObj.player = best;
+      } else {
+        ctxObj.player = soloSeat;
+      }
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
       e.life += dt;
@@ -11428,7 +11517,8 @@ SF.World = World;
 // and "where exactly does it hang?", and both answers must come from the one
 // place that knows what a stale link looks like.
 SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
-SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable };
+SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable,
+                   WING_MIN, FIELD_MAX };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();
 
@@ -16289,13 +16379,26 @@ function update(dt, run, world, simMs, VW, VH){
     S.nextRing++;
   }
   const hits = run.stats.ringsHit || 0;
+  /*
+   * EITHER SHIP FLIES THE RING. The flight check is the mission's objective,
+   * and in co-op it was only ever testing seat one - so a child could fly
+   * clean through a ring, watch it stay lit, and be told 4/6 while their
+   * brother did all the scoring. Solo, livePlayers() is a list of one and
+   * this is exactly what it always was.
+   */
+  const seats = world.livePlayers ? world.livePlayers() : (p ? [p] : []);
   for(const r of S.rings){
-    if(r.hit || r.gone || !p) continue;
+    if(r.hit || r.gone) continue;
     r.x = r.fx*VW; r.y = r.fy*VH + Math.sin((T - r.born)*1.4)*6;
-    const dx = p.x - r.x, dy = p.y - r.y;
-    if(dx*dx + dy*dy < 40*40){
+    let through = null;
+    for(let s = 0; s < seats.length; s++){
+      const q = seats[s];
+      const dx = q.x - r.x, dy = q.y - r.y;
+      if(dx*dx + dy*dy < 40*40){ through = q; break; }
+    }
+    if(through){
       r.hit = true; r.hitAt = T;
-      run.stats.ringsHit = hits + 1;
+      run.stats.ringsHit = (run.stats.ringsHit || 0) + 1;
       SF.audio.play("star", false, r.x);
       SF.fx.ring(r.x, r.y, 52, "#ffd23f", 4, 0.5);
       SF.fx.text(r.x, r.y - 34, (run.stats.ringsHit) + "/6", "#ffd23f", 15, true);
@@ -16653,7 +16756,14 @@ class WaveDirector {
    * double the traffic.
    */
   waveSize(wave){
-    const widthTopUp = clamp(VW / 600, 1, 1.2);
+    /*
+     * Enemies-per-area, held level as the field grows. The cap is the widest
+     * field there is rather than a literal: pinned to 1.2 it saturated at
+     * VW 720, so every pixel past that was extra sky with no extra traffic in
+     * it - the game quietly getting easier on exactly the big screens the
+     * field was widened for.
+     */
+    const widthTopUp = clamp(VW / 600, 1, SF.entityConst.FIELD_MAX / 600);
     return Math.max(1, Math.round(wave.n * this.density * widthTopUp));
   }
 
@@ -28209,8 +28319,10 @@ function resize(){
   });
 }
 /* Below this the panels are too narrow to read, so the canvas HUD keeps the
-   job. 150 fits the widest readout (a six-figure score) with margin. */
-const WING_MIN = 150;
+   job. 150 fits the widest readout (a six-figure score) with margin. It lives
+   in entities.js because the FIELD's width is now chosen to leave room for
+   it - two copies of that number could disagree and cost somebody their HUD. */
+const WING_MIN = SF.entityConst.WING_MIN;
 
 /*
  * CO-OP REVIVE. Long enough that going down still stings and the survivor has
@@ -28429,6 +28541,27 @@ function startMission(missionIndex, difficultyId){
    * known until after its scripts have run. Everything below builds the world
    * from VW, so this has to come first.
    */
+  /*
+   * TWO DEVICES. Across the wire the mate's save lives on the OTHER machine,
+   * so it cannot be loaded - it arrives as a card and is worn by a blank
+   * pilot marked `remote`, which endMission refuses to bank into. Their
+   * takings go home over the link instead, and they save them themselves.
+   *
+   * The HOST is seat one on both screens, always. Without a fixed rule each
+   * device would call itself seat one and the two pictures would disagree
+   * about which ship is which - and the guest's own snapshot would fly the
+   * wrong hull.
+   */
+  const netRole = SF.netcode.live() ? SF.netcode.role() : null;
+  game.coopMate = netRole
+    ? SF.netcode.asPilot(SF.netcode.mate())
+    : (game.coopWith ? (SF.profile.load(game.coopWith) || null) : null);
+  const mate = game.coopMate;
+  /*
+   * ...and it is settled BEFORE the field is measured, because how many ships
+   * are flying decides how wide the sky may be. See pickFieldWidth: one pilot
+   * cannot cover a two-pilot field, and measured, they should not have to.
+   */
   SF.field.refresh();
 
   /*
@@ -28502,22 +28635,6 @@ function startMission(missionIndex, difficultyId){
    * household, and somebody who is really in the sky must not also appear as
    * a drone wearing the same name.
    */
-  /*
-   * TWO DEVICES. Across the wire the mate's save lives on the OTHER machine,
-   * so it cannot be loaded - it arrives as a card and is worn by a blank
-   * pilot marked `remote`, which endMission refuses to bank into. Their
-   * takings go home over the link instead, and they save them themselves.
-   *
-   * The HOST is seat one on both screens, always. Without a fixed rule each
-   * device would call itself seat one and the two pictures would disagree
-   * about which ship is which - and the guest's own snapshot would fly the
-   * wrong hull.
-   */
-  const netRole = SF.netcode.live() ? SF.netcode.role() : null;
-  game.coopMate = netRole
-    ? SF.netcode.asPilot(SF.netcode.mate())
-    : (game.coopWith ? (SF.profile.load(game.coopWith) || null) : null);
-  const mate = game.coopMate;
   // On the guest, THIS pilot is seat two and the host's card is seat one.
   const seatOne = netRole === "guest" ? mate : profile;
   const seatTwo = netRole === "guest" ? profile : mate;
@@ -30657,6 +30774,7 @@ function update(dt, timeMs){
         fl.mode = "warn"; fl.timer = 1.2;
         fl.top = rand(VH*0.42, VH*0.70);
         fl.hitThisBurn = false;
+        fl.burnId = (fl.burnId || 0) + 1;   // what a seat's "already burned" means
         audio.play("telegraph");
       }
     } else if(fl.mode === "warn"){
@@ -30666,11 +30784,22 @@ function update(dt, timeMs){
       fl.y = (VH + 60) + (fl.top - (VH + 60)) * (k*k*(3 - 2*k));
       if(fl.timer <= 0){ fl.mode = "burn"; fl.timer = 1.3; fl.y = fl.top; audio.play("gust"); }
     } else if(fl.mode === "burn"){
-      if(pl && pl.alive && pl.y > fl.y && !fl.hitThisBurn && pl.invuln <= 0){
-        fl.hitThisBurn = true;
-        run.stats.flareHits++;
-        callbacks.onPlayerHit("flare", null);
-      }
+      /*
+       * The fire takes whoever is caught below it - each of them once per
+       * burn, tracked per seat. One shared `hitThisBurn` meant the first
+       * pilot to be caught spent the flag and the second flew through the
+       * flame untouched, on the level whose whole lesson is "get above it".
+       */
+      { const seats = game.world.livePlayers();
+        for(let s = 0; s < seats.length; s++){
+          const q = seats[s];
+          if(q.y <= fl.y || q.invuln > 0) continue;
+          if(q.flareBurn === fl.burnId) continue;
+          q.flareBurn = fl.burnId;
+          fl.hitThisBurn = true;
+          run.stats.flareHits++;
+          callbacks.onPlayerHit("flare", null, q);
+        } }
       /*
        * Everything alive below the line goes with it - and pays NOTHING.
        * Routed through onEnemyKilled with the no-pay flag so the ledger stays
@@ -30872,16 +31001,23 @@ function update(dt, timeMs){
      * Keyboard flight integrates velocity, so for keys the direct push is
      * real and stays.
      */
-    const p = game.world.player;
-    if(p && p.alive){
-      const k = pull(p.y);
-      const push = cu.dir*cu.speed*k*dt;
-      if(k > 0){
-        if(SF.input.state.dragging) SF.input.flowNudge(push);
-        else p.x = clamp(p.x + push, 20, VW - 20);
-      } else {
-        SF.input.flowRelax(dt);      // out of the stream: the stick comes home
+    /*
+     * The water carries every boat in it. `flowNudge` moves the point seat
+     * one's FINGER names and there is only one of those, so seat two - which
+     * has its own stick - is pushed directly instead. Same drift either way.
+     */
+    { const seats = game.world.livePlayers();
+      let anyInStream = false;
+      for(let s = 0; s < seats.length; s++){
+        const q = seats[s];
+        const k = pull(q.y);
+        if(k <= 0) continue;
+        anyInStream = true;
+        const push = cu.dir*cu.speed*k*dt;
+        if(q.seat === 0 && SF.input.state.dragging) SF.input.flowNudge(push);
+        else q.x = clamp(q.x + push, 20, VW - 20);
       }
+      if(!anyInStream) SF.input.flowRelax(dt);   // out of it: the stick comes home
     }
     const es = game.world.enemies.items;
     for(let i = 0; i < es.length; i++){
@@ -30966,15 +31102,19 @@ function update(dt, timeMs){
       const to   = Math.ceil( ((sp.a + sp.half) - sp.lo) / span * n);
       for(let i = Math.max(0, from); i < Math.min(n, to); i++) sp.seen[i] = sp.t;
     }
-    const p = game.world.player;
+    // Either ship caught in the beam lights the sky. Hiding only works if
+    // BOTH of you are in the dark, which is the co-op version of the level's
+    // own rule rather than a new one.
     let lit = false;
-    if(p && p.alive){
-      const ang = Math.atan2(p.y - sp.pivotY, p.x - sp.pivotX);
-      let d = ang - sp.a;
-      while(d > Math.PI) d -= Math.PI*2;
-      while(d < -Math.PI) d += Math.PI*2;
-      lit = Math.abs(d) < sp.half;
-    }
+    { const seats = game.world.livePlayers();
+      for(let s = 0; s < seats.length && !lit; s++){
+        const q = seats[s];
+        const ang = Math.atan2(q.y - sp.pivotY, q.x - sp.pivotX);
+        let d = ang - sp.a;
+        while(d > Math.PI) d -= Math.PI*2;
+        while(d < -Math.PI) d += Math.PI*2;
+        lit = Math.abs(d) < sp.half;
+      } }
     // A hair of hysteresis, so clipping the edge of the beam does not strobe
     // the whole sky's aggression on and off several times a second.
     if(lit) sp.litFor = 0.35;
@@ -31018,19 +31158,25 @@ function update(dt, timeMs){
     const squeeze = 0.5 - Math.cos(na.t*0.42)*0.5;        // 0 open, 1 shut
     const ripple = Math.sin(na.t*0.9)*0.5 + 0.5;
     na.w = VW*(0.02 + (0.155 + ripple*0.03)*squeeze);
-    const p = game.world.player;
-    if(p && p.alive && p.invuln <= 0 && !callbacks.godMode){
-      const into = Math.min(p.x - (na.w + p.r), (VW - na.w - p.r) - p.x);
-      if(into < 0 && simMs - na.lastHit > 400){
-        na.lastHit = simMs;
+    /*
+     * The cliffs are solid for BOTH ships. Per-seat cooldowns, not one shared
+     * `lastHit`: with a single timer, one pilot scraping the wall bought the
+     * other four hundred milliseconds of free passage through solid rock.
+     */
+    { const seats = game.world.livePlayers();
+      for(let s = 0; s < seats.length; s++){
+        const p = seats[s];
+        if(p.invuln > 0 || callbacks.godMode) continue;
+        const into = Math.min(p.x - (na.w + p.r), (VW - na.w - p.r) - p.x);
+        if(into >= 0 || simMs - (p.narrowsHitAt || 0) <= 400) continue;
+        p.narrowsHitAt = simMs;
         fx.sparks(p.x, p.y, 14, "#d9c2a4", 210);
         fx.shake(11);
-        callbacks.onPlayerHit("rock", null);
+        callbacks.onPlayerHit("rock", null, p);
         // Pushed clear, so a hit cannot repeat every frame while a child is
         // still holding the stick into the wall.
         p.x = p.x < VW*0.5 ? na.w + p.r + 3 : VW - na.w - p.r - 3;
-      }
-    }
+      } }
     // Anything that flies into the rock is stopped by it too, or a wave could
     // park itself inside a cliff where no bullet reaches.
     const es = game.world.enemies.items;
@@ -31068,8 +31214,10 @@ function update(dt, timeMs){
                  st.dir*rand(600, 850), rand(-25, 25), "#9fd8ff", 0.32, 1.6);
       if(st.timer <= 0){ st.mode = "blow"; st.timer = rand(1.4, 2.2); audio.play("gust"); }
     } else if(st.mode === "blow"){
-      const pl = game.world.player;
-      if(pl && pl.alive) pl.x = clamp(pl.x + st.dir*st.str*dt, 24, VW - 24);
+      // The wind blows on everything with wings, not only the first one.
+      { const seats = game.world.livePlayers();
+        for(let s = 0; s < seats.length; s++)
+          seats[s].x = clamp(seats[s].x + st.dir*st.str*dt, 24, VW - 24); }
       /*
        * The wind may not blow an enemy somewhere you cannot follow it.
        *
@@ -31177,18 +31325,20 @@ function update(dt, timeMs){
       }
     }
     // The ship feels the pull too - readable, never a trap.
-    const pl = game.world.player;
-    if(pl && pl.alive){
-      for(let k = 0; k < wl.list.length; k++){
-        const w = wl.list[k];
-        const dx = w.x - pl.x, dy = w.y - pl.y;
-        const d = Math.hypot(dx, dy);
-        if(d > w.R || d < 1) continue;
-        const f = (w.maw ? 130 : 85) * (1 - d/w.R);
-        pl.x = clamp(pl.x + dx/d * f * dt, 24, VW - 24);
-        pl.y = clamp(pl.y + dy/d * f * dt, 90, SF.entityConst.PLAY_BOTTOM);
-      }
-    }
+    // A whirlpool pulls on every hull inside it.
+    { const seats = game.world.livePlayers();
+      for(let s = 0; s < seats.length; s++){
+        const pl = seats[s];
+        for(let k = 0; k < wl.list.length; k++){
+          const w = wl.list[k];
+          const dx = w.x - pl.x, dy = w.y - pl.y;
+          const d = Math.hypot(dx, dy);
+          if(d > w.R || d < 1) continue;
+          const f = (w.maw ? 130 : 85) * (1 - d/w.R);
+          pl.x = clamp(pl.x + dx/d * f * dt, 24, VW - 24);
+          pl.y = clamp(pl.y + dy/d * f * dt, 90, SF.entityConst.PLAY_BOTTOM);
+        }
+      } }
     for(let k = wl.list.length - 1; k >= 0; k--){
       const w = wl.list[k];
       w.x += w.vx * dt; w.y += w.vy * dt;
@@ -31616,21 +31766,24 @@ function announceNewThreats(){
 
 const CLOSE_R = 26;
 function checkCloseCall(){
-  const p = game.world.player;
-  if(!p || !p.alive || p.invuln > 0) return;
+  const seats = game.world.livePlayers();
   const items = game.world.enemyBullets.items;
-  for(let i=0;i<items.length;i++){
-    const b = items[i];
-    if(!b.alive || b.vy <= 0) continue;
-    // Only count it once it's level with or past the ship: still-approaching
-    // bullets aren't near misses yet, they're threats.
-    if(b.y < p.y) continue;
-    if(b.y > p.y + 24) continue;
-    const dx = b.x - p.x, dy = b.y - p.y;
-    const d = Math.sqrt(dx*dx + dy*dy);
-    if(d < CLOSE_R + b.r && d > p.r + b.r){
-      SF.comms.say("closeCall");
-      return;
+  for(let s = 0; s < seats.length; s++){
+    const p = seats[s];
+    if(p.invuln > 0) continue;
+    for(let i=0;i<items.length;i++){
+      const b = items[i];
+      if(!b.alive || b.vy <= 0) continue;
+      // Only count it once it's level with or past the ship: still-approaching
+      // bullets aren't near misses yet, they're threats.
+      if(b.y < p.y) continue;
+      if(b.y > p.y + 24) continue;
+      const dx = b.x - p.x, dy = b.y - p.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if(d < CLOSE_R + b.r && d > p.r + b.r){
+        SF.comms.say("closeCall");
+        return;                     // one radio call is enough for the room
+      }
     }
   }
 }

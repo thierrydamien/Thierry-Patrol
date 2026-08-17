@@ -75,6 +75,35 @@ function tetherAt(c, u, out){
  * formations, boss patrol limits, spawn margins and the HUD are all expressed
  * relative to VW/VH.
  */
+/*
+ * How much room the HUD wings need either side before they are worth showing.
+ * game.js reads this through SF.entityConst: the field's width is now decided
+ * BY it, so the two cannot be allowed to drift apart.
+ */
+const WING_MIN = 150;
+/*
+ * HOW WIDE THE SKY MAY BE, and it depends on how many are flying.
+ *
+ * Measured, bot-flying eight seeded missions a minute each on a laptop:
+ *
+ *            solo killed/escaped     co-op killed/escaped
+ *   640          53% / 32%                79% / 12%
+ *   720          51% / 33%                72% / 16%
+ *   900          37% / 46%                57% / 27%
+ *
+ * Holding enemies-per-AREA level does not hold DIFFICULTY level, because one
+ * ship can only be in one place: widen the sky and more of it is unguarded at
+ * any moment, whatever the density. So 720 is where one pilot stops breaking
+ * even - at 900 nearly half of everything escapes them - while two pilots at
+ * 900 land almost exactly where one pilot used to be at 640, which is the
+ * "too easy with 2 planes" complaint answered with a number.
+ *
+ * FIELD_MAX is the absolute ceiling and what the density top-up is pinned to
+ * (see waveSize), so a wider field always brings its own traffic.
+ */
+const FIELD_MAX  = 900;      // two pilots
+const FIELD_SOLO = 720;      // one
+
 function pickFieldWidth(){
   /*
    * Match the field to the box it will actually be drawn in, measured - not
@@ -170,7 +199,38 @@ function pickFieldWidth(){
    * 1920 monitor, and gets essentially all of the difficulty back that 780
    * does.
    */
-  return Math.round(Math.max(380, Math.min(720, 800 * (w / Math.max(1, h)))));
+  /*
+   * ...AND THE CEILING IS THE HUD's, not a number picked in advance.
+   *
+   * 720 was chosen because 780 dropped a landscape iPad's gutter to 149px
+   * against the 150 the HUD wings need - so the readouts would have jumped
+   * back on top of the action on the very device the widening was for. But
+   * that is an argument about ONE screen, and applying its answer everywhere
+   * left a MacBook and a monitor flying a field far narrower than they could
+   * comfortably hold.
+   *
+   * So the constraint is stated instead of guessed: take the widest field
+   * that still leaves WING_MIN either side, and let each screen answer for
+   * itself. A landscape iPad lands on ~778 - the widest it can be and keep
+   * its panels - and a 1470x856 laptop is limited by FIELD_MAX rather than by
+   * its margins. The rule cannot silently cost anyone their HUD again.
+   *
+   * A window with no room for wings at all (a phone) falls back to filling
+   * the glass, because there is no HUD out there to protect.
+   */
+  const fill  = 800 * (w / Math.max(1, h));
+  const wings = 800 * ((w - 2*WING_MIN) / Math.max(1, h));
+  const seats = (SF.game && SF.game.coopMate) ? 2 : 1;
+  const ceiling = seats > 1 ? FIELD_MAX : FIELD_SOLO;
+  const want  = wings >= 640 ? Math.min(fill, wings) : fill;
+  /*
+   * FLOOR, not round. Rounding a wings-limited width UP puts it back past the
+   * very constraint it was computed from: an iPad Pro asked for 832.8, got
+   * 833, and its gutter came out at 149 against a 150 minimum - losing the
+   * HUD by one pixel. A field a pixel narrower than it could be costs
+   * nothing; a field a pixel wider costs the whole HUD.
+   */
+  return Math.floor(Math.max(380, Math.min(ceiling, want)));
 }
 
 const VH = 800;
@@ -1003,9 +1063,38 @@ class World {
     if(this.silent) this.silentClock += dt;   // paces the shared-shot throttle
     const items = this.enemies.items;
     this.applyGuardianShields();
+    /*
+     * WHO IS THIS ONE HUNTING?
+     *
+     * Every behaviour aims at `ctx.player`, and that used to be seat one for
+     * the whole frame - so in co-op the second child was invisible to the AI.
+     * Nothing chased them, nothing led its shots at them, nothing dived at
+     * them. They flew through the level as a ghost while their brother took
+     * the entire sky's attention, which is both unfair and boring.
+     *
+     * Each enemy now picks the nearest ship it can see, per frame. Solo there
+     * is one seat, `nearestSeat` returns it every time, and this is precisely
+     * the old behaviour with a loop of length one around it.
+     */
+    const seats = this.livePlayers();
+    // With nobody left alive the behaviours still get the ship they were
+    // aiming at, dead or not - which is what they were handed before, and
+    // several of them read its position through the death sequence.
+    const soloSeat = seats.length === 1 ? seats[0] : this.player;
     for(let i=0;i<items.length;i++){
       const e = items[i];
       if(!e.alive) continue;
+      if(seats.length > 1){
+        let best = null, bestD = Infinity;
+        for(let s = 0; s < seats.length; s++){
+          const q = seats[s];
+          const d = (q.x-e.x)*(q.x-e.x) + (q.y-e.y)*(q.y-e.y);
+          if(d < bestD){ bestD = d; best = q; }
+        }
+        ctxObj.player = best;
+      } else {
+        ctxObj.player = soloSeat;
+      }
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
       e.life += dt;
@@ -1279,6 +1368,7 @@ SF.World = World;
 // and "where exactly does it hang?", and both answers must come from the one
 // place that knows what a stale link looks like.
 SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
-SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable };
+SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable,
+                   WING_MIN, FIELD_MAX };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();
