@@ -30,7 +30,7 @@ window.HTMLCanvasElement.prototype.getContext = function(){
     measureText: () => ({ width: 10 }),
   };
   ["save","restore","translate","rotate","scale","setTransform","resetTransform","clearRect","fillRect",
-   "strokeRect","beginPath","closePath","moveTo","lineTo","arc","ellipse","fill","stroke","drawImage",
+   "strokeRect","beginPath","closePath","moveTo","lineTo","arc","arcTo","ellipse","fill","stroke","drawImage",
    "fillText","strokeText","clip","quadraticCurveTo","bezierCurveTo","rect","setLineDash","createPattern",
   ].forEach(m => ctx[m] = noop);
   return ctx;
@@ -490,6 +490,23 @@ async function run(){
            SF.skygen.SKIES.length === 41 &&
            SF.skygen.SKIES[40].surface === true &&
            SF.skygen.SKIES[40].props.some(pr => pr.k === "fields");
+  })());
+  /*
+   * The farmland's two honesty rules, pinned at the source. "The fields are
+   * too geometrically perfect" - so no shared column grid survives (each row
+   * deals its own edges) and the rows themselves are dealt unequal, with only
+   * the two ends pinned to the wrap. "The road's shape doesn't make sense" -
+   * so the sine wander is gone: the lane runs straight along field edges,
+   * turns square at hedgerows (arcTo corners), and the fields align to it.
+   */
+  check("the farm lane is a field edge, not a sine wave", (() => {
+    const s2 = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+    const f2 = s2.slice(s2.indexOf("function drawFields"), s2.indexOf("function drawGround"));
+    return /arcTo\(/.test(f2) &&              // square corners, rounded for a tractor
+           !/Math\.sin\(y\*k1/.test(f2) &&    // the wander is gone
+           /homeRow/.test(f2) &&              // the farmyard's field exists
+           /roadXAtRow/.test(f2) &&           // each row aligns its edges to the lane
+           /rowE\[ROWS\] = H;/.test(f2);      // the wrap still lands on a hedgerow
   })());
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
@@ -1164,10 +1181,10 @@ async function run(){
   check("every upgrade explains itself in plain words",
     SF.config.UPGRADES.every(u => typeof u.desc === "string" && u.desc.length > 12));
   check("both story acts exist and name real art",
-    ["firstPart","ace","actTwo","campaign"].every(k => {
+    ["firstPart","ace","actTwo","campaign","launchDay","skyTaken"].every(k => {
       const st = SF.storyData.STORY[k];
       return st && st.panels.length > 0 &&
-        st.panels.every(pn => ["stock","now","crew","sky"].indexOf(pn.art) >= 0 && pn.text.length > 20);
+        st.panels.every(pn => ["stock","now","crew","sky","dawn","dark"].indexOf(pn.art) >= 0 && pn.text.length > 20);
     }));
   check("every mission has a brief and a subtitle",
     SF.missions.MISSIONS.every(m => m.brief && m.brief.length > 12 && m.subtitle));
@@ -1510,6 +1527,34 @@ async function run(){
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /maybeStory\("workshop"\)/.test(u) &&
                     /missionIndex === DEVOURER_END\) maybeStory\("campaign"\)/.test(u); })());
+  /*
+   * Launch Day is bookended: its briefing opens the story's first page and
+   * its first results card turns it. Both hooks are pinned as source because
+   * each fires exactly once per pilot - the functional side is asserted in
+   * the mission 0 flow below, where the cards actually pop.
+   */
+  check("Launch Day opens the book and the first night turns the page",
+    !!SF.storyData.STORY.launchDay && !!SF.storyData.STORY.skyTaken &&
+    (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+             return /if\(m\.prologue\) maybeStory\("launchDay"\)/.test(u) &&
+                    /run\.mission\.prologue\) maybeStory\("skyTaken"\)/.test(u); })());
+  /*
+   * The pages were English in every language for months, because only the
+   * beat's SHELL was registered with the binder - the panels' prose (the
+   * part a reader actually reads) and the button never made the list.
+   */
+  check("the binder reaches the story panels and buttons", (() => {
+    const u = fs.readFileSync(path.join(__dirname, "src/data/i18nbind.js"), "utf8");
+    return /"button"/.test(u) && /b\.panels \|\| \[\]/.test(u);
+  })());
+  check("every story page speaks French", (() => {
+    const s2 = SF.i18n._packs.fr.s;
+    return Object.keys(SF.storyData.STORY).every(k => {
+      const b = SF.storyData.STORY[k];
+      return (!b.title || !!s2[b.title]) && (!b.button || !!s2[b.button]) &&
+             (b.panels || []).every(pn => !!s2[pn.text]);
+    });
+  })());
 
   /* ---------- pilot picker + menu ---------- */
   check("pilot grid lists Marc & Charles", qa("#profileGrid .profile-card").length === 2);
@@ -1905,6 +1950,21 @@ async function run(){
     check("tapping it briefs that mission",
       id("screen-briefing").classList.contains("active") &&
       id("briefNum").textContent === "MISSION 0");
+    /*
+     * The story's first page. A pilot's first look at Launch Day's briefing
+     * opens the LAUNCH DAY card - the family, the farm, and why there are
+     * six new ships in the workshop - so the theft later means something.
+     * It fires exactly once, and it is recorded on the pilot's own save.
+     */
+    check("the first briefing opens the story's first page",
+      !id("storyOverlay").classList.contains("hidden") &&
+      /LAUNCH DAY/.test(id("storyTitle").textContent) &&
+      qa("#storyPanels .story-panel").length === 3);
+    check("the first page is remembered on the pilot's save",
+      !!(SF.ui.getProfile().stories || {}).launchDay);
+    clickEl(id("storyBtn"));
+    check("the first page closes on its own button",
+      id("storyOverlay").classList.contains("hidden"));
     SF.ui.renderMissions(); SF.ui.show("screen-missions");
   }
 
@@ -2471,6 +2531,10 @@ async function run(){
 
   clickEl(qa("#campaignNodes .map-node")[0]);
   check("briefing opens for mission 1", id("screen-briefing").classList.contains("active"));
+  // The story's first page fired on the FIRST look (asserted up in the map
+  // section); a second look must not replay it over the briefing.
+  check("the story's first page does not replay on a second look",
+    id("storyOverlay").classList.contains("hidden"));
   check("briefing lists 3 objectives", qa("#briefObjectives .bo-row").length === 3);
   check("briefing shows what you'll be facing", qa("#briefRoster .roster-chip").length > 0);
   /*
@@ -2618,6 +2682,16 @@ async function run(){
     !SF.comms.current() || SF.comms.current().life <= SF.comms.current().max);
   const res1 = !id("overlayResults").classList.contains("hidden");
   check("mission 0 reached the results screen", res1);
+  /*
+   * The night after Launch Day. The first completion turns the story's page:
+   * the sky is gone, and every mission after this one has its reason. The
+   * card pops OVER the results, once, and is recorded on the save.
+   */
+  check("finishing Launch Day turns the story's page",
+    !id("storyOverlay").classList.contains("hidden") &&
+    /THE FIRST NIGHT/.test(id("storyTitle").textContent) &&
+    qa("#storyPanels .story-panel").length === 3);
+  clickEl(id("storyBtn"));
   check("results show 3 star slots", qa("#resultStars .rs").length === 3);
   check("results name the family record", /record|to beat/i.test(id("resultLines").textContent));
   // Celebrations must be earned: a first-ever completion with nothing beaten
@@ -2644,6 +2718,8 @@ async function run(){
     SF.game.world.player.crew.some(c => c.callsign === "Charles"));
   const marc = JSON.parse(window.localStorage.getItem("patrol_profile_Marc"));
   check("mission 0 recorded as cleared", !!(marc.missions && marc.missions[0] && marc.missions[0].cleared));
+  check("the first night is remembered on the save",
+    !!(marc.stories && marc.stories.skyTaken));
   check("earned stars on the record itself", (() => {
     const st = marc.missions[0] && marc.missions[0].stars;
     return !!st && Object.values(st).some(v => v >= 1);

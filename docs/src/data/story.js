@@ -16,6 +16,33 @@
 const SF = window.SF;
 
 const STORY = {
+  /* The first page of the whole story: who the family is, and why there are
+     six new ships in a farm workshop. Fires when Launch Day's briefing opens,
+     so it is read BEFORE the first flight - the theft lands harder when you
+     know what Papa spent the winter building. */
+  launchDay: {
+    title: "LAUNCH DAY",
+    panels: [
+      { art:"dawn",  text:"This is home, {you}. The farm, the fields - and Papa's workshop at the end of the lane, the one whose lights haven't gone out in months." },
+      { art:"stock", text:"All winter he built. Six little ships nobody asked for. Ask him why and he gives the same answer every time: keep your eyes on the sky." },
+      { art:"crew",  text:"This morning they finally fly. Thread the rings, pop the balloons - the whole family is watching from the fence." },
+    ],
+    button:"TO THE RUNWAY",
+  },
+
+  /* The night after Launch Day: what was taken, and what the family decided
+     to do about it. Fires with Mission 0's first results card, so it is the
+     bridge between the farm and every mission that follows. */
+  skyTaken: {
+    title: "THE FIRST NIGHT",
+    panels: [
+      { art:"dark", text:"That night there were no stars to count. The thieves took every one they could reach and ran for deep space with the family's sky in cages." },
+      { art:"crew", text:"Nobody slept. Papa opened the workshop, turned on every light, and said the thing he had waited all winter to say: the ships are ready. So are you." },
+      { art:"sky",  text:"Sector by sector, star by star, {you}. Follow them up - and don't come home without the sky." },
+    ],
+    button:"FOLLOW THEM UP",
+  },
+
   /* Fires the first time they own a part - the moment the hangar means something. */
   firstPart: {
     title: "SHE'S CHANGING",

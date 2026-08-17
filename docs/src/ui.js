@@ -4130,6 +4130,114 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "rgba(90,140,255,0.18)";
     ctx.beginPath(); ctx.arc(W*0.5, H*1.45, W*0.8, 0, Math.PI*2); ctx.fill();
     A.drawShip(ctx, W/2, H*0.42, 52, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "dawn"){
+    /*
+     * Launch Day's establishing shot: the farm at first light. The wash is
+     * transparent at the top on purpose - the star field underneath survives
+     * up there, which is where stars belong at dawn.
+     */
+    const horizon = H*0.68;
+    const d = ctx.createLinearGradient(0, 0, 0, horizon);
+    d.addColorStop(0, "rgba(19,26,58,0)");
+    d.addColorStop(0.5, "rgba(96,82,118,0.85)");
+    d.addColorStop(1, "#f0b168");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, horizon);
+    const sun = ctx.createRadialGradient(W*0.30, horizon - 4, 2, W*0.30, horizon - 4, 34);
+    sun.addColorStop(0, "rgba(255,236,180,0.95)");
+    sun.addColorStop(0.25, "rgba(255,210,130,0.55)");
+    sun.addColorStop(1, "rgba(255,190,110,0)");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(W*0.30, horizon - 4, 34, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ffeccc";
+    ctx.beginPath(); ctx.arc(W*0.30, horizon - 4, 7, 0, Math.PI*2); ctx.fill();
+    // the land: field strips, the lane, and the workshop with its lights on
+    ctx.fillStyle = "#1c2410";
+    ctx.fillRect(0, horizon, W, H - horizon);
+    const strip = ["#2a3a1a", "#33421e", "#243415", "#3a4522"];
+    for(let s = 0; s < 5; s++){
+      ctx.fillStyle = strip[s % strip.length];
+      ctx.fillRect(0, horizon + 5 + s*9, W, 7);
+    }
+    ctx.strokeStyle = "rgba(160,140,95,0.9)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W*0.42, H + 2);
+    ctx.quadraticCurveTo(W*0.5, H*0.86, W*0.72, horizon + 6); ctx.stroke();
+    const fx = W*0.72, fy = horizon + 2;
+    const glow = ctx.createRadialGradient(fx, fy, 1, fx, fy, 26);
+    glow.addColorStop(0, "rgba(255,214,110,0.5)"); glow.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(fx, fy, 26, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#0d1208";
+    ctx.fillRect(fx - 13, fy - 8, 26, 9);
+    ctx.beginPath(); ctx.moveTo(fx - 15, fy - 8); ctx.lineTo(fx, fy - 16);
+    ctx.lineTo(fx + 15, fy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";                                  // every light on
+    ctx.fillRect(fx - 9, fy - 6, 4, 4); ctx.fillRect(fx - 2, fy - 6, 4, 4);
+    ctx.fillRect(fx + 5, fy - 6, 4, 4);
+    ctx.fillStyle = "#0d1208";                                  // the house, asleep
+    ctx.fillRect(fx + 20, fy - 6, 14, 7);
+    ctx.beginPath(); ctx.moveTo(fx + 18, fy - 6); ctx.lineTo(fx + 27, fy - 12);
+    ctx.lineTo(fx + 36, fy - 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(20,24,40,0.8)"; ctx.lineWidth = 1.4; // birds up early
+    [[W*0.18, H*0.30], [W*0.24, H*0.36], [W*0.52, H*0.22]].forEach(([bx, by]) => {
+      ctx.beginPath(); ctx.moveTo(bx - 4, by); ctx.quadraticCurveTo(bx - 2, by - 3.5, bx, by);
+      ctx.quadraticCurveTo(bx + 2, by - 3.5, bx + 4, by); ctx.stroke();
+    });
+  } else if(art === "dark"){
+    /*
+     * The first night. The star field gets buried under near-black - all but
+     * a thin band up top, out of the thieves' reach - and the only warm
+     * thing left in the world is the workshop with every light on.
+     */
+    const d = ctx.createLinearGradient(0, 0, 0, H);
+    d.addColorStop(0, "rgba(4,6,14,0.55)");
+    d.addColorStop(0.3, "rgba(4,6,14,0.96)");
+    d.addColorStop(1, "#04060e");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, H);
+    const tx = W*0.70, ty = H*0.26;
+    const cages = [[tx - 36, ty + 26], [tx - 52, ty + 40], [tx - 22, ty + 44]];
+    ctx.strokeStyle = "rgba(120,130,170,0.35)"; ctx.lineWidth = 1;   // tow lines
+    ctx.beginPath();
+    cages.forEach(([cx, cy]) => { ctx.moveTo(tx - 16, ty + 3); ctx.lineTo(cx, cy - 6); });
+    ctx.stroke();
+    ctx.fillStyle = "#070a18";                                   // the thief, leaving
+    ctx.beginPath(); ctx.moveTo(tx - 18, ty + 6); ctx.lineTo(tx + 22, ty);
+    ctx.lineTo(tx + 8, ty - 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(150,160,200,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "rgba(255,90,80,0.9)";                       // engines, going away
+    ctx.fillRect(tx - 20, ty + 1, 2.5, 2.5); ctx.fillRect(tx - 15, ty + 3.5, 2, 2);
+    cages.forEach(([cx, cy]) => {
+      const halo = ctx.createRadialGradient(cx, cy, 1, cx, cy, 14);
+      halo.addColorStop(0, "rgba(255,214,110,0.55)"); halo.addColorStop(1, "rgba(255,214,110,0)");
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffd76e";                                 // a star, boxed
+      ctx.beginPath();
+      for(let k = 0; k < 10; k++){
+        const a2 = -Math.PI/2 + k*Math.PI/5, rr = k % 2 ? 2.2 : 5;
+        const px = cx + Math.cos(a2)*rr, py = cy + Math.sin(a2)*rr;
+        if(k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(170,180,220,0.75)"; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 7, cy - 6, 14, 12);
+      ctx.beginPath();
+      ctx.moveTo(cx - 2.3, cy - 6); ctx.lineTo(cx - 2.3, cy + 6);
+      ctx.moveTo(cx + 2.3, cy - 6); ctx.lineTo(cx + 2.3, cy + 6);
+      ctx.stroke();
+    });
+    ctx.fillStyle = "#020308";                                   // the dark farm below
+    ctx.fillRect(0, H*0.86, W, H*0.14);
+    const wx = W*0.26, wy = H*0.86;
+    const g2 = ctx.createRadialGradient(wx, wy, 1, wx, wy, 30);
+    g2.addColorStop(0, "rgba(255,214,110,0.65)"); g2.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(wx, wy, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#000106";
+    ctx.fillRect(wx - 14, wy - 8, 28, 9);
+    ctx.beginPath(); ctx.moveTo(wx - 16, wy - 8); ctx.lineTo(wx, wy - 17);
+    ctx.lineTo(wx + 16, wy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(wx - 10, wy - 6, 4.5, 5); ctx.fillRect(wx - 2, wy - 6, 4.5, 5);
+    ctx.fillRect(wx + 6, wy - 6, 4.5, 5);
+    ctx.fillStyle = "rgba(255,255,255,0.8)";                     // out of their reach
+    ctx.fillRect(W*0.12, 6, 1.6, 1.6); ctx.fillRect(W*0.55, 12, 1.4, 1.4);
+    ctx.fillRect(W*0.83, 4, 1.6, 1.6);
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4153,6 +4261,9 @@ function openBriefing(index){
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");
+  // Launch Day's briefing is the story's first page: the family, the farm,
+  // and why there are six new ships in the workshop - read BEFORE flying.
+  if(m.prologue) maybeStory("launchDay");
 
   $("briefNum").textContent = "MISSION " + m.id;
   $("briefBoss").classList.toggle("hidden", !m.boss);
@@ -4907,6 +5018,8 @@ function showResults(result){
   else if(completed && run.missionIndex === DEVOURER_END) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
+  // The night after Launch Day: the theft becomes the campaign's reason.
+  else if(completed && run.mission.prologue) maybeStory("skyTaken");
 }
 
 /** Who has run the gauntlet deepest - shown after every Boss Rush. */

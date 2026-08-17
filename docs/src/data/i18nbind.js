@@ -58,7 +58,11 @@ const ST = (SF.storyData && SF.storyData.STORY) || {};
 Object.keys(ST).forEach(k => {
   const b = ST[k];
   if(!b) return;
-  I.bind(b, ["title", "text", "sub"]);
+  I.bind(b, ["title", "text", "sub", "button"]);
   if(Array.isArray(b.lines)) I.bindList(b.lines);
+  // The pages themselves: the panels' prose is the part a reader actually
+  // reads, and it went untranslated for months because only the shell of
+  // the beat was registered here.
+  (b.panels || []).forEach(pn => I.bind(pn, ["text"]));
 });
 })();

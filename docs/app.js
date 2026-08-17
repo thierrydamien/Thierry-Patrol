@@ -15,34 +15,34 @@
  *     5166  src/wacky.js
  *     5382  src/data/comms.js
  *     5788  src/data/story.js
- *     5885  src/data/fr.js
- *     6946  src/profile.js
- *     7575  src/cloud.js
- *     8180  src/fx.js
- *     9293  src/input.js
- *     9716  src/entities.js
- *    10928  src/bossart.js
- *    11794  src/bosses.js
- *    12544  src/bossintro.js
- *    12667  src/rewind.js
- *    13198  src/finale.js
- *    13519  src/papadeath.js
- *    13841  src/backstage.js
- *    15044  src/sky29.js
- *    15285  src/prologue.js
- *    15751  src/systems.js
- *    16382  src/render.js
- *    20981  src/enemyart.js
- *    21933  src/insignia.js
- *    22178  src/skygen.js
- *    24805  src/shipart.js
- *    26005  src/paintjob.js
- *    26167  src/pilotart.js
- *    26262  src/comms.js
- *    26401  src/game.js
- *    29886  src/workshop.js
- *    30583  src/data/i18nbind.js
- *    30650  src/ui.js
+ *     5912  src/data/fr.js
+ *     7047  src/profile.js
+ *     7676  src/cloud.js
+ *     8281  src/fx.js
+ *     9394  src/input.js
+ *     9817  src/entities.js
+ *    11029  src/bossart.js
+ *    11895  src/bosses.js
+ *    12645  src/bossintro.js
+ *    12768  src/rewind.js
+ *    13299  src/finale.js
+ *    13620  src/papadeath.js
+ *    13942  src/backstage.js
+ *    15145  src/sky29.js
+ *    15386  src/prologue.js
+ *    15852  src/systems.js
+ *    16483  src/render.js
+ *    21082  src/enemyart.js
+ *    22034  src/insignia.js
+ *    22279  src/skygen.js
+ *    25076  src/shipart.js
+ *    26276  src/paintjob.js
+ *    26438  src/pilotart.js
+ *    26533  src/comms.js
+ *    26672  src/game.js
+ *    30157  src/workshop.js
+ *    30854  src/data/i18nbind.js
+ *    30925  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -5803,6 +5803,33 @@ SF.commsData = { COMMS, fill };
 const SF = window.SF;
 
 const STORY = {
+  /* The first page of the whole story: who the family is, and why there are
+     six new ships in a farm workshop. Fires when Launch Day's briefing opens,
+     so it is read BEFORE the first flight - the theft lands harder when you
+     know what Papa spent the winter building. */
+  launchDay: {
+    title: "LAUNCH DAY",
+    panels: [
+      { art:"dawn",  text:"This is home, {you}. The farm, the fields - and Papa's workshop at the end of the lane, the one whose lights haven't gone out in months." },
+      { art:"stock", text:"All winter he built. Six little ships nobody asked for. Ask him why and he gives the same answer every time: keep your eyes on the sky." },
+      { art:"crew",  text:"This morning they finally fly. Thread the rings, pop the balloons - the whole family is watching from the fence." },
+    ],
+    button:"TO THE RUNWAY",
+  },
+
+  /* The night after Launch Day: what was taken, and what the family decided
+     to do about it. Fires with Mission 0's first results card, so it is the
+     bridge between the farm and every mission that follows. */
+  skyTaken: {
+    title: "THE FIRST NIGHT",
+    panels: [
+      { art:"dark", text:"That night there were no stars to count. The thieves took every one they could reach and ran for deep space with the family's sky in cages." },
+      { art:"crew", text:"Nobody slept. Papa opened the workshop, turned on every light, and said the thing he had waited all winter to say: the ships are ready. So are you." },
+      { art:"sky",  text:"Sector by sector, star by star, {you}. Follow them up - and don't come home without the sky." },
+    ],
+    button:"FOLLOW THEM UP",
+  },
+
   /* Fires the first time they own a part - the moment the hangar means something. */
   firstPart: {
     title: "SHE'S CHANGING",
@@ -6185,6 +6212,80 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Personne ne vole le ciel de la famille. Allez les récupérer.",
 "Full throttle, straight up. Wheels up, squadron!":
   "Pleins gaz, droit vers le haut. Décollage, escadrille !",
+
+/* ---------------- story pages ----------------
+   The comic-panel beats. These went untranslated for months because only
+   the beat's title was registered with the binder; now the panels' prose
+   and the button are bound too, so every page reads in French. */
+"LAUNCH DAY": "JOUR DU DÉCOLLAGE",
+"This is home, {you}. The farm, the fields - and Papa's workshop at the end of the lane, the one whose lights haven't gone out in months.":
+  "C'est chez nous, {you}. La ferme, les champs — et l'atelier de Papa au bout du chemin, celui dont les lumières ne s'éteignent plus depuis des mois.",
+"All winter he built. Six little ships nobody asked for. Ask him why and he gives the same answer every time: keep your eyes on the sky.":
+  "Tout l'hiver, il a construit. Six petits vaisseaux que personne n'avait demandés. Demande-lui pourquoi, et il donne toujours la même réponse : garde les yeux sur le ciel.",
+"This morning they finally fly. Thread the rings, pop the balloons - the whole family is watching from the fence.":
+  "Ce matin, ils volent enfin. Passe dans les anneaux, éclate les ballons — toute la famille regarde depuis la barrière.",
+"TO THE RUNWAY": "VERS LA PISTE",
+"THE FIRST NIGHT": "LA PREMIÈRE NUIT",
+"That night there were no stars to count. The thieves took every one they could reach and ran for deep space with the family's sky in cages.":
+  "Cette nuit-là, il n'y avait plus d'étoiles à compter. Les voleurs ont pris toutes celles qu'ils pouvaient atteindre et ont filé vers l'espace, le ciel de la famille en cage.",
+"Nobody slept. Papa opened the workshop, turned on every light, and said the thing he had waited all winter to say: the ships are ready. So are you.":
+  "Personne n'a dormi. Papa a ouvert l'atelier, allumé toutes les lumières, et dit ce qu'il attendait de dire depuis tout l'hiver : les vaisseaux sont prêts. Vous aussi.",
+"Sector by sector, star by star, {you}. Follow them up - and don't come home without the sky.":
+  "Secteur par secteur, étoile par étoile, {you}. Poursuis-les là-haut — et ne rentre pas sans le ciel.",
+"FOLLOW THEM UP": "À LEUR POURSUITE",
+"SHE'S CHANGING": "ELLE CHANGE",
+"This is the ship they gave you, {you}. Stock hull, one gun, and a lot of sky.":
+  "Voilà le vaisseau qu'on t'a donné, {you}. Une coque de série, un canon, et beaucoup de ciel.",
+"This is the ship you built. Every bolt on it, you paid for.":
+  "Et voilà le vaisseau que tu as construit. Chaque boulon, c'est toi qui l'as payé.",
+"The mechanics have started asking what you're going to add next.":
+  "Les mécanos commencent à demander ce que tu vas ajouter ensuite.",
+"BACK TO THE HANGAR": "RETOUR AU HANGAR",
+"SQUADRON ACE": "AS DE L'ESCADRILLE",
+"Twenty upgrades ago this was all you had, {you}.":
+  "Il y a vingt améliorations, tu n'avais que ça, {you}.",
+"They said the two of you wouldn't last a week up here.":
+  "On disait que vous ne tiendriez pas une semaine là-haut, tous les deux.",
+"Command has stopped calling you a cadet. You're the squadron's ace now - the pilot the others form up on.":
+  "Le commandement ne t'appelle plus cadet. Tu es l'as de l'escadrille maintenant — le pilote sur qui les autres s'alignent.",
+"That's the end of the beginning. The sky's still full of them. Go and see how far this thing can really go.":
+  "C'est la fin du début. Le ciel est encore plein d'ennemis. Va voir jusqu'où cette machine peut vraiment aller.",
+"FLY ON": "CONTINUE DE VOLER",
+"THEY'RE RUNNING": "ILS FUIENT",
+"The Sentinel is scrap. Home space is quiet for the first time in months - and the rest of their fleet is running for the lane they came in by.":
+  "La Sentinelle est en miettes. Notre espace est calme pour la première fois depuis des mois — et le reste de leur flotte fuit par le couloir qui l'a amenée.",
+"Command wants to know if you'll follow them, {you}. Nobody would think less of you for saying no.":
+  "Le commandement veut savoir si tu vas les poursuivre, {you}. Personne ne t'en voudrait de dire non.",
+"You already know the answer. Eight more stops, all of them theirs - one flown dark, one their own treasure house, and one of them is the last one.":
+  "Tu connais déjà la réponse. Huit étapes encore, toutes chez eux — une à voler tous feux éteints, une qui est leur salle au trésor, et une qui est la dernière.",
+"GO AFTER THEM": "PRENDS-LES EN CHASSE",
+"GUNS DOWN": "CANONS COUPÉS",
+"That last blast from the Sentinel fried every cannon on your ship, {you}. The crew can fix them - but not out here.":
+  "La dernière salve de la Sentinelle a grillé tous les canons de ton vaisseau, {you}. L'équipe peut les réparer — mais pas ici.",
+"The repair yard is on the far side of their blockade. Fly dark, stay quiet, and dodge EVERYTHING - most of them can't even see you, so the shots are few. The traffic won't move out of your way, though.":
+  "L'atelier de réparation est de l'autre côté de leur blocus. Vole tous feux éteints, reste discret, et esquive TOUT — la plupart ne te voient même pas, alors les tirs sont rares. Mais le trafic ne s'écartera pas pour toi.",
+"No guns means no mistakes, {you}. Catch the coins, catch our drifting pilots, and bring the ship home in one piece.":
+  "Pas de canons, pas d'erreurs, {you}. Attrape les pièces, attrape nos pilotes à la dérive, et ramène le vaisseau entier.",
+"FLY DARK": "TOUS FEUX ÉTEINTS",
+"THE STAR CAME BACK": "L'ÉTOILE EST REVENUE",
+"The Devourer came apart in a light so bright that every pilot in the sector saw it from home. Where it was, there is nothing now - just the dark, and then, slowly, stars again.":
+  "Le Dévoreur s'est disloqué dans une lumière si vive que chaque pilote du secteur l'a vue depuis chez lui. Là où il était, il n'y a plus rien — juste le noir, puis, lentement, des étoiles à nouveau.",
+"They all came, {you}. Every pilot you ever pulled out of a cell or caught drifting - they turned up at the end and flew the last minute with you. That's the part they'll tell.":
+  "Ils sont tous venus, {you}. Chaque pilote que tu as sorti d'une cellule ou rattrapé à la dérive — ils étaient là à la fin et ont volé la dernière minute avec toi. C'est cette partie-là qu'on racontera.",
+"Command's calling it the day the war ended. Down there they're calling it something else: the day the Thierrys went out to the last star and came back.":
+  "Le commandement appelle ça le jour où la guerre a pris fin. En bas, on l'appelle autrement : le jour où les Thierry sont allés jusqu'à la dernière étoile et sont revenus.",
+"One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it.":
+  "Une dernière chose avant d'atterrir, {you}. Là où le Dévoreur est tombé, le ciel n'a pas guéri — il y a une fissure là-haut, fine comme un trait de crayon, et la lumière qui la traverse n'est pas celle des étoiles. La carte l'a déjà trouvée.",
+"COME HOME": "RENTRE À LA MAISON",
+"THE PAINTED SKY": "LE CIEL PEINT",
+"The Royal Brush went up like a firework with every colour the workshop owns - and where it burst, the sky isn't blank any more. You painted it, {you}. It's yours.":
+  "Le Pinceau Royal a explosé comme un feu d'artifice avec toutes les couleurs de l'atelier — et là où il a éclaté, le ciel n'est plus vide. C'est toi qui l'as peint, {you}. Il est à toi.",
+"The sketches you painted flew home beside you. Somebody in that workshop once drew YOUR ship too - and today you flew that drawing better than it knew it could be flown.":
+  "Les croquis que tu as peints sont rentrés en volant à tes côtés. Dans cet atelier, quelqu'un a un jour dessiné TON vaisseau aussi — et aujourd'hui tu as fait voler ce dessin mieux qu'il ne se savait capable de voler.",
+"Command has no name for what happened behind the sky, so the squadron picked one: the day {you} chased the game all the way to its drawing board and won.":
+  "Le commandement n'a pas de nom pour ce qui s'est passé derrière le ciel, alors l'escadrille en a choisi un : le jour où {you} a poursuivi le jeu jusqu'à sa planche à dessin et a gagné.",
+"Every sky from here on is one somebody painted first. Fly them all, on every tier - and if the paint ever stutters again, wave. The painter knows your ship by heart.":
+  "Chaque ciel, désormais, est un ciel que quelqu'un a peint d'abord. Vole-les tous, à tous les niveaux — et si la peinture bafouille encore, fais signe. Le peintre connaît ton vaisseau par cœur.",
 "First Patrol": "Première Patrouille",
 "Weaving Through": "Slalom",
 "The Anchor": "L'Ancre",
@@ -23863,34 +23964,90 @@ function drawVortex(ctx, W, H, p, rand){
  * The canyon painter above makes rock; run in green it made a night swamp.
  * What sells "home" from a cockpit is the thing every child has seen from a
  * plane window: a PATCHWORK - fields in different stages of the season, some
- * cut gold, some young green, stitched with hedgerows, one dirt road
- * wandering through, and copses of trees throwing morning shadows.
+ * cut gold, some young green, stitched with hedgerows, a dirt lane, and
+ * copses of trees throwing morning shadows.
+ *
+ * Two facts of real farmland carry the whole picture. Nothing is surveyed
+ * equal - every field is its own size, so both the row heights and each
+ * row's divisions are dealt separately. And a lane is not a river: it runs
+ * dead straight along a field edge, turns square at a boundary, and runs
+ * straight again - so the road here IS a field edge, every row it crosses
+ * lines its fields up against it, and it goes somewhere: past the farmyard
+ * it serves, where the workshop's lights are still on and the morning's
+ * ships are already wheeled out beside the airstrip.
  *
  * Same two disciplines as the canyon: drawn once (never through `tiled`),
- * and periodic in H by construction - the patch grid divides H exactly, the
- * road completes whole cycles, and every copse near an edge is repeated at
- * the far one, so the scroll never shows a seam. The dawn itself is baked
- * in last: a warm wash from the key-light corner, so the land agrees with
- * every lit hull in the game about where the sun is.
+ * and periodic in H by construction - row 0 starts at 0 and the last row
+ * ends exactly at H so the wrap seam lands on a hedgerow, the lane leaves
+ * the top at the same x it enters the bottom, and every copse near an edge
+ * is repeated at the far one. The dawn is baked in last: a warm wash from
+ * the key-light side, varying only in x, so the land agrees with every lit
+ * hull in the game about where the sun is.
  */
 function drawFields(ctx, W, H, p, rand){
-  const ROWS = 12, COLS = 6;
-  const ch = H/ROWS;
   /*
-   * Columns are jittered - a regular grid reads as a chessboard, and no
-   * farm was ever surveyed that neatly. Rows stay exact divisions of H so
-   * the wrap seam lands on a hedgerow; all the irregularity is horizontal,
-   * where the scroll can never expose it.
+   * Rows first: irregular heights, because equal strips are the single
+   * biggest tell of painted farmland. Only the two ends are sacred - the
+   * first row starts at 0 and the last ends at H, so the seam still lands
+   * on a hedgerow. One row is dealt a double share on purpose: that is the
+   * home field, and it has to hold a farmyard and an airstrip.
    */
-  const edges = [0];
-  { let acc = 0;
-    const raw = [];
-    for(let c = 0; c < COLS; c++){ const w = 0.6 + rand()*0.9; raw.push(w); acc += w; }
-    let x = 0;
-    for(let c = 0; c < COLS; c++){ x += raw[c]/acc*W; edges.push(x); } }
-  // The season's palette: young green to cut gold, all dawn-warmed.
+  const ROWS = 12;
+  const homeRow = 2 + Math.floor(rand()*3);
+  const rowE = [0];
+  { const raw = []; let acc = 0;
+    for(let r = 0; r < ROWS; r++){
+      const w = r === homeRow ? 2.0 : 0.55 + rand()*1.0;
+      raw.push(w); acc += w;
+    }
+    let y = 0;
+    for(let r = 0; r < ROWS; r++){ y += raw[r]/acc*H; rowE.push(y); }
+    rowE[ROWS] = H; }
+  /*
+   * The lane, before the fields - because the fields have to KNOW about it.
+   * Three straight legs (the middle one passes the farm gate), two square
+   * jogs along hedgerows, and the last leg returns to the first x so the
+   * wrap joins mid-straight. y1 is the home field's top edge: the lane
+   * turns the corner exactly at the gate.
+   */
+  const xa = W*(0.30 + rand()*0.10);
+  const xb = xa + W*(0.16 + rand()*0.08);
+  const xc = xa - W*(0.10 + rand()*0.06);
+  const r2 = 6 + Math.floor(rand()*2), r3 = 9 + Math.floor(rand()*2);
+  const y1 = rowE[homeRow], y2 = rowE[r2], y3 = rowE[r3];
+  const roadXAtRow = r => r < homeRow ? xa : r < r2 ? xb : r < r3 ? xc : xa;
+  const roadXAtY = y => { const yy = ((y % H) + H) % H;
+    return yy < y1 ? xa : yy < y2 ? xb : yy < y3 ? xc : xa; };
+  // The home paddock: one wide field to the right of the gate, sized for a
+  // yard and a strip of mown runway. If it would leave only a sliver before
+  // the map edge, it runs to the edge instead.
+  const padX0 = xb, padX1 = xb + W*0.30 < W*0.93 ? xb + W*0.30 : W;
+  /*
+   * Each row divides on its own - shared column lines are what made the
+   * first draft read as a chessboard. The lane's x is always one of the
+   * edges: fields line up against a road because the road came first.
+   */
+  const rowCols = [];
+  for(let r = 0; r < ROWS; r++){
+    const rx = roadXAtRow(r);
+    const e = [0];
+    const split = (a, b) => {
+      const span = b - a;
+      const n = Math.max(1, Math.round(span/(W*0.17)*(0.65 + rand()*0.8)));
+      const raw2 = []; let acc2 = 0;
+      for(let i = 0; i < n; i++){ const w2 = 0.55 + rand()*0.9; raw2.push(w2); acc2 += w2; }
+      let x = a;
+      for(let i = 0; i < n - 1; i++){ x += raw2[i]/acc2*span; e.push(x); }
+    };
+    split(0, rx); e.push(rx);
+    if(r === homeRow){ if(padX1 < W){ e.push(padX1); split(padX1, W); } }
+    else split(rx, W);
+    e.push(W);
+    rowCols.push(e);
+  }
+  // The season's palette: young green to cut gold to ploughed earth.
   const CROPS = ["#7f9a4e", "#94a75a", "#6b8a46", "#a8a55e", "#b3a765",
-                 "#87975a", "#758f4a", "#9fa864"];
+                 "#87975a", "#758f4a", "#9fa864", "#8a7050", "#7d6a45"];
   const wrapY = (y, r, draw) => {
     draw(y);
     if(y - r < 0) draw(y + H);
@@ -23900,29 +24057,32 @@ function drawFields(ctx, W, H, p, rand){
   ctx.fillStyle = p.dark || "#2a3418";
   ctx.fillRect(-2, -2, W + 4, H + 4);
   /*
-   * The patches. Geometry stays ON the grid so row 0 and row H are the same
-   * line of hedgerows and the wrap is invisible; all the variety lives in
-   * colour, and in a soft within-patch gradient that reads as the lie of
-   * the land rather than flat paint.
+   * The patches. All the variety lives in size and colour, plus a soft
+   * within-patch gradient that reads as the lie of the land rather than
+   * flat paint. The home paddock is mown flat and even - it has to read
+   * as tended grass next to its working neighbours.
    */
   let prevCrop = null;
   for(let r = 0; r < ROWS; r++){
-    for(let c = 0; c < COLS; c++){
-      const x0 = edges[c], x1 = edges[c+1], cw = x1 - x0;
+    const e = rowCols[r], ry0 = rowE[r], ry1 = rowE[r+1];
+    for(let c = 0; c < e.length - 1; c++){
+      const x0 = e[c], x1 = e[c+1], cw = x1 - x0;
+      const isPaddock = r === homeRow && Math.abs(x0 - padX0) < 0.5;
       // A third of the time a field runs on into its neighbour - crops come
       // in runs, and the runs are what stop the land reading as tiles.
-      const crop = (prevCrop && rand() < 0.35) ? prevCrop
+      const crop = isPaddock ? "#8ea15a"
+                 : (prevCrop && rand() < 0.35) ? prevCrop
                  : CROPS[Math.floor(rand()*CROPS.length)];
       prevCrop = crop;
       // mixA takes HEXES and returns rgba() - never feed its output back in.
-      const g = ctx.createLinearGradient(x0, r*ch, x1, (r+1)*ch);
+      const g = ctx.createLinearGradient(x0, ry0, x1, ry1);
       g.addColorStop(0, mixA(crop, "#ffd9a0", 0.22, 1));   // dawn-touched corner
       g.addColorStop(1, mixA(crop, "#20300f", 0.38, 1));   // the shaded end
       ctx.fillStyle = g;
-      ctx.globalAlpha = 0.86 + rand()*0.14;
-      ctx.fillRect(x0, r*ch, cw + 1, ch + 1);
+      ctx.globalAlpha = isPaddock ? 1 : 0.86 + rand()*0.14;
+      ctx.fillRect(x0, ry0, cw + 1, ry1 - ry0 + 1);
       // a few patches carry plough lines - thin darker rows along one axis
-      if(rand() < 0.3){
+      if(!isPaddock && rand() < 0.3){
         ctx.globalAlpha = 0.16;
         ctx.strokeStyle = "#1e2812";
         ctx.lineWidth = 1.4;
@@ -23930,11 +24090,11 @@ function drawFields(ctx, W, H, p, rand){
         for(let l = 1; l <= lines; l++){
           ctx.beginPath();
           if(horiz){
-            const y = r*ch + (ch*l)/(lines+1);
+            const y = ry0 + ((ry1 - ry0)*l)/(lines+1);
             ctx.moveTo(x0 + 3, y); ctx.lineTo(x1 - 3, y);
           } else {
             const x = x0 + (cw*l)/(lines+1);
-            ctx.moveTo(x, r*ch + 3); ctx.lineTo(x, (r+1)*ch - 3);
+            ctx.moveTo(x, ry0 + 3); ctx.lineTo(x, ry1 - 3);
           }
           ctx.stroke();
         }
@@ -23942,60 +24102,171 @@ function drawFields(ctx, W, H, p, rand){
     }
   }
   ctx.globalAlpha = 1;
-  // Hedgerows: the stitching. Dark seams on the grid, slightly irregular in
-  // thickness so they read as grown, not drawn.
+  // Hedgerows: the stitching. Full-width seams on the row lines; short
+  // per-row seams between fields, so no line runs the whole map top to
+  // bottom - that long line was half of what made the grid look drawn.
   ctx.strokeStyle = "rgba(24,32,14,0.85)";
   for(let r = 0; r <= ROWS; r++){
     ctx.lineWidth = 2 + rand()*2.4;
-    ctx.beginPath(); ctx.moveTo(0, r*ch); ctx.lineTo(W, r*ch); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, rowE[r]); ctx.lineTo(W, rowE[r]); ctx.stroke();
   }
-  for(let c = 0; c <= COLS; c++){
-    ctx.lineWidth = 2 + rand()*2.4;
-    ctx.beginPath(); ctx.moveTo(edges[c], 0); ctx.lineTo(edges[c], H); ctx.stroke();
+  for(let r = 0; r < ROWS; r++){
+    const e = rowCols[r];
+    for(let c = 1; c < e.length - 1; c++){
+      ctx.lineWidth = 2 + rand()*2.4;
+      ctx.beginPath(); ctx.moveTo(e[c], rowE[r]); ctx.lineTo(e[c], rowE[r+1]); ctx.stroke();
+    }
   }
   /*
-   * The road: one dirt lane wandering the whole strip, whole cycles over H
-   * (the canyon channel's trick) so its ends meet across the wrap. A pale
-   * cut with a darker edge - a road is a scar, not a river.
+   * The lane itself: one path, square corners rounded just enough for a
+   * tractor, shaded bank offset the same way every tree throws its shadow.
+   * Both ends are vertical at xa, overdrawn past the edges, so the wrap
+   * joins mid-straight and no cap ever shows.
    */
   {
-    const wob = W*(0.10 + rand()*0.06);
-    const mid = W*(0.34 + rand()*0.3);
-    const phase = rand()*TAU;
-    const k1 = (TAU/H)*1, k2 = (TAU/H)*3;
-    const xAt = y => mid + Math.sin(y*k1 + phase)*wob + Math.sin(y*k2 + phase*2)*wob*0.3;
-    const lane = (off, wpx, col) => {
-      ctx.strokeStyle = col; ctx.lineWidth = wpx;
+    const R = 13;
+    const roadPath = () => {
       ctx.beginPath();
-      for(let y = -8; y <= H + 8; y += 8){
-        const x = xAt(y) + off;
-        if(y === -8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+      ctx.moveTo(xa, -10);
+      ctx.arcTo(xa, y1, xb, y1, R);
+      ctx.arcTo(xb, y1, xb, y2, R);
+      ctx.arcTo(xb, y2, xc, y2, R);
+      ctx.arcTo(xc, y2, xc, y3, R);
+      ctx.arcTo(xc, y3, xa, y3, R);
+      ctx.arcTo(xa, y3, xa, H + 10, R);
+      ctx.lineTo(xa, H + 10);
     };
-    lane(2.5, W*0.020, "rgba(30,36,18,0.8)");     // the shaded bank
-    lane(0,   W*0.014, "#8d7f57");                 // the dust itself
+    ctx.lineJoin = "round"; ctx.lineCap = "butt";
+    ctx.save(); ctx.translate(2.2, 1.2);
+    roadPath(); ctx.strokeStyle = "rgba(30,36,18,0.8)"; ctx.lineWidth = W*0.020; ctx.stroke();
+    ctx.restore();
+    roadPath(); ctx.strokeStyle = "#8d7f57"; ctx.lineWidth = W*0.014; ctx.stroke();
   }
   /*
-   * Copses: clusters of trees, each a dark crown with one lit arc on the
-   * key-light side, throwing a soft long shadow the OTHER way - the morning
-   * light, drawn twice so it cannot be missed.
+   * The farmyard, tucked into the inside of the gate corner - so the lane
+   * visibly exists to serve it. Packed-dirt apron, the big workshop with
+   * its doors open and every light on (the story starts here), the house
+   * still asleep, and two of the morning's ships already wheeled out.
    */
-  const copses = 14;
+  const ax0 = xb + 5, ay0 = y1 + 6, apW = W*0.105, apH = 40;
+  {
+    ctx.fillStyle = "#8d7f57";
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.moveTo(ax0, ay0);
+    ctx.lineTo(ax0 + apW, ay0 + 2 + rand()*3);
+    ctx.lineTo(ax0 + apW - 2 - rand()*4, ay0 + apH);
+    ctx.lineTo(ax0 + 3 + rand()*4, ay0 + apH - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    // A roof seen from straight above: two slopes about the ridge, the
+    // north-west slope catching the dawn, the other in its own shade, and
+    // a soft shadow thrown the same way the trees throw theirs.
+    const roof = (bx, by, bw, bh, base, vert) => {
+      ctx.fillStyle = "rgba(18,26,10,0.5)";
+      ctx.beginPath(); ctx.ellipse(bx + bw*0.62, by + bh*0.72, bw*0.62, bh*0.5, 0.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = mixA(base, "#ffd9a0", 0.30, 1);
+      if(vert) ctx.fillRect(bx, by, bw/2, bh); else ctx.fillRect(bx, by, bw, bh/2);
+      ctx.fillStyle = mixA(base, "#141a0c", 0.42, 1);
+      if(vert) ctx.fillRect(bx + bw/2, by, bw/2, bh); else ctx.fillRect(bx, by + bh/2, bw, bh/2);
+      ctx.strokeStyle = "rgba(255,224,160,0.55)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      if(vert){ ctx.moveTo(bx + bw/2, by + 0.5); ctx.lineTo(bx + bw/2, by + bh - 0.5); }
+      else { ctx.moveTo(bx + 0.5, by + bh/2); ctx.lineTo(bx + bw - 0.5, by + bh/2); }
+      ctx.stroke();
+    };
+    // the workshop, south of the apron, doors facing it
+    const wx = ax0 - 2, wy = ay0 + apH + 3;
+    const spill = ctx.createRadialGradient(wx + 12, wy - 1, 1, wx + 12, wy - 1, 13);
+    spill.addColorStop(0, "rgba(255,214,110,0.8)");
+    spill.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = spill;
+    ctx.beginPath(); ctx.arc(wx + 12, wy - 1, 13, 0, TAU); ctx.fill();
+    roof(wx, wy, 30, 15, "#6d5a4a", false);
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(wx + 9, wy - 1.4, 7, 2.8);              // the open door
+    ctx.fillRect(wx + 6, wy + 9.6, 2.2, 2.2);            // rooflights, lit
+    ctx.fillRect(wx + 20, wy + 9.6, 2.2, 2.2);
+    roof(ax0 + apW + 5, ay0 + 3, 15, 10, "#7a4a3a", false);   // the house
+    roof(ax0 + apW + 7, ay0 + 22, 10, 7, "#5a6055", true);    // a shed
+    // two of the six, wheeled out and waiting for the morning's check
+    const dart = (dx, dy, s) => {
+      ctx.fillStyle = "rgba(18,26,10,0.45)";
+      ctx.beginPath(); ctx.ellipse(dx + s*0.5, dy + s*0.55, s*0.8, s*0.4, 0.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#cfd6da";
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - s);
+      ctx.lineTo(dx + s*0.85, dy + s*0.8);
+      ctx.lineTo(dx, dy + s*0.35);
+      ctx.lineTo(dx - s*0.85, dy + s*0.8);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#7fb0c8";
+      ctx.fillRect(dx - 1, dy - s*0.45, 2, 2.6);
+    };
+    dart(ax0 + apW*0.30, ay0 + 16, 6);
+    dart(ax0 + apW*0.62, ay0 + 24, 6);
+  }
+  /*
+   * The airstrip: a mown pale strip down the paddock with white thresholds
+   * and a windsock - Launch Day's actual runway, visible from the sky. A
+   * worn footpath ties it back to the apron so the yard reads as one place.
+   */
+  const sx = Math.min(padX1 - 26, ax0 + apW + 34);
+  const sy0 = y1 + 14, sy1 = rowE[homeRow + 1] - 12;
+  {
+    for(let d = sy0; d < sy1; d += 9)
+      { ctx.fillStyle = "rgba(230,238,170," + (((d - sy0)/9|0) % 2 ? 0.12 : 0.26) + ")";
+        ctx.fillRect(sx, d, 13, Math.min(9, sy1 - d)); }
+    ctx.strokeStyle = "rgba(28,36,16,0.5)"; ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, sy0 + 0.5, 12, sy1 - sy0 - 1);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(sx + 2, sy0 + 2, 9, 2.4);
+    ctx.fillRect(sx + 2, sy1 - 4.4, 9, 2.4);
+    ctx.strokeStyle = "rgba(141,127,87,0.75)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ax0 + apW - 2, ay0 + apH*0.5);
+    ctx.quadraticCurveTo((ax0 + apW + sx)/2, ay0 + apH*0.72, sx + 6, sy0 + 10);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(240,240,240,0.7)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx - 5, sy0 + 9); ctx.stroke();
+    ctx.fillStyle = "#e8823c";
+    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx + 2, sy0 + 4.5);
+    ctx.lineTo(sx - 5, sy0 + 6); ctx.closePath(); ctx.fill();
+  }
+  /*
+   * Trees. One shared crown so the copses and the farm's windbreak match:
+   * dark canopy, one lit arc on the key-light side, soft long shadow the
+   * other way - the morning light, drawn twice so it cannot be missed.
+   */
+  const tree = (tx, ty, tr) => {
+    ctx.fillStyle = "rgba(18,26,10,0.5)";
+    ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#2c3d1c";
+    ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "rgba(255,214,140,0.5)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
+  };
+  // The windbreak: a planted line along the lane's last stretch before the
+  // gate - the one row of trees on the map that somebody chose to put there.
+  for(let i = 0; i < 5; i++){
+    const tx = xa + 16 + (xb - xa - 30)*(i/4) + (rand() - 0.5)*6;
+    tree(tx, y1 - 7 - rand()*4, 5 + rand()*3);
+  }
+  // Copses keep clear of the lane and the paddock - trees grow anywhere
+  // except where somebody drives or mows.
+  const nearRoad = (bx, by) => Math.abs(bx - roadXAtY(by)) < 34
+    || (Math.abs(by - y1) < 26 && bx > Math.min(xa, xb) - 20 && bx < Math.max(xa, xb) + 20)
+    || (Math.abs(by - y2) < 26 && bx > Math.min(xb, xc) - 20 && bx < Math.max(xb, xc) + 20)
+    || (Math.abs(by - y3) < 26 && bx > Math.min(xc, xa) - 20 && bx < Math.max(xc, xa) + 20);
+  const inPaddock = (bx, by) => by > y1 - 14 && by < rowE[homeRow + 1] + 14 &&
+    bx > padX0 - 14 && bx < padX1 + 14;
+  const copses = 17;
   for(let i = 0; i < copses; i++){
     const bx = rand()*W, by = rand()*H, n = 3 + Math.floor(rand()*4);
+    if(nearRoad(bx, by) || inPaddock(bx, by)) continue;
     wrapY(by, 40, y => {
-      for(let t = 0; t < n; t++){
-        const tx = bx + (rand() - 0.5)*46, ty = y + (rand() - 0.5)*34;
-        const tr = 6 + rand()*7;
-        ctx.fillStyle = "rgba(18,26,10,0.5)";                    // long shadow
-        ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
-        ctx.fillStyle = "#2c3d1c";                               // the crown
-        ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
-        ctx.strokeStyle = "rgba(255,214,140,0.5)";               // lit rim
-        ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
-      }
+      for(let t = 0; t < n; t++)
+        tree(bx + (rand() - 0.5)*46, y + (rand() - 0.5)*34, 6 + rand()*7);
     });
   }
   /*
@@ -30640,8 +30911,12 @@ const ST = (SF.storyData && SF.storyData.STORY) || {};
 Object.keys(ST).forEach(k => {
   const b = ST[k];
   if(!b) return;
-  I.bind(b, ["title", "text", "sub"]);
+  I.bind(b, ["title", "text", "sub", "button"]);
   if(Array.isArray(b.lines)) I.bindList(b.lines);
+  // The pages themselves: the panels' prose is the part a reader actually
+  // reads, and it went untranslated for months because only the shell of
+  // the beat was registered here.
+  (b.panels || []).forEach(pn => I.bind(pn, ["text"]));
 });
 })();
 
@@ -34779,6 +35054,114 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "rgba(90,140,255,0.18)";
     ctx.beginPath(); ctx.arc(W*0.5, H*1.45, W*0.8, 0, Math.PI*2); ctx.fill();
     A.drawShip(ctx, W/2, H*0.42, 52, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "dawn"){
+    /*
+     * Launch Day's establishing shot: the farm at first light. The wash is
+     * transparent at the top on purpose - the star field underneath survives
+     * up there, which is where stars belong at dawn.
+     */
+    const horizon = H*0.68;
+    const d = ctx.createLinearGradient(0, 0, 0, horizon);
+    d.addColorStop(0, "rgba(19,26,58,0)");
+    d.addColorStop(0.5, "rgba(96,82,118,0.85)");
+    d.addColorStop(1, "#f0b168");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, horizon);
+    const sun = ctx.createRadialGradient(W*0.30, horizon - 4, 2, W*0.30, horizon - 4, 34);
+    sun.addColorStop(0, "rgba(255,236,180,0.95)");
+    sun.addColorStop(0.25, "rgba(255,210,130,0.55)");
+    sun.addColorStop(1, "rgba(255,190,110,0)");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(W*0.30, horizon - 4, 34, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ffeccc";
+    ctx.beginPath(); ctx.arc(W*0.30, horizon - 4, 7, 0, Math.PI*2); ctx.fill();
+    // the land: field strips, the lane, and the workshop with its lights on
+    ctx.fillStyle = "#1c2410";
+    ctx.fillRect(0, horizon, W, H - horizon);
+    const strip = ["#2a3a1a", "#33421e", "#243415", "#3a4522"];
+    for(let s = 0; s < 5; s++){
+      ctx.fillStyle = strip[s % strip.length];
+      ctx.fillRect(0, horizon + 5 + s*9, W, 7);
+    }
+    ctx.strokeStyle = "rgba(160,140,95,0.9)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W*0.42, H + 2);
+    ctx.quadraticCurveTo(W*0.5, H*0.86, W*0.72, horizon + 6); ctx.stroke();
+    const fx = W*0.72, fy = horizon + 2;
+    const glow = ctx.createRadialGradient(fx, fy, 1, fx, fy, 26);
+    glow.addColorStop(0, "rgba(255,214,110,0.5)"); glow.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(fx, fy, 26, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#0d1208";
+    ctx.fillRect(fx - 13, fy - 8, 26, 9);
+    ctx.beginPath(); ctx.moveTo(fx - 15, fy - 8); ctx.lineTo(fx, fy - 16);
+    ctx.lineTo(fx + 15, fy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";                                  // every light on
+    ctx.fillRect(fx - 9, fy - 6, 4, 4); ctx.fillRect(fx - 2, fy - 6, 4, 4);
+    ctx.fillRect(fx + 5, fy - 6, 4, 4);
+    ctx.fillStyle = "#0d1208";                                  // the house, asleep
+    ctx.fillRect(fx + 20, fy - 6, 14, 7);
+    ctx.beginPath(); ctx.moveTo(fx + 18, fy - 6); ctx.lineTo(fx + 27, fy - 12);
+    ctx.lineTo(fx + 36, fy - 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(20,24,40,0.8)"; ctx.lineWidth = 1.4; // birds up early
+    [[W*0.18, H*0.30], [W*0.24, H*0.36], [W*0.52, H*0.22]].forEach(([bx, by]) => {
+      ctx.beginPath(); ctx.moveTo(bx - 4, by); ctx.quadraticCurveTo(bx - 2, by - 3.5, bx, by);
+      ctx.quadraticCurveTo(bx + 2, by - 3.5, bx + 4, by); ctx.stroke();
+    });
+  } else if(art === "dark"){
+    /*
+     * The first night. The star field gets buried under near-black - all but
+     * a thin band up top, out of the thieves' reach - and the only warm
+     * thing left in the world is the workshop with every light on.
+     */
+    const d = ctx.createLinearGradient(0, 0, 0, H);
+    d.addColorStop(0, "rgba(4,6,14,0.55)");
+    d.addColorStop(0.3, "rgba(4,6,14,0.96)");
+    d.addColorStop(1, "#04060e");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, H);
+    const tx = W*0.70, ty = H*0.26;
+    const cages = [[tx - 36, ty + 26], [tx - 52, ty + 40], [tx - 22, ty + 44]];
+    ctx.strokeStyle = "rgba(120,130,170,0.35)"; ctx.lineWidth = 1;   // tow lines
+    ctx.beginPath();
+    cages.forEach(([cx, cy]) => { ctx.moveTo(tx - 16, ty + 3); ctx.lineTo(cx, cy - 6); });
+    ctx.stroke();
+    ctx.fillStyle = "#070a18";                                   // the thief, leaving
+    ctx.beginPath(); ctx.moveTo(tx - 18, ty + 6); ctx.lineTo(tx + 22, ty);
+    ctx.lineTo(tx + 8, ty - 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(150,160,200,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "rgba(255,90,80,0.9)";                       // engines, going away
+    ctx.fillRect(tx - 20, ty + 1, 2.5, 2.5); ctx.fillRect(tx - 15, ty + 3.5, 2, 2);
+    cages.forEach(([cx, cy]) => {
+      const halo = ctx.createRadialGradient(cx, cy, 1, cx, cy, 14);
+      halo.addColorStop(0, "rgba(255,214,110,0.55)"); halo.addColorStop(1, "rgba(255,214,110,0)");
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffd76e";                                 // a star, boxed
+      ctx.beginPath();
+      for(let k = 0; k < 10; k++){
+        const a2 = -Math.PI/2 + k*Math.PI/5, rr = k % 2 ? 2.2 : 5;
+        const px = cx + Math.cos(a2)*rr, py = cy + Math.sin(a2)*rr;
+        if(k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(170,180,220,0.75)"; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 7, cy - 6, 14, 12);
+      ctx.beginPath();
+      ctx.moveTo(cx - 2.3, cy - 6); ctx.lineTo(cx - 2.3, cy + 6);
+      ctx.moveTo(cx + 2.3, cy - 6); ctx.lineTo(cx + 2.3, cy + 6);
+      ctx.stroke();
+    });
+    ctx.fillStyle = "#020308";                                   // the dark farm below
+    ctx.fillRect(0, H*0.86, W, H*0.14);
+    const wx = W*0.26, wy = H*0.86;
+    const g2 = ctx.createRadialGradient(wx, wy, 1, wx, wy, 30);
+    g2.addColorStop(0, "rgba(255,214,110,0.65)"); g2.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(wx, wy, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#000106";
+    ctx.fillRect(wx - 14, wy - 8, 28, 9);
+    ctx.beginPath(); ctx.moveTo(wx - 16, wy - 8); ctx.lineTo(wx, wy - 17);
+    ctx.lineTo(wx + 16, wy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(wx - 10, wy - 6, 4.5, 5); ctx.fillRect(wx - 2, wy - 6, 4.5, 5);
+    ctx.fillRect(wx + 6, wy - 6, 4.5, 5);
+    ctx.fillStyle = "rgba(255,255,255,0.8)";                     // out of their reach
+    ctx.fillRect(W*0.12, 6, 1.6, 1.6); ctx.fillRect(W*0.55, 12, 1.4, 1.4);
+    ctx.fillRect(W*0.83, 4, 1.6, 1.6);
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -34802,6 +35185,9 @@ function openBriefing(index){
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");
+  // Launch Day's briefing is the story's first page: the family, the farm,
+  // and why there are six new ships in the workshop - read BEFORE flying.
+  if(m.prologue) maybeStory("launchDay");
 
   $("briefNum").textContent = "MISSION " + m.id;
   $("briefBoss").classList.toggle("hidden", !m.boss);
@@ -35556,6 +35942,8 @@ function showResults(result){
   else if(completed && run.missionIndex === DEVOURER_END) maybeStory("campaign");
   // Clearing the Sentinel used to be the end of the game; now it's half time.
   else if(completed && run.missionIndex === ACT_ONE_END) maybeStory("actTwo");
+  // The night after Launch Day: the theft becomes the campaign's reason.
+  else if(completed && run.mission.prologue) maybeStory("skyTaken");
 }
 
 /** Who has run the gauntlet deepest - shown after every Boss Rush. */

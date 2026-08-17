@@ -301,6 +301,80 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Personne ne vole le ciel de la famille. Allez les récupérer.",
 "Full throttle, straight up. Wheels up, squadron!":
   "Pleins gaz, droit vers le haut. Décollage, escadrille !",
+
+/* ---------------- story pages ----------------
+   The comic-panel beats. These went untranslated for months because only
+   the beat's title was registered with the binder; now the panels' prose
+   and the button are bound too, so every page reads in French. */
+"LAUNCH DAY": "JOUR DU DÉCOLLAGE",
+"This is home, {you}. The farm, the fields - and Papa's workshop at the end of the lane, the one whose lights haven't gone out in months.":
+  "C'est chez nous, {you}. La ferme, les champs — et l'atelier de Papa au bout du chemin, celui dont les lumières ne s'éteignent plus depuis des mois.",
+"All winter he built. Six little ships nobody asked for. Ask him why and he gives the same answer every time: keep your eyes on the sky.":
+  "Tout l'hiver, il a construit. Six petits vaisseaux que personne n'avait demandés. Demande-lui pourquoi, et il donne toujours la même réponse : garde les yeux sur le ciel.",
+"This morning they finally fly. Thread the rings, pop the balloons - the whole family is watching from the fence.":
+  "Ce matin, ils volent enfin. Passe dans les anneaux, éclate les ballons — toute la famille regarde depuis la barrière.",
+"TO THE RUNWAY": "VERS LA PISTE",
+"THE FIRST NIGHT": "LA PREMIÈRE NUIT",
+"That night there were no stars to count. The thieves took every one they could reach and ran for deep space with the family's sky in cages.":
+  "Cette nuit-là, il n'y avait plus d'étoiles à compter. Les voleurs ont pris toutes celles qu'ils pouvaient atteindre et ont filé vers l'espace, le ciel de la famille en cage.",
+"Nobody slept. Papa opened the workshop, turned on every light, and said the thing he had waited all winter to say: the ships are ready. So are you.":
+  "Personne n'a dormi. Papa a ouvert l'atelier, allumé toutes les lumières, et dit ce qu'il attendait de dire depuis tout l'hiver : les vaisseaux sont prêts. Vous aussi.",
+"Sector by sector, star by star, {you}. Follow them up - and don't come home without the sky.":
+  "Secteur par secteur, étoile par étoile, {you}. Poursuis-les là-haut — et ne rentre pas sans le ciel.",
+"FOLLOW THEM UP": "À LEUR POURSUITE",
+"SHE'S CHANGING": "ELLE CHANGE",
+"This is the ship they gave you, {you}. Stock hull, one gun, and a lot of sky.":
+  "Voilà le vaisseau qu'on t'a donné, {you}. Une coque de série, un canon, et beaucoup de ciel.",
+"This is the ship you built. Every bolt on it, you paid for.":
+  "Et voilà le vaisseau que tu as construit. Chaque boulon, c'est toi qui l'as payé.",
+"The mechanics have started asking what you're going to add next.":
+  "Les mécanos commencent à demander ce que tu vas ajouter ensuite.",
+"BACK TO THE HANGAR": "RETOUR AU HANGAR",
+"SQUADRON ACE": "AS DE L'ESCADRILLE",
+"Twenty upgrades ago this was all you had, {you}.":
+  "Il y a vingt améliorations, tu n'avais que ça, {you}.",
+"They said the two of you wouldn't last a week up here.":
+  "On disait que vous ne tiendriez pas une semaine là-haut, tous les deux.",
+"Command has stopped calling you a cadet. You're the squadron's ace now - the pilot the others form up on.":
+  "Le commandement ne t'appelle plus cadet. Tu es l'as de l'escadrille maintenant — le pilote sur qui les autres s'alignent.",
+"That's the end of the beginning. The sky's still full of them. Go and see how far this thing can really go.":
+  "C'est la fin du début. Le ciel est encore plein d'ennemis. Va voir jusqu'où cette machine peut vraiment aller.",
+"FLY ON": "CONTINUE DE VOLER",
+"THEY'RE RUNNING": "ILS FUIENT",
+"The Sentinel is scrap. Home space is quiet for the first time in months - and the rest of their fleet is running for the lane they came in by.":
+  "La Sentinelle est en miettes. Notre espace est calme pour la première fois depuis des mois — et le reste de leur flotte fuit par le couloir qui l'a amenée.",
+"Command wants to know if you'll follow them, {you}. Nobody would think less of you for saying no.":
+  "Le commandement veut savoir si tu vas les poursuivre, {you}. Personne ne t'en voudrait de dire non.",
+"You already know the answer. Eight more stops, all of them theirs - one flown dark, one their own treasure house, and one of them is the last one.":
+  "Tu connais déjà la réponse. Huit étapes encore, toutes chez eux — une à voler tous feux éteints, une qui est leur salle au trésor, et une qui est la dernière.",
+"GO AFTER THEM": "PRENDS-LES EN CHASSE",
+"GUNS DOWN": "CANONS COUPÉS",
+"That last blast from the Sentinel fried every cannon on your ship, {you}. The crew can fix them - but not out here.":
+  "La dernière salve de la Sentinelle a grillé tous les canons de ton vaisseau, {you}. L'équipe peut les réparer — mais pas ici.",
+"The repair yard is on the far side of their blockade. Fly dark, stay quiet, and dodge EVERYTHING - most of them can't even see you, so the shots are few. The traffic won't move out of your way, though.":
+  "L'atelier de réparation est de l'autre côté de leur blocus. Vole tous feux éteints, reste discret, et esquive TOUT — la plupart ne te voient même pas, alors les tirs sont rares. Mais le trafic ne s'écartera pas pour toi.",
+"No guns means no mistakes, {you}. Catch the coins, catch our drifting pilots, and bring the ship home in one piece.":
+  "Pas de canons, pas d'erreurs, {you}. Attrape les pièces, attrape nos pilotes à la dérive, et ramène le vaisseau entier.",
+"FLY DARK": "TOUS FEUX ÉTEINTS",
+"THE STAR CAME BACK": "L'ÉTOILE EST REVENUE",
+"The Devourer came apart in a light so bright that every pilot in the sector saw it from home. Where it was, there is nothing now - just the dark, and then, slowly, stars again.":
+  "Le Dévoreur s'est disloqué dans une lumière si vive que chaque pilote du secteur l'a vue depuis chez lui. Là où il était, il n'y a plus rien — juste le noir, puis, lentement, des étoiles à nouveau.",
+"They all came, {you}. Every pilot you ever pulled out of a cell or caught drifting - they turned up at the end and flew the last minute with you. That's the part they'll tell.":
+  "Ils sont tous venus, {you}. Chaque pilote que tu as sorti d'une cellule ou rattrapé à la dérive — ils étaient là à la fin et ont volé la dernière minute avec toi. C'est cette partie-là qu'on racontera.",
+"Command's calling it the day the war ended. Down there they're calling it something else: the day the Thierrys went out to the last star and came back.":
+  "Le commandement appelle ça le jour où la guerre a pris fin. En bas, on l'appelle autrement : le jour où les Thierry sont allés jusqu'à la dernière étoile et sont revenus.",
+"One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it.":
+  "Une dernière chose avant d'atterrir, {you}. Là où le Dévoreur est tombé, le ciel n'a pas guéri — il y a une fissure là-haut, fine comme un trait de crayon, et la lumière qui la traverse n'est pas celle des étoiles. La carte l'a déjà trouvée.",
+"COME HOME": "RENTRE À LA MAISON",
+"THE PAINTED SKY": "LE CIEL PEINT",
+"The Royal Brush went up like a firework with every colour the workshop owns - and where it burst, the sky isn't blank any more. You painted it, {you}. It's yours.":
+  "Le Pinceau Royal a explosé comme un feu d'artifice avec toutes les couleurs de l'atelier — et là où il a éclaté, le ciel n'est plus vide. C'est toi qui l'as peint, {you}. Il est à toi.",
+"The sketches you painted flew home beside you. Somebody in that workshop once drew YOUR ship too - and today you flew that drawing better than it knew it could be flown.":
+  "Les croquis que tu as peints sont rentrés en volant à tes côtés. Dans cet atelier, quelqu'un a un jour dessiné TON vaisseau aussi — et aujourd'hui tu as fait voler ce dessin mieux qu'il ne se savait capable de voler.",
+"Command has no name for what happened behind the sky, so the squadron picked one: the day {you} chased the game all the way to its drawing board and won.":
+  "Le commandement n'a pas de nom pour ce qui s'est passé derrière le ciel, alors l'escadrille en a choisi un : le jour où {you} a poursuivi le jeu jusqu'à sa planche à dessin et a gagné.",
+"Every sky from here on is one somebody painted first. Fly them all, on every tier - and if the paint ever stutters again, wave. The painter knows your ship by heart.":
+  "Chaque ciel, désormais, est un ciel que quelqu'un a peint d'abord. Vole-les tous, à tous les niveaux — et si la peinture bafouille encore, fais signe. Le peintre connaît ton vaisseau par cœur.",
 "First Patrol": "Première Patrouille",
 "Weaving Through": "Slalom",
 "The Anchor": "L'Ancre",
