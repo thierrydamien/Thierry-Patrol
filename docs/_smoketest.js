@@ -495,17 +495,23 @@ async function run(){
    * The farmland's two honesty rules, pinned at the source. "The fields are
    * too geometrically perfect" - so no shared column grid survives (each row
    * deals its own edges) and the rows themselves are dealt unequal, with only
-   * the two ends pinned to the wrap. "The road's shape doesn't make sense" -
-   * so the sine wander is gone: the lane runs straight along field edges,
-   * turns square at hedgerows (arcTo corners), and the fields align to it.
+   * the two ends pinned to the wrap. "Roads are mostly straight unless
+   * there's a good reason to have a turn" - so the through-lane is ONE
+   * straight line down the whole map, and the only turnings anywhere are the
+   * side lane's T-junction and the short track into the yard. Two earlier
+   * drafts failed this: a double-sine wander, then a lane that jogged three
+   * times on its way down for no reason a farmer would recognise.
    */
-  check("the farm lane is a field edge, not a sine wave", (() => {
+  check("every road is straight, and every turning has a reason", (() => {
     const s2 = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
     const f2 = s2.slice(s2.indexOf("function drawFields"), s2.indexOf("function drawGround"));
-    return /arcTo\(/.test(f2) &&              // square corners, rounded for a tractor
-           !/Math\.sin\(y\*k1/.test(f2) &&    // the wander is gone
+    return /moveTo\(laneX, -10\); ctx\.lineTo\(laneX, H \+ 10\)/.test(f2) &&  // one straight run
+           !/arcTo\(/.test(f2) &&             // no jogs left in it at all
+           !/Math\.sin\(y\*k1/.test(f2) &&    // and no wander either
+           /sideY/.test(f2) &&                // the T-junction
+           /trackY/.test(f2) &&               // the spur that serves the yard
            /homeRow/.test(f2) &&              // the farmyard's field exists
-           /roadXAtRow/.test(f2) &&           // each row aligns its edges to the lane
+           /const rx = laneX;/.test(f2) &&    // every row aligns its edges to the lane
            /rowE\[ROWS\] = H;/.test(f2);      // the wrap still lands on a hedgerow
   })());
   /*
@@ -1536,8 +1542,18 @@ async function run(){
   check("Launch Day opens the book and the first night turns the page",
     !!SF.storyData.STORY.launchDay && !!SF.storyData.STORY.skyTaken &&
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
-             return /if\(m\.prologue\) maybeStory\("launchDay"\)/.test(u) &&
+             return /if\(m\.prologue\) showStory\(SF\.storyData\.STORY\.launchDay\)/.test(u) &&
                     /run\.mission\.prologue\) maybeStory\("skyTaken"\)/.test(u); })());
+  /*
+   * ...and the opening page is the ONE beat that is not once-only: it plays
+   * every time the stop is picked, because it is the story's first page and
+   * the mission gets replayed for fun. `maybeStory` would silence it after
+   * the first look, so the hook must call `showStory` directly.
+   */
+  check("the opening page is never gated by the save", (() => {
+    const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+    return !/maybeStory\("launchDay"\)/.test(u);
+  })());
   /*
    * The pages were English in every language for months, because only the
    * beat's SHELL was registered with the binder - the panels' prose (the
@@ -1951,17 +1967,14 @@ async function run(){
       id("screen-briefing").classList.contains("active") &&
       id("briefNum").textContent === "MISSION 0");
     /*
-     * The story's first page. A pilot's first look at Launch Day's briefing
-     * opens the LAUNCH DAY card - the family, the farm, and why there are
-     * six new ships in the workshop - so the theft later means something.
-     * It fires exactly once, and it is recorded on the pilot's own save.
+     * The story's first page. Picking Launch Day opens the LAUNCH DAY card -
+     * the family, the farm, and why there are six new ships in the workshop -
+     * so the theft later means something.
      */
-    check("the first briefing opens the story's first page",
+    check("picking Launch Day opens the story's first page",
       !id("storyOverlay").classList.contains("hidden") &&
       /LAUNCH DAY/.test(id("storyTitle").textContent) &&
       qa("#storyPanels .story-panel").length === 3);
-    check("the first page is remembered on the pilot's save",
-      !!(SF.ui.getProfile().stories || {}).launchDay);
     clickEl(id("storyBtn"));
     check("the first page closes on its own button",
       id("storyOverlay").classList.contains("hidden"));
@@ -2531,10 +2544,16 @@ async function run(){
 
   clickEl(qa("#campaignNodes .map-node")[0]);
   check("briefing opens for mission 1", id("screen-briefing").classList.contains("active"));
-  // The story's first page fired on the FIRST look (asserted up in the map
-  // section); a second look must not replay it over the briefing.
-  check("the story's first page does not replay on a second look",
-    id("storyOverlay").classList.contains("hidden"));
+  /*
+   * ...and the story's first page plays AGAIN. It already fired once up in
+   * the map section, so a once-only beat would be silent here - this is the
+   * check that keeps "the story card should appear every time the level is
+   * selected" true, from a second real trip through the map.
+   */
+  check("the story's first page plays again on a second visit",
+    !id("storyOverlay").classList.contains("hidden") &&
+    /LAUNCH DAY/.test(id("storyTitle").textContent));
+  clickEl(id("storyBtn"));
   check("briefing lists 3 objectives", qa("#briefObjectives .bo-row").length === 3);
   check("briefing shows what you'll be facing", qa("#briefRoster .roster-chip").length > 0);
   /*

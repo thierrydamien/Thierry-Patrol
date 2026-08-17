@@ -1691,12 +1691,13 @@ function drawVortex(ctx, W, H, p, rand){
  *
  * Two facts of real farmland carry the whole picture. Nothing is surveyed
  * equal - every field is its own size, so both the row heights and each
- * row's divisions are dealt separately. And a lane is not a river: it runs
- * dead straight along a field edge, turns square at a boundary, and runs
- * straight again - so the road here IS a field edge, every row it crosses
- * lines its fields up against it, and it goes somewhere: past the farmyard
- * it serves, where the workshop's lights are still on and the morning's
- * ships are already wheeled out beside the airstrip.
+ * row's divisions are dealt separately. And roads are STRAIGHT: a lane
+ * follows a field boundary for as long as the boundary runs and turns only
+ * where something makes it turn. So the road here IS a field edge, every
+ * row lines its fields up against it, and the only turnings on the map are
+ * a T-junction with a side lane and the short track into the farmyard -
+ * where the workshop's lights are still on and the morning's ships are
+ * already wheeled out beside the airstrip.
  *
  * Same two disciplines as the canyon: drawn once (never through `tiled`),
  * and periodic in H by construction - row 0 starts at 0 and the last row
@@ -1726,24 +1727,31 @@ function drawFields(ctx, W, H, p, rand){
     for(let r = 0; r < ROWS; r++){ y += raw[r]/acc*H; rowE.push(y); }
     rowE[ROWS] = H; }
   /*
-   * The lane, before the fields - because the fields have to KNOW about it.
-   * Three straight legs (the middle one passes the farm gate), two square
-   * jogs along hedgerows, and the last leg returns to the first x so the
-   * wrap joins mid-straight. y1 is the home field's top edge: the lane
-   * turns the corner exactly at the gate.
+   * The roads, before the fields - because the fields have to know where
+   * they are. Real country roads are STRAIGHT. A lane follows the boundary
+   * between holdings for as long as the holdings run, and it turns only
+   * where something makes it turn. An earlier draft jogged three times on
+   * its way down the map for no reason a farmer would recognise; there are
+   * three roads here now and each one is a straight line with a purpose:
+   *
+   *   the through-lane - dead straight down the whole map, the road that
+   *     was here before the farm was. Straight is also what makes the wrap
+   *     exact: it leaves the top at the very x it entered the bottom, so
+   *     there is no kink and no cap anywhere near the seam.
+   *   the side lane - leaves it at a T-junction, runs along a hedgerow and
+   *     off the edge of the map towards wherever it goes next. It never
+   *     comes back, so it never has to bend to get home.
+   *   the farm track - the short spur into the yard, narrower and paler.
+   *     The one reason anything would leave the road here.
    */
-  const xa = W*(0.30 + rand()*0.10);
-  const xb = xa + W*(0.16 + rand()*0.08);
-  const xc = xa - W*(0.10 + rand()*0.06);
-  const r2 = 6 + Math.floor(rand()*2), r3 = 9 + Math.floor(rand()*2);
-  const y1 = rowE[homeRow], y2 = rowE[r2], y3 = rowE[r3];
-  const roadXAtRow = r => r < homeRow ? xa : r < r2 ? xb : r < r3 ? xc : xa;
-  const roadXAtY = y => { const yy = ((y % H) + H) % H;
-    return yy < y1 ? xa : yy < y2 ? xb : yy < y3 ? xc : xa; };
-  // The home paddock: one wide field to the right of the gate, sized for a
-  // yard and a strip of mown runway. If it would leave only a sliver before
-  // the map edge, it runs to the edge instead.
-  const padX0 = xb, padX1 = xb + W*0.30 < W*0.93 ? xb + W*0.30 : W;
+  const laneX = W*(0.34 + rand()*0.10);
+  const y1 = rowE[homeRow];                       // the home field's top edge
+  // The side lane meets it well clear of the farm, on a hedgerow of its own.
+  const sideY = rowE[Math.min(homeRow + 4 + Math.floor(rand()*3), ROWS - 1)];
+  // The home paddock: one wide field beside the lane, sized for a yard and a
+  // strip of mown runway. If it would leave only a sliver before the map
+  // edge, it runs to the edge instead.
+  const padX0 = laneX, padX1 = laneX + W*0.34 < W*0.93 ? laneX + W*0.34 : W;
   /*
    * Each row divides on its own - shared column lines are what made the
    * first draft read as a chessboard. The lane's x is always one of the
@@ -1751,7 +1759,7 @@ function drawFields(ctx, W, H, p, rand){
    */
   const rowCols = [];
   for(let r = 0; r < ROWS; r++){
-    const rx = roadXAtRow(r);
+    const rx = laneX;
     const e = [0];
     const split = (a, b) => {
       const span = b - a;
@@ -1840,37 +1848,38 @@ function drawFields(ctx, W, H, p, rand){
     }
   }
   /*
-   * The lane itself: one path, square corners rounded just enough for a
-   * tractor, shaded bank offset the same way every tree throws its shadow.
-   * Both ends are vertical at xa, overdrawn past the edges, so the wrap
-   * joins mid-straight and no cap ever shows.
+   * The farmyard sits beside the lane, a field's width off it, with the
+   * track running in - so the buildings are the track's reason and the
+   * track is the only turn on the whole map. Packed-dirt apron, the big
+   * workshop with its doors open and every light on (the story starts
+   * here), the house still asleep, and two ships already wheeled out.
+   */
+  const ax0 = laneX + W*0.075, ay0 = y1 + 9, apW = W*0.105, apH = 40;
+  const trackY = ay0 + apH*0.45;                  // the track meets the yard
+  /*
+   * The three roads, each one straight. Drawn banks-first and with the dark
+   * only barely off-centre, because a country lane is a cut between two
+   * hedges - dark down BOTH sides, a little heavier on the shaded one. Offset
+   * far enough to read as a drop shadow and it stops looking like a road and
+   * starts looking like a pale stripe someone laid on the field. The
+   * through-lane is overdrawn past both edges so no cap shows at the seam,
+   * and the side lane overshoots the junction so the T has no hairline in it.
    */
   {
-    const R = 13;
-    const roadPath = () => {
-      ctx.beginPath();
-      ctx.moveTo(xa, -10);
-      ctx.arcTo(xa, y1, xb, y1, R);
-      ctx.arcTo(xb, y1, xb, y2, R);
-      ctx.arcTo(xb, y2, xc, y2, R);
-      ctx.arcTo(xc, y2, xc, y3, R);
-      ctx.arcTo(xc, y3, xa, y3, R);
-      ctx.arcTo(xa, y3, xa, H + 10, R);
-      ctx.lineTo(xa, H + 10);
+    const paintRoads = (grow, col) => {
+      ctx.strokeStyle = col; ctx.lineCap = "butt";
+      ctx.lineWidth = W*0.014 + grow;             // the through-lane
+      ctx.beginPath(); ctx.moveTo(laneX, -10); ctx.lineTo(laneX, H + 10); ctx.stroke();
+      ctx.lineWidth = W*0.011 + grow;             // the side lane, off the map
+      ctx.beginPath(); ctx.moveTo(-6, sideY); ctx.lineTo(laneX + 1, sideY); ctx.stroke();
+      ctx.lineWidth = W*0.007 + grow;             // the farm track
+      ctx.beginPath(); ctx.moveTo(laneX, trackY); ctx.lineTo(ax0 + 2, trackY); ctx.stroke();
     };
-    ctx.lineJoin = "round"; ctx.lineCap = "butt";
-    ctx.save(); ctx.translate(2.2, 1.2);
-    roadPath(); ctx.strokeStyle = "rgba(30,36,18,0.8)"; ctx.lineWidth = W*0.020; ctx.stroke();
+    ctx.save(); ctx.translate(1.2, 0.7);
+    paintRoads(W*0.009, "rgba(26,34,15,0.8)");
     ctx.restore();
-    roadPath(); ctx.strokeStyle = "#8d7f57"; ctx.lineWidth = W*0.014; ctx.stroke();
+    paintRoads(0, "#8d7f57");
   }
-  /*
-   * The farmyard, tucked into the inside of the gate corner - so the lane
-   * visibly exists to serve it. Packed-dirt apron, the big workshop with
-   * its doors open and every light on (the story starts here), the house
-   * still asleep, and two of the morning's ships already wheeled out.
-   */
-  const ax0 = xb + 5, ay0 = y1 + 6, apW = W*0.105, apH = 40;
   {
     ctx.fillStyle = "#8d7f57";
     ctx.globalAlpha = 0.92;
@@ -1968,18 +1977,18 @@ function drawFields(ctx, W, H, p, rand){
     ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
   };
-  // The windbreak: a planted line along the lane's last stretch before the
-  // gate - the one row of trees on the map that somebody chose to put there.
+  // The windbreak: a planted line on the hedgerow above the yard, sheltering
+  // it from the open field - the one row of trees on this map that somebody
+  // chose to put where it is.
   for(let i = 0; i < 5; i++){
-    const tx = xa + 16 + (xb - xa - 30)*(i/4) + (rand() - 0.5)*6;
+    const tx = ax0 + 4 + (apW - 8)*(i/4) + (rand() - 0.5)*6;
     tree(tx, y1 - 7 - rand()*4, 5 + rand()*3);
   }
-  // Copses keep clear of the lane and the paddock - trees grow anywhere
+  // Copses keep clear of the roads and the paddock - trees grow anywhere
   // except where somebody drives or mows.
-  const nearRoad = (bx, by) => Math.abs(bx - roadXAtY(by)) < 34
-    || (Math.abs(by - y1) < 26 && bx > Math.min(xa, xb) - 20 && bx < Math.max(xa, xb) + 20)
-    || (Math.abs(by - y2) < 26 && bx > Math.min(xb, xc) - 20 && bx < Math.max(xb, xc) + 20)
-    || (Math.abs(by - y3) < 26 && bx > Math.min(xc, xa) - 20 && bx < Math.max(xc, xa) + 20);
+  const nearRoad = (bx, by) => Math.abs(bx - laneX) < 32
+    || (Math.abs(by - sideY) < 24 && bx < laneX + 24)
+    || (Math.abs(by - trackY) < 20 && bx > laneX - 10 && bx < ax0 + 10);
   const inPaddock = (bx, by) => by > y1 - 14 && by < rowE[homeRow + 1] + 14 &&
     bx > padX0 - 14 && bx < padX1 + 14;
   const copses = 17;

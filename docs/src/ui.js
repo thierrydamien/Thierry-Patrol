@@ -4261,9 +4261,14 @@ function openBriefing(index){
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");
-  // Launch Day's briefing is the story's first page: the family, the farm,
-  // and why there are six new ships in the workshop - read BEFORE flying.
-  if(m.prologue) maybeStory("launchDay");
+  /*
+   * Launch Day's briefing is the story's first page: the family, the farm,
+   * and why there are six new ships in the workshop - read BEFORE flying.
+   * Unlike every other beat this one is NOT once-only. It is the opening of
+   * the story and the mission is replayed for fun, so it plays every time
+   * the stop is picked - `showStory` directly, never `maybeStory`.
+   */
+  if(m.prologue) showStory(SF.storyData.STORY.launchDay);
 
   $("briefNum").textContent = "MISSION " + m.id;
   $("briefBoss").classList.toggle("hidden", !m.boss);
