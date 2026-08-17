@@ -28,6 +28,9 @@ const { DIFFICULTY_BY_ID, POWERUPS, SUPPLIES } = SF.config;
 const fx = SF.fx;
 const audio = SF.audio;
 const P = SF.profile;
+// Canvas text is out of reach of the DOM sweep, so anything drawn on the
+// playfield has to ask for its own translation.
+const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 
 let canvas, ctx, gameFrame, scale = 1;
 const shakeVec = { x:0, y:0 };
@@ -132,7 +135,7 @@ const REVIVE_MS = 5000;
 /* ---------------------------------------------------------
    LOADOUT - profile upgrades become concrete ship stats.
    --------------------------------------------------------- */
-function buildLoadout(profile, difficulty){
+function buildLoadout(profile, difficulty, alsoFlying){
   const lv = id => P.upgradeLevel(profile, id);
   // Flight tuning: a whole-ship stat trade chosen in MY SHIP. `fire` scales
   // the fire interval (above 1 = slower guns), and dps is scaled to match so
@@ -143,7 +146,15 @@ function buildLoadout(profile, difficulty){
   // doesn't summon a nameless escort - it calls your brother in.
   // `levels` rides along so the comms portrait draws their ship as *they*
   // have built it, not a stock hull in their colour.
-  const crew = P.squadmates(profile.name).slice(0, 2).map(m => ({
+  /*
+   * ...and a pilot who is REALLY in the sky is not also an escort drone.
+   * Without this, a co-op flight on a level that lends the squadron drew two
+   * ships badged CHARLES and two badged MARC, and neither child could tell
+   * which one they were steering. `alsoFlying` is the names already in seats.
+   */
+  const crew = P.squadmates(profile.name)
+    .filter(m => !alsoFlying || alsoFlying.indexOf(m.name) < 0)
+    .slice(0, 2).map(m => ({
     callsign: m.callsign || m.name, color: m.shipColor, levels: SF.shipart.levelsOf(m),
     pilot: { name: m.name, avatar: m.avatar, shipColor: m.shipColor, badge: m.badge },
   }));
@@ -395,7 +406,18 @@ function startMission(missionIndex, difficultyId){
   SF.render.initBackground(custom ? (mission.skyIndex || 0)
                           : wacky ? SF.wacky.skyIndex() : test ? 0 : rush ? 7
                           : vault ? 8 : missionIndex);   // the vault flies gold
-  const loadout = buildLoadout(profile, difficulty);
+  /*
+   * SEAT TWO, resolved BEFORE either loadout is built. Their own profile, so
+   * their own hull, paint, upgrades and callsign come with them - a co-op
+   * flight is two real pilots, not one pilot and a palette swap. It has to be
+   * known this early because each pilot's escort drones are drawn from the
+   * household, and somebody who is really in the sky must not also appear as
+   * a drone wearing the same name.
+   */
+  game.coopMate = game.coopWith ? (SF.profile.load(game.coopWith) || null) : null;
+  const mate = game.coopMate;
+
+  const loadout = buildLoadout(profile, difficulty, mate ? [mate.name] : null);
   /*
    * LENT DRONES (mission flag). On the very first patrol the squadron flies
    * with you: two escort drones, on the house, whoever else is on the device.
@@ -410,24 +432,14 @@ function startMission(missionIndex, difficultyId){
   // it is simply the one profile playing, which is what every counter that
   // used to say `game.profile` outright already meant.
   game.world.createPlayer(loadout).acct = profile;
-  /*
-   * SEAT TWO. Their own profile, so their own hull, paint, upgrades and
-   * callsign come with them - a co-op flight is two real pilots, not one
-   * pilot and a palette swap. Spawned to the right of seat one so the two
-   * do not start on top of each other.
-   */
-  game.coopMate = null;
-  if(game.coopWith){
-    const mate = SF.profile.load(game.coopWith);
-    if(mate){
-      game.coopMate = mate;
-      const l2 = buildLoadout(mate, difficulty);
-      if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
-      const p2 = game.world.createPlayer(l2);
-      p2.acct = mate;
-      p2.x = p2.targetX = VW*0.66;
-      game.world.player.x = game.world.player.targetX = VW*0.34;
-    }
+  if(mate){
+    const l2 = buildLoadout(mate, difficulty, [profile.name]);
+    if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
+    const p2 = game.world.createPlayer(l2);
+    p2.acct = mate;
+    // Spawned apart, so the two do not start on top of each other.
+    p2.x = p2.targetX = VW*0.66;
+    game.world.player.x = game.world.player.targetX = VW*0.34;
   }
   SF.input.setCoop(!!game.coopMate);
 
@@ -1489,8 +1501,8 @@ const callbacks = {
       if(game.world.livePlayers().length){
         run.down = run.down || [];
         run.down.push({ p, at: simMs + REVIVE_MS });
-        run.bannerText = seatName(p) + " IS DOWN";
-        run.bannerSub = "hold on — bringing them back";
+        run.bannerText = T("{who} IS DOWN", { who: seatName(p) });
+        run.bannerSub = T("hold on — bringing them back");
         run.bannerColor = "#ff5d73";
         run.bannerUntil = simMs + 2600;
         return;
@@ -2183,10 +2195,10 @@ function update(dt, timeMs){
       fx.ring(p.x, p.y, 90, p.color, 5, 0.5);
       fx.ring(p.x, p.y, 50, "#ffd23f", 3, 0.35);
       fx.sparks(p.x, p.y, 18, p.color, 220);
-      fx.text(p.x, p.y - 40, "BACK IN!", p.color, 20, true);
+      fx.text(p.x, p.y - 40, T("BACK IN!"), p.color, 20, true);
       audio.play("rescue");
-      run.bannerText = seatName(p) + " IS BACK";
-      run.bannerSub = seatName(donor) + " gave up a life";
+      run.bannerText = T("{who} IS BACK", { who: seatName(p) });
+      run.bannerSub = T("{who} gave up a life", { who: seatName(donor) });
       run.bannerColor = "#4ade80";
       run.bannerUntil = timeMs + 2200;
     }

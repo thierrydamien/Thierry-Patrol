@@ -8730,6 +8730,25 @@ async function run(){
     const solo = G.world.player;
     check("solo, the pilot's own tally IS the mission's tally",
       G.run.stats.kills > 0 && solo.killsGot === G.run.stats.kills);
+    /*
+     * A pilot who is really in the sky must not also be one of your escort
+     * drones - on a level that lends the squadron that drew two ships wearing
+     * the same name, and neither child could tell which was theirs.
+     *
+     * Tested on whoever the household actually picks rather than on a name
+     * chosen here: the escorts are the top two by stars, and this save has a
+     * dozen pilots in it, so naming one would be a check on the leaderboard.
+     */
+    {
+      const diff = SF.config.DIFFICULTY_BY_ID.pilot;
+      const open = G.buildLoadout(P.load("CoopA"), diff).crew;
+      const excluded = open.length ? open[0].callsign : null;
+      const shut = excluded
+        ? G.buildLoadout(P.load("CoopA"), diff, [excluded]).crew : [];
+      check("a pilot already in a seat is dropped from the escort roster",
+        !!excluded && open.some(c => c.callsign === excluded) &&
+        !shut.some(c => c.callsign === excluded));
+    }
     const soloBank = G.profile.money, soloKills = G.profile.totalKills;
     G.endMission(true);
     await runFrames(8);
@@ -8750,6 +8769,10 @@ async function run(){
     check("a co-op flight puts two ships in the sky, each with its own book",
       w.players.length === 2 && w.player === p1 &&
       p1.acct && p1.acct.name === "CoopA" && p2.acct && p2.acct.name === "CoopB");
+    // ...and end to end: neither seat's escorts wear the other seat's name.
+    check("neither pilot's escorts wear the other pilot's name",
+      !(p1.crew || []).some(c => c.callsign.toUpperCase() === "COOPB") &&
+      !(p2.crew || []).some(c => c.callsign.toUpperCase() === "COOPA"));
 
     // Parked far apart, so "whoever reaches it" has an unambiguous answer.
     // Only once the launch is over: through introFly the autopilot owns both
@@ -8833,10 +8856,133 @@ async function run(){
         !!(b.missions[run.mission.id] && b.missions[run.mission.id].cleared));
     }
     closeCard();
+
+    /* --- the way in: the FLY TOGETHER row on the briefing --- */
+    {
+      /*
+       * None of the above is worth anything if a child cannot reach it, and
+       * until this row existed `coopWith` was a field nothing ever set. So
+       * the picker is driven the way a player drives it: open the map, open a
+       * briefing, tap a brother, press LAUNCH.
+       */
+      G.state = "idle";
+      SF.ui.renderProfiles();
+      const cards = qa("#profileGrid .profile-card");
+      const mine = cards.find(c => /COOPA/i.test(c.textContent));
+      check("a co-op pilot still appears on the pilot-picker", !!mine);
+      if(mine){
+        clickEl(mine);
+        SF.ui.renderMissions();
+        clickEl(qa("#campaignNodes .map-node")[0]);
+        const chips = qa("#coopPicker .coop-chip");
+        check("the briefing offers the other pilots on the device, JUST ME first",
+          !id("briefCoop").classList.contains("hidden") &&
+          chips.length >= 2 && /JUST ME|TOUT SEUL/i.test(chips[0].textContent) &&
+          chips[0].classList.contains("on") &&
+          chips.some(c => /COOPB/i.test(c.textContent)));
+        const mate = chips.find(c => /COOPB/i.test(c.textContent));
+        if(mate){
+          clickEl(mate);
+          check("picking a wingman selects them and says who steers what",
+            qa("#coopPicker .coop-chip").find(c => /COOPB/i.test(c.textContent))
+              .classList.contains("on") &&
+            /W A S D/.test(id("coopHint").textContent) &&
+            /COOPB/i.test(id("coopHint").textContent));
+          clickEl(id("launchBtn"));
+          await runFrames(6, true);
+          check("pressing LAUNCH with a wingman picked puts two ships in the sky",
+            G.coopWith === "CoopB" && G.world.players.length === 2 &&
+            !!G.coopMate && G.coopMate.name === "CoopB");
+
+          /*
+           * ...and the wing grows a card for them. Two children need to see
+           * two purses: the coin race is only worth running if you can watch
+           * yourself winning it.
+           */
+          // A laptop-sized window, so the wings are actually open to inspect.
+          Object.defineProperty(window.HTMLElement.prototype, "clientWidth",
+            { configurable:true, get(){ return 1470; } });
+          Object.defineProperty(window.HTMLElement.prototype, "clientHeight",
+            { configurable:true, get(){ return 856; } });
+          G.resize();
+          G.world.players[0].purse = 120;
+          G.world.players[1].purse = 340;
+          SF.ui.resetHudWings();
+          SF.ui.syncHudWings();
+          check("the wing gives each pilot their own card and their own purse",
+            !id("hwPilot2").classList.contains("hidden") &&
+            !id("hwTeam").classList.contains("hidden") &&
+            id("hwSoloScore").classList.contains("hidden") &&
+            /COOPB/i.test(id("hwName2").textContent) &&
+            id("hwMoney").textContent !== id("hwMoney2").textContent &&
+            /340/.test(id("hwMoney2").textContent) &&
+            /120/.test(id("hwMoney").textContent));
+          // ...and hands the wing straight back the moment it is one pilot.
+          G.coopMate = null;
+          SF.ui.resetHudWings();
+          SF.ui.syncHudWings();
+          check("solo gets the one-card wing back, score and all",
+            id("hwPilot2").classList.contains("hidden") &&
+            id("hwTeam").classList.contains("hidden") &&
+            !id("hwSoloScore").classList.contains("hidden") &&
+            !id("hudLeft").classList.contains("coop"));
+          G.coopMate = P.load("CoopB");
+        }
+      }
+    }
+
+    /* --- two fingers on one iPad --- */
+    {
+      /*
+       * Solo, exactly one finger flies and every other touch is ignored, so a
+       * palm on the bezel cannot steal the ship. In co-op that second finger
+       * is the whole point, and this is the line between the two rules.
+       */
+      const cv = id("game");
+      // jsdom lays nothing out, so the canvas has to be given a box or every
+      // finger maps to the same coordinate and the test proves nothing.
+      const BOX = { left:0, top:0, width:390, height:800, right:390, bottom:800 };
+      const realRect = cv.getBoundingClientRect;
+      cv.getBoundingClientRect = () => BOX;
+      const touch = (type, pointerId, x, y) => {
+        const ev = new window.PointerEvent(type, {
+          pointerId, pointerType:"touch", clientX:x, clientY:y, bubbles:true });
+        (type === "pointerdown" ? cv : window).dispatchEvent(ev);
+      };
+      const px = f => BOX.width*f, py = f => BOX.height*f;
+      const st = SF.input.state, st2 = SF.input.state2;
+
+      SF.input.setCoop(true);
+      touch("pointerdown", 71, px(0.25), py(0.7));
+      touch("pointerdown", 72, px(0.75), py(0.6));
+      check("in co-op the second finger flies the second ship",
+        st.dragging && st2.dragging && st2.dragX > st.dragX);
+      touch("pointerdown", 73, px(0.5), py(0.5));
+      const heldX = st2.dragX, heldX1 = st.dragX;
+      touch("pointermove", 73, px(0.1), py(0.9));
+      check("a third finger gets nothing — there are two ships",
+        st2.dragX === heldX && st.dragX === heldX1);
+      touch("pointerup", 72, px(0.75), py(0.6));
+      check("lifting a finger lets that ship go, and only that one",
+        st.dragging && !st2.dragging);
+      touch("pointerup", 71, px(0.25), py(0.7));
+
+      SF.input.setCoop(false);
+      touch("pointerdown", 81, px(0.25), py(0.7));
+      touch("pointerdown", 82, px(0.75), py(0.6));
+      check("solo, a second finger still cannot steal the ship",
+        st.dragging && !st2.dragging);
+      touch("pointerup", 81, px(0.25), py(0.7));
+      SF.input.clearMovement();
+      cv.getBoundingClientRect = realRect;
+    }
+
+    closeCard();
     G.coopWith = null;
     G.coopMate = null;
     SF.input.setCoop(false);
-    G.run.ended = true; G.state = "idle";
+    if(G.run) G.run.ended = true;
+    G.state = "idle";
   }
 
   /* ---------- report ---------- */

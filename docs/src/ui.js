@@ -4361,6 +4361,65 @@ function drawStoryArt(ctx, art, levels, mate){
    BRIEFING + DIFFICULTY
    --------------------------------------------------------- */
 let briefTier = "pilot";
+/*
+ * WHO ELSE IS COMING. Null is "just me", and it is deliberately reset every
+ * time a briefing opens: co-op is a decision about this flight, and a pilot
+ * who played with their brother yesterday should not find him silently
+ * strapped into seat two tonight.
+ */
+let coopMateName = null;
+
+/*
+ * The FLY TOGETHER row. Every other pilot saved on the device, in their own
+ * ship colour, plus JUST ME - which leads, and is what you get by touching
+ * nothing.
+ */
+function renderCoopPicker(){
+  const block = $("briefCoop"), host = $("coopPicker"), hint = $("coopHint");
+  if(!block || !host) return;
+  const others = P.listNames().filter(n => n !== profile.name);
+  block.classList.toggle("hidden", others.length === 0);
+  if(!others.length){ coopMateName = null; return; }
+  if(coopMateName && others.indexOf(coopMateName) < 0) coopMateName = null;
+
+  host.innerHTML = "";
+  const chip = (name, label, color) => {
+    const b = document.createElement("button");
+    b.className = "coop-chip" + (coopMateName === name ? " on" : "");
+    b.type = "button";
+    if(coopMateName === name) b.style.color = color;
+    const dot = document.createElement("span");
+    dot.className = "cc-dot";
+    dot.style.background = color;
+    b.appendChild(dot);
+    const txt = document.createElement("span");
+    txt.textContent = label;
+    b.appendChild(txt);
+    click(b, () => { coopMateName = name; renderCoopPicker(); });   // click() taps
+    host.appendChild(b);
+  };
+  chip(null, T("JUST ME"), profile.shipColor);
+  others.forEach(n => {
+    const q = P.load(n);
+    if(q) chip(n, (q.callsign || q.name).toUpperCase(), q.shipColor);
+  });
+
+  if(!hint) return;
+  if(!coopMateName){
+    hint.textContent = T("Two of you can fly this one together — pick who.");
+  } else {
+    const q = P.load(coopMateName);
+    const mine = (profile.callsign || profile.name).toUpperCase();
+    const theirs = ((q && (q.callsign || q.name)) || coopMateName).toUpperCase();
+    /*
+     * The controls, said once, here, where the choice is made. Both halves
+     * matter: on a laptop the keyboard is split, and on a tablet each pilot
+     * simply puts a finger on the glass and that finger is their ship.
+     */
+    hint.textContent = T("{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.",
+                         { a: mine, b: theirs });
+  }
+}
 
 function openBriefing(index){
   selectedMissionIndex = index;
@@ -4444,6 +4503,9 @@ function openBriefing(index){
   briefTier = (clearedHere[clearedHere.length-1] || lastFlown ||
                unlocked[0] || DIFFICULTIES[1]).id;
   renderBriefTiers(index);
+  // A fresh choice every briefing: see coopMateName.
+  coopMateName = null;
+  renderCoopPicker();
   drawBriefHero(index);
   show("screen-briefing");
 }
@@ -4624,7 +4686,16 @@ function rushUnlocked(p){
   return !!(rec && rec.cleared);
 }
 
-function launch(index, difficultyId){
+/*
+ * Who was actually in seat two on the flight that just ended. RETRY, NEXT
+ * MISSION and the pause screen's RESTART all read this rather than the
+ * briefing's chip, so a pair keep flying together across a run of levels -
+ * and so the answer survives anything that might have re-rendered the
+ * briefing underneath them.
+ */
+const flyingWith = () => (SF.game.coopMate ? SF.game.coopMate.name : null);
+
+function launch(index, difficultyId, mate){
   /*
    * The unlock gate lives HERE, not only on the campaign map.
    *
@@ -4647,6 +4718,15 @@ function launch(index, difficultyId){
   audio.init();
   show("screen-game");
   hideResults();
+  /*
+   * WHO IS IN SEAT TWO, passed in rather than read off a module variable.
+   * Every way into a flight comes through here - the briefing, RETRY, NEXT
+   * MISSION, Boss Rush, the Wacky Sky, a drawn sky, the test flight - and
+   * only the first three have any business carrying a wingman. An ambient
+   * "last thing picked" would strap somebody's brother into a Boss Rush he
+   * never agreed to, so the ones that mean it say so and the rest get null.
+   */
+  SF.game.coopWith = (mate && mate !== profile.name) ? mate : null;
   SF.game.startMission(index, difficultyId);
   // Silent running hides the specials entirely - a greyed-out bomb button
   // reads as "broken", an absent one reads as "not this mission".
@@ -4996,13 +5076,37 @@ function syncHudWings(){
     const el = $(id);
     if(el) el.textContent = v;
   };
+  /*
+   * ONE CARD PER PILOT. Solo, the wing is exactly what it has always been.
+   * In co-op it grows a second card and the score moves to a SQUAD line above
+   * both, because the score is the one number in a co-op flight that really
+   * is shared - the wallets are not, and showing each child their own purse
+   * is what makes racing your brother to a falling coin worth doing.
+   */
+  const mate = g.coopMate;
+  const p2 = mate ? g.world.players[1] : null;
+  if(wingWas.hwCoop !== !!mate){
+    wingWas.hwCoop = !!mate;
+    const t = (elId, on) => { const el = $(elId); if(el) el.classList.toggle("hidden", !on); };
+    t("hwTeam", !!mate);
+    t("hwPilot2", !!mate);
+    t("hwSoloScore", !mate);
+    // Three cards where there was one: the wing clips rather than scrolls, so
+    // co-op trims the hull portraits to buy the height back.
+    $("hudLeft").classList.toggle("coop", !!mate);
+  }
+  // Hearts, and a count once there are more than a row's worth.
+  const hearts = n => (n > 5 ? "♥ ×" + n : "♥".repeat(n) || "—");
   const who = profile ? (profile.callsign || profile.name) : "";
   set("hwName", who);
-  set("hwScore", String(run.score).padStart(6, "0"));
-  set("hwMoney", money(run.money));
-  // Hearts, and a count once there are more than a row's worth.
-  const lives = Math.max(0, p.lives | 0);
-  set("hwLives", lives > 5 ? "♥ ×" + lives : "♥".repeat(lives) || "—");
+  set(mate ? "hwTeamScore" : "hwScore", String(run.score).padStart(6, "0"));
+  set("hwMoney", money(mate ? p.purse : run.money));
+  set("hwLives", hearts(Math.max(0, p.lives | 0)));
+  if(p2){
+    set("hwName2", mate.callsign || mate.name);
+    set("hwMoney2", money(p2.purse));
+    set("hwLives2", p2.alive ? hearts(Math.max(0, p2.lives | 0)) : T("DOWN"));
+  }
   set("hwNum", T("MISSION {n}", { n: run.mission.id }));
   set("hwTitle", run.mission.name.toUpperCase());
   const diffEl = $("hwDiff");
@@ -5030,18 +5134,22 @@ function syncHudWings(){
       `<div class="${run.objectiveDefs[i].test(run.stats) ? "met" : ""}">${esc(t)}</div>`).join("");
   }
   // The pilot's own ship, painted once - it only moves when the loadout does.
-  const shipKey = (profile ? profile.name + profile.shipColor + profile.hull + profile.tune : "") +
-                  SF.shipart.ownedCount(SF.shipart.levelsOf(profile || {}));
-  if(wingWas.hwShip !== shipKey){
-    wingWas.hwShip = shipKey;
-    const cv = $("hwShip"), c2 = cv && cv.getContext("2d");
-    if(c2 && profile){
-      c2.clearRect(0, 0, cv.width, cv.height);
-      SF.shipart.drawShip(c2, cv.width/2, cv.height/2 + 4, 74, {
-        color: profile.shipColor, levels: SF.shipart.levelsOf(profile),
-        t: 0.6, idle: false, tune: profile.tune, hull: profile.hull });
-    }
-  }
+  const paintShip = (cvId, memo, q) => {
+    const key = (q ? q.name + q.shipColor + q.hull + q.tune : "") +
+                SF.shipart.ownedCount(SF.shipart.levelsOf(q || {}));
+    if(wingWas[memo] === key) return;
+    wingWas[memo] = key;
+    const cv = $(cvId), c2 = cv && cv.getContext("2d");
+    if(!c2 || !q) return;
+    c2.clearRect(0, 0, cv.width, cv.height);
+    SF.shipart.drawShip(c2, cv.width/2, cv.height/2 + 4, 74, {
+      color: q.shipColor, levels: SF.shipart.levelsOf(q),
+      t: 0.6, idle: false, tune: q.tune, hull: q.hull });
+  };
+  paintShip("hwShip", "hwShip", profile);
+  // Seat two's hull is their own, off their own profile - the whole reason a
+  // co-op flight is two pilots rather than one pilot and a palette swap.
+  if(mate) paintShip("hwShip2", "hwShip2Key", mate);
 }
 /** Wipes the memo so the next sync repaints everything (new mission, new pilot). */
 function resetHudWings(){ for(const k in wingWas) delete wingWas[k]; }
@@ -5780,7 +5888,7 @@ click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard
  */
 click($("missionsBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("briefBackBtn"), () => { renderMissions(); show("screen-missions"); });
-click($("launchBtn"), () => launch(selectedMissionIndex, briefTier));
+click($("launchBtn"), () => launch(selectedMissionIndex, briefTier, coopMateName));
 click($("armoryBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("achievementsBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("leaderboardBackBtn"), () => { renderMenu(); show("screen-menu"); });
@@ -5796,7 +5904,7 @@ document.addEventListener("visibilitychange", () => {
 });
 click($("restartBtn"), () => {
   $("overlayPause").classList.add("hidden");
-  launch(SF.game.run.missionIndex, SF.game.run.difficulty.id);
+  launch(SF.game.run.missionIndex, SF.game.run.difficulty.id, flyingWith());
 });
 /*
  * Quitting forfeits the run's takings - `endMission` is never reached, so the
@@ -5822,9 +5930,9 @@ click($("quitBtn"), () => {
              { okLabel:T("LEAVE"), cancelLabel:T("KEEP FLYING"), danger:true })
     .then(yes => { if(yes) leave(); });
 });
-click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));
-click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie"));
-click($("nextBtn"), () => launch(SF.game.run.missionIndex + 1, SF.game.run.difficulty.id));
+click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id, flyingWith()));
+click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie", flyingWith()));
+click($("nextBtn"), () => launch(SF.game.run.missionIndex + 1, SF.game.run.difficulty.id, flyingWith()));
 click($("resultsMenuBtn"), () => {
   SF.game.state = "idle";
   hideResults();

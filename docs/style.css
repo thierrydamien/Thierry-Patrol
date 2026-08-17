@@ -519,6 +519,30 @@ html, body {
 .brief-setup-col .kit-list { width:100%; }
 .brief-setup-col .diff-detail { max-width:none; width:100%; }
 /*
+ * FLY TOGETHER. A row of the other pilots saved on this device, each in their
+ * own ship colour, with JUST ME first and selected by default - the safe
+ * choice is the one you land on by doing nothing. Chips rather than a select
+ * because the people picking are seven, and because a colour is a faster way
+ * to recognise your brother than his name is.
+ */
+.brief-coop { width:100%; display:flex; flex-direction:column; align-items:flex-start; }
+.coop-picker { display:flex; flex-wrap:wrap; gap:8px; width:100%; }
+.coop-chip {
+  display:flex; align-items:center; gap:7px;
+  min-height:44px; padding:6px 13px 6px 9px;
+  border:2px solid rgba(255,255,255,0.14); border-radius:11px;
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.72);
+  font-family:inherit; font-size:12px; letter-spacing:0.05em; cursor:pointer;
+}
+.coop-chip .cc-dot {
+  width:15px; height:15px; border-radius:50%; flex:0 0 auto;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35);
+}
+.coop-chip.on { border-color: currentColor; background: rgba(255,255,255,0.1); color:#fff; }
+.coop-hint {
+  margin:7px 0 0; font-size:11px; line-height:1.4; color: rgba(255,255,255,0.55);
+}
+/*
  * Below 700px the two stack, and whichever is LAST ends up under the sticky
  * launch bar. That has to be the difficulty blurb, not the kit: the blurb
  * explains a choice already visible as five chips, while the kit is a thing
@@ -2043,6 +2067,16 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .hw-score{ font:700 26px Rajdhani, Arial, sans-serif; color:#fff; line-height:1.05; }
 .hw-money{ font:700 20px Rajdhani, Arial, sans-serif; color:#ffd23f; line-height:1.1; }
 .hw-lives{ font:700 17px Rajdhani, Arial, sans-serif; color:#ff5d73; letter-spacing:0.06em; }
+/*
+ * CO-OP: three cards in the wing instead of one - a shared score, then a
+ * pilot each. The wing clips rather than scrolls, so the hull portraits give
+ * up some height and the labels tighten. Everything a player has to READ
+ * keeps its size; only the picture shrinks.
+ */
+.hud-wing.coop .hw-ship{ height:64px; }
+.hud-wing.coop .hw-label{ margin-top:6px; }
+.hud-wing.coop .hw-card{ padding:9px 14px; }
+.hw-team .hw-label{ margin-top:0; }
 .hw-num{ font:700 10px Rajdhani, Arial, sans-serif; letter-spacing:0.16em; color:rgba(140,200,255,0.6); }
 .hw-title{ font:700 17px Rajdhani, Arial, sans-serif; color:#7fc4ff; line-height:1.15; margin-top:1px; }
 .hw-diff{ font:700 11px Rajdhani, Arial, sans-serif; letter-spacing:0.1em; margin-top:3px; }

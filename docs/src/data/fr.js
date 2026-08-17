@@ -419,6 +419,23 @@ SF.i18n.register("fr", { name: "Français", s: {
 "home": "à la maison",
 "AREA CLEAR!": "ZONE DÉGAGÉE !",
 "grab the last coins — then head home": "ramasse les dernières pièces — puis rentre",
+
+/* --- à deux dans le même ciel --- */
+"FLY TOGETHER": "VOLER À DEUX",
+"JUST ME": "TOUT SEUL",
+"Two of you can fly this one together — pick who.":
+  "Vous pouvez voler à deux sur cette mission — choisis avec qui.",
+/* "or a finger" : sur tablette, chacun pose un doigt et ce doigt est son avion. */
+"{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.":
+  "{a} pilote avec W A S D ou un doigt ; {b} pilote avec les flèches ou un deuxième doigt. Les pièces et les médailles vont à celui qui les gagne.",
+"{who} IS DOWN": "{who} EST TOMBÉ",
+"hold on — bringing them back": "tiens bon — on le fait revenir",
+"{who} IS BACK": "{who} EST DE RETOUR",
+"{who} gave up a life": "{who} a donné une vie",
+"BACK IN!": "DE RETOUR !",
+"Squad score": "Score de l'équipe",
+"DOWN": "À TERRE",
+
 "no.": "non.",
 "the workshop isn't done with you": "l'atelier n'en a pas fini avec toi",
 "THE SKY TEARS": "LE CIEL SE DÉCHIRE",

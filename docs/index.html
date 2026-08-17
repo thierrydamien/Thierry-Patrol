@@ -172,6 +172,15 @@
       </div>
     </div>
 
+    <!-- Two pilots, one sky. Only mounted when there is somebody else saved on
+         the device to fly with, so a lone pilot never sees a control that
+         cannot do anything. -->
+    <div id="briefCoop" class="brief-coop hidden">
+      <label class="panel-label brief-label">FLY TOGETHER</label>
+      <div id="coopPicker" class="coop-picker"></div>
+      <p id="coopHint" class="coop-hint"></p>
+    </div>
+
     <!-- Pinned to the bottom of the scroll box. Cutting content shortened this
          screen but could never guarantee it fits - the roster grows with the
          mission and a small phone runs out first. Sticky makes "can they see
@@ -341,15 +350,33 @@
       the bug the results card just had.
     -->
     <aside id="hudLeft" class="hud-wing left hidden" aria-hidden="true">
+      <!-- Co-op only: one score for the pair, above two separate pilots. Solo
+           the score belongs on the single card below and this stays down. -->
+      <div class="hw-card hw-team hidden" id="hwTeam">
+        <div class="hw-label">Squad score</div>
+        <div class="hw-score" id="hwTeamScore">000000</div>
+      </div>
       <div class="hw-card hw-pilot">
         <canvas id="hwShip" class="hw-ship" width="132" height="92"></canvas>
         <div class="hw-name" id="hwName"></div>
-        <div class="hw-label">Score</div>
-        <div class="hw-score" id="hwScore">000000</div>
+        <div id="hwSoloScore">
+          <div class="hw-label">Score</div>
+          <div class="hw-score" id="hwScore">000000</div>
+        </div>
         <div class="hw-label">Wallet</div>
         <div class="hw-money" id="hwMoney"></div>
         <div class="hw-label">Lives</div>
         <div class="hw-lives" id="hwLives"></div>
+      </div>
+      <!-- Seat two's own card: their ship, their purse, their lives. Mounted
+           only when somebody is actually in that seat. -->
+      <div class="hw-card hw-pilot hidden" id="hwPilot2">
+        <canvas id="hwShip2" class="hw-ship" width="132" height="92"></canvas>
+        <div class="hw-name" id="hwName2"></div>
+        <div class="hw-label">Wallet</div>
+        <div class="hw-money" id="hwMoney2"></div>
+        <div class="hw-label">Lives</div>
+        <div class="hw-lives" id="hwLives2"></div>
       </div>
     </aside>
     <aside id="hudRight" class="hud-wing right hidden" aria-hidden="true">

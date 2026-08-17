@@ -617,6 +617,21 @@ function drawPlayer(ctx, p, timeMs){
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(p.x, y, size*0.68 + (p.shield-1)*4 + wob, 0, TAU); ctx.stroke();
   }
+
+  /*
+   * WHICH ONE IS MINE?
+   *
+   * Solo this never draws - there is one ship and it is yours. In co-op there
+   * are two, and on the levels that lend you the squadron there are six more
+   * around them wearing the family's names, so "the red one" is not an answer
+   * a seven-year-old can act on mid-fight. Each pilot's own callsign, in their
+   * own colour, under their own hull - the same badge the drones already
+   * wear, which is why it reads instantly.
+   */
+  if(SF.game.coopMate && p.acct){
+    label(ctx, (p.acct.callsign || p.acct.name).toUpperCase(),
+          p.x, y + size*0.72, p.color, 11, 700);
+  }
 }
 
 // Scratch for the tether's curve and a point on it. Reused rather than

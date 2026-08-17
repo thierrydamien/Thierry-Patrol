@@ -278,10 +278,11 @@ function flowRelax(dt){
   if(state.dragging || hoverSteer) state.dragX = clamp(state.dragX + d, 0, VW);
 }
 
-function pointerToVirtual(clientX, clientY, lift){
+function pointerToVirtual(clientX, clientY, lift, st){
+  const s = st || state;
   const rect = canvas.getBoundingClientRect();
-  state.dragX = clamp((clientX - rect.left) / rect.width * VW + flowX, 0, VW);
-  state.dragY = clamp((clientY - rect.top) / rect.height * VH - lift, 0, VH);
+  s.dragX = clamp((clientX - rect.left) / rect.width * VW + flowX, 0, VW);
+  s.dragY = clamp((clientY - rect.top) / rect.height * VH - lift, 0, VH);
 }
 
 /* The lift exists because a thumb hides what's under it. A cursor hides
@@ -298,10 +299,9 @@ const liftFor = e => e.pointerType === "touch" ? TOUCH_LIFT : 0;
 function setField(vw, vh){ VW = vw; VH = vh; }
 
 /*
- * SEAT TWO'S STICK. Keys only - there is one pointer on a laptop and one
- * finger's worth of room on a tablet, so the second pilot flies on the
- * arrows. Cleared whenever co-op closes, or a key held at the moment the
- * mode ends would leave a ghost pushing against a ship nobody is flying.
+ * SEAT TWO'S STICK. On a laptop it is the arrow keys; on a tablet it is the
+ * second finger. Cleared whenever co-op closes, or a key held at the moment
+ * the mode ends would leave a ghost pushing against a ship nobody is flying.
  */
 const state2 = { left:false, right:false, up:false, down:false,
                  dragging:false, dragX:0, dragY:0,
@@ -310,7 +310,22 @@ let coop = false;
 function setCoop(on){
   coop = !!on;
   state2.left = state2.right = state2.up = state2.down = false;
+  state2.dragging = false;
+  dragPointerId2 = null;
 }
+/*
+ * TWO BROTHERS, ONE IPAD.
+ *
+ * Solo, exactly one finger flies and every other touch is ignored - a palm on
+ * the bezel or a sibling reaching in used to steal the ship mid-fight, which
+ * read as the game glitching. In co-op that same second finger is the point:
+ * the first one down takes seat one, the next one takes seat two, and each
+ * keeps its own pointer id for as long as it stays on the glass. Your finger
+ * is your ship, which is what a child assumes before anyone explains it.
+ *
+ * A third finger still gets nothing. There are two ships.
+ */
+let dragPointerId2 = null;
 
 function attach(canvasEl, vw, vh){
   canvas = canvasEl; VW = vw; VH = vh;
@@ -326,13 +341,23 @@ function attach(canvasEl, vw, vh){
      * glitching, and mid-fight it was unrecoverable. A mouse may still take
      * over from anything - there is only ever one of those.
      */
-    if(dragPointerId !== null && e.pointerType === "touch") return;
+    if(dragPointerId !== null && e.pointerType === "touch"){
+      // Seat two's finger, if there is a seat two and it is still free.
+      if(!coop || dragPointerId2 !== null || e.pointerId === dragPointerId) return;
+      state2.dragging = true; dragPointerId2 = e.pointerId;
+      pointerToVirtual(e.clientX, e.clientY, liftFor(e), state2);
+      return;
+    }
     state.dragging = true; dragPointerId = e.pointerId; pointerToVirtual(e.clientX, e.clientY, liftFor(e));
   });
   window.addEventListener("pointermove", e => {
     if(locked) return;                       // the locked handler steers instead
     if(state.dragging && e.pointerId === dragPointerId){
       pointerToVirtual(e.clientX, e.clientY, liftFor(e));
+      return;
+    }
+    if(state2.dragging && e.pointerId === dragPointerId2){
+      pointerToVirtual(e.clientX, e.clientY, liftFor(e), state2);
       return;
     }
     /*
@@ -374,6 +399,10 @@ function attach(canvasEl, vw, vh){
       // Releasing a button doesn't drop a mouse the way lifting a finger
       // drops a touch - hover steering carries straight on through the click.
       state.dragging = hoverSteer;
+    }
+    if(e.pointerId === dragPointerId2){
+      dragPointerId2 = null;
+      state2.dragging = false;      // seat two is fingers only: lifted is let go
     }
   };
   window.addEventListener("pointerup", end);
@@ -444,6 +473,10 @@ function consumePause(){ const v = state.pausePressed; state.pausePressed = fals
 function clearMovement(){
   state.up = state.down = state.left = state.right = false;
   state.dragging = false; hoverSteer = false;
+  // Seat two lets go too, or a finger lifted during a pause leaves the second
+  // ship flying at a spot nobody is touching any more.
+  state2.up = state2.down = state2.left = state2.right = false;
+  state2.dragging = false; dragPointerId2 = null;
   // A clean slate, so the next pointer move re-acquires however small it is.
   // Leaving the yield point standing here made an untouched cursor unable to
   // take the ship back after a pause, which is not what "clear" means.
