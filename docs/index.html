@@ -57,6 +57,7 @@
            pilot, and choosing a wingman after the level is chosen makes the
            second child a passenger through the only choice that mattered. -->
       <button id="coopModeBtn" class="ghost-btn">Two Players</button>
+      <button id="netModeBtn" class="ghost-btn">Two Devices</button>
       <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
       <button id="settingsBtnPicker" class="ghost-btn btn-with-glyph">Settings</button>
     </div>
@@ -197,6 +198,26 @@
   </section>
 
   <!-- Mix your own colour: the one shelf that never runs out. -->
+  <!-- Two tablets, one sky. The code is four characters because the person
+       reading it out to their brother is seven. -->
+  <div id="netOverlay" class="overlay hidden">
+    <div class="mix-box net-box">
+      <h3 class="mix-title">TWO DEVICES</h3>
+      <p id="netSay" class="net-say"></p>
+      <div id="netCode" class="net-code hidden"></div>
+      <div id="netEntry" class="net-entry hidden">
+        <input type="text" id="netCodeInput" maxlength="4" autocomplete="off"
+               autocapitalize="characters" spellcheck="false" placeholder="CODE">
+        <button id="netJoinGo" class="main-btn">GO</button>
+      </div>
+      <div id="netChoice" class="mix-actions">
+        <button id="netHostBtn" class="main-btn">Start a game</button>
+        <button id="netJoinBtn" class="ghost-btn">I have a code</button>
+      </div>
+      <button id="netCancel" class="ghost-btn">Cancel</button>
+    </div>
+  </div>
+
   <div id="mixOverlay" class="overlay hidden">
     <div class="mix-box">
       <h3 class="mix-title">MIX YOUR OWN</h3>

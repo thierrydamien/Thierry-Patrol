@@ -432,6 +432,35 @@ SF.i18n.register("fr", { name: "Français", s: {
   "À deux, il faut deux pilotes. Comment s'appelle l'autre ?",
 "Name": "Nom",
 "JOIN UP": "REJOINDRE",
+
+/* --- à deux, sur deux appareils --- */
+"Two Devices": "Deux appareils",
+"Two devices — which pilot is on this one?":
+  "Deux appareils — quel pilote est sur celui-ci ?",
+"TWO DEVICES": "DEUX APPAREILS",
+"Start a game": "Lancer une partie",
+"I have a code": "J'ai un code",
+"Cancel": "Annuler",
+"CODE": "CODE",
+"{who} is flying. Is this tablet starting the game, or joining one?":
+  "{who} est aux commandes. Cette tablette lance la partie, ou en rejoint une ?",
+"Pick your pilot first.": "Choisis d'abord ton pilote.",
+"Opening a game...": "Ouverture de la partie…",
+"Read this code out to the other tablet.": "Lis ce code à l'autre tablette.",
+"Type the code from the other tablet.": "Tape le code de l'autre tablette.",
+"A code is four characters.": "Un code, c'est quatre caractères.",
+"No game with that code. Check it and try again.":
+  "Aucune partie avec ce code. Vérifie et réessaie.",
+"Nobody joined. Try again?": "Personne n'est venu. On réessaie ?",
+"The link broke. Try again?": "La connexion a lâché. On réessaie ?",
+"The sync server needs updating before two devices can play.":
+  "Le serveur de synchro doit être mis à jour pour jouer à deux appareils.",
+"LINK LOST": "CONNEXION PERDUE",
+"the other tablet went quiet": "l'autre tablette ne répond plus",
+"NOT HERE": "PAS ICI",
+"this browser can't talk to another device":
+  "ce navigateur ne peut pas parler à un autre appareil",
+"Flying with {who} on another device": "En vol avec {who} sur un autre appareil",
 /* "or a finger" : sur tablette, chacun pose un doigt et ce doigt est son avion. */
 "{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.":
   "{a} pilote avec W A S D ou un doigt ; {b} pilote avec les flèches ou un deuxième doigt. Les pièces et les médailles vont à celui qui les gagne.",

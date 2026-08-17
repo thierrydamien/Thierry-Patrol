@@ -559,12 +559,16 @@ function startTitleLoop(){
  */
 let sessionMate = null;
 let pairPick = null;
+/* Set while the picker is asking which pilot this tablet is bringing to a
+   two-device game. Same shape as pairPick: one tap, then the lobby. */
+let netPick = false;
 
 function renderProfiles(){
   drawTitleArt("titleArt", null);
   const tag = $("pickerTagline");
   if(tag){
-    tag.textContent = pairPick === null ? T("Who's flying today?")
+    tag.textContent = netPick          ? T("Two devices — which pilot is on this one?")
+                    : pairPick === null ? T("Who's flying today?")
                     : pairPick === ""   ? T("Two players — tap the first pilot")
                     : T("...and now the second pilot");
   }
@@ -604,6 +608,13 @@ function renderProfiles(){
     // two; the pilot already chosen is marked and cannot be picked twice.
     if(pairPick) card.classList.toggle("picked", pairPick === name);
     click(card, () => {
+      if(netPick){
+        netPick = false;
+        netPending = P.load(name);
+        renderProfiles();
+        netShow(true);
+        return;
+      }
       if(pairPick === null) return selectProfile(name);
       if(pairPick === ""){ pairPick = name; renderProfiles(); return; }
       if(pairPick === name) return;             // nobody flies with themselves
@@ -663,7 +674,7 @@ function renderProfiles(){
 }
 
 function selectProfile(name, mateName){
-  pairPick = null;                              // the two-tap flow is spent
+  pairPick = null; netPick = false;             // the picker's flows are spent
   profile = P.load(name);
   SF.game.profile = profile;
   // A pilot picked alone flies alone: choosing a single card is also how you
@@ -5848,6 +5859,113 @@ click($("addProfileBtn"), async () => {
  * one saved pilot it offers to make the second one instead of switching into
  * a mode that cannot be completed.
  */
+/* ---------------------------------------------------------
+   TWO DEVICES
+   ---------------------------------------------------------
+ * The other half of "on the same device or on 2 different devices". The
+ * pilot is whoever is picked on THIS screen, so the flow is: pick yourself,
+ * then either read a code out or type one in.
+ */
+let netPending = null;              // the pilot this device is bringing
+function netShow(on){
+  $("netOverlay").classList.toggle("hidden", !on);
+  if(!on) return;
+  $("netChoice").classList.remove("hidden");
+  $("netCode").classList.add("hidden");
+  $("netEntry").classList.add("hidden");
+  $("netSay").textContent = netPending
+    ? T("{who} is flying. Is this tablet starting the game, or joining one?",
+        { who: (netPending.callsign || netPending.name).toUpperCase() })
+    : T("Pick your pilot first.");
+}
+/** Whatever the link is doing, said in words a child can act on. */
+function netSay(msg){ $("netSay").textContent = msg; }
+function netDropped(){
+  if(SF.game.state !== "playing") return;
+  SF.game.state = "paused";
+  queueToast({ glyph:"lock", label:T("LINK LOST"),
+               name:T("the other tablet went quiet") });
+}
+SF.netcode.onPhase(p => {
+  if(p === "waiting") netSay(T("Read this code out to the other tablet."));
+  if(p === "live"){
+    netShow(false);
+    const mate = SF.netcode.mate();
+    // The far pilot is a card, not a save, so it is never written to disk -
+    // but the menu still says who is up there.
+    sessionMate = null;
+    profile = netPending || profile;
+    SF.game.profile = profile;
+    renderMenu();
+    const row = $("menuMate");
+    if(row && mate){
+      row.classList.remove("hidden");
+      row.innerHTML = `<span class="mm-dot" style="background:${esc(mate.shipColor)}"></span>` +
+        `<span>${esc(T("Flying with {who} on another device",
+                       { who: (mate.callsign || mate.name).toUpperCase() }))}</span>`;
+    }
+    show("screen-menu");
+  }
+  if(p === "failed"){
+    const why = SF.netcode.error();
+    netSay(why === "no-room-endpoint"
+      ? T("The sync server needs updating before two devices can play.")
+      : why === "no-such-room" ? T("No game with that code. Check it and try again.")
+      : why === "nobody-came"  ? T("Nobody joined. Try again?")
+      : T("The link broke. Try again?"));
+    $("netChoice").classList.remove("hidden");
+    $("netCode").classList.add("hidden");
+    $("netEntry").classList.add("hidden");
+  }
+});
+// The far pilot's half of a finished flight, banked here where their save is.
+SF.netcode.onControl(m => { if(m && m.k === "end") SF.game.bankRemoteResult(m); });
+
+click($("netModeBtn"), () => {
+  if(!SF.netcode.supported()){
+    queueToast({ glyph:"lock", label:T("NOT HERE"),
+                 name:T("this browser can't talk to another device") });
+    return;
+  }
+  /*
+   * Ask WHO before asking host-or-join. On this screen nobody has been picked
+   * yet - that is what the screen is for - so guessing at the first card in
+   * the list would quietly send the wrong child's ship to the other tablet.
+   */
+  pairPick = null;
+  netPick = true;
+  renderProfiles();
+});
+click($("netCancel"), () => { SF.netcode.close(); netShow(false); netPick = false; renderProfiles(); });
+click($("netHostBtn"), async () => {
+  $("netChoice").classList.add("hidden");
+  netSay(T("Opening a game..."));
+  try {
+    const code = await SF.netcode.host(netPending);
+    $("netCode").textContent = code;
+    $("netCode").classList.remove("hidden");
+  } catch(e){ netSay(T("The link broke. Try again?")); $("netChoice").classList.remove("hidden"); }
+});
+click($("netJoinBtn"), () => {
+  $("netChoice").classList.add("hidden");
+  $("netEntry").classList.remove("hidden");
+  netSay(T("Type the code from the other tablet."));
+  $("netCodeInput").value = "";
+  $("netCodeInput").focus();
+});
+click($("netJoinGo"), async () => {
+  const code = ($("netCodeInput").value || "").toUpperCase().trim();
+  if(code.length !== 4) return netSay(T("A code is four characters."));
+  $("netEntry").classList.add("hidden");
+  netSay(T("Looking for the game..."));
+  await SF.netcode.join(code, netPending);
+});
+$("netCodeInput").addEventListener("keydown", e => {
+  if(e.key === "Enter")
+    $("netJoinGo").dispatchEvent(new MouseEvent("click", { bubbles:true }));
+  e.stopPropagation();             // typing a code must not steer the ship
+});
+
 click($("coopModeBtn"), async () => {
   if(pairPick !== null){ pairPick = null; renderProfiles(); return; }
   if(P.listNames().length < 2){
@@ -6164,6 +6282,7 @@ if("serviceWorker" in navigator){
 }
 
 SF.ui = { show, togglePause, syncAbilityButtons, syncHudWings, resetHudWings,
+          netDropped,
           renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),

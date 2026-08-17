@@ -73,3 +73,28 @@ hard to find. Brute-forcing a *different* squad is covered by the code space
 
 If you would rather it were locked down harder, the smallest useful change is a
 shared secret header checked in `fetch()` before anything else.
+
+## Two devices, one sky
+
+Cross-device co-op needs somewhere for two tablets to swap a WebRTC handshake
+before they can talk directly. That is the `/room` endpoint, added alongside
+`/save`:
+
+```
+GET  /room?code=WXYZ&slot=offer   -> { data: "..." }   ({} until written)
+PUT  /room?code=WXYZ&slot=offer   <- the blob
+```
+
+Rooms use their own key prefix and expire after two minutes, so a four-letter
+room code a child reads out loud can never collide with an eight-character
+squad code that holds a family's whole save.
+
+**This needs a deploy to take effect.** From `worker/`:
+
+```
+npx wrangler deploy
+```
+
+Until then, choosing TWO DEVICES in the game says the sync server needs
+updating rather than hanging — everything else, including same-device two
+player, works without it.

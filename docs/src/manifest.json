@@ -38,6 +38,7 @@
     "src/paintjob.js",
     "src/pilotart.js",
     "src/comms.js",
+    "src/netcode.js",
     "src/game.js",
     "src/workshop.js",
     "src/data/i18nbind.js",

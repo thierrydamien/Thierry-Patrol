@@ -526,6 +526,26 @@ html, body {
  * to recognise your brother than his name is.
  */
 /*
+ * TWO DEVICES. The code is the whole screen for a moment, because the job in
+ * front of the child is to read four characters across a room.
+ */
+.net-box { text-align:center; }
+.net-say { margin:2px 0 12px; font-size:13px; line-height:1.45; color:rgba(220,238,255,0.8); }
+.net-code {
+  font:700 54px Rajdhani, Arial, sans-serif; letter-spacing:0.24em;
+  color:#ffd23f; text-shadow:0 0 22px rgba(255,210,63,0.4);
+  margin:6px 0 14px; padding-left:0.24em;      /* the tracking's trailing gap */
+}
+.net-code.hidden, .net-entry.hidden, #netChoice.hidden { display:none; }
+.net-entry { display:flex; gap:10px; justify-content:center; margin-bottom:12px; }
+.net-entry input {
+  width:150px; text-align:center; text-transform:uppercase;
+  font:700 30px Rajdhani, Arial, sans-serif; letter-spacing:0.18em;
+  background:rgba(255,255,255,0.06); color:#fff;
+  border:2px solid rgba(140,200,255,0.3); border-radius:10px; padding:6px 4px;
+}
+
+/*
  * TWO PLAYERS, chosen on the pilot screen. The button latches on, the grid
  * becomes a two-tap flow, and the pilot already chosen wears a ring so a
  * seven-year-old can see their brother is in before tapping their own card.

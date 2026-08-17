@@ -414,10 +414,27 @@ function startMission(missionIndex, difficultyId){
    * household, and somebody who is really in the sky must not also appear as
    * a drone wearing the same name.
    */
-  game.coopMate = game.coopWith ? (SF.profile.load(game.coopWith) || null) : null;
+  /*
+   * TWO DEVICES. Across the wire the mate's save lives on the OTHER machine,
+   * so it cannot be loaded - it arrives as a card and is worn by a blank
+   * pilot marked `remote`, which endMission refuses to bank into. Their
+   * takings go home over the link instead, and they save them themselves.
+   *
+   * The HOST is seat one on both screens, always. Without a fixed rule each
+   * device would call itself seat one and the two pictures would disagree
+   * about which ship is which - and the guest's own snapshot would fly the
+   * wrong hull.
+   */
+  const netRole = SF.netcode.live() ? SF.netcode.role() : null;
+  game.coopMate = netRole
+    ? SF.netcode.asPilot(SF.netcode.mate())
+    : (game.coopWith ? (SF.profile.load(game.coopWith) || null) : null);
   const mate = game.coopMate;
+  // On the guest, THIS pilot is seat two and the host's card is seat one.
+  const seatOne = netRole === "guest" ? mate : profile;
+  const seatTwo = netRole === "guest" ? profile : mate;
 
-  const loadout = buildLoadout(profile, difficulty, mate ? [mate.name] : null);
+  const loadout = buildLoadout(seatOne, difficulty, seatTwo ? [seatTwo.name] : null);
   /*
    * LENT DRONES (mission flag). On the very first patrol the squadron flies
    * with you: two escort drones, on the house, whoever else is on the device.
@@ -431,12 +448,12 @@ function startMission(missionIndex, difficultyId){
   // `acct` is the book this seat's own coins, kills and medals go into. Solo
   // it is simply the one profile playing, which is what every counter that
   // used to say `game.profile` outright already meant.
-  game.world.createPlayer(loadout).acct = profile;
-  if(mate){
-    const l2 = buildLoadout(mate, difficulty, [profile.name]);
+  game.world.createPlayer(loadout).acct = seatOne;
+  if(seatTwo){
+    const l2 = buildLoadout(seatTwo, difficulty, [seatOne.name]);
     if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
     const p2 = game.world.createPlayer(l2);
-    p2.acct = mate;
+    p2.acct = seatTwo;
     // Spawned apart, so the two do not start on top of each other.
     p2.x = p2.targetX = VW*0.66;
     game.world.player.x = game.world.player.targetX = VW*0.34;
@@ -925,7 +942,15 @@ function endMission(completed){
     }
   };
   bank(profile, seats[0]);
-  if(mate) bank(mate, seats[1]);
+  /*
+   * ...unless seat two is on another device, in which case there is nothing
+   * here to bank INTO. `mate` is a blank pilot wearing their card, and saving
+   * it would mint a counterfeit local profile with their name on it. Their
+   * takings go home over the link and they bank them themselves - which is
+   * the cross-device reading of "coin for their own account", and the only
+   * one that keeps a child's save on the child's own machine.
+   */
+  if(mate && !mate.remote) bank(mate, seats[1]);
   // The Wacky Sky keeps its own book: one all-time best score and one
   // longest run, no campaign record, no lastMission (the campaign hint must
   // keep pointing at a real map stop).
@@ -1005,7 +1030,29 @@ function endMission(completed){
   const unlocked = P.checkAchievements(profile);
   // Seat two's medals are checked against seat two's own lifetime numbers,
   // which is the whole point of banking them separately above.
-  if(mate){ P.checkAchievements(mate); P.save(mate); }
+  if(mate && !mate.remote){ P.checkAchievements(mate); P.save(mate); }
+  /*
+   * The far pilot's half of the flight, posted home. Everything their device
+   * needs to do its own banking - the same arithmetic, run against the save
+   * that actually belongs to them.
+   */
+  if(mate && mate.remote && seats[1]){
+    const p2 = seats[1];
+    SF.netcode.send({
+      t: "C", k: "end",
+      completed: !!completed, stars,
+      missionId: run.mission.id, difficultyId: run.difficulty.id,
+      campaign: !(run.mission.endless || run.mission.bossRush ||
+                  run.mission.vault || run.mission.custom),
+      score: run.score, maxCombo: run.maxCombo,
+      purse: Math.round(p2.purse || 0), shared,
+      kills: p2.killsGot | 0, rescues: p2.rescuesGot | 0,
+      flawless: run.stats.damageTaken === 0,
+      metIds: completed
+        ? (run.objectiveIds || []).filter((id, i) => run.objectiveDefs[i].test(run.stats))
+        : [],
+    });
+  }
 
   // A Daily Patrol never "fails" - the run simply ends, so its sound is a
   // fanfare on a new best and a neutral chime otherwise.
@@ -1781,6 +1828,53 @@ function finalBossBlast(boss){
   run.finishTimer = 1.2;
 }
 
+/*
+ * THE FAR PILOT BANKS THEIR OWN FLIGHT.
+ *
+ * The host owns the simulation, but it does not own this child's save - that
+ * is on this device, and this is where it is written. Same arithmetic as the
+ * host runs for itself in endMission, against the profile that really belongs
+ * to the person who flew.
+ */
+function bankRemoteResult(m){
+  const prof = game.profile;
+  if(!prof || !m) return;
+  const cash = Math.round((m.purse || 0) + (m.shared || 0));
+  prof.money += cash;
+  prof.lifetimeMoney += cash;
+  prof.totalKills += m.kills | 0;
+  prof.rescues    += m.rescues | 0;
+  if(m.maxCombo > prof.maxCombo) prof.maxCombo = m.maxCombo;
+  if(m.completed){
+    prof.missionsCompleted++;
+    if(m.flawless) prof.flawlessMissions++;
+  }
+  if(m.campaign){
+    prof.lastMission = m.missionId;
+    prof.lastDifficulty = m.difficultyId;
+    P.recordMission(prof, m.missionId, m.difficultyId, m.completed ? m.stars : 0,
+                    m.score, !!m.completed, m.metIds || []);
+  }
+  P.checkAchievements(prof);
+  P.save(prof);
+  game.state = "ending";
+  if(game.run) game.run.ended = true;
+  if(game.onMissionEnd){
+    game.onMissionEnd({
+      completed: !!m.completed, stars: m.stars || 0, run: game.run, unlocked: [],
+      endless: false, endlessNewBest: false, prevEndlessBest: 0,
+      rush: false, rushBeaten: 0, rushTotal: 0,
+      firstClear: false, vaultWon: false, sky29Won: false, allStarsNow: false,
+      durationSec: game.run ? Math.round(game.run.time) : 0,
+      prevFamilyBest: null, prevSelfBest: 0,
+      objectives: (game.run && game.run.objectiveDefs || []).map(def => ({
+        label: def.label, icon: def.icon, met: def.test(game.run.stats),
+        progress: def.progress(game.run.stats),
+      })),
+    });
+  }
+}
+
 function pilotName(){
   const p = game.profile;
   return ((p && (p.callsign || p.name)) || "PILOT").toUpperCase();
@@ -2203,6 +2297,11 @@ function update(dt, timeMs){
       run.bannerUntil = timeMs + 2200;
     }
   }
+
+  // Cross-device: seat two's stick is a child in another room. It lands in
+  // the same state2 the arrow keys write to, so from here down there is no
+  // difference between a brother on the sofa and a brother upstairs.
+  SF.netcode.applyGuestInput();
 
   game.world.updatePlayer(dt, timeMs);
   // Seat two flies on the arrows and fires on its own clock.
@@ -3359,6 +3458,10 @@ function update(dt, timeMs){
     audio.play("star", met);
   }
   run.objectivesMet = met;
+
+  // ...and the far device gets the finished frame. Last, so the picture that
+  // goes out is the one this device is about to draw, not the one before it.
+  SF.netcode.sendSnapshot(dt, game.world, run);
 }
 
 /*
@@ -3711,7 +3814,20 @@ function frame(now){
     if(SF.input.consumePause() && game.state === "playing" && SF.ui) SF.ui.togglePause();
     if(SF.input.consumeBomb()) useBomb();
     if(SF.input.consumeOverdrive()) useOverdrive();
-    if(game.state === "playing") update(dt, simMs);
+    /*
+     * THE GUEST DOES NOT SIMULATE. On the far device the whole world arrives
+     * over the wire twenty times a second and is painted; the only thing this
+     * machine decides is where its own finger is. Everything else here is the
+     * same frame the host runs, which is what keeps one code path.
+     */
+    if(game.state === "playing" && SF.netcode.role() === "guest" && SF.netcode.live()){
+      SF.netcode.sendInput(dt);
+      SF.netcode.applySnapshot(game.world);
+      fx.update(dt, simMs);
+      SF.render.updateBackground(dt);
+      if(SF.netcode.stale()) SF.ui.netDropped();
+    }
+    else if(game.state === "playing") update(dt, simMs);
     else {
       // fx keeps ticking through the rewind or the screen would hold the
       // death's shake as a permanent offset, and the sky would stop drifting.
@@ -3756,7 +3872,7 @@ Object.assign(game, {
   // The mission clock, for the UI and the renderer: both read deadlines that
   // are set in here, and all three have to agree about what time it is.
   now: () => simMs,
-  buildLoadout, squadronDue, callbacks,
+  buildLoadout, squadronDue, callbacks, bankRemoteResult,
   // Exported so the suite can check what a mission is actually willing to
   // hand a player, rather than inferring it from a spawn it happened to see.
   powerupPool, spawnPowerup,

@@ -4,47 +4,48 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       50  src/core.js
- *      220  src/i18n.js
- *      419  src/icons.js
- *      985  src/haptics.js
- *     1164  src/audio.js
- *     1862  src/data/config.js
- *     2332  src/data/enemies.js
- *     3203  src/data/missions.js
- *     5182  src/wacky.js
- *     5398  src/data/comms.js
- *     5819  src/data/story.js
- *     5957  src/data/fr.js
- *     7261  src/profile.js
- *     7890  src/cloud.js
- *     8495  src/fx.js
- *     9608  src/input.js
- *    10102  src/entities.js
- *    11370  src/bossart.js
- *    12236  src/bosses.js
- *    12986  src/bossintro.js
- *    13109  src/rewind.js
- *    13640  src/finale.js
- *    13961  src/papadeath.js
- *    14283  src/backstage.js
- *    15232  src/sky29.js
- *    15477  src/mirrorduel.js
- *    15824  src/homecoming.js
- *    16021  src/prologue.js
- *    16487  src/systems.js
- *    17135  src/render.js
- *    21763  src/enemyart.js
- *    22715  src/insignia.js
- *    22960  src/skygen.js
- *    25904  src/shipart.js
- *    27104  src/paintjob.js
- *    27266  src/pilotart.js
- *    27361  src/comms.js
- *    27500  src/game.js
- *    31267  src/workshop.js
- *    31964  src/data/i18nbind.js
- *    32035  src/ui.js
+ *       51  src/core.js
+ *      221  src/i18n.js
+ *      420  src/icons.js
+ *      986  src/haptics.js
+ *     1165  src/audio.js
+ *     1863  src/data/config.js
+ *     2333  src/data/enemies.js
+ *     3204  src/data/missions.js
+ *     5183  src/wacky.js
+ *     5399  src/data/comms.js
+ *     5820  src/data/story.js
+ *     5958  src/data/fr.js
+ *     7291  src/profile.js
+ *     7920  src/cloud.js
+ *     8525  src/fx.js
+ *     9638  src/input.js
+ *    10132  src/entities.js
+ *    11400  src/bossart.js
+ *    12266  src/bosses.js
+ *    13016  src/bossintro.js
+ *    13139  src/rewind.js
+ *    13670  src/finale.js
+ *    13991  src/papadeath.js
+ *    14313  src/backstage.js
+ *    15262  src/sky29.js
+ *    15507  src/mirrorduel.js
+ *    15854  src/homecoming.js
+ *    16051  src/prologue.js
+ *    16517  src/systems.js
+ *    17165  src/render.js
+ *    21793  src/enemyart.js
+ *    22745  src/insignia.js
+ *    22990  src/skygen.js
+ *    25934  src/shipart.js
+ *    27134  src/paintjob.js
+ *    27296  src/pilotart.js
+ *    27391  src/comms.js
+ *    27530  src/netcode.js
+ *    28043  src/game.js
+ *    31926  src/workshop.js
+ *    32623  src/data/i18nbind.js
+ *    32694  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6388,6 +6389,35 @@ SF.i18n.register("fr", { name: "Français", s: {
   "À deux, il faut deux pilotes. Comment s'appelle l'autre ?",
 "Name": "Nom",
 "JOIN UP": "REJOINDRE",
+
+/* --- à deux, sur deux appareils --- */
+"Two Devices": "Deux appareils",
+"Two devices — which pilot is on this one?":
+  "Deux appareils — quel pilote est sur celui-ci ?",
+"TWO DEVICES": "DEUX APPAREILS",
+"Start a game": "Lancer une partie",
+"I have a code": "J'ai un code",
+"Cancel": "Annuler",
+"CODE": "CODE",
+"{who} is flying. Is this tablet starting the game, or joining one?":
+  "{who} est aux commandes. Cette tablette lance la partie, ou en rejoint une ?",
+"Pick your pilot first.": "Choisis d'abord ton pilote.",
+"Opening a game...": "Ouverture de la partie…",
+"Read this code out to the other tablet.": "Lis ce code à l'autre tablette.",
+"Type the code from the other tablet.": "Tape le code de l'autre tablette.",
+"A code is four characters.": "Un code, c'est quatre caractères.",
+"No game with that code. Check it and try again.":
+  "Aucune partie avec ce code. Vérifie et réessaie.",
+"Nobody joined. Try again?": "Personne n'est venu. On réessaie ?",
+"The link broke. Try again?": "La connexion a lâché. On réessaie ?",
+"The sync server needs updating before two devices can play.":
+  "Le serveur de synchro doit être mis à jour pour jouer à deux appareils.",
+"LINK LOST": "CONNEXION PERDUE",
+"the other tablet went quiet": "l'autre tablette ne répond plus",
+"NOT HERE": "PAS ICI",
+"this browser can't talk to another device":
+  "ce navigateur ne peut pas parler à un autre appareil",
+"Flying with {who} on another device": "En vol avec {who} sur un autre appareil",
 /* "or a finger" : sur tablette, chacun pose un doigt et ce doigt est son avion. */
 "{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.":
   "{a} pilote avec W A S D ou un doigt ; {b} pilote avec les flèches ou un deuxième doigt. Les pièces et les médailles vont à celui qui les gagne.",
@@ -27496,6 +27526,519 @@ SF.comms = { begin, say, update, clear, current, isPhone, _state: state };
 })();
 
 
+;/* ===== src/netcode.js ===== */
+/*
+ * Two devices, one sky.
+ *
+ * Same-device co-op is two seats in one World. This is the other half of the
+ * ask - "either on same device or on 2 different devices" - and it is a
+ * different problem: two browsers, two clocks, two copies of the game, and
+ * one shared reality that has to be the same on both screens.
+ *
+ * ---------------------------------------------------------------------------
+ * HOST-AUTHORITATIVE, not lockstep.
+ *
+ * The tempting design is deterministic lockstep: both devices run the whole
+ * simulation from the same seed and only trade the two sticks. It is beautiful
+ * and it is the wrong choice here. It needs the two machines to agree on every
+ * float forever - one Math.sin that rounds differently on an iPad and a
+ * MacBook and the two skies quietly drift apart with nothing on screen to say
+ * so. A desync a child cannot see is worse than a stutter they can.
+ *
+ * So one device owns reality. The HOST runs the game exactly as it always has,
+ * both ships and all. The GUEST sends its stick and draws what it is told. If
+ * a packet is lost the guest is briefly stale and then correct again, which is
+ * a failure mode you can live with.
+ *
+ * ---------------------------------------------------------------------------
+ * THE GUEST DOES NOT HAVE A SPECIAL RENDERER.
+ *
+ * Snapshots are applied INTO the guest's own World - spawning into the same
+ * pools, through the same spawnEnemy - so every field the painter reads is
+ * really there and the whole renderer works untouched. The guest is not
+ * simulating; it is being puppeted. That is what keeps this ~600 lines instead
+ * of a second copy of the game.
+ *
+ * ---------------------------------------------------------------------------
+ * FINDING EACH OTHER.
+ *
+ * WebRTC needs somewhere to swap two blobs before it can talk peer-to-peer.
+ * That is the Squad Sync worker's /room endpoint: four characters a child
+ * reads off one screen and types into the other, a two-minute expiry, and a
+ * key prefix that can never collide with a save. Once the two peers are
+ * talking, nothing else goes through the server - the game is on the home
+ * network, at home-network latency.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+
+const ENDPOINT = "https://thierry-patrol.wgsync.workers.dev";
+/*
+ * No I, O, 0 or 1. Every one of those is a different character on a screen and
+ * the same character to a seven-year-old reading one out loud to their
+ * brother, and a mistyped code is a failure with nothing to debug.
+ */
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const POLL_MS = 1200;             // how often we ask whether the other side answered
+const HANDSHAKE_MS = 90000;       // how long a child gets to type a code
+const ICE_WAIT_MS = 4000;         // ...then send whatever candidates we have
+const SNAP_HZ = 20;               // snapshots per second, host -> guest
+const INPUT_HZ = 30;              // sticks per second, guest -> host
+const STALE_MS = 3000;            // no traffic for this long: the link is gone
+
+const state = {
+  role: null,                     // "host" | "guest" | null
+  phase: "idle",                  // idle | opening | waiting | joining | live | failed | closed
+  code: null,
+  error: null,
+  pc: null,
+  chan: null,
+  lastRx: 0,
+  ping: 0,
+  // Host: the guest's most recent stick. Guest: the most recent snapshot.
+  guestInput: { dragging:false, dragX:0, dragY:0, seq:0 },
+  snap: null,
+  snapAt: 0,
+  mate: null,                     // the other device's pilot, as a profile-ish object
+  onPhase: null,
+};
+
+function now(){ return Date.now(); }
+function live(){ return state.phase === "live"; }
+function supported(){
+  return typeof window.RTCPeerConnection === "function";
+}
+
+/* ---------------------------------------------------------
+   THE RENDEZVOUS
+   --------------------------------------------------------- */
+function makeCode(){
+  let s = "";
+  // Math.random on purpose: a room code is not part of the simulation and
+  // must never draw from the seeded stream that decides where ships appear.
+  for(let i = 0; i < 4; i++) s += ALPHABET[Math.floor(Math.random()*ALPHABET.length)];
+  return s;
+}
+
+async function put(code, slot, text){
+  const r = await fetch(ENDPOINT + "/room?code=" + code + "&slot=" + slot,
+                        { method:"PUT", body: text });
+  if(!r.ok) throw new Error(r.status === 404 ? "no-room-endpoint" : "put-" + r.status);
+}
+async function get(code, slot){
+  const r = await fetch(ENDPOINT + "/room?code=" + code + "&slot=" + slot);
+  if(!r.ok) throw new Error(r.status === 404 ? "no-room-endpoint" : "get-" + r.status);
+  const j = await r.json();
+  return j && j.data ? j.data : null;
+}
+/** Ask until it is there or the child has run out of patience. */
+async function poll(code, slot, untilMs){
+  while(now() < untilMs){
+    if(state.phase === "closed") return null;
+    const got = await get(code, slot);
+    if(got) return got;
+    await new Promise(r => setTimeout(r, POLL_MS));
+  }
+  return null;
+}
+
+/*
+ * Non-trickle ICE: gather candidates, then send ONE blob. Trickling is faster
+ * on paper and would mean a stream of tiny writes through a key-value store
+ * that was never meant to be a message bus. Capped, because a network with no
+ * STUN reachable will otherwise sit in "gathering" until it times out, and the
+ * candidates we already have are usually the ones that were going to work.
+ */
+function iceReady(pc){
+  return new Promise(resolve => {
+    if(pc.iceGatheringState === "complete") return resolve();
+    let done = false;
+    const finish = () => { if(!done){ done = true; resolve(); } };
+    const t = setTimeout(finish, ICE_WAIT_MS);
+    pc.addEventListener("icegatheringstatechange", () => {
+      if(pc.iceGatheringState === "complete"){ clearTimeout(t); finish(); }
+    });
+  });
+}
+
+function newPeer(){
+  /*
+   * A public STUN server is what lets two devices on different networks find
+   * a route. Two tablets on the same home Wi-Fi usually do not need it - they
+   * find each other on host candidates - so a family with no reachable STUN
+   * still gets the case they actually asked for.
+   */
+  const pc = new window.RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  });
+  pc.addEventListener("connectionstatechange", () => {
+    if(pc.connectionState === "failed" || pc.connectionState === "disconnected")
+      fail("lost");
+  });
+  return pc;
+}
+
+function wire(chan){
+  state.chan = chan;
+  chan.binaryType = "arraybuffer";
+  chan.addEventListener("open", () => setPhase("live"));
+  chan.addEventListener("close", () => { if(live()) fail("lost"); });
+  chan.addEventListener("message", ev => {
+    state.lastRx = now();
+    let m;
+    try { m = JSON.parse(ev.data); } catch(e){ return; }
+    receive(m);
+  });
+}
+
+function setPhase(p){
+  if(state.phase === p) return;
+  state.phase = p;
+  if(p === "live"){ state.lastRx = now(); state.error = null; }
+  if(state.onPhase) { try { state.onPhase(p); } catch(e){} }
+}
+function fail(why){
+  if(state.phase === "closed") return;
+  state.error = why;
+  setPhase("failed");
+  teardown();
+}
+function teardown(){
+  try { if(state.chan) state.chan.close(); } catch(e){}
+  try { if(state.pc) state.pc.close(); } catch(e){}
+  state.chan = null; state.pc = null;
+}
+function close(){
+  const was = state.phase;
+  setPhase("closed");
+  teardown();
+  state.role = null; state.code = null; state.snap = null; state.mate = null;
+  if(was !== "closed") setPhase("idle");
+}
+
+/**
+ * Open a room. Resolves with the four-character code IMMEDIATELY, so the code
+ * can be on screen while the handshake is still happening behind it - a child
+ * should never watch a spinner before being told what to type.
+ */
+async function host(me){
+  if(!supported()) throw new Error("unsupported");
+  close();
+  state.role = "host";
+  state.code = makeCode();
+  setPhase("opening");
+  const code = state.code;
+
+  const pc = state.pc = newPeer();
+  wire(pc.createDataChannel("sky", { ordered:false, maxRetransmits:0 }));
+
+  (async () => {
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await iceReady(pc);
+      if(state.phase === "closed") return;
+      await put(code, "offer", JSON.stringify({ sdp: pc.localDescription, who: card(me) }));
+      setPhase("waiting");
+      const raw = await poll(code, "answer", now() + HANDSHAKE_MS);
+      if(!raw){ return fail("nobody-came"); }
+      const ans = JSON.parse(raw);
+      state.mate = ans.who || null;
+      await pc.setRemoteDescription(ans.sdp);
+    } catch(e){ fail(e && e.message || "handshake"); }
+  })();
+
+  return code;
+}
+
+/** Join a room somebody read out to you. Resolves when the link is live. */
+async function join(code, me){
+  if(!supported()) throw new Error("unsupported");
+  close();
+  state.role = "guest";
+  state.code = (code || "").toUpperCase().trim();
+  setPhase("joining");
+
+  const pc = state.pc = newPeer();
+  pc.addEventListener("datachannel", ev => wire(ev.channel));
+  try {
+    const raw = await poll(state.code, "offer", now() + 12000);
+    if(!raw){ fail("no-such-room"); return false; }
+    const off = JSON.parse(raw);
+    state.mate = off.who || null;
+    await pc.setRemoteDescription(off.sdp);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await iceReady(pc);
+    if(state.phase === "closed") return false;
+    await put(state.code, "answer", JSON.stringify({ sdp: pc.localDescription, who: card(me) }));
+    return true;
+  } catch(e){ fail(e && e.message || "handshake"); return false; }
+}
+
+/**
+ * The little of a pilot the other device needs. Enough to BUILD their ship
+ * (upgrades, hull, tune) and enough to DRAW it (colour, decal, badge) - but
+ * not their save. Their money and medals stay on their own device, which is
+ * the whole point: what they earn up here is sent home at the end of the
+ * mission and banked there, by them.
+ */
+function card(p){
+  if(!p) return null;
+  return { name: p.name, callsign: p.callsign || p.name, shipColor: p.shipColor,
+           hull: p.hull, tune: p.tune, decal: p.decal, badge: p.badge,
+           upgrades: Object.assign({}, p.upgrades),
+           levels: SF.shipart ? SF.shipart.levelsOf(p) : {} };
+}
+
+/**
+ * ...and back the other way: a card is not a save, so anything that wants to
+ * treat it like a pilot gets a blank one wearing the card's gear. Used for
+ * the ship the OTHER device is flying, which this device must build and draw
+ * but must never bank anything into.
+ */
+function asPilot(c){
+  if(!c) return null;
+  const p = SF.profile.blank(c.name || "PILOT");
+  p.callsign = c.callsign || p.callsign;
+  p.shipColor = c.shipColor || p.shipColor;
+  p.hull = c.hull; p.tune = c.tune; p.decal = c.decal; p.badge = c.badge;
+  p.upgrades = Object.assign({}, c.upgrades || {});
+  p.remote = true;                 // never saved: see endMission
+  return p;
+}
+
+function send(obj){
+  const c = state.chan;
+  if(!c || c.readyState !== "open") return false;
+  try { c.send(JSON.stringify(obj)); return true; }
+  catch(e){ return false; }
+}
+
+/* ---------------------------------------------------------
+   THE WIRE
+   ---------------------------------------------------------
+ * Rounded integers, positional arrays, short keys. Not premature: a busy sky
+ * is a couple of hundred moving things and this goes out twenty times a
+ * second, so the difference between {"x":123.456} and 123 is the difference
+ * between a comfortable link and a stuttering one on the far side of a house.
+ */
+const R = n => Math.round(n) || 0;
+
+let snapAcc = 0, inputAcc = 0, inputSeq = 0;
+
+function packEnemies(pool){
+  const out = [];
+  const items = pool.items;
+  for(let i = 0; i < items.length; i++){
+    const e = items[i];
+    if(!e.alive) continue;
+    out.push([e.netId || (e.netId = ++netSeq), e.typeId, R(e.x), R(e.y),
+              R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100)]);
+  }
+  return out;
+}
+function packBullets(pool){
+  const out = [];
+  const items = pool.items;
+  for(let i = 0; i < items.length; i++){
+    const b = items[i];
+    if(!b.alive) continue;
+    out.push([R(b.x), R(b.y), R(b.vx), R(b.vy), R(b.r), b.tier || 0, b.kind || 0]);
+  }
+  return out;
+}
+function packPickups(pool){
+  const out = [];
+  const items = pool.items;
+  for(let i = 0; i < items.length; i++){
+    const it = items[i];
+    if(!it.alive) continue;
+    out.push([it.kind, R(it.x), R(it.y), R(it.value)]);
+  }
+  return out;
+}
+function packShip(p){
+  if(!p) return null;
+  return [R(p.x), R(p.y), R((p.bank || 0)*100), p.alive ? 1 : 0, p.lives | 0,
+          p.shield | 0, R((p.invuln || 0)*100), R(p.purse || 0)];
+}
+
+let netSeq = 0;
+
+/**
+ * The host's picture of the world, once every 50ms. Called from the game loop
+ * with the real dt, so a slow device sends fewer and larger-stepped snapshots
+ * rather than falling behind forever.
+ */
+function sendSnapshot(dt, world, run){
+  if(!live() || state.role !== "host") return;
+  snapAcc += dt;
+  if(snapAcc < 1/SNAP_HZ) return;
+  snapAcc = 0;
+  const boss = world.boss;
+  send({
+    t: "S",
+    vw: SF.entityConst.VW,
+    p: (world.players || []).map(packShip),
+    e: packEnemies(world.enemies),
+    b: packBullets(world.bullets),
+    eb: packBullets(world.enemyBullets),
+    k: packPickups(world.pickups),
+    B: boss && boss.alive
+       ? [R(boss.x), R(boss.y), R(boss.hp), R(boss.maxHp), boss.typeId || boss.id || ""]
+       : null,
+    r: run ? {
+      score: run.score, money: R(run.money), combo: run.combo,
+      prog: R(run.progress*1000), boss: run.bossActive ? 1 : 0,
+      bt: run.bannerText || "", bs: run.bannerSub || "",
+      bc: run.bannerColor || "", bu: R(run.bannerUntil - SF.game.now()),
+      ended: run.ended ? 1 : 0,
+    } : null,
+  });
+}
+
+/** The guest's stick, thirty times a second. */
+function sendInput(dt){
+  if(!live() || state.role !== "guest") return;
+  inputAcc += dt;
+  if(inputAcc < 1/INPUT_HZ) return;
+  inputAcc = 0;
+  const s = SF.input.state;              // on the guest's own device they are seat one
+  send({ t:"I", q: ++inputSeq, d: s.dragging ? 1 : 0, x: R(s.dragX), y: R(s.dragY),
+         u: s.up ? 1:0, dn: s.down ? 1:0, l: s.left ? 1:0, rr: s.right ? 1:0 });
+}
+
+function receive(m){
+  if(!m || !m.t) return;
+  if(m.t === "I" && state.role === "host"){
+    // Out-of-order delivery is expected on an unreliable channel: an older
+    // stick position must never overwrite a newer one.
+    if(m.q <= state.guestInput.seq) return;
+    state.guestInput = { seq:m.q, dragging:!!m.d, dragX:m.x, dragY:m.y,
+                         up:!!m.u, down:!!m.dn, left:!!m.l, right:!!m.rr };
+    return;
+  }
+  if(m.t === "S" && state.role === "guest"){
+    state.snap = m; state.snapAt = now();
+    return;
+  }
+  if(m.t === "C"){
+    if(state.onControl) { try { state.onControl(m); } catch(e){} }
+    return;
+  }
+}
+
+/**
+ * Hand the host's guest-stick to the input layer, so seat two on the host is
+ * driven by a child in another room exactly as if they were on the sofa.
+ */
+function applyGuestInput(){
+  if(state.role !== "host") return;
+  const g = state.guestInput, s2 = SF.input.state2;
+  if(!s2) return;
+  s2.dragging = g.dragging; s2.dragX = g.dragX; s2.dragY = g.dragY;
+  s2.up = !!g.up; s2.down = !!g.down; s2.left = !!g.left; s2.right = !!g.right;
+}
+
+/* ---------------------------------------------------------
+   BEING PUPPETED
+   ---------------------------------------------------------
+ * The guest's World is filled in from the snapshot rather than simulated.
+ * Enemies are matched by the id the host gave them, so one that is still there
+ * MOVES rather than being destroyed and rebuilt - which is what lets the
+ * painter's per-enemy state (flash, wobble, baked sprite) survive between
+ * snapshots instead of flickering.
+ */
+function applySnapshot(world){
+  const s = state.snap;
+  if(!s || state.role !== "guest") return false;
+
+  const seen = Object.create(null);
+  for(let i = 0; i < s.e.length; i++) seen[s.e[i][0]] = s.e[i];
+
+  const items = world.enemies.items;
+  for(let i = 0; i < items.length; i++){
+    const e = items[i];
+    if(!e.alive) continue;
+    const row = seen[e.netId];
+    if(!row){ e.alive = false; continue; }
+    e.x = row[2]; e.y = row[3]; e.hp = row[4];
+    e.angle = row[6]/100; e.flash = row[7]/100;
+    delete seen[e.netId];
+  }
+  for(const id in seen){
+    const row = seen[id];
+    let e;
+    try {
+      e = world.spawnEnemy(row[1], row[2], row[3],
+        { difficulty: SF.config.DIFFICULTY_BY_ID.pilot, elite: !!row[5], uncounted: true });
+    } catch(err){ continue; }
+    if(!e) continue;
+    e.netId = +id; e.hp = row[4]; e.angle = row[6]/100; e.entering = false;
+  }
+
+  const fillBullets = (pool, rows) => {
+    pool.killAll();
+    for(let i = 0; i < rows.length; i++){
+      const r = rows[i], b = pool.spawn();
+      b.x = r[0]; b.y = r[1]; b.vx = r[2]; b.vy = r[3];
+      b.r = r[4]; b.tier = r[5]; b.kind = r[6];
+      b.life = 0; b.pierce = 0; b.owner = null;
+    }
+  };
+  fillBullets(world.bullets, s.b);
+  fillBullets(world.enemyBullets, s.eb);
+
+  world.pickups.killAll();
+  for(let i = 0; i < s.k.length; i++){
+    const r = s.k[i];
+    const it = world.spawnPickup(r[0], r[1], r[2], { value: r[3] });
+    it.vx = 0; it.vy = 0;
+  }
+
+  // The two ships. Seat two on the wire is THIS device's pilot, so on the
+  // guest's screen the ships keep the same identities they have on the host's.
+  const ps = world.players || [];
+  for(let i = 0; i < ps.length && i < s.p.length; i++){
+    const row = s.p[i], p = ps[i];
+    if(!row) continue;
+    p.x = row[0]; p.y = row[1]; p.bank = row[2]/100;
+    p.alive = !!row[3]; p.lives = row[4]; p.shield = row[5];
+    p.invuln = row[6]/100; p.purse = row[7];
+  }
+
+  const run = SF.game.run;
+  if(run && s.r){
+    run.score = s.r.score; run.money = s.r.money; run.combo = s.r.combo;
+    run.progress = s.r.prog/1000; run.bossActive = !!s.r.boss;
+    run.bannerText = s.r.bt; run.bannerSub = s.r.bs;
+    run.bannerColor = s.r.bc; run.bannerUntil = SF.game.now() + s.r.bu;
+    if(s.r.ended) run.ended = true;
+  }
+  return true;
+}
+
+/** Has the other device gone quiet? */
+function stale(){ return live() && now() - state.lastRx > STALE_MS; }
+
+SF.netcode = {
+  supported, host, join, close, send, asPilot,
+  role: () => state.role,
+  phase: () => state.phase,
+  error: () => state.error,
+  code: () => state.code,
+  mate: () => state.mate,
+  live, stale,
+  sendSnapshot, sendInput, applyGuestInput, applySnapshot,
+  onPhase: fn => { state.onPhase = fn; },
+  onControl: fn => { state.onControl = fn; },
+  _state: state,
+};
+})();
+
+
 ;/* ===== src/game.js ===== */
 /*
  * GameStateManager: owns the canvas, the run lifecycle and the main loop.
@@ -27913,10 +28456,27 @@ function startMission(missionIndex, difficultyId){
    * household, and somebody who is really in the sky must not also appear as
    * a drone wearing the same name.
    */
-  game.coopMate = game.coopWith ? (SF.profile.load(game.coopWith) || null) : null;
+  /*
+   * TWO DEVICES. Across the wire the mate's save lives on the OTHER machine,
+   * so it cannot be loaded - it arrives as a card and is worn by a blank
+   * pilot marked `remote`, which endMission refuses to bank into. Their
+   * takings go home over the link instead, and they save them themselves.
+   *
+   * The HOST is seat one on both screens, always. Without a fixed rule each
+   * device would call itself seat one and the two pictures would disagree
+   * about which ship is which - and the guest's own snapshot would fly the
+   * wrong hull.
+   */
+  const netRole = SF.netcode.live() ? SF.netcode.role() : null;
+  game.coopMate = netRole
+    ? SF.netcode.asPilot(SF.netcode.mate())
+    : (game.coopWith ? (SF.profile.load(game.coopWith) || null) : null);
   const mate = game.coopMate;
+  // On the guest, THIS pilot is seat two and the host's card is seat one.
+  const seatOne = netRole === "guest" ? mate : profile;
+  const seatTwo = netRole === "guest" ? profile : mate;
 
-  const loadout = buildLoadout(profile, difficulty, mate ? [mate.name] : null);
+  const loadout = buildLoadout(seatOne, difficulty, seatTwo ? [seatTwo.name] : null);
   /*
    * LENT DRONES (mission flag). On the very first patrol the squadron flies
    * with you: two escort drones, on the house, whoever else is on the device.
@@ -27930,12 +28490,12 @@ function startMission(missionIndex, difficultyId){
   // `acct` is the book this seat's own coins, kills and medals go into. Solo
   // it is simply the one profile playing, which is what every counter that
   // used to say `game.profile` outright already meant.
-  game.world.createPlayer(loadout).acct = profile;
-  if(mate){
-    const l2 = buildLoadout(mate, difficulty, [profile.name]);
+  game.world.createPlayer(loadout).acct = seatOne;
+  if(seatTwo){
+    const l2 = buildLoadout(seatTwo, difficulty, [seatOne.name]);
     if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
     const p2 = game.world.createPlayer(l2);
-    p2.acct = mate;
+    p2.acct = seatTwo;
     // Spawned apart, so the two do not start on top of each other.
     p2.x = p2.targetX = VW*0.66;
     game.world.player.x = game.world.player.targetX = VW*0.34;
@@ -28424,7 +28984,15 @@ function endMission(completed){
     }
   };
   bank(profile, seats[0]);
-  if(mate) bank(mate, seats[1]);
+  /*
+   * ...unless seat two is on another device, in which case there is nothing
+   * here to bank INTO. `mate` is a blank pilot wearing their card, and saving
+   * it would mint a counterfeit local profile with their name on it. Their
+   * takings go home over the link and they bank them themselves - which is
+   * the cross-device reading of "coin for their own account", and the only
+   * one that keeps a child's save on the child's own machine.
+   */
+  if(mate && !mate.remote) bank(mate, seats[1]);
   // The Wacky Sky keeps its own book: one all-time best score and one
   // longest run, no campaign record, no lastMission (the campaign hint must
   // keep pointing at a real map stop).
@@ -28504,7 +29072,29 @@ function endMission(completed){
   const unlocked = P.checkAchievements(profile);
   // Seat two's medals are checked against seat two's own lifetime numbers,
   // which is the whole point of banking them separately above.
-  if(mate){ P.checkAchievements(mate); P.save(mate); }
+  if(mate && !mate.remote){ P.checkAchievements(mate); P.save(mate); }
+  /*
+   * The far pilot's half of the flight, posted home. Everything their device
+   * needs to do its own banking - the same arithmetic, run against the save
+   * that actually belongs to them.
+   */
+  if(mate && mate.remote && seats[1]){
+    const p2 = seats[1];
+    SF.netcode.send({
+      t: "C", k: "end",
+      completed: !!completed, stars,
+      missionId: run.mission.id, difficultyId: run.difficulty.id,
+      campaign: !(run.mission.endless || run.mission.bossRush ||
+                  run.mission.vault || run.mission.custom),
+      score: run.score, maxCombo: run.maxCombo,
+      purse: Math.round(p2.purse || 0), shared,
+      kills: p2.killsGot | 0, rescues: p2.rescuesGot | 0,
+      flawless: run.stats.damageTaken === 0,
+      metIds: completed
+        ? (run.objectiveIds || []).filter((id, i) => run.objectiveDefs[i].test(run.stats))
+        : [],
+    });
+  }
 
   // A Daily Patrol never "fails" - the run simply ends, so its sound is a
   // fanfare on a new best and a neutral chime otherwise.
@@ -29280,6 +29870,53 @@ function finalBossBlast(boss){
   run.finishTimer = 1.2;
 }
 
+/*
+ * THE FAR PILOT BANKS THEIR OWN FLIGHT.
+ *
+ * The host owns the simulation, but it does not own this child's save - that
+ * is on this device, and this is where it is written. Same arithmetic as the
+ * host runs for itself in endMission, against the profile that really belongs
+ * to the person who flew.
+ */
+function bankRemoteResult(m){
+  const prof = game.profile;
+  if(!prof || !m) return;
+  const cash = Math.round((m.purse || 0) + (m.shared || 0));
+  prof.money += cash;
+  prof.lifetimeMoney += cash;
+  prof.totalKills += m.kills | 0;
+  prof.rescues    += m.rescues | 0;
+  if(m.maxCombo > prof.maxCombo) prof.maxCombo = m.maxCombo;
+  if(m.completed){
+    prof.missionsCompleted++;
+    if(m.flawless) prof.flawlessMissions++;
+  }
+  if(m.campaign){
+    prof.lastMission = m.missionId;
+    prof.lastDifficulty = m.difficultyId;
+    P.recordMission(prof, m.missionId, m.difficultyId, m.completed ? m.stars : 0,
+                    m.score, !!m.completed, m.metIds || []);
+  }
+  P.checkAchievements(prof);
+  P.save(prof);
+  game.state = "ending";
+  if(game.run) game.run.ended = true;
+  if(game.onMissionEnd){
+    game.onMissionEnd({
+      completed: !!m.completed, stars: m.stars || 0, run: game.run, unlocked: [],
+      endless: false, endlessNewBest: false, prevEndlessBest: 0,
+      rush: false, rushBeaten: 0, rushTotal: 0,
+      firstClear: false, vaultWon: false, sky29Won: false, allStarsNow: false,
+      durationSec: game.run ? Math.round(game.run.time) : 0,
+      prevFamilyBest: null, prevSelfBest: 0,
+      objectives: (game.run && game.run.objectiveDefs || []).map(def => ({
+        label: def.label, icon: def.icon, met: def.test(game.run.stats),
+        progress: def.progress(game.run.stats),
+      })),
+    });
+  }
+}
+
 function pilotName(){
   const p = game.profile;
   return ((p && (p.callsign || p.name)) || "PILOT").toUpperCase();
@@ -29702,6 +30339,11 @@ function update(dt, timeMs){
       run.bannerUntil = timeMs + 2200;
     }
   }
+
+  // Cross-device: seat two's stick is a child in another room. It lands in
+  // the same state2 the arrow keys write to, so from here down there is no
+  // difference between a brother on the sofa and a brother upstairs.
+  SF.netcode.applyGuestInput();
 
   game.world.updatePlayer(dt, timeMs);
   // Seat two flies on the arrows and fires on its own clock.
@@ -30858,6 +31500,10 @@ function update(dt, timeMs){
     audio.play("star", met);
   }
   run.objectivesMet = met;
+
+  // ...and the far device gets the finished frame. Last, so the picture that
+  // goes out is the one this device is about to draw, not the one before it.
+  SF.netcode.sendSnapshot(dt, game.world, run);
 }
 
 /*
@@ -31210,7 +31856,20 @@ function frame(now){
     if(SF.input.consumePause() && game.state === "playing" && SF.ui) SF.ui.togglePause();
     if(SF.input.consumeBomb()) useBomb();
     if(SF.input.consumeOverdrive()) useOverdrive();
-    if(game.state === "playing") update(dt, simMs);
+    /*
+     * THE GUEST DOES NOT SIMULATE. On the far device the whole world arrives
+     * over the wire twenty times a second and is painted; the only thing this
+     * machine decides is where its own finger is. Everything else here is the
+     * same frame the host runs, which is what keeps one code path.
+     */
+    if(game.state === "playing" && SF.netcode.role() === "guest" && SF.netcode.live()){
+      SF.netcode.sendInput(dt);
+      SF.netcode.applySnapshot(game.world);
+      fx.update(dt, simMs);
+      SF.render.updateBackground(dt);
+      if(SF.netcode.stale()) SF.ui.netDropped();
+    }
+    else if(game.state === "playing") update(dt, simMs);
     else {
       // fx keeps ticking through the rewind or the screen would hold the
       // death's shake as a permanent offset, and the sky would stop drifting.
@@ -31255,7 +31914,7 @@ Object.assign(game, {
   // The mission clock, for the UI and the renderer: both read deadlines that
   // are set in here, and all three have to agree about what time it is.
   now: () => simMs,
-  buildLoadout, squadronDue, callbacks,
+  buildLoadout, squadronDue, callbacks, bankRemoteResult,
   // Exported so the suite can check what a mission is actually willing to
   // hand a player, rather than inferring it from a spawn it happened to see.
   powerupPool, spawnPowerup,
@@ -32593,12 +33252,16 @@ function startTitleLoop(){
  */
 let sessionMate = null;
 let pairPick = null;
+/* Set while the picker is asking which pilot this tablet is bringing to a
+   two-device game. Same shape as pairPick: one tap, then the lobby. */
+let netPick = false;
 
 function renderProfiles(){
   drawTitleArt("titleArt", null);
   const tag = $("pickerTagline");
   if(tag){
-    tag.textContent = pairPick === null ? T("Who's flying today?")
+    tag.textContent = netPick          ? T("Two devices — which pilot is on this one?")
+                    : pairPick === null ? T("Who's flying today?")
                     : pairPick === ""   ? T("Two players — tap the first pilot")
                     : T("...and now the second pilot");
   }
@@ -32638,6 +33301,13 @@ function renderProfiles(){
     // two; the pilot already chosen is marked and cannot be picked twice.
     if(pairPick) card.classList.toggle("picked", pairPick === name);
     click(card, () => {
+      if(netPick){
+        netPick = false;
+        netPending = P.load(name);
+        renderProfiles();
+        netShow(true);
+        return;
+      }
       if(pairPick === null) return selectProfile(name);
       if(pairPick === ""){ pairPick = name; renderProfiles(); return; }
       if(pairPick === name) return;             // nobody flies with themselves
@@ -32697,7 +33367,7 @@ function renderProfiles(){
 }
 
 function selectProfile(name, mateName){
-  pairPick = null;                              // the two-tap flow is spent
+  pairPick = null; netPick = false;             // the picker's flows are spent
   profile = P.load(name);
   SF.game.profile = profile;
   // A pilot picked alone flies alone: choosing a single card is also how you
@@ -37882,6 +38552,113 @@ click($("addProfileBtn"), async () => {
  * one saved pilot it offers to make the second one instead of switching into
  * a mode that cannot be completed.
  */
+/* ---------------------------------------------------------
+   TWO DEVICES
+   ---------------------------------------------------------
+ * The other half of "on the same device or on 2 different devices". The
+ * pilot is whoever is picked on THIS screen, so the flow is: pick yourself,
+ * then either read a code out or type one in.
+ */
+let netPending = null;              // the pilot this device is bringing
+function netShow(on){
+  $("netOverlay").classList.toggle("hidden", !on);
+  if(!on) return;
+  $("netChoice").classList.remove("hidden");
+  $("netCode").classList.add("hidden");
+  $("netEntry").classList.add("hidden");
+  $("netSay").textContent = netPending
+    ? T("{who} is flying. Is this tablet starting the game, or joining one?",
+        { who: (netPending.callsign || netPending.name).toUpperCase() })
+    : T("Pick your pilot first.");
+}
+/** Whatever the link is doing, said in words a child can act on. */
+function netSay(msg){ $("netSay").textContent = msg; }
+function netDropped(){
+  if(SF.game.state !== "playing") return;
+  SF.game.state = "paused";
+  queueToast({ glyph:"lock", label:T("LINK LOST"),
+               name:T("the other tablet went quiet") });
+}
+SF.netcode.onPhase(p => {
+  if(p === "waiting") netSay(T("Read this code out to the other tablet."));
+  if(p === "live"){
+    netShow(false);
+    const mate = SF.netcode.mate();
+    // The far pilot is a card, not a save, so it is never written to disk -
+    // but the menu still says who is up there.
+    sessionMate = null;
+    profile = netPending || profile;
+    SF.game.profile = profile;
+    renderMenu();
+    const row = $("menuMate");
+    if(row && mate){
+      row.classList.remove("hidden");
+      row.innerHTML = `<span class="mm-dot" style="background:${esc(mate.shipColor)}"></span>` +
+        `<span>${esc(T("Flying with {who} on another device",
+                       { who: (mate.callsign || mate.name).toUpperCase() }))}</span>`;
+    }
+    show("screen-menu");
+  }
+  if(p === "failed"){
+    const why = SF.netcode.error();
+    netSay(why === "no-room-endpoint"
+      ? T("The sync server needs updating before two devices can play.")
+      : why === "no-such-room" ? T("No game with that code. Check it and try again.")
+      : why === "nobody-came"  ? T("Nobody joined. Try again?")
+      : T("The link broke. Try again?"));
+    $("netChoice").classList.remove("hidden");
+    $("netCode").classList.add("hidden");
+    $("netEntry").classList.add("hidden");
+  }
+});
+// The far pilot's half of a finished flight, banked here where their save is.
+SF.netcode.onControl(m => { if(m && m.k === "end") SF.game.bankRemoteResult(m); });
+
+click($("netModeBtn"), () => {
+  if(!SF.netcode.supported()){
+    queueToast({ glyph:"lock", label:T("NOT HERE"),
+                 name:T("this browser can't talk to another device") });
+    return;
+  }
+  /*
+   * Ask WHO before asking host-or-join. On this screen nobody has been picked
+   * yet - that is what the screen is for - so guessing at the first card in
+   * the list would quietly send the wrong child's ship to the other tablet.
+   */
+  pairPick = null;
+  netPick = true;
+  renderProfiles();
+});
+click($("netCancel"), () => { SF.netcode.close(); netShow(false); netPick = false; renderProfiles(); });
+click($("netHostBtn"), async () => {
+  $("netChoice").classList.add("hidden");
+  netSay(T("Opening a game..."));
+  try {
+    const code = await SF.netcode.host(netPending);
+    $("netCode").textContent = code;
+    $("netCode").classList.remove("hidden");
+  } catch(e){ netSay(T("The link broke. Try again?")); $("netChoice").classList.remove("hidden"); }
+});
+click($("netJoinBtn"), () => {
+  $("netChoice").classList.add("hidden");
+  $("netEntry").classList.remove("hidden");
+  netSay(T("Type the code from the other tablet."));
+  $("netCodeInput").value = "";
+  $("netCodeInput").focus();
+});
+click($("netJoinGo"), async () => {
+  const code = ($("netCodeInput").value || "").toUpperCase().trim();
+  if(code.length !== 4) return netSay(T("A code is four characters."));
+  $("netEntry").classList.add("hidden");
+  netSay(T("Looking for the game..."));
+  await SF.netcode.join(code, netPending);
+});
+$("netCodeInput").addEventListener("keydown", e => {
+  if(e.key === "Enter")
+    $("netJoinGo").dispatchEvent(new MouseEvent("click", { bubbles:true }));
+  e.stopPropagation();             // typing a code must not steer the ship
+});
+
 click($("coopModeBtn"), async () => {
   if(pairPick !== null){ pairPick = null; renderProfiles(); return; }
   if(P.listNames().length < 2){
@@ -38198,6 +38975,7 @@ if("serviceWorker" in navigator){
 }
 
 SF.ui = { show, togglePause, syncAbilityButtons, syncHudWings, resetHudWings,
+          netDropped,
           renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
           showStory: id => showStory(SF.storyData.STORY[id]),
