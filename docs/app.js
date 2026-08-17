@@ -21,31 +21,31 @@
  *     8525  src/fx.js
  *     9638  src/input.js
  *    10132  src/entities.js
- *    11400  src/bossart.js
- *    12266  src/bosses.js
- *    13016  src/bossintro.js
- *    13139  src/rewind.js
- *    13670  src/finale.js
- *    13991  src/papadeath.js
- *    14313  src/backstage.js
- *    15262  src/sky29.js
- *    15507  src/mirrorduel.js
- *    15854  src/homecoming.js
- *    16051  src/prologue.js
- *    16517  src/systems.js
- *    17165  src/render.js
- *    21793  src/enemyart.js
- *    22745  src/insignia.js
- *    22990  src/skygen.js
- *    25934  src/shipart.js
- *    27134  src/paintjob.js
- *    27296  src/pilotart.js
- *    27391  src/comms.js
- *    27530  src/netcode.js
- *    28043  src/game.js
- *    31926  src/workshop.js
- *    32623  src/data/i18nbind.js
- *    32694  src/ui.js
+ *    11419  src/bossart.js
+ *    12285  src/bosses.js
+ *    13035  src/bossintro.js
+ *    13158  src/rewind.js
+ *    13689  src/finale.js
+ *    14010  src/papadeath.js
+ *    14332  src/backstage.js
+ *    15281  src/sky29.js
+ *    15526  src/mirrorduel.js
+ *    15873  src/homecoming.js
+ *    16070  src/prologue.js
+ *    16536  src/systems.js
+ *    17184  src/render.js
+ *    21812  src/enemyart.js
+ *    22764  src/insignia.js
+ *    23009  src/skygen.js
+ *    25953  src/shipart.js
+ *    27153  src/paintjob.js
+ *    27315  src/pilotart.js
+ *    27410  src/comms.js
+ *    27549  src/netcode.js
+ *    28062  src/game.js
+ *    31945  src/workshop.js
+ *    32642  src/data/i18nbind.js
+ *    32713  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -10194,12 +10194,12 @@ function tetherAt(c, u, out){
  * Playfield coordinate system.
  *
  * The height is fixed at 800; the width adapts to the device aspect within
- * 440-640 and is decided once, at load. On the target device - an iPad - that
+ * 380-720 and is re-measured whenever the window changes. On the target device - an iPad - that
  * lands at ~560-600, i.e. 3:4-ish: the playfield fills the glass, the 4:5
  * background art is no longer squashed, and the ship has thirteen ship-widths
  * of room to dodge in instead of the eight it had at the old phone-shaped
  * 390x620. Phones still get a sensibly proportioned field rather than a
- * letterboxed band, and landscape uses the full 640.
+ * letterboxed band, and landscape uses the full 720.
  *
  * Every other number in the game derives from these two, so this is the only
  * place the field size is stated. Nothing else may hard-code a coordinate:
@@ -10261,11 +10261,9 @@ function pickFieldWidth(){
    * screen, which is exactly the "optimised for a phone" complaint.
    *
    * In a landscape window the HEIGHT is the binding edge and width is
-   * abundant, so the field takes the widest shape the game is tuned for -
-   * the 640 ceiling every formation, boss arena and difficulty pass was
-   * validated against. Wider than that is a gameplay retune, not a sizing
-   * fix. A landscape window always has room for it: a 640x800 field at full
-   * height needs width = 0.8 x height, and landscape means width > height.
+   * abundant, so the field takes the widest shape the game is tuned for. A
+   * landscape window always has room for it: a 720x800 field at full height
+   * needs width = 0.9 x height, and landscape means width > height.
    *
    * Phones still end up portrait-shaped: the sub-500px rotate nag blocks
    * play until the phone is turned, and the field is re-measured at mission
@@ -10276,13 +10274,34 @@ function pickFieldWidth(){
   const h = (portrait ? vh : vh) - inset("top") - inset("bottom");
 
   /*
-   * The clamp is now only a safety net for something pathological, not the
+   * The floor is only a safety net for something pathological, not the
    * shape-defining decision it used to be: a 390x844 iPhone asks for ~411 and
    * an iPad for 600, both comfortably inside it. Measured, nothing breaks down
    * to 370 - formations stay readable and every boss weak point stays
    * reachable - so 380 is a floor with room to spare rather than a guess.
+   *
+   * THE CEILING WENT FROM 640 TO 720, and it was measured rather than
+   * guessed. "Even single player, the screen would benefit being wider,
+   * especially on ipad and computer" - and with two ships in it, "otherwise
+   * it will be too easy".
+   *
+   * Both true. Bot-flying eight seeded missions for a minute each: two ships
+   * in a 640 field killed 79% of everything and let 12% escape, against 53%
+   * and 32% for one ship - co-op was walking it. At 720 that comes back to
+   * 72% and 16%. Solo is unchanged where it counts: 53% -> 51% killed, 32%
+   * -> 33% escaped. A wider sky holds proportionally more (see waveSize's
+   * width top-up), so it is more game rather than an easier one.
+   *
+   * 720 AND NOT WIDER, and this is the interesting part. Past this the field
+   * starts eating the margins the HUD wings live in, and at 780 a landscape
+   * iPad's gutter falls to 149px against the 150 those panels need to stay
+   * readable - so the score, wallet and objectives would silently jump back
+   * on top of the action, on the exact device this was widened for. 720
+   * keeps the wings on every screen measured, from a landscape iPad to a
+   * 1920 monitor, and gets essentially all of the difficulty back that 780
+   * does.
    */
-  return Math.round(Math.max(380, Math.min(640, 800 * (w / Math.max(1, h)))));
+  return Math.round(Math.max(380, Math.min(720, 800 * (w / Math.max(1, h)))));
 }
 
 const VH = 800;

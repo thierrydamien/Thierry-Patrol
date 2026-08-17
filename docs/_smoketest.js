@@ -179,7 +179,7 @@ async function run(){
    */
   {
     const before = SF.entityConst.VW;
-    check("the field starts at a sane width", before >= 380 && before <= 640);
+    check("the field starts at a sane width", before >= 380 && before <= 720);
     check("a re-measure with nothing changed is a no-op",
       SF.field.refresh() === before && SF.entityConst.VW === before);
 
@@ -229,12 +229,12 @@ async function run(){
       Object.defineProperty(window.HTMLElement.prototype, "clientHeight", { configurable:true, get(){ return h; } });
     };
     defineSize(1920, 1040);
-    check("a desktop window gets the full 640-wide field", SF.field.measure() === 640);
+    check("a desktop window gets the full 720-wide field", SF.field.measure() === 720);
     defineSize(1024, 744);
-    check("a landscape iPad gets it too", SF.field.measure() === 640);
+    check("a landscape iPad gets it too", SF.field.measure() === 720);
     defineSize(390, 620);
     check("a portrait phone still gets a phone-shaped field",
-      SF.field.measure() >= 380 && SF.field.measure() < 640);
+      SF.field.measure() >= 380 && SF.field.measure() < 720);
     /*
      * THE HUD WINGS.
      *
@@ -310,8 +310,8 @@ async function run(){
     check("...while a phone's line is exactly the tuned shape", span(F.line(5, 400)) === 300);
     check("a vee's wings widen with the field too",
       span(F.vee(8, 640)) > span(F.vee(8, 400)) * 1.05);
-    check("every formation stays inside a 640 field",
-      Object.keys(F).every(k => F[k](12, 640).every(sl => sl.x >= 0 && sl.x <= 640)));
+    check("every formation stays inside the widest field there is",
+      Object.keys(F).every(k => F[k](12, 720).every(sl => sl.x >= 0 && sl.x <= 720)));
     check("a wide field tops the wave counts up to hold enemies-per-area", (() => {
       // Direct: build a director on a desktop-measured field and compare.
       defineSize(1920, 1040);
@@ -324,7 +324,13 @@ async function run(){
       const phone = new SF.systems.WaveDirector(
         { waves: [], objectives: [] }, SF.config.DIFFICULTY_BY_ID.pilot, SF.game.world);
       const phoneN = phone.waveSize({ n: 10 });
-      return wideN === 11 && phoneN === 10;   // +7% at 640, tuned data on phones
+      /*
+       * +20% at the 720 ceiling and exactly the tuned number on a phone. The
+       * top-up's own cap is reached precisely at 720, which is what makes the
+       * wider field more GAME rather than an easier one: enemies-per-area is
+       * held level, and no field can ever become a way to farm a bigger wave.
+       */
+      return wideN === 12 && phoneN === 10 && wideN <= Math.round(10 * 1.2);
     })());
     SF.field.refresh();
     check("the harness field is back where the rest of the suite expects it",
@@ -796,7 +802,7 @@ async function run(){
     Object.values(SF.missions.BOSSES).every(b =>
       b.phases.every((p,i) => i === 0 || p.at < b.phases[i-1].at)));
   check("playfield is tuned-range wide and 800 tall",
-    SF.entityConst.VH === 800 && SF.entityConst.VW >= 440 && SF.entityConst.VW <= 640);
+    SF.entityConst.VH === 800 && SF.entityConst.VW >= 440 && SF.entityConst.VW <= 720);
   check("nothing spawns outside the playfield",
     SF.missions.MISSIONS.every(m => m.waves.every(wv => {
       const slots = SF.enemyData.FORMATIONS[wv.form](wv.n, SF.entityConst.VW);
@@ -2515,7 +2521,7 @@ async function run(){
      * everyone is only that the field stays inside the tuned range.
      */
     check("the playfield always lands inside the tuned range",
-      SF.entityConst.VW >= 380 && SF.entityConst.VW <= 640);
+      SF.entityConst.VW >= 380 && SF.entityConst.VW <= 720);
     /* The field lands in the screen MINUS the status bar and home indicator -
        ~93px of difference on an iPhone, which was the entire remaining gap.
        Measure the reserved strips rather than assuming them. */
