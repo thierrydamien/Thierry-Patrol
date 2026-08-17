@@ -197,14 +197,39 @@ function press(el){
   } catch(e){ if(el.click) el.click(); }
 }
 
+/*
+ * WHO DOES THIS KEY BELONG TO?
+ *
+ * Solo, one pilot owns both key sets and nothing here changes: WASD and the
+ * arrows do the same thing, as they always have. In co-op the keyboard is
+ * cut in half - the left hand side is seat one and the arrows are seat two -
+ * so two children can sit side by side at one laptop without either of them
+ * having to learn new keys.
+ */
+const WASD = "aAdDwWsS";
+function seatFor(k){
+  const wasd = WASD.indexOf(k) >= 0;
+  const arrow = k === "ArrowLeft" || k === "ArrowRight" ||
+                k === "ArrowUp"   || k === "ArrowDown";
+  if(!wasd && !arrow) return null;
+  if(!coop) return state;                    // solo: one pilot, both sets
+  return wasd ? state : state2;
+}
+function axisFor(k){
+  if(k === "ArrowLeft" || k === "a" || k === "A") return "left";
+  if(k === "ArrowRight"|| k === "d" || k === "D") return "right";
+  if(k === "ArrowUp"   || k === "w" || k === "W") return "up";
+  if(k === "ArrowDown" || k === "s" || k === "S") return "down";
+  return null;
+}
+
 function keyDown(e){
   const k = e.key;
   const was = state.left || state.right || state.up || state.down;
-  if(k === "ArrowLeft" || k === "a" || k === "A") state.left = true;
-  if(k === "ArrowRight"|| k === "d" || k === "D") state.right = true;
-  if(k === "ArrowUp"   || k === "w" || k === "W") state.up = true;
-  if(k === "ArrowDown" || k === "s" || k === "S") state.down = true;
-  // Steering with the keys means the hovering cursor is not steering.
+  { const seat = seatFor(k), axis = axisFor(k);
+    if(seat && axis) seat[axis] = true; }
+  // Steering with the keys means the hovering cursor is not steering. Seat
+  // two has no cursor to take over from, so this stays seat one's business.
   if(!was && (state.left || state.right || state.up || state.down)) keysTakeOver();
   if(k === "b" || k === "B" || k === " ") state.bombPressed = true;
   if(k === "v" || k === "V" || k === "Shift") state.overdrivePressed = true;
@@ -219,10 +244,8 @@ function keyDown(e){
 }
 function keyUp(e){
   const k = e.key;
-  if(k === "ArrowLeft" || k === "a" || k === "A") state.left = false;
-  if(k === "ArrowRight"|| k === "d" || k === "D") state.right = false;
-  if(k === "ArrowUp"   || k === "w" || k === "W") state.up = false;
-  if(k === "ArrowDown" || k === "s" || k === "S") state.down = false;
+  const seat = seatFor(k), axis = axisFor(k);
+  if(seat && axis) seat[axis] = false;
 }
 
 /*
@@ -273,6 +296,21 @@ const liftFor = e => e.pointerType === "touch" ? TOUCH_LIFT : 0;
  * and overshoot the other.
  */
 function setField(vw, vh){ VW = vw; VH = vh; }
+
+/*
+ * SEAT TWO'S STICK. Keys only - there is one pointer on a laptop and one
+ * finger's worth of room on a tablet, so the second pilot flies on the
+ * arrows. Cleared whenever co-op closes, or a key held at the moment the
+ * mode ends would leave a ghost pushing against a ship nobody is flying.
+ */
+const state2 = { left:false, right:false, up:false, down:false,
+                 dragging:false, dragX:0, dragY:0,
+                 bombPressed:false, overdrivePressed:false, pausePressed:false };
+let coop = false;
+function setCoop(on){
+  coop = !!on;
+  state2.left = state2.right = state2.up = state2.down = false;
+}
 
 function attach(canvasEl, vw, vh){
   canvas = canvasEl; VW = vw; VH = vh;
@@ -413,7 +451,7 @@ function clearMovement(){
   flowX = 0;      // the river does not follow you out of its own mission
 }
 
-SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+SF.input = { state, state2, setCoop, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
              flowNudge, flowRelax,
              _hoverSteering: () => hoverSteer,
              lockPointer, unlockPointer, isPointerLocked, lockSupported };

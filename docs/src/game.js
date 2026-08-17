@@ -399,6 +399,25 @@ function startMission(missionIndex, difficultyId){
   if(mission.lentDrones)
     loadout.drones = Math.max(loadout.drones, mission.lentDrones);
   game.world.createPlayer(loadout);
+  /*
+   * SEAT TWO. Their own profile, so their own hull, paint, upgrades and
+   * callsign come with them - a co-op flight is two real pilots, not one
+   * pilot and a palette swap. Spawned to the right of seat one so the two
+   * do not start on top of each other.
+   */
+  game.coopMate = null;
+  if(game.coopWith){
+    const mate = SF.profile.load(game.coopWith);
+    if(mate){
+      game.coopMate = mate;
+      const l2 = buildLoadout(mate, difficulty);
+      if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
+      const p2 = game.world.createPlayer(l2);
+      p2.x = p2.targetX = VW*0.66;
+      game.world.player.x = game.world.player.targetX = VW*0.34;
+    }
+  }
+  SF.input.setCoop(!!game.coopMate);
 
   /*
    * The player-side modifiers are applied here, not in createPlayer: the
@@ -2014,6 +2033,9 @@ function update(dt, timeMs){
   }
 
   game.world.updatePlayer(dt, timeMs);
+  // Seat two flies on the arrows and fires on its own clock.
+  if(game.world.players.length > 1)
+    game.world.updatePlayer(dt, timeMs, game.world.players[1], SF.input.state2);
   /*
    * Paint Shop engine trails. The whole point of a trail is that everyone in
    * the room can see it, so it burns every frame the ship is alive - two
@@ -3396,6 +3418,9 @@ function draw(timeMs){
       ctx.restore();
     }
   }
+  for(let i = world.players.length - 1; i >= 1; i--)
+    if(world.players[i] && world.players[i].alive)
+      SF.render.drawPlayer(ctx, world.players[i], timeMs);
   SF.render.drawPlayer(ctx, world.player, timeMs);
   /*
    * SHAKE THEM OFF: a pair of pulsing chevrons flank the ship while anything

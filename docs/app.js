@@ -20,31 +20,31 @@
  *     7866  src/cloud.js
  *     8471  src/fx.js
  *     9584  src/input.js
- *    10007  src/entities.js
- *    11246  src/bossart.js
- *    12112  src/bosses.js
- *    12862  src/bossintro.js
- *    12985  src/rewind.js
- *    13516  src/finale.js
- *    13837  src/papadeath.js
- *    14159  src/backstage.js
- *    15108  src/sky29.js
- *    15353  src/mirrorduel.js
- *    15700  src/homecoming.js
- *    15897  src/prologue.js
- *    16363  src/systems.js
- *    16994  src/render.js
- *    21607  src/enemyart.js
- *    22559  src/insignia.js
- *    22804  src/skygen.js
- *    25748  src/shipart.js
- *    26948  src/paintjob.js
- *    27110  src/pilotart.js
- *    27205  src/comms.js
- *    27344  src/game.js
- *    30907  src/workshop.js
- *    31604  src/data/i18nbind.js
- *    31675  src/ui.js
+ *    10045  src/entities.js
+ *    11284  src/bossart.js
+ *    12150  src/bosses.js
+ *    12900  src/bossintro.js
+ *    13023  src/rewind.js
+ *    13554  src/finale.js
+ *    13875  src/papadeath.js
+ *    14197  src/backstage.js
+ *    15146  src/sky29.js
+ *    15391  src/mirrorduel.js
+ *    15738  src/homecoming.js
+ *    15935  src/prologue.js
+ *    16401  src/systems.js
+ *    17032  src/render.js
+ *    21645  src/enemyart.js
+ *    22597  src/insignia.js
+ *    22842  src/skygen.js
+ *    25786  src/shipart.js
+ *    26986  src/paintjob.js
+ *    27148  src/pilotart.js
+ *    27243  src/comms.js
+ *    27382  src/game.js
+ *    30970  src/workshop.js
+ *    31667  src/data/i18nbind.js
+ *    31738  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -9780,14 +9780,39 @@ function press(el){
   } catch(e){ if(el.click) el.click(); }
 }
 
+/*
+ * WHO DOES THIS KEY BELONG TO?
+ *
+ * Solo, one pilot owns both key sets and nothing here changes: WASD and the
+ * arrows do the same thing, as they always have. In co-op the keyboard is
+ * cut in half - the left hand side is seat one and the arrows are seat two -
+ * so two children can sit side by side at one laptop without either of them
+ * having to learn new keys.
+ */
+const WASD = "aAdDwWsS";
+function seatFor(k){
+  const wasd = WASD.indexOf(k) >= 0;
+  const arrow = k === "ArrowLeft" || k === "ArrowRight" ||
+                k === "ArrowUp"   || k === "ArrowDown";
+  if(!wasd && !arrow) return null;
+  if(!coop) return state;                    // solo: one pilot, both sets
+  return wasd ? state : state2;
+}
+function axisFor(k){
+  if(k === "ArrowLeft" || k === "a" || k === "A") return "left";
+  if(k === "ArrowRight"|| k === "d" || k === "D") return "right";
+  if(k === "ArrowUp"   || k === "w" || k === "W") return "up";
+  if(k === "ArrowDown" || k === "s" || k === "S") return "down";
+  return null;
+}
+
 function keyDown(e){
   const k = e.key;
   const was = state.left || state.right || state.up || state.down;
-  if(k === "ArrowLeft" || k === "a" || k === "A") state.left = true;
-  if(k === "ArrowRight"|| k === "d" || k === "D") state.right = true;
-  if(k === "ArrowUp"   || k === "w" || k === "W") state.up = true;
-  if(k === "ArrowDown" || k === "s" || k === "S") state.down = true;
-  // Steering with the keys means the hovering cursor is not steering.
+  { const seat = seatFor(k), axis = axisFor(k);
+    if(seat && axis) seat[axis] = true; }
+  // Steering with the keys means the hovering cursor is not steering. Seat
+  // two has no cursor to take over from, so this stays seat one's business.
   if(!was && (state.left || state.right || state.up || state.down)) keysTakeOver();
   if(k === "b" || k === "B" || k === " ") state.bombPressed = true;
   if(k === "v" || k === "V" || k === "Shift") state.overdrivePressed = true;
@@ -9802,10 +9827,8 @@ function keyDown(e){
 }
 function keyUp(e){
   const k = e.key;
-  if(k === "ArrowLeft" || k === "a" || k === "A") state.left = false;
-  if(k === "ArrowRight"|| k === "d" || k === "D") state.right = false;
-  if(k === "ArrowUp"   || k === "w" || k === "W") state.up = false;
-  if(k === "ArrowDown" || k === "s" || k === "S") state.down = false;
+  const seat = seatFor(k), axis = axisFor(k);
+  if(seat && axis) seat[axis] = false;
 }
 
 /*
@@ -9856,6 +9879,21 @@ const liftFor = e => e.pointerType === "touch" ? TOUCH_LIFT : 0;
  * and overshoot the other.
  */
 function setField(vw, vh){ VW = vw; VH = vh; }
+
+/*
+ * SEAT TWO'S STICK. Keys only - there is one pointer on a laptop and one
+ * finger's worth of room on a tablet, so the second pilot flies on the
+ * arrows. Cleared whenever co-op closes, or a key held at the moment the
+ * mode ends would leave a ghost pushing against a ship nobody is flying.
+ */
+const state2 = { left:false, right:false, up:false, down:false,
+                 dragging:false, dragX:0, dragY:0,
+                 bombPressed:false, overdrivePressed:false, pausePressed:false };
+let coop = false;
+function setCoop(on){
+  coop = !!on;
+  state2.left = state2.right = state2.up = state2.down = false;
+}
 
 function attach(canvasEl, vw, vh){
   canvas = canvasEl; VW = vw; VH = vh;
@@ -9996,7 +10034,7 @@ function clearMovement(){
   flowX = 0;      // the river does not follow you out of its own mission
 }
 
-SF.input = { state, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
+SF.input = { state, state2, setCoop, attach, setField, consumeBomb, consumeOverdrive, consumePause, clearMovement,
              flowNudge, flowRelax,
              _hoverSteering: () => hoverSteer,
              lockPointer, unlockPointer, isPointerLocked, lockSupported };
@@ -27742,6 +27780,25 @@ function startMission(missionIndex, difficultyId){
   if(mission.lentDrones)
     loadout.drones = Math.max(loadout.drones, mission.lentDrones);
   game.world.createPlayer(loadout);
+  /*
+   * SEAT TWO. Their own profile, so their own hull, paint, upgrades and
+   * callsign come with them - a co-op flight is two real pilots, not one
+   * pilot and a palette swap. Spawned to the right of seat one so the two
+   * do not start on top of each other.
+   */
+  game.coopMate = null;
+  if(game.coopWith){
+    const mate = SF.profile.load(game.coopWith);
+    if(mate){
+      game.coopMate = mate;
+      const l2 = buildLoadout(mate, difficulty);
+      if(mission.lentDrones) l2.drones = Math.max(l2.drones, mission.lentDrones);
+      const p2 = game.world.createPlayer(l2);
+      p2.x = p2.targetX = VW*0.66;
+      game.world.player.x = game.world.player.targetX = VW*0.34;
+    }
+  }
+  SF.input.setCoop(!!game.coopMate);
 
   /*
    * The player-side modifiers are applied here, not in createPlayer: the
@@ -29357,6 +29414,9 @@ function update(dt, timeMs){
   }
 
   game.world.updatePlayer(dt, timeMs);
+  // Seat two flies on the arrows and fires on its own clock.
+  if(game.world.players.length > 1)
+    game.world.updatePlayer(dt, timeMs, game.world.players[1], SF.input.state2);
   /*
    * Paint Shop engine trails. The whole point of a trail is that everyone in
    * the room can see it, so it burns every frame the ship is alive - two
@@ -30739,6 +30799,9 @@ function draw(timeMs){
       ctx.restore();
     }
   }
+  for(let i = world.players.length - 1; i >= 1; i--)
+    if(world.players[i] && world.players[i].alive)
+      SF.render.drawPlayer(ctx, world.players[i], timeMs);
   SF.render.drawPlayer(ctx, world.player, timeMs);
   /*
    * SHAKE THEM OFF: a pair of pulsing chevrons flank the ship while anything
