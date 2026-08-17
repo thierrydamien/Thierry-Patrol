@@ -225,6 +225,15 @@ function begin(player){
 }
 
 function active(){ return !!show; }
+/*
+ * True once the replay is taking the WHOLE frame, which is not the same as
+ * being active: the death beat is still live play - the wreck, its particles
+ * and the HUD - and wants the lens and the shake exactly as it always had.
+ * From the scrub onward the replay owns the frame, and the caller must not
+ * put a moving camera underneath it. Same condition draw() returns on, kept
+ * in one place so the two cannot drift apart.
+ */
+function owns(){ return !!(show && filled && show.beat !== "death"); }
 /** The UI parks the results screen behind this. */
 function onEnd(cb){ doneCb = cb; }
 
@@ -513,7 +522,7 @@ function drawFurniture(ctx, VW, VH, timeMs){
   ctx.restore();
 }
 
-SF.rewind = { arm, record, capture, begin, active, update, draw, onEnd, skip, finish,
+SF.rewind = { arm, record, capture, begin, active, owns, update, draw, onEnd, skip, finish,
               canPlay, WINDOW, HZ, FRAMES, speedAt, _tape: () => tape, _kill: () => kill,
               _show: () => show };
 })();

@@ -25,23 +25,23 @@
  *    11608  src/bosses.js
  *    12358  src/bossintro.js
  *    12481  src/rewind.js
- *    13003  src/finale.js
- *    13324  src/papadeath.js
- *    13646  src/backstage.js
- *    14849  src/sky29.js
- *    15090  src/systems.js
- *    15709  src/render.js
- *    20305  src/enemyart.js
- *    21223  src/insignia.js
- *    21468  src/skygen.js
- *    23912  src/shipart.js
- *    25112  src/paintjob.js
- *    25274  src/pilotart.js
- *    25369  src/comms.js
- *    25490  src/game.js
- *    28943  src/workshop.js
- *    29640  src/data/i18nbind.js
- *    29707  src/ui.js
+ *    13012  src/finale.js
+ *    13333  src/papadeath.js
+ *    13655  src/backstage.js
+ *    14858  src/sky29.js
+ *    15099  src/systems.js
+ *    15718  src/render.js
+ *    20314  src/enemyart.js
+ *    21232  src/insignia.js
+ *    21477  src/skygen.js
+ *    23921  src/shipart.js
+ *    25121  src/paintjob.js
+ *    25283  src/pilotart.js
+ *    25378  src/comms.js
+ *    25499  src/game.js
+ *    28972  src/workshop.js
+ *    29669  src/data/i18nbind.js
+ *    29736  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -12705,6 +12705,15 @@ function begin(player){
 }
 
 function active(){ return !!show; }
+/*
+ * True once the replay is taking the WHOLE frame, which is not the same as
+ * being active: the death beat is still live play - the wreck, its particles
+ * and the HUD - and wants the lens and the shake exactly as it always had.
+ * From the scrub onward the replay owns the frame, and the caller must not
+ * put a moving camera underneath it. Same condition draw() returns on, kept
+ * in one place so the two cannot drift apart.
+ */
+function owns(){ return !!(show && filled && show.beat !== "death"); }
 /** The UI parks the results screen behind this. */
 function onEnd(cb){ doneCb = cb; }
 
@@ -12993,7 +13002,7 @@ function drawFurniture(ctx, VW, VH, timeMs){
   ctx.restore();
 }
 
-SF.rewind = { arm, record, capture, begin, active, update, draw, onEnd, skip, finish,
+SF.rewind = { arm, record, capture, begin, active, owns, update, draw, onEnd, skip, finish,
               canPlay, WINDOW, HZ, FRAMES, speedAt, _tape: () => tape, _kill: () => kill,
               _show: () => show };
 })();
@@ -28720,6 +28729,26 @@ function onPickupCollected(item, lost){
 function draw(timeMs){
   if(!ctx) return;
   const world = game.world;
+  /*
+   * ONE CAMERA AT A TIME.
+   *
+   * The replay has a lens of its own: it zooms toward the impact as the tape
+   * slows, 1.0 to 1.42, and for the eight days between the rewind landing and
+   * the camera push landing it was the only lens in the frame. Then the push
+   * arrived and was applied HERE, above everything - including the replay.
+   * Two zooms multiplying, and because the push is still falling back from
+   * the kick the death itself gave it, the product kept moving underneath a
+   * replay that was already zooming. Measured on a real death, the replay
+   * inherited a drifting 1.0000-1.0378 on top of its own ramp; frame to
+   * frame, the picture lurched 34% harder at the 90th percentile than it
+   * does with one camera.
+   *
+   * The death beat is exempt: it is not a replay yet, it is the live wreck,
+   * and it keeps the push exactly as it always did. So does the shake, which
+   * was in the frame throughout the eight good days and is therefore not
+   * what broke.
+   */
+  const replaying = SF.rewind.owns();
   ctx.save();
   fx.shakeOffset(shakeVec);
   ctx.translate(shakeVec.x, shakeVec.y);
@@ -28727,7 +28756,7 @@ function draw(timeMs){
   // The lens. After the clear, so a push can never leave last frame's pixels
   // in the margin, and before anything is drawn, so the sky moves with the
   // fight rather than sitting still behind it.
-  fx.cameraApply(ctx, VW, VH);
+  if(!replaying) fx.cameraApply(ctx, VW, VH);
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted

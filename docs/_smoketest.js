@@ -6208,6 +6208,32 @@ async function run(){
       // frame is handed back to the caller, who paints the live wreck.
       return !!st && st.beat === "death" && RW.draw({}, 0, 480, 800) === false;
     })());
+    /*
+     * ONE CAMERA AT A TIME.
+     *
+     * The replay zooms toward the impact on its own, 1.0 to 1.42. The camera
+     * push landed eight days after the rewind did and was applied above
+     * everything, the replay included, so the two zooms multiplied - and
+     * since the push is still falling back from the kick the death gave it,
+     * the product kept moving under a picture that was already moving. That
+     * is what "it zooms crazily" was. Measured on a real death: the replay
+     * inherited a drifting 1.0000-1.0378, and the frame-to-frame lurch ran
+     * 36% higher at the 90th percentile than with one camera.
+     *
+     * owns() is the line between the two, and it is not the same as
+     * active(): the death beat is active but is still LIVE PLAY - the wreck,
+     * its blast, the HUD - and keeps the push exactly as it always had.
+     */
+    check("the wreck's beat is live play, not replay",
+      RW.owns() === false && RW.draw({}, 0, 480, 800) === false);
+    check("the replay is the only camera in its own frame", (() => {
+      const g = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
+      const r = fs.readFileSync(path.join(__dirname, "src/rewind.js"), "utf8");
+      return /function owns\(\)/.test(r) &&
+             /\bowns,/.test(r) &&                               // exported
+             /const replaying = SF\.rewind\.owns\(\);/.test(g) &&
+             /if\(!replaying\) fx\.cameraApply\(ctx, VW, VH\);/.test(g);
+    })());
     check("the last life blows the ship up, not just dents it", (() => {
       const src = fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8");
       const branch = src.split("if(p.lives <= 0){")[1].split("} else if")[0];

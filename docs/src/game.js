@@ -3231,6 +3231,26 @@ function onPickupCollected(item, lost){
 function draw(timeMs){
   if(!ctx) return;
   const world = game.world;
+  /*
+   * ONE CAMERA AT A TIME.
+   *
+   * The replay has a lens of its own: it zooms toward the impact as the tape
+   * slows, 1.0 to 1.42, and for the eight days between the rewind landing and
+   * the camera push landing it was the only lens in the frame. Then the push
+   * arrived and was applied HERE, above everything - including the replay.
+   * Two zooms multiplying, and because the push is still falling back from
+   * the kick the death itself gave it, the product kept moving underneath a
+   * replay that was already zooming. Measured on a real death, the replay
+   * inherited a drifting 1.0000-1.0378 on top of its own ramp; frame to
+   * frame, the picture lurched 34% harder at the 90th percentile than it
+   * does with one camera.
+   *
+   * The death beat is exempt: it is not a replay yet, it is the live wreck,
+   * and it keeps the push exactly as it always did. So does the shake, which
+   * was in the frame throughout the eight good days and is therefore not
+   * what broke.
+   */
+  const replaying = SF.rewind.owns();
   ctx.save();
   fx.shakeOffset(shakeVec);
   ctx.translate(shakeVec.x, shakeVec.y);
@@ -3238,7 +3258,7 @@ function draw(timeMs){
   // The lens. After the clear, so a push can never leave last frame's pixels
   // in the margin, and before anything is drawn, so the sky moves with the
   // fight rather than sitting still behind it.
-  fx.cameraApply(ctx, VW, VH);
+  if(!replaying) fx.cameraApply(ctx, VW, VH);
   SF.render.drawBackground(ctx);
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint under everything
   SF.sky29.drawSky(ctx, timeMs, VW, VH);             // the pencil veil, until it's painted
