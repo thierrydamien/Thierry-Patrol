@@ -542,8 +542,37 @@ function startTitleLoop(){
 /* ---------------------------------------------------------
    PILOT PICKER
    --------------------------------------------------------- */
+/*
+ * WHO IS SITTING DOWN, answered on the first screen.
+ *
+ * Two players used to be picked at the briefing, after a mission was chosen,
+ * and that was the wrong place for a reason worth writing down: the campaign
+ * map belongs to ONE pilot. Choosing a wingman after the level meant the
+ * second child had been a passenger through the only choice that mattered,
+ * and a stop THEY had unlocked and their brother had not was never even on
+ * the map to pick. Co-op is a fact about the session, so it is settled before
+ * the session starts.
+ *
+ * `sessionMate` is the name in seat two for as long as this pair are playing.
+ * `pairPick` is the two-tap flow that sets it: null when off, otherwise the
+ * first pilot chosen (or "" while still waiting for them).
+ */
+let sessionMate = null;
+let pairPick = null;
+
 function renderProfiles(){
   drawTitleArt("titleArt", null);
+  const tag = $("pickerTagline");
+  if(tag){
+    tag.textContent = pairPick === null ? T("Who's flying today?")
+                    : pairPick === ""   ? T("Two players — tap the first pilot")
+                    : T("...and now the second pilot");
+  }
+  const btn = $("coopModeBtn");
+  if(btn){
+    btn.textContent = pairPick === null ? T("Two Players") : T("Just one player");
+    btn.classList.toggle("on", pairPick !== null);
+  }
   const grid = $("profileGrid");
   grid.innerHTML = "";
   P.listNames().forEach(name => {
@@ -571,7 +600,17 @@ function renderProfiles(){
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
       <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> best</div>
     `;
-    click(card, () => selectProfile(name));
+    // In pair mode the first tap picks seat one and the second picks seat
+    // two; the pilot already chosen is marked and cannot be picked twice.
+    if(pairPick) card.classList.toggle("picked", pairPick === name);
+    click(card, () => {
+      if(pairPick === null) return selectProfile(name);
+      if(pairPick === ""){ pairPick = name; renderProfiles(); return; }
+      if(pairPick === name) return;             // nobody flies with themselves
+      const first = pairPick;
+      pairPick = null;
+      selectProfile(first, name);
+    });
     grid.appendChild(card);
     // Their actual ship, with everything they have bought on it - a pilot
     // picker should show who you are, not a coloured circle.
@@ -623,9 +662,13 @@ function renderProfiles(){
   if(SF.i18n) SF.i18n.sweep();
 }
 
-function selectProfile(name){
+function selectProfile(name, mateName){
+  pairPick = null;                              // the two-tap flow is spent
   profile = P.load(name);
   SF.game.profile = profile;
+  // A pilot picked alone flies alone: choosing a single card is also how you
+  // END a pair, so there is always a way back to one player.
+  sessionMate = (mateName && mateName !== name) ? mateName : null;
   renderMenu();
   show("screen-menu");
 }
@@ -649,6 +692,28 @@ function renderMenu(){
     </div>`;
   if(!SF.pilotart.mount($("menuPilot").querySelector(".mp-patch"), profile, 52)){
     SF.insignia.mount($("menuPilot").querySelector(".mp-patch"), P.badgeFor(profile), profile.shipColor, 52);
+  }
+  /*
+   * ...and who they are flying with. The pair was chosen a screen ago, so the
+   * menu has to say it out loud - otherwise the second child's only
+   * confirmation that they are in the game is a ship appearing after launch.
+   * SWITCH PILOT goes back to the picker, which is also how a pair is undone.
+   */
+  {
+    const mate = sessionMate ? P.load(sessionMate) : null;
+    if(!mate) sessionMate = null;               // they were deleted meanwhile
+    let row = $("menuMate");
+    if(!row){
+      row = document.createElement("div");
+      row.id = "menuMate";
+      row.className = "menu-mate";
+      $("menuPilot").insertAdjacentElement("afterend", row);
+    }
+    row.classList.toggle("hidden", !mate);
+    if(mate){
+      row.innerHTML = `<span class="mm-dot" style="background:${esc(mate.shipColor)}"></span>` +
+        `<span>${esc(T("Flying with {who}", { who: (mate.callsign || mate.name).toUpperCase() }))}</span>`;
+    }
   }
 
   // Each button says what it is *for* right now, not just where it goes.
@@ -4361,64 +4426,49 @@ function drawStoryArt(ctx, art, levels, mate){
    BRIEFING + DIFFICULTY
    --------------------------------------------------------- */
 let briefTier = "pilot";
-/*
- * WHO ELSE IS COMING. Null is "just me", and it is deliberately reset every
- * time a briefing opens: co-op is a decision about this flight, and a pilot
- * who played with their brother yesterday should not find him silently
- * strapped into seat two tonight.
- */
-let coopMateName = null;
 
 /*
- * The FLY TOGETHER row. Every other pilot saved on the device, in their own
- * ship colour, plus JUST ME - which leads, and is what you get by touching
- * nothing.
+ * The briefing's FLY TOGETHER line. Not a picker any more - the pair was
+ * settled on the pilot screen, before the campaign map was ever opened - but
+ * still worth saying here, because this is the last screen before launch and
+ * it is where the controls belong. A child who is about to fly needs to know
+ * which stick is theirs; a child choosing a difficulty needs to know there
+ * are two of them.
  */
-function renderCoopPicker(){
+function renderCoopLine(){
   const block = $("briefCoop"), host = $("coopPicker"), hint = $("coopHint");
   if(!block || !host) return;
-  const others = P.listNames().filter(n => n !== profile.name);
-  block.classList.toggle("hidden", others.length === 0);
-  if(!others.length){ coopMateName = null; return; }
-  if(coopMateName && others.indexOf(coopMateName) < 0) coopMateName = null;
-
+  const mate = sessionMate ? P.load(sessionMate) : null;
+  block.classList.toggle("hidden", !mate);
   host.innerHTML = "";
-  const chip = (name, label, color) => {
-    const b = document.createElement("button");
-    b.className = "coop-chip" + (coopMateName === name ? " on" : "");
-    b.type = "button";
-    if(coopMateName === name) b.style.color = color;
+  if(!mate) return;
+
+  const badge = (q, label) => {
+    const b = document.createElement("div");
+    b.className = "coop-chip on";
+    b.style.color = q.shipColor;
     const dot = document.createElement("span");
     dot.className = "cc-dot";
-    dot.style.background = color;
+    dot.style.background = q.shipColor;
     b.appendChild(dot);
     const txt = document.createElement("span");
     txt.textContent = label;
     b.appendChild(txt);
-    click(b, () => { coopMateName = name; renderCoopPicker(); });   // click() taps
     host.appendChild(b);
   };
-  chip(null, T("JUST ME"), profile.shipColor);
-  others.forEach(n => {
-    const q = P.load(n);
-    if(q) chip(n, (q.callsign || q.name).toUpperCase(), q.shipColor);
-  });
+  badge(profile, (profile.callsign || profile.name).toUpperCase());
+  badge(mate, (mate.callsign || mate.name).toUpperCase());
 
   if(!hint) return;
-  if(!coopMateName){
-    hint.textContent = T("Two of you can fly this one together — pick who.");
-  } else {
-    const q = P.load(coopMateName);
-    const mine = (profile.callsign || profile.name).toUpperCase();
-    const theirs = ((q && (q.callsign || q.name)) || coopMateName).toUpperCase();
-    /*
-     * The controls, said once, here, where the choice is made. Both halves
-     * matter: on a laptop the keyboard is split, and on a tablet each pilot
-     * simply puts a finger on the glass and that finger is their ship.
-     */
-    hint.textContent = T("{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.",
-                         { a: mine, b: theirs });
-  }
+  const mine = (profile.callsign || profile.name).toUpperCase();
+  const theirs = (mate.callsign || mate.name).toUpperCase();
+  /*
+   * Both halves matter: on a laptop the keyboard is split down the middle,
+   * and on a tablet each pilot simply puts a finger on the glass and that
+   * finger is their ship.
+   */
+  hint.textContent = T("{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.",
+                       { a: mine, b: theirs });
 }
 
 function openBriefing(index){
@@ -4503,9 +4553,7 @@ function openBriefing(index){
   briefTier = (clearedHere[clearedHere.length-1] || lastFlown ||
                unlocked[0] || DIFFICULTIES[1]).id;
   renderBriefTiers(index);
-  // A fresh choice every briefing: see coopMateName.
-  coopMateName = null;
-  renderCoopPicker();
+  renderCoopLine();
   drawBriefHero(index);
   show("screen-briefing");
 }
@@ -4686,16 +4734,7 @@ function rushUnlocked(p){
   return !!(rec && rec.cleared);
 }
 
-/*
- * Who was actually in seat two on the flight that just ended. RETRY, NEXT
- * MISSION and the pause screen's RESTART all read this rather than the
- * briefing's chip, so a pair keep flying together across a run of levels -
- * and so the answer survives anything that might have re-rendered the
- * briefing underneath them.
- */
-const flyingWith = () => (SF.game.coopMate ? SF.game.coopMate.name : null);
-
-function launch(index, difficultyId, mate){
+function launch(index, difficultyId){
   /*
    * The unlock gate lives HERE, not only on the campaign map.
    *
@@ -4719,14 +4758,14 @@ function launch(index, difficultyId, mate){
   show("screen-game");
   hideResults();
   /*
-   * WHO IS IN SEAT TWO, passed in rather than read off a module variable.
-   * Every way into a flight comes through here - the briefing, RETRY, NEXT
-   * MISSION, Boss Rush, the Wacky Sky, a drawn sky, the test flight - and
-   * only the first three have any business carrying a wingman. An ambient
-   * "last thing picked" would strap somebody's brother into a Boss Rush he
-   * never agreed to, so the ones that mean it say so and the rest get null.
+   * WHO IS IN SEAT TWO. One answer for the whole session, set on the pilot
+   * screen, so every way into a flight agrees: the campaign, RETRY, NEXT
+   * MISSION, Boss Rush, the Wacky Sky, a drawn sky, the firing range. Two
+   * children who sat down together are still two children when they pick
+   * Boss Rush, and making them re-declare it per mission was the thing that
+   * put this control in the wrong place to begin with.
    */
-  SF.game.coopWith = (mate && mate !== profile.name) ? mate : null;
+  SF.game.coopWith = (sessionMate && sessionMate !== profile.name) ? sessionMate : null;
   SF.game.startMission(index, difficultyId);
   // Silent running hides the specials entirely - a greyed-out bomb button
   // reads as "broken", an absent one reads as "not this mission".
@@ -5803,6 +5842,24 @@ click($("addProfileBtn"), async () => {
   const name = await ask("NEW PILOT", { text:"What's the pilot's name?", placeholder:"Name", okLabel:"JOIN UP" });
   if(name && name.trim()){ P.addName(name.trim()); renderProfiles(); }
 });
+/*
+ * Two players, on or off. Off is the plain picker; on turns it into a
+ * two-tap flow. It needs two pilots to mean anything, so on a device with
+ * one saved pilot it offers to make the second one instead of switching into
+ * a mode that cannot be completed.
+ */
+click($("coopModeBtn"), async () => {
+  if(pairPick !== null){ pairPick = null; renderProfiles(); return; }
+  if(P.listNames().length < 2){
+    const name = await ask(T("SECOND PILOT"),
+      { text: T("Two players need two pilots. What's the other one called?"),
+        placeholder: T("Name"), okLabel: T("JOIN UP") });
+    if(!name || !name.trim()) return;
+    P.addName(name.trim());
+  }
+  pairPick = "";
+  renderProfiles();
+});
 click($("switchBtn"), () => { renderProfiles(); show("screen-profiles"); });
 click($("playBtn"), () => { renderMissions(); show("screen-missions"); });
 
@@ -5888,7 +5945,7 @@ click($("leaderboardBtn"), () => { renderLeaderboard(); show("screen-leaderboard
  */
 click($("missionsBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("briefBackBtn"), () => { renderMissions(); show("screen-missions"); });
-click($("launchBtn"), () => launch(selectedMissionIndex, briefTier, coopMateName));
+click($("launchBtn"), () => launch(selectedMissionIndex, briefTier));
 click($("armoryBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("achievementsBackBtn"), () => { renderMenu(); show("screen-menu"); });
 click($("leaderboardBackBtn"), () => { renderMenu(); show("screen-menu"); });
@@ -5904,7 +5961,7 @@ document.addEventListener("visibilitychange", () => {
 });
 click($("restartBtn"), () => {
   $("overlayPause").classList.add("hidden");
-  launch(SF.game.run.missionIndex, SF.game.run.difficulty.id, flyingWith());
+  launch(SF.game.run.missionIndex, SF.game.run.difficulty.id);
 });
 /*
  * Quitting forfeits the run's takings - `endMission` is never reached, so the
@@ -5930,9 +5987,9 @@ click($("quitBtn"), () => {
              { okLabel:T("LEAVE"), cancelLabel:T("KEEP FLYING"), danger:true })
     .then(yes => { if(yes) leave(); });
 });
-click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id, flyingWith()));
-click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie", flyingWith()));
-click($("nextBtn"), () => launch(SF.game.run.missionIndex + 1, SF.game.run.difficulty.id, flyingWith()));
+click($("retryBtn"), () => launch(SF.game.run.missionIndex, SF.game.run.difficulty.id));
+click($("rookieBtn"), () => launch(SF.game.run.missionIndex, "rookie"));
+click($("nextBtn"), () => launch(SF.game.run.missionIndex + 1, SF.game.run.difficulty.id));
 click($("resultsMenuBtn"), () => {
   SF.game.state = "idle";
   hideResults();

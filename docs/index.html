@@ -49,9 +49,14 @@
     <canvas id="titleArt" class="title-art" width="720" height="1000"></canvas>
     <div class="family-title">A FAMILY SQUADRON</div>
     <h1 class="game-title">THIERRY <span>PATROL</span></h1>
-    <p class="tagline">Who's flying today?</p>
+    <p class="tagline" id="pickerTagline">Who's flying today?</p>
     <div id="profileGrid" class="profile-grid"></div>
     <div class="picker-actions">
+      <!-- Two players is a decision about who is sitting down, so it is made
+           HERE and not four screens later: the campaign map belongs to one
+           pilot, and choosing a wingman after the level is chosen makes the
+           second child a passenger through the only choice that mattered. -->
+      <button id="coopModeBtn" class="ghost-btn">Two Players</button>
       <button id="addProfileBtn" class="ghost-btn">+ Add Pilot</button>
       <button id="settingsBtnPicker" class="ghost-btn btn-with-glyph">Settings</button>
     </div>

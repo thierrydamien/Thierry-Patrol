@@ -422,9 +422,16 @@ SF.i18n.register("fr", { name: "Français", s: {
 
 /* --- à deux dans le même ciel --- */
 "FLY TOGETHER": "VOLER À DEUX",
-"JUST ME": "TOUT SEUL",
-"Two of you can fly this one together — pick who.":
-  "Vous pouvez voler à deux sur cette mission — choisis avec qui.",
+"Two Players": "À deux",
+"Just one player": "Tout seul",
+"Two players — tap the first pilot": "À deux — touche le premier pilote",
+"...and now the second pilot": "…et maintenant le deuxième pilote",
+"Flying with {who}": "En vol avec {who}",
+"SECOND PILOT": "DEUXIÈME PILOTE",
+"Two players need two pilots. What's the other one called?":
+  "À deux, il faut deux pilotes. Comment s'appelle l'autre ?",
+"Name": "Nom",
+"JOIN UP": "REJOINDRE",
 /* "or a finger" : sur tablette, chacun pose un doigt et ce doigt est son avion. */
 "{a} steers with W A S D or a finger; {b} steers with the arrow keys or a second finger. Coins and medals go to whoever earns them.":
   "{a} pilote avec W A S D ou un doigt ; {b} pilote avec les flèches ou un deuxième doigt. Les pièces et les médailles vont à celui qui les gagne.",

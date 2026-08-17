@@ -8625,7 +8625,12 @@ async function run(){
       const ui = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
       const at = ui.indexOf("function renderProfiles(");
       if(at < 0) return false;
-      const body = ui.slice(at, at + 4000);
+      // To the end of the function, not a fixed byte count: a window measured
+      // in characters silently stops covering the thing it is checking the
+      // moment anything is added above it, and then passes for the wrong
+      // reason. The next top-level declaration is where this one ends.
+      const end = ui.indexOf("\nfunction ", at + 1);
+      const body = ui.slice(at, end < 0 ? ui.length : end);
       const box  = /<canvas width="(\d+)" height="(\d+)">/.exec(body);
       const ship = /drawShip\(ctx, (\d+), (\d+), (\d+),/.exec(body);
       const fade = /createRadialGradient\((\d+), (\d+), (\d+), \d+, \d+, (\d+)\)/.exec(body);
@@ -8857,35 +8862,46 @@ async function run(){
     }
     closeCard();
 
-    /* --- the way in: the FLY TOGETHER row on the briefing --- */
+    /* --- the way in: TWO PLAYERS on the pilot screen --- */
     {
       /*
        * None of the above is worth anything if a child cannot reach it, and
-       * until this row existed `coopWith` was a field nothing ever set. So
-       * the picker is driven the way a player drives it: open the map, open a
-       * briefing, tap a brother, press LAUNCH.
+       * `coopWith` is a field nothing used to set. Driven the way a player
+       * drives it: turn on two players, tap both pilots, open the map, press
+       * LAUNCH.
+       *
+       * It lives on the FIRST screen deliberately. The campaign map belongs
+       * to one pilot, so choosing a wingman after the mission made the second
+       * child a passenger through the only choice that mattered - and a stop
+       * only THEY had unlocked was never on the map to pick.
        */
       G.state = "idle";
       SF.ui.renderProfiles();
-      const cards = qa("#profileGrid .profile-card");
-      const mine = cards.find(c => /COOPA/i.test(c.textContent));
-      check("a co-op pilot still appears on the pilot-picker", !!mine);
+      clickEl(id("coopModeBtn"));
+      const cards = () => qa("#profileGrid .profile-card");
+      const cardFor = re => cards().find(c => re.test(c.textContent));
+      check("TWO PLAYERS turns the pilot grid into a two-tap pick",
+        /first pilot|premier pilote/i.test(id("pickerTagline").textContent) &&
+        id("coopModeBtn").classList.contains("on") &&
+        !!cardFor(/COOPA/i) && !!cardFor(/COOPB/i));
+      const mine = cardFor(/COOPA/i);
       if(mine){
         clickEl(mine);
-        SF.ui.renderMissions();
-        clickEl(qa("#campaignNodes .map-node")[0]);
-        const chips = qa("#coopPicker .coop-chip");
-        check("the briefing offers the other pilots on the device, JUST ME first",
-          !id("briefCoop").classList.contains("hidden") &&
-          chips.length >= 2 && /JUST ME|TOUT SEUL/i.test(chips[0].textContent) &&
-          chips[0].classList.contains("on") &&
-          chips.some(c => /COOPB/i.test(c.textContent)));
-        const mate = chips.find(c => /COOPB/i.test(c.textContent));
+        check("the first pilot is marked, and the prompt asks for the second",
+          /second pilot|deuxième pilote/i.test(id("pickerTagline").textContent) &&
+          !!cardFor(/COOPA/i).classList.contains("picked"));
+        const mate = cardFor(/COOPB/i);
         if(mate){
           clickEl(mate);
-          check("picking a wingman selects them and says who steers what",
-            qa("#coopPicker .coop-chip").find(c => /COOPB/i.test(c.textContent))
-              .classList.contains("on") &&
+          check("two taps land on the menu as a pair, and it says so",
+            id("screen-menu").classList.contains("active") &&
+            !id("menuMate").classList.contains("hidden") &&
+            /COOPB/i.test(id("menuMate").textContent));
+          SF.ui.renderMissions();
+          clickEl(qa("#campaignNodes .map-node")[0]);
+          check("the briefing shows the pair and says who steers what",
+            !id("briefCoop").classList.contains("hidden") &&
+            qa("#coopPicker .coop-chip").length === 2 &&
             /W A S D/.test(id("coopHint").textContent) &&
             /COOPB/i.test(id("coopHint").textContent));
           clickEl(id("launchBtn"));
