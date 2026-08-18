@@ -653,7 +653,7 @@ function renderProfiles(){
         <span class="pc-patch"></span></div>
       <div class="pname">${esc(p.callsign || p.name)}</div>
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
-      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> best</div>
+      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> ${T("best")}</div>
     `;
     // In pair mode the first tap picks seat one and the second picks seat
     // two; the pilot already chosen is marked and cannot be picked twice.
@@ -6376,8 +6376,8 @@ qa(".mode-ico[data-glyph]").forEach(cv => {
   paintState();
 })();
 /*
- * LANGUAGE, LAST. i18n.boot() picks the saved choice (or the device's, on a
- * first run), rewrites the data tables and sweeps the markup - so it has to
+ * LANGUAGE, LAST. i18n.boot() picks the saved choice, or French if nobody has
+ * chosen, rewrites the data tables and sweeps the markup - so it has to
  * happen before the first render, or the pilot picker paints English and
  * then flickers.
  *

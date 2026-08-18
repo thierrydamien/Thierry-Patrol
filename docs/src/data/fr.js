@@ -32,6 +32,8 @@ SF.i18n.register("fr", { name: "Français", s: {
    and the family - without the calque. */
 "A FAMILY SQUADRON": "EN ESCADRILLE, EN FAMILLE",
 "Who's flying today?": "Qui vole aujourd'hui ?",
+// On the pilot card, after the score: "12 ★ · 4500 record".
+"best": "record",
 "+ Add Pilot": "+ Ajouter un pilote",
 "Settings": "Réglages",
 "SETTINGS": "RÉGLAGES",

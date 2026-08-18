@@ -167,6 +167,20 @@ async function run(){
   });
   const SF = window.SF;
 
+  /*
+   * The suite reads the English. The game now OPENS in French for everyone
+   * who has not chosen otherwise, which is what the family sees - but roughly
+   * a thousand pins below match on button labels, headings and mission names,
+   * and they are pins about content, not about which language boots. So the
+   * language is pinned to English here for the body of the suite.
+   *
+   * What that does NOT skip: the language block further down boots the app
+   * from a clean localStorage and proves the French default and its migration
+   * for real, and the coverage pins there still hold that every player-facing
+   * string and table has a French translation registered.
+   */
+  SF.i18n.setLang("en");
+
   /* ---------- the playfield can be re-measured ---------- */
   /*
    * The iPhone home-screen bug: Safari lays a TAB out with its safe-area
@@ -8525,6 +8539,69 @@ async function run(){
       I.setLang("en");
       return stored === "fr";
     })());
+
+    /*
+     * FRENCH IS THE DEFAULT, and it is a decision rather than a detection.
+     * The game is played by one French family across borrowed phones, school
+     * laptops and a browser or two that report en-GB, so asking the device
+     * what it "would like" got the wrong answer more often than the right one.
+     *
+     * The migration is the half that actually matters. boot() used to stamp
+     * the detected locale into the saved-choice key on the very first run,
+     * which means every device that had ever opened the game already had
+     * "en" written down - and simply changing the default would have reached
+     * nobody. So the stamped guesses are cleared once, and a real choice made
+     * afterwards has to survive every boot after it.
+     */
+    {
+      const LS = window.localStorage;
+      const keep = { lang: LS.getItem("patrol_lang"), picked: LS.getItem("patrol_lang_picked") };
+      const bootWith = (saved, picked) => {
+        LS.removeItem("patrol_lang"); LS.removeItem("patrol_lang_picked");
+        if(saved !== null) LS.setItem("patrol_lang", saved);
+        if(picked !== null) LS.setItem("patrol_lang_picked", picked);
+        I.boot();
+        return I.lang();
+      };
+
+      check("a device that has never opened the game opens in French",
+        bootWith(null, null) === "fr");
+
+      /* The one that would have silently done nothing: an existing install
+         carrying the locale guess boot() stamped there on its first run. */
+      check("a device carrying the old locale guess is moved to French too",
+        bootWith("en", null) === "fr");
+
+      /* ...and the migration is once, not every boot, or a chosen English
+         would be wiped every time the game opened. */
+      check("a language somebody actually chose survives every boot after it",
+        bootWith("en", "1") === "en" && bootWith("fr", "1") === "fr");
+
+      /* Choosing writes BOTH halves, so the choice is a choice from then on. */
+      check("choosing a language marks it as chosen, not guessed", (() => {
+        LS.removeItem("patrol_lang"); LS.removeItem("patrol_lang_picked");
+        I.boot();                       // opens French, writes nothing
+        const clean = LS.getItem("patrol_lang") === null;
+        I.setLang("en");
+        return clean && LS.getItem("patrol_lang") === "en" &&
+               LS.getItem("patrol_lang_picked") === "1";
+      })());
+
+      /* Opening the game is not choosing. If boot() writes the key again,
+         the next default change is dead on arrival exactly as this one was. */
+      check("opening the game never records a choice", (() => {
+        const src = fs.readFileSync(path.join(__dirname, "src/i18n.js"), "utf8");
+        const bootFn = (src.match(/function boot\(\)\{[\s\S]*?\n\}/) || [""])[0];
+        return bootFn.indexOf("setItem") < 0 &&
+               // ...and the default is a decision, not the device's opinion
+               !/navigator\.language/.test(src);
+      })());
+
+      LS.removeItem("patrol_lang"); LS.removeItem("patrol_lang_picked");
+      if(keep.lang !== null) LS.setItem("patrol_lang", keep.lang);
+      if(keep.picked !== null) LS.setItem("patrol_lang_picked", keep.picked);
+      I.setLang("en");                  // the pins below this read English
+    }
 
     /* Every player-facing table is registered. A new table that nobody binds
        is a screen that silently stays English forever. */

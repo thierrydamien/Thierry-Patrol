@@ -32,19 +32,46 @@
 "use strict";
 const SF = window.SF;
 const KEY = "patrol_lang";
+/*
+ * KEY means "a person chose this", and only setLang writes it. It used to be
+ * written by boot() as well, stamping whatever the device's locale happened to
+ * be - so the moment the default below changed, every install that had ever
+ * opened the game would have kept the old guess forever. PICKED marks the one
+ * migration that clears those stamped guesses, exactly once per device.
+ */
+const PICKED = "patrol_lang_picked";
 
 const packs = { en: null };            // en is the identity: no lookup needed
 let lang = "en";
 const listeners = [];
 
-/* What the device would like, used only when nothing has been chosen yet. */
+/*
+ * The language to open in. A person's own choice wins and is permanent;
+ * otherwise the game opens in French, whatever the device's locale says.
+ *
+ * This is a deliberate default, not a detection. The game is played by one
+ * French family, on borrowed phones and school laptops and a browser or two
+ * that report en-GB; asking every one of those devices what language it
+ * "would like" got the wrong answer more often than the right one. English
+ * is still one tap away in Settings, and that tap is remembered forever.
+ */
 function preferred(){
   try {
     const saved = window.localStorage.getItem(KEY);
     if(saved && (saved === "en" || packs[saved])) return saved;
-    const nav = (window.navigator && (navigator.language || navigator.userLanguage)) || "";
-    return nav.slice(0,2).toLowerCase() === "fr" ? "fr" : "en";
-  } catch(e){ return "en"; }
+  } catch(e){ /* private mode, no storage - fall through to the default */ }
+  return packs.fr ? "fr" : "en";      // never promise a pack that failed to load
+}
+
+/* One-time: drop the locale guess boot() used to stamp into KEY, so devices
+   that already opened the game get the new default too. A real choice made
+   after this runs is written by setLang and is never touched again. */
+function migrate(){
+  try {
+    if(window.localStorage.getItem(PICKED)) return;
+    window.localStorage.removeItem(KEY);
+    window.localStorage.setItem(PICKED, "1");
+  } catch(e){}
 }
 
 /** Registers a pack. `strings` is English -> translation. */
@@ -172,15 +199,18 @@ function setLang(code){
   if(code !== "en" && !packs[code]) return false;
   if(code === lang) return true;
   lang = code;
-  try { window.localStorage.setItem(KEY, code); } catch(e){}
+  // A person just chose. This is the only write to KEY, and it outlives boots.
+  try { window.localStorage.setItem(KEY, code);
+        window.localStorage.setItem(PICKED, "1"); } catch(e){}
   apply();
   listeners.forEach(fn => { try { fn(code); } catch(e){} });
   return true;
 }
 /** Runs once everything else has loaded and the tables exist. */
 function boot(){
+  migrate();
   lang = preferred();
-  try { window.localStorage.setItem(KEY, lang); } catch(e){}
+  // Note what boot does NOT do: write KEY. Opening the game is not choosing.
   apply();
 }
 function onChange(fn){ if(typeof fn === "function") listeners.push(fn); }

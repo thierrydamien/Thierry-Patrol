@@ -6,46 +6,46 @@
  *
  *       51  src/core.js
  *      221  src/i18n.js
- *      420  src/icons.js
- *     1024  src/haptics.js
- *     1203  src/audio.js
- *     1901  src/data/config.js
- *     2371  src/data/enemies.js
- *     3242  src/data/missions.js
- *     5280  src/wacky.js
- *     5496  src/data/comms.js
- *     5926  src/data/story.js
- *     6076  src/data/fr.js
- *     7435  src/profile.js
- *     8091  src/cloud.js
- *     8696  src/fx.js
- *     9809  src/input.js
- *    10303  src/entities.js
- *    11680  src/bossart.js
- *    12546  src/bosses.js
- *    13296  src/bossintro.js
- *    13419  src/rewind.js
- *    13950  src/finale.js
- *    14272  src/papadeath.js
- *    14594  src/backstage.js
- *    15545  src/sky29.js
- *    15791  src/mirrorduel.js
- *    16138  src/homecoming.js
- *    16338  src/prologue.js
- *    16817  src/systems.js
- *    17472  src/render.js
- *    22243  src/enemyart.js
- *    23195  src/insignia.js
- *    23440  src/skygen.js
- *    26841  src/shipart.js
- *    28041  src/paintjob.js
- *    28203  src/pilotart.js
- *    28298  src/comms.js
- *    28437  src/netcode.js
- *    28968  src/game.js
- *    33002  src/workshop.js
- *    33699  src/data/i18nbind.js
- *    33770  src/ui.js
+ *      450  src/icons.js
+ *     1054  src/haptics.js
+ *     1233  src/audio.js
+ *     1931  src/data/config.js
+ *     2401  src/data/enemies.js
+ *     3272  src/data/missions.js
+ *     5310  src/wacky.js
+ *     5526  src/data/comms.js
+ *     5956  src/data/story.js
+ *     6106  src/data/fr.js
+ *     7467  src/profile.js
+ *     8123  src/cloud.js
+ *     8728  src/fx.js
+ *     9841  src/input.js
+ *    10335  src/entities.js
+ *    11712  src/bossart.js
+ *    12578  src/bosses.js
+ *    13328  src/bossintro.js
+ *    13451  src/rewind.js
+ *    13982  src/finale.js
+ *    14304  src/papadeath.js
+ *    14626  src/backstage.js
+ *    15577  src/sky29.js
+ *    15823  src/mirrorduel.js
+ *    16170  src/homecoming.js
+ *    16370  src/prologue.js
+ *    16849  src/systems.js
+ *    17504  src/render.js
+ *    22275  src/enemyart.js
+ *    23227  src/insignia.js
+ *    23472  src/skygen.js
+ *    26873  src/shipart.js
+ *    28073  src/paintjob.js
+ *    28235  src/pilotart.js
+ *    28330  src/comms.js
+ *    28469  src/netcode.js
+ *    29000  src/game.js
+ *    33034  src/workshop.js
+ *    33731  src/data/i18nbind.js
+ *    33802  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -252,19 +252,46 @@ SF.core = { TAU, clamp, lerp, damp, dist2, len, rand, randInt, pick, chance, see
 "use strict";
 const SF = window.SF;
 const KEY = "patrol_lang";
+/*
+ * KEY means "a person chose this", and only setLang writes it. It used to be
+ * written by boot() as well, stamping whatever the device's locale happened to
+ * be - so the moment the default below changed, every install that had ever
+ * opened the game would have kept the old guess forever. PICKED marks the one
+ * migration that clears those stamped guesses, exactly once per device.
+ */
+const PICKED = "patrol_lang_picked";
 
 const packs = { en: null };            // en is the identity: no lookup needed
 let lang = "en";
 const listeners = [];
 
-/* What the device would like, used only when nothing has been chosen yet. */
+/*
+ * The language to open in. A person's own choice wins and is permanent;
+ * otherwise the game opens in French, whatever the device's locale says.
+ *
+ * This is a deliberate default, not a detection. The game is played by one
+ * French family, on borrowed phones and school laptops and a browser or two
+ * that report en-GB; asking every one of those devices what language it
+ * "would like" got the wrong answer more often than the right one. English
+ * is still one tap away in Settings, and that tap is remembered forever.
+ */
 function preferred(){
   try {
     const saved = window.localStorage.getItem(KEY);
     if(saved && (saved === "en" || packs[saved])) return saved;
-    const nav = (window.navigator && (navigator.language || navigator.userLanguage)) || "";
-    return nav.slice(0,2).toLowerCase() === "fr" ? "fr" : "en";
-  } catch(e){ return "en"; }
+  } catch(e){ /* private mode, no storage - fall through to the default */ }
+  return packs.fr ? "fr" : "en";      // never promise a pack that failed to load
+}
+
+/* One-time: drop the locale guess boot() used to stamp into KEY, so devices
+   that already opened the game get the new default too. A real choice made
+   after this runs is written by setLang and is never touched again. */
+function migrate(){
+  try {
+    if(window.localStorage.getItem(PICKED)) return;
+    window.localStorage.removeItem(KEY);
+    window.localStorage.setItem(PICKED, "1");
+  } catch(e){}
 }
 
 /** Registers a pack. `strings` is English -> translation. */
@@ -392,15 +419,18 @@ function setLang(code){
   if(code !== "en" && !packs[code]) return false;
   if(code === lang) return true;
   lang = code;
-  try { window.localStorage.setItem(KEY, code); } catch(e){}
+  // A person just chose. This is the only write to KEY, and it outlives boots.
+  try { window.localStorage.setItem(KEY, code);
+        window.localStorage.setItem(PICKED, "1"); } catch(e){}
   apply();
   listeners.forEach(fn => { try { fn(code); } catch(e){} });
   return true;
 }
 /** Runs once everything else has loaded and the tables exist. */
 function boot(){
+  migrate();
   lang = preferred();
-  try { window.localStorage.setItem(KEY, lang); } catch(e){}
+  // Note what boot does NOT do: write KEY. Opening the game is not choosing.
   apply();
 }
 function onChange(fn){ if(typeof fn === "function") listeners.push(fn); }
@@ -6107,6 +6137,8 @@ SF.i18n.register("fr", { name: "Français", s: {
    and the family - without the calque. */
 "A FAMILY SQUADRON": "EN ESCADRILLE, EN FAMILLE",
 "Who's flying today?": "Qui vole aujourd'hui ?",
+// On the pilot card, after the score: "12 ★ · 4500 record".
+"best": "record",
 "+ Add Pilot": "+ Ajouter un pilote",
 "Settings": "Réglages",
 "SETTINGS": "RÉGLAGES",
@@ -34422,7 +34454,7 @@ function renderProfiles(){
         <span class="pc-patch"></span></div>
       <div class="pname">${esc(p.callsign || p.name)}</div>
       <div class="prank" style="color:${rank.color}">${rank.name}</div>
-      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> best</div>
+      <div class="pstats"><b>${P.totalStars(p)}</b> ★ <i>·</i> <b>${p.highscore}</b> ${T("best")}</div>
     `;
     // In pair mode the first tap picks seat one and the second picks seat
     // two; the pilot already chosen is marked and cannot be picked twice.
@@ -40145,8 +40177,8 @@ qa(".mode-ico[data-glyph]").forEach(cv => {
   paintState();
 })();
 /*
- * LANGUAGE, LAST. i18n.boot() picks the saved choice (or the device's, on a
- * first run), rewrites the data tables and sweeps the markup - so it has to
+ * LANGUAGE, LAST. i18n.boot() picks the saved choice, or French if nobody has
+ * chosen, rewrites the data tables and sweeps the markup - so it has to
  * happen before the first render, or the pilot picker paints English and
  * then flickers.
  *
