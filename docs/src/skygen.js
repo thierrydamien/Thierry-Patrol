@@ -633,6 +633,23 @@ const SKIES = [
     lum:1.0, density:0.85, stars:0, bright:0,
     props:[ {k:"wild", x:0.50, y:0.50, dark:"#101c12"},
             {k:"ruin", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE DROWNED SKY (The Dive) - the other side of the crack, where the sky
+   * river landed as a sea. Appended at the end for the same reason the farms
+   * were: the Drawing Board's saves hold bare sky indices.
+   *
+   * The third surface in the game and the first one that is not land: the
+   * "ground seen from above" rule holds, but the ground is an ocean floor -
+   * sand, kelp, coral, one trench - under a water column the live layer
+   * (dive.js) fills with light shafts, fish and bubbles. The sunken flagship
+   * passes once, the way home's farm does.
+   */
+  { name:"The Drowned Sky", surface:true,
+    clouds:["#0f4a5e","#2aa5b8","#052030"], dust:"#03141c", star:"#d8fbff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"seabed",  x:0.50, y:0.50},
+            {k:"drowned", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -2534,6 +2551,378 @@ function drawRuin(ctx, W, H, p, rand){
   ctx.restore();
 }
 
+/* ---------------------------------------------------------
+   THE DROWNED SKY - an ocean floor from above.
+   ---------------------------------------------------------
+   Everything below is water-filtered on purpose: there is no local colour
+   down here, only what survives the column - teals, grey-greens, and the
+   coral's dimmed reds. The two loud things in the level (the spilled
+   starlight, the trench glow) are loud BECAUSE everything else obeys that.
+
+   One CURRENT crosses the whole floor, the way one dawn crossed the whole
+   farm: every kelp strand leans the same way and every sand ripple runs
+   square to it. A floor where each clump sways to itself reads as clip-art;
+   a floor that agrees on the water reads as a place. */
+
+const CURRENT = -0.42;                  // radians off vertical; everything agrees
+const SEA = {
+  water:"#04222e", deep:"#021820", light:"#0d4152",
+  sand:"#5d8a84", sandLit:"#7aa89b",
+  rock:"#0c333c", rockLit:"#1d5c60",
+  kelp:"#0d4034", kelpLit:"#1a6b4d",
+  coral:["#a35a6e","#b3854e","#6b5a96","#7fbdb2"],
+  glow:"#ffe9a8", trench:"#37d9bd",
+};
+
+/** One kelp strand: a ribbon leaning into the current, leaves alternating.
+ *  Shared by the tile (groves) and the once-layer (growth on the wreck). */
+function kelpStrand(ctx, x, y, len, rand){
+  const lean = CURRENT + (rand() - 0.5)*0.3;
+  const sway = 8 + rand()*14;
+  const tipX = x + Math.sin(lean)*len, tipY = y - Math.cos(lean)*len;
+  const midX = (x + tipX)/2 + Math.cos(lean)*sway, midY = (y + tipY)/2 + Math.sin(lean)*sway;
+  ctx.strokeStyle = SEA.kelp; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(midX, midY, tipX, tipY); ctx.stroke();
+  ctx.fillStyle = SEA.kelpLit;
+  for(let i = 1; i <= 4; i++){
+    const t = i/5, side = i % 2 ? 1 : -1, u = 1 - t;
+    const lx = u*u*x + 2*u*t*midX + t*t*tipX;
+    const ly = u*u*y + 2*u*t*midY + t*t*tipY;
+    ctx.beginPath(); ctx.ellipse(lx, ly, 4.5, 1.7, lean + side*0.7, 0, TAU); ctx.fill();
+  }
+}
+
+/** A pinch of spilled sky: soft gold glow with a four-point glint. The
+ *  campaign's own star shape, so a child recognises WHAT is on the floor. */
+function starGlint(ctx, x, y, r, a){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r*3.2);
+  g.addColorStop(0, rgba(SEA.glow, a));
+  g.addColorStop(1, rgba(SEA.glow, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r*3.2, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba("#fff6d8", Math.min(1, a*1.8));
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
+  ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+  ctx.stroke();
+}
+
+function drawSeabed(ctx, W, H, p, rand){
+  /* The floor, in the order the sea put it there: sand, then what the sand
+     buries, then what grows out of it. */
+  ctx.fillStyle = SEA.water;
+  ctx.fillRect(0, 0, W, H);
+
+  // Broad light wells and deeps - the mottling sunlight leaves on a bottom.
+  for(let i = 0; i < 11; i++){
+    const x = rand()*W, y = rand()*H, r = (0.16 + rand()*0.30)*W;
+    const col = i % 3 ? SEA.light : SEA.deep;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.30 : 0.34));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  // Sand flats: pale banks the rest of the furniture stands on.
+  const banks = [];
+  for(let i = 0; i < 6; i++){
+    const x = rand()*W, y = rand()*H, r = (0.10 + rand()*0.15)*W;
+    banks.push({ x, y, r });
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(SEA.sand, 0.30));
+      g.addColorStop(0.7, rgba(SEA.sand, 0.16));
+      g.addColorStop(1, rgba(SEA.sand, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // Ripples run square to the current, everywhere sand shows.
+  ctx.lineWidth = 1;
+  banks.forEach(b => {
+    for(let i = 0; i < 10; i++){
+      const a2 = rand()*TAU, d = Math.sqrt(rand())*b.r*0.8;
+      const cx = b.x + Math.cos(a2)*d, cy = b.y + Math.sin(a2)*d;
+      const len = 8 + rand()*18, wob = 2 + rand()*2;
+      ctx.strokeStyle = rgba(SEA.sandLit, 0.10 + rand()*0.08);
+      tiled(ctx, H, cy, yy => {
+        ctx.beginPath();
+        // square to the current: the ripple runs along CURRENT's normal
+        const nx = Math.cos(CURRENT), ny = Math.sin(CURRENT);
+        ctx.moveTo(cx - nx*len, yy - ny*len);
+        ctx.quadraticCurveTo(cx + ny*wob, yy - nx*wob, cx + nx*len, yy + ny*len);
+        ctx.stroke();
+      });
+    }
+  });
+
+  /*
+   * THE TRENCH - one, like the farm's through-lane, and for the same wrap
+   * reason: it runs the full height and leaves the top at the exact x it
+   * entered the bottom, so the seam never lands on a kink. It is the darkest
+   * thing in the game's darkest-bottomed level, and the spilled light pools
+   * along it - deep water finds the deepest place.
+   */
+  const tx0 = W*(0.62 + rand()*0.16), tW = W*0.055 + rand()*W*0.02;
+  const sway1 = (rand() - 0.5)*W*0.16, sway2 = (rand() - 0.5)*W*0.16;
+  // Both sway terms are whole periods of t, so position AND slope agree at
+  // the wrap - the farm's through-lane got this for free by being straight.
+  const edge = t => tx0 + Math.sin(t*TAU)*sway1 + Math.sin(t*TAU*2)*sway2*0.5;
+  ctx.beginPath();
+  for(let i = 0; i <= 24; i++){ const t = i/24; const x = edge(t) - tW/2; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  for(let i = 24; i >= 0; i--){ const t = i/24; ctx.lineTo(edge(t) + tW/2, t*H); }
+  ctx.closePath();
+  const tg = ctx.createLinearGradient(tx0 - tW, 0, tx0 + tW, 0);
+  tg.addColorStop(0, rgba(SEA.deep, 0.0));
+  tg.addColorStop(0.25, "#010c12");
+  tg.addColorStop(0.75, "#010c12");
+  tg.addColorStop(1, rgba(SEA.deep, 0.0));
+  ctx.fillStyle = tg; ctx.fill();
+  // The rim catches what light is left...
+  ctx.strokeStyle = rgba(SEA.trench, 0.18); ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for(let i = 0; i <= 24; i++){ const t = i/24; const x = edge(t) - tW/2; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  ctx.stroke();
+  // ...and the drowned stars pool in the dark below it.
+  for(let i = 0; i < 7; i++){
+    const t = rand(); const gx = edge(t) + (rand() - 0.5)*tW*0.5;
+    tiled(ctx, H, t*H, yy => starGlint(ctx, gx, yy, 1.6 + rand()*1.4, 0.20 + rand()*0.14));
+  }
+
+  // Rock gardens: rounded stones, lit from the surface like everything else.
+  for(let c = 0; c < 7; c++){
+    const cx = rand()*W, cy = rand()*H, n = 4 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 4 + rand()*9;
+      tiled(ctx, H, y, yy => {
+        ctx.fillStyle = SEA.rock;
+        ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.8, rand()*TAU, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(SEA.rockLit, 0.7);
+        ctx.beginPath(); ctx.ellipse(x - r*0.2, yy - r*0.3, r*0.55, r*0.35, 0, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  // Kelp groves: every strand leans into the same current.
+  for(let g = 0; g < 7; g++){
+    const gx = rand()*W, gy = rand()*H, n = 5 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = gx + (rand() - 0.5)*W*0.09, y = gy + (rand() - 0.5)*W*0.07;
+      const len = 26 + rand()*30;
+      tiled(ctx, H, y, yy => kelpStrand(ctx, x, yy, len, rngFor(g*100 + i)));
+    }
+  }
+
+  // Coral heads: the only warm colour on the floor, and even it is dimmed.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.08, y = cy + (rand() - 0.5)*W*0.06;
+      const col = SEA.coral[Math.floor(rand()*SEA.coral.length)];
+      const kind = rand();
+      tiled(ctx, H, y, yy => {
+        if(kind < 0.4){
+          // brain coral: a mound with wobbled growth rings
+          const r = 6 + rand()*8;
+          ctx.fillStyle = rgba(col, 0.7);
+          ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+          ctx.strokeStyle = rgba("#031a20", 0.35); ctx.lineWidth = 1;
+          for(let q = 1; q <= 2; q++){
+            ctx.beginPath();
+            for(let i2 = 0; i2 <= 16; i2++){
+              const a3 = (i2/16)*TAU;
+              const rr = r*(q/3 + 0.12) + Math.sin(a3*3 + q)*1.1;
+              const px2 = x + Math.cos(a3)*rr, py2 = yy + Math.sin(a3)*rr;
+              i2 ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2);
+            }
+            ctx.closePath(); ctx.stroke();
+          }
+        } else if(kind < 0.75){
+          // staghorn: short forked branches reaching into the current
+          ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = 2; ctx.lineCap = "round";
+          for(let b = 0; b < 3; b++){
+            const a4 = CURRENT + (b - 1)*0.55 + (rand() - 0.5)*0.2, l2 = 8 + rand()*9;
+            const ex = x + Math.sin(a4)*l2, ey = yy - Math.cos(a4)*l2;
+            ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(ex, ey);
+            ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.sin(a4 + 0.5)*4, ey - Math.cos(a4 + 0.5)*4);
+            ctx.stroke();
+          }
+        } else {
+          // fan coral: a webbed arc, face square to the current
+          const r = 7 + rand()*7;
+          ctx.strokeStyle = rgba(col, 0.8); ctx.lineWidth = 1.2;
+          for(let b = 0; b < 5; b++){
+            const a5 = CURRENT - 0.8 + (b/4)*1.6;
+            ctx.beginPath(); ctx.moveTo(x, yy);
+            ctx.lineTo(x + Math.sin(a5)*r, yy - Math.cos(a5)*r);
+            ctx.stroke();
+          }
+          ctx.beginPath(); ctx.arc(x, yy, r*0.75, CURRENT - Math.PI/2 - 0.8, CURRENT - Math.PI/2 + 0.8); ctx.stroke();
+        }
+      });
+    }
+  }
+
+  // Loose spilled light, thinning away from the trench.
+  for(let i = 0; i < 8; i++){
+    const x = rand()*W, y = rand()*H;
+    tiled(ctx, H, y, yy => starGlint(ctx, x, yy, 1.2 + rand(), 0.10 + rand()*0.08));
+  }
+
+  // Sediment: the fine grain that stops the floor reading as flat paint.
+  for(let i = 0; i < 260; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? SEA.sandLit : SEA.deep, 0.05 + rand()*0.07);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE FLAGSHIP - the once-layer. One of theirs, down long enough for the
+ * reef to claim it, cracked open across the middle with the stolen light
+ * still spilling out of the hold. Top-down like everything on a surface,
+ * with its own sand apron so it sits ON the floor wherever the scroll has
+ * carried the tile - the apron is what spares the two bakes having to agree
+ * the way the farm and its fields do.
+ */
+function drawDrowned(ctx, W, H, p, rand){
+  const cx = W*0.40, cy = H*0.52;
+  const ang = -0.38 + (rand() - 0.5)*0.1;       // came down mid-turn; nothing sinks square
+  const L = W*0.62, B = L*0.21;                 // length and beam
+
+  // The sand it threw up when it hit, and the shadow it throws now.
+  const apron = ctx.createRadialGradient(cx, cy, 0, cx, cy, L*0.72);
+  apron.addColorStop(0, rgba(SEA.sand, 0.34));
+  apron.addColorStop(0.55, rgba(SEA.sand, 0.16));
+  apron.addColorStop(1, rgba(SEA.sand, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.ellipse(cx, cy, L*0.72, L*0.5, ang, 0, TAU); ctx.fill();
+
+  const hull = "#1a3038", plate = "#24424c", plateLit = "#33565e", scar = "#0b1a20";
+
+  /** One section of hull in local coords: x along the keel, y across it. */
+  const section = (x0, x1, jagAt, taper) => {
+    ctx.beginPath();
+    const nose = x1 - (x1 - x0)*(taper || 0.18);
+    ctx.moveTo(x0, -B*0.5);
+    ctx.lineTo(nose, -B*0.5); ctx.quadraticCurveTo(x1, -B*0.15, x1, 0);
+    ctx.quadraticCurveTo(x1, B*0.15, nose, B*0.5);
+    ctx.lineTo(x0, B*0.5);
+    if(jagAt){ // the break: a torn edge, not a cut
+      for(let i = 0; i <= 6; i++)
+        ctx.lineTo(x0 + (i % 2 ? -7 : 4), B*0.5 - (B/6)*i - (i % 2 ? 4 : 0));
+    }
+    ctx.closePath();
+  };
+
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(ang);
+
+  // Shadow under both sections, sunk-side.
+  ctx.fillStyle = rgba("#01090d", 0.5);
+  ctx.beginPath(); ctx.ellipse(-L*0.12, B*0.42, L*0.46, B*0.5, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(L*0.36, B*0.44, L*0.17, B*0.36, 0, 0, TAU); ctx.fill();
+
+  // STERN SECTION - two thirds of her, listing into the sand.
+  section(-L*0.5, L*0.12, true);
+  ctx.fillStyle = hull; ctx.fill();
+  ctx.strokeStyle = scar; ctx.lineWidth = 2; ctx.stroke();
+  // deck plates
+  ctx.fillStyle = plate;
+  ctx.fillRect(-L*0.47, -B*0.34, L*0.55, B*0.68);
+  ctx.strokeStyle = rgba(scar, 0.8); ctx.lineWidth = 1;
+  for(let i = 1; i < 6; i++){
+    const x = -L*0.47 + (L*0.55)*(i/6);
+    ctx.beginPath(); ctx.moveTo(x, -B*0.34); ctx.lineTo(x, B*0.34); ctx.stroke();
+  }
+  // the centreline stripe their carriers wear, faded
+  ctx.fillStyle = rgba("#c8d4d8", 0.13);
+  ctx.fillRect(-L*0.47, -B*0.045, L*0.55, B*0.09);
+  // the island tower, knocked loose, leaning off-axis with its own shadow
+  ctx.save();
+  ctx.translate(-L*0.18, -B*0.16); ctx.rotate(0.34);
+  ctx.fillStyle = rgba("#01090d", 0.45); ctx.fillRect(-9, 4, 34, 14);
+  ctx.fillStyle = plateLit; ctx.fillRect(-11, -8, 30, 15);
+  ctx.fillStyle = scar; ctx.fillRect(-11, -8, 30, 4);
+  // three portholes still warm - somebody's lights outlasted the ship
+  ctx.fillStyle = "#ffd9a0";
+  for(let i = 0; i < 3; i++){ ctx.beginPath(); ctx.arc(-4 + i*8, 1.5, 1.4, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  // sand drifted over the stern quarter - the sea is halfway through burying her
+  const drift = ctx.createLinearGradient(-L*0.5, 0, -L*0.28, 0);
+  drift.addColorStop(0, rgba(SEA.sand, 0.55));
+  drift.addColorStop(1, rgba(SEA.sand, 0));
+  ctx.fillStyle = drift;
+  section(-L*0.5, L*0.12, false); ctx.fill();
+
+  // BOW SECTION - snapped clean off, a length ahead and turned further.
+  ctx.save();
+  ctx.translate(L*0.36, B*0.10); ctx.rotate(0.24);
+  section(-L*0.12, L*0.16, true, 0.42);
+  ctx.fillStyle = hull; ctx.fill();
+  ctx.strokeStyle = scar; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = plate; ctx.fillRect(-L*0.10, -B*0.30, L*0.14, B*0.60);
+  ctx.strokeStyle = rgba(scar, 0.8); ctx.lineWidth = 1;
+  for(let i = 1; i < 3; i++){
+    const x = -L*0.10 + (L*0.14)*(i/3);
+    ctx.beginPath(); ctx.moveTo(x, -B*0.30); ctx.lineTo(x, B*0.30); ctx.stroke();
+  }
+  // the stripe carries across the break - one ship, told in two pieces
+  ctx.fillStyle = rgba("#c8d4d8", 0.13);
+  ctx.fillRect(-L*0.10, -B*0.045, L*0.17, B*0.09);
+  // the anchor she dropped too late: chain paying out to a half-buried fluke
+  ctx.strokeStyle = rgba("#0e2228", 0.9); ctx.lineWidth = 2;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(L*0.15, 2); ctx.quadraticCurveTo(L*0.26, B*0.5, L*0.30, B*0.9); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#0e2228";
+  ctx.beginPath(); ctx.arc(L*0.30, B*0.9, 3.5, Math.PI*0.1, Math.PI*1.1); ctx.fill();
+  ctx.restore();
+
+  // THE BREAK, and what it spilled: the hold was full of the river's light.
+  const gx = L*0.20, gy = B*0.06;
+  const burst = ctx.createRadialGradient(gx, gy, 0, gx, gy, L*0.24);
+  burst.addColorStop(0, rgba(SEA.glow, 0.65));
+  burst.addColorStop(0.4, rgba(SEA.glow, 0.24));
+  burst.addColorStop(1, rgba(SEA.glow, 0));
+  ctx.fillStyle = burst;
+  ctx.beginPath(); ctx.arc(gx, gy, L*0.24, 0, TAU); ctx.fill();
+  // debris between the halves, silhouetted against the spill
+  ctx.fillStyle = scar;
+  for(let i = 0; i < 7; i++){
+    const dx = gx + (rand() - 0.5)*L*0.16, dy = gy + (rand() - 0.5)*B*0.8;
+    ctx.save(); ctx.translate(dx, dy); ctx.rotate(rand()*TAU);
+    ctx.fillRect(-3 - rand()*3, -1.5, 6 + rand()*6, 3);
+    ctx.restore();
+  }
+  // the light itself, leaking out in a trail the current carries
+  for(let i = 0; i < 9; i++){
+    const t = i/9;
+    const sx = gx + Math.sin(CURRENT - ang)*t*L*0.34 + (rand() - 0.5)*14;
+    const sy = gy - Math.cos(CURRENT - ang)*t*L*0.34 + (rand() - 0.5)*14;
+    starGlint(ctx, sx, sy, 1.4 + (1 - t)*1.6, 0.34*(1 - t) + 0.10);
+  }
+
+  // The reef is claiming her: coral crusts and a few kelp strands on the hull.
+  for(let i = 0; i < 8; i++){
+    const x = -L*0.46 + rand()*L*0.5, y = (rand() < 0.5 ? -1 : 1)*B*(0.30 + rand()*0.18);
+    const col = SEA.coral[Math.floor(rand()*SEA.coral.length)];
+    ctx.fillStyle = rgba(col, 0.75);
+    for(let q = 0; q < 4; q++){
+      ctx.beginPath(); ctx.arc(x + (rand() - 0.5)*8, y + (rand() - 0.5)*5, 1.6 + rand()*2.2, 0, TAU); ctx.fill();
+    }
+  }
+  for(let i = 0; i < 4; i++)
+    kelpStrand(ctx, -L*0.42 + rand()*L*0.36, (rand() < 0.5 ? -1 : 1)*B*0.5, 20 + rand()*16, rngFor(700 + i));
+
+  ctx.restore();
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -2928,6 +3317,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "farm") drawFarm(px, W, H, pr, rand);
     else if(pr.k === "wild") drawWild(px, W, H, pr, rand);
     else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
+    else if(pr.k === "seabed") drawSeabed(px, W, H, pr, rand);
+    else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
   });
 }
 

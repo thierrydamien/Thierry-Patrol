@@ -722,6 +722,9 @@ class World {
       const vx = pattern[i];
       const b = this.bullets.spawn();
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
+      // Underwater everything is slower - yours and theirs alike, so the
+      // trade is fair. The mirror volley below copies these, already slowed.
+      if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
@@ -735,6 +738,7 @@ class World {
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
+      if(this.mods.water) b.vy *= 0.8;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
@@ -852,6 +856,8 @@ class World {
     }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
+    // The water slows their fire exactly as much as it slows yours.
+    if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
     // BUBBLE SHOTS: their fire drifts in at just over a third speed and wobbles
     // on the way. Strictly easier - which is the Wacky Sky's whole contract -
     // and readable in the first second, because a bubble does not look like a

@@ -350,6 +350,23 @@ function migrate(p){
     if((p.reached || 0) >= 22) p.reached += 1;
     p.missionsVer = 9;
   }
+  /*
+   * v10: The Dive landed as mission 34 - the sea past the crack, the third
+   * surface - pushing the old 34-41 up one. Same single-offset shape as v9.
+   *
+   * The hand-written mission ids all sit BELOW the insertion this time
+   * (tunes: ghost 23, apex 28, nova 32; devourerDown 32), so uniquely for
+   * these migrations nothing outside this block has to move - checked by
+   * hand and pinned in the suite rather than assumed.
+   */
+  if((p.missionsVer || 1) < 10){
+    for(let id = 41; id >= 34; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 34) p.lastMission += 1;
+    if((p.reached || 0) >= 34) p.reached += 1;
+    p.missionsVer = 10;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

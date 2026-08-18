@@ -4,48 +4,49 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       51  src/core.js
- *      221  src/i18n.js
- *      450  src/icons.js
- *     1054  src/haptics.js
- *     1233  src/audio.js
- *     1931  src/data/config.js
- *     2401  src/data/enemies.js
- *     3272  src/data/missions.js
- *     5310  src/wacky.js
- *     5526  src/data/comms.js
- *     5956  src/data/story.js
- *     6106  src/data/fr.js
- *     7467  src/profile.js
- *     8123  src/cloud.js
- *     8728  src/fx.js
- *     9841  src/input.js
- *    10335  src/entities.js
- *    11712  src/bossart.js
- *    12578  src/bosses.js
- *    13328  src/bossintro.js
- *    13451  src/rewind.js
- *    13982  src/finale.js
- *    14304  src/papadeath.js
- *    14626  src/backstage.js
- *    15577  src/sky29.js
- *    15823  src/mirrorduel.js
- *    16170  src/homecoming.js
- *    16370  src/prologue.js
- *    16849  src/systems.js
- *    17504  src/render.js
- *    22275  src/enemyart.js
- *    23227  src/insignia.js
- *    23472  src/skygen.js
- *    26873  src/shipart.js
- *    28073  src/paintjob.js
- *    28235  src/pilotart.js
- *    28330  src/comms.js
- *    28469  src/netcode.js
- *    29000  src/game.js
- *    33034  src/workshop.js
- *    33731  src/data/i18nbind.js
- *    33802  src/ui.js
+ *       52  src/core.js
+ *      222  src/i18n.js
+ *      451  src/icons.js
+ *     1055  src/haptics.js
+ *     1234  src/audio.js
+ *     1932  src/data/config.js
+ *     2402  src/data/enemies.js
+ *     3273  src/data/missions.js
+ *     5356  src/wacky.js
+ *     5572  src/data/comms.js
+ *     6007  src/data/story.js
+ *     6169  src/data/fr.js
+ *     7552  src/profile.js
+ *     8225  src/cloud.js
+ *     8830  src/fx.js
+ *     9943  src/input.js
+ *    10437  src/entities.js
+ *    11820  src/bossart.js
+ *    12686  src/bosses.js
+ *    13436  src/bossintro.js
+ *    13559  src/rewind.js
+ *    14090  src/finale.js
+ *    14412  src/papadeath.js
+ *    14734  src/backstage.js
+ *    15685  src/sky29.js
+ *    15931  src/dive.js
+ *    16181  src/mirrorduel.js
+ *    16528  src/homecoming.js
+ *    16728  src/prologue.js
+ *    17207  src/systems.js
+ *    17862  src/render.js
+ *    22633  src/enemyart.js
+ *    23585  src/insignia.js
+ *    23830  src/skygen.js
+ *    27622  src/shipart.js
+ *    28822  src/paintjob.js
+ *    28984  src/pilotart.js
+ *    29079  src/comms.js
+ *    29218  src/netcode.js
+ *    29749  src/game.js
+ *    33788  src/workshop.js
+ *    34485  src/data/i18nbind.js
+ *    34556  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -4940,7 +4941,52 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:34, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE DIVE - the first stop past the crack, and the answer to the
+     * question The Sky River leaves hanging: where does a draining sky GO?
+     * Down. On the other side it landed as a sea, the drowned light pooled
+     * on the bottom, and their dredgers got there first. The rule act four
+     * breaks here is the medium itself - this stop is not flown, it is swum:
+     * the water slows every shot (mods.water, both sides, same 0.8), the
+     * floor is skygen's third surface, and dive.js fills the column with
+     * rays, fish and the game's only upward-travelling bubbles.
+     *
+     * The thieves ARE the dredgers - the coins they steal are the drowned
+     * light the brief is about, which is why coinRush is the star here.
+     */
+    id:34, sky:42, name:"The Dive", subtitle:"The sky fell in the sea",
+    brief:"The river poured through the crack and landed HERE, {you} - a whole sea with our sky sunk inside it. Every star it swallowed is still glowing on the bottom... and their dredgers are already scooping them up. Dive. Take back every coin of light they touch.",
+    goal:"Take back the drowned light!",
+    dive:true, mods:{ water:true },
+    face:"balloon",
+    waves: [
+      w(1,   "balloon",  6, "arc"),            // jellyfish first: the sea says hello
+      w(9,   "weaver",   7, "sides"),
+      w(17,  "swooper",  6, "pincer"),
+      w(25,  "limpet",   4, "scatter"),        // barnacles want your hull
+      w(28,  "thief",    2, "column"),         // the dredgers show themselves
+      w(34,  "mine",     5, "scatter"),
+      w(40,  "carrier",  1, "column"),
+      w(46,  "balloon",  7, "vee"),
+      w(53,  "splitter", 4, "scatter"),
+      w(59,  "hive",     2, "sides"),
+      w(65,  "thief",    2, "sides"),
+      w(70,  "weaver",   9, "twinColumns"),
+      w(77,  "limpet",   6, "sides"),
+      w(83,  "mine",     6, "scatter"),
+      w(89,  "swooper",  8, "arc", { elite: 2 }),
+      w(95,  "carrier",  1, "column"),
+      w(99,  "mender",   2, "column"),
+      w(103, "thief",    3, "column"),         // the last dredge is the greedy one
+      w(107, "splitter", 6, "pincer", { elite: 2 }),
+      w(113, "brute",    5, "twinColumns", { elite: 1 }),
+      w(119, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(126, "balloon",  9, "wall"),
+    ],
+    objectives: ["complete","coinRush","rescueAll"],
+  },
+  {
+    id:35, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -4983,7 +5029,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:35, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:36, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -5015,7 +5061,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:36, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:37, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -5057,7 +5103,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:37, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:38, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -5092,7 +5138,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:38, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:39, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5124,7 +5170,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:39, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:40, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5163,7 +5209,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:40, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:41, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5191,7 +5237,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:41, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:42, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -5903,6 +5949,11 @@ const COMMS = {
     "No cannons this run, {you}. Slip through quiet and don't get touched.",
     "The crew's working on the guns. Until then: dodge everything.",
   ]},
+  diveStart: { speaker:"control", cooldown:999, lines:[
+    "Guns work fine down here, {you}. Breathing is the hard part - good thing ships don't.",
+    "Mind the water, {you} - every shot swims slower. Theirs too.",
+    "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",
@@ -6086,6 +6137,18 @@ const STORY = {
   },
 
   /* The TRUE ending now: the workshop is beaten, the sky is painted. */
+  /* The pre-flight page for The Dive: read every time the stop is opened,
+     like every pre-flight page (see ui.js PREFLIGHT_STORY). */
+  theDive: {
+    title: "THE DROWNED SKY",
+    panels: [
+      { art:"seafall", text:"The river didn't stop at the crack, {you}. It fell through - and on the other side, a whole sea caught it. Every star it swallowed is still down there, glowing on the bottom." },
+      { art:"dredger", text:"Their dredgers found it first, and they're hauling our sky up coin by coin. So today the patrol doesn't fly - it DIVES. The water slows every shot down there... theirs just as much as yours." },
+      { art:"lamps",   text:"One more thing, {you}. There's an old wreck on the floor - it went down full of the light they stole, and three of its lamps are somehow still burning. Nobody knows who's keeping them lit." },
+    ],
+    button:"DIVE",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [
@@ -6723,6 +6786,28 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Their Treasury": "Leur Trésor",
 "Shake Them Off": "Décroche-les !",
 "Second Harvest": "Seconde Récolte",
+
+/* ----- The Dive (mission 34) ----- */
+"The Dive": "La Plongée",
+"The sky fell in the sea": "le ciel est tombé dans la mer",
+"The river poured through the crack and landed HERE, {you} - a whole sea with our sky sunk inside it. Every star it swallowed is still glowing on the bottom... and their dredgers are already scooping them up. Dive. Take back every coin of light they touch.":
+  "La rivière a traversé la fissure et elle est tombée ICI, {you} — une mer entière, avec notre ciel englouti dedans. Chaque étoile avalée brille encore au fond... et leurs dragueurs sont déjà en train de les ramasser. Plonge. Reprends-leur chaque pièce de lumière.",
+"Take back the drowned light!": "Reprends la lumière engloutie !",
+"The Drowned Sky": "Le Ciel Englouti",
+"THE DROWNED SKY": "LE CIEL ENGLOUTI",
+"The river didn't stop at the crack, {you}. It fell through - and on the other side, a whole sea caught it. Every star it swallowed is still down there, glowing on the bottom.":
+  "La rivière ne s'est pas arrêtée à la fissure, {you}. Elle est tombée de l'autre côté — et là, une mer entière l'a recueillie. Chaque étoile qu'elle a avalée est encore au fond, et elle brille toujours.",
+"Their dredgers found it first, and they're hauling our sky up coin by coin. So today the patrol doesn't fly - it DIVES. The water slows every shot down there... theirs just as much as yours.":
+  "Leurs dragueurs l'ont trouvée les premiers, et ils remontent notre ciel pièce par pièce. Alors aujourd'hui, la patrouille ne vole pas : elle PLONGE. Sous l'eau, chaque tir est ralenti... les leurs autant que les tiens.",
+"One more thing, {you}. There's an old wreck on the floor - it went down full of the light they stole, and three of its lamps are somehow still burning. Nobody knows who's keeping them lit.":
+  "Encore une chose, {you}. Il y a une vieille épave au fond — elle a coulé pleine de la lumière qu'ils avaient volée, et trois de ses lampes brûlent encore. Personne ne sait qui les garde allumées.",
+"DIVE": "PLONGE !",
+"Guns work fine down here, {you}. Breathing is the hard part - good thing ships don't.":
+  "Les canons marchent très bien ici, {you}. C'est respirer qui est difficile — heureusement, les vaisseaux ne respirent pas.",
+"Mind the water, {you} - every shot swims slower. Theirs too.":
+  "Attention à l'eau, {you} — chaque tir nage plus lentement. Les leurs aussi.",
+"The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.":
+  "Tout le ciel est couché au fond de cette mer, {you}. Ramène-le à la maison, pièce par pièce.",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
@@ -7815,6 +7900,23 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 22) p.lastMission += 1;
     if((p.reached || 0) >= 22) p.reached += 1;
     p.missionsVer = 9;
+  }
+  /*
+   * v10: The Dive landed as mission 34 - the sea past the crack, the third
+   * surface - pushing the old 34-41 up one. Same single-offset shape as v9.
+   *
+   * The hand-written mission ids all sit BELOW the insertion this time
+   * (tunes: ghost 23, apex 28, nova 32; devourerDown 32), so uniquely for
+   * these migrations nothing outside this block has to move - checked by
+   * hand and pinned in the suite rather than assumed.
+   */
+  if((p.missionsVer || 1) < 10){
+    for(let id = 41; id >= 34; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 34) p.lastMission += 1;
+    if((p.reached || 0) >= 34) p.reached += 1;
+    p.missionsVer = 10;
   }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
@@ -11056,6 +11158,9 @@ class World {
       const vx = pattern[i];
       const b = this.bullets.spawn();
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
+      // Underwater everything is slower - yours and theirs alike, so the
+      // trade is fair. The mirror volley below copies these, already slowed.
+      if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
@@ -11069,6 +11174,7 @@ class World {
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
+      if(this.mods.water) b.vy *= 0.8;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
@@ -11186,6 +11292,8 @@ class World {
     }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
+    // The water slows their fire exactly as much as it slows yours.
+    if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
     // BUBBLE SHOTS: their fire drifts in at just over a third speed and wobbles
     // on the way. Strictly easier - which is the Wacky Sky's whole contract -
     // and readable in the first second, because a bubble does not look like a
@@ -15816,6 +15924,256 @@ function drawOver(ctx, timeMs){
 
 SF.sky29 = { _state: () => S,
              reset, begin, active, readyToClear, splash, update, drawSky, drawOver };
+})();
+
+
+;/* ===== src/dive.js ===== */
+/*
+ * THE DIVE - the water column.
+ *
+ * The Drowned Sky's backdrop (skygen.js) is the ocean FLOOR; this module is
+ * the water between the floor and the camera, and it is the reason the level
+ * feels submerged rather than merely teal: light shafts swinging slowly from
+ * the surface, caustic shimmer drifting over everything, schools of fish that
+ * get out of the squadron's way - and bubbles. The bubbles matter most: they
+ * are the one thing in the whole game that travels UP the screen while the
+ * world scrolls down, and that single reversed motion is what convinces the
+ * eye there is water here.
+ *
+ * Same shape as sky29.js: a mission flag (`dive`) plus hooks game.js already
+ * knows how to call - begin/update, one draw pass under the world (drawSky)
+ * and one over it (drawOver). All state lives in S; reset() clears it.
+ *
+ * Everything here is ambience. Nothing collides, nothing scores, and the
+ * fish are cowards by design - they flee the fight, they never join it.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+
+let S = null;
+
+/*
+ * THE WATER COLUMN OVERLAY - one canvas, one blit.
+ *
+ * Rays, caustics and the depth vignette are all full-screen washes, and a
+ * software rasterizer (headless test rigs, cheap tablets) pays for every
+ * full-screen composite separately: drawn naively they took the frame rate
+ * to HALF of what neighbouring missions manage. So all three render into a
+ * single half-resolution canvas, repainted ~11 times a second - water light
+ * moves slowly, nobody can see a 90ms-old sunbeam - and the frame pays one
+ * stretched drawImage. The stretch even helps: upscaling softens the light
+ * exactly the way water does.
+ *
+ * The whole overlay sits OVER the fight (drawOver), which is also where the
+ * physics puts it: you are looking THROUGH lit water at the ships, so the
+ * shafts, the dapple and the deep-blue edges all belong in front.
+ */
+let column = null, colW = 0, colH = 0, colAt = -1;
+
+function paintColumn(VW, VH){
+  const K = 0.5, w = Math.max(1, Math.round(VW*K)), h = Math.max(1, Math.round(VH*K));
+  if(!column || colW !== w || colH !== h){
+    column = document.createElement("canvas");
+    column.width = w; column.height = h;
+    colW = w; colH = h;
+  }
+  const c = column.getContext("2d");
+  c.clearRect(0, 0, w, h);
+
+  // Caustic shimmer: soft bright patches sliding over everything.
+  for(const ca of S.caustics){
+    const a = 0.05 + Math.sin(S.t*0.8 + ca.ph)*0.02;
+    const g = c.createRadialGradient(ca.x*K, ca.y*K, 0, ca.x*K, ca.y*K, ca.r*K);
+    g.addColorStop(0, "rgba(140,220,235," + a.toFixed(3) + ")");
+    g.addColorStop(1, "rgba(140,220,235,0)");
+    c.fillStyle = g;
+    c.beginPath(); c.arc(ca.x*K, ca.y*K, ca.r*K, 0, TAU); c.fill();
+  }
+
+  // God rays: four shafts from the surface, swinging like the water is.
+  for(let i = 0; i < 4; i++){
+    const x0 = w*(0.14 + i*0.24);
+    const tilt = Math.sin(S.t*0.13 + i*1.7)*0.16 + 0.10;
+    const w0 = w*(0.045 + (i % 2)*0.02);
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgba(150,230,240,0.13)");
+    g.addColorStop(0.75, "rgba(150,230,240,0.025)");
+    g.addColorStop(1, "rgba(150,230,240,0)");
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(x0 - w0, 0);
+    c.lineTo(x0 + w0, 0);
+    c.lineTo(x0 + w0*2.6 + tilt*h, h);
+    c.lineTo(x0 - w0*2.6 + tilt*h, h);
+    c.closePath(); c.fill();
+  }
+
+  // The depth vignette goes on LAST, over the rays - the water really is
+  // thicker toward the edges of what you can see, sunbeams included.
+  const g = c.createRadialGradient(w/2, h*0.42, h*0.30, w/2, h*0.42, h*0.78);
+  g.addColorStop(0, "rgba(2,16,26,0)");
+  g.addColorStop(1, "rgba(2,16,26,0.34)");
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+}
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, bubbles: [], schools: [], caustics: [], vent: 0, thrust: 0 };
+  for(let i = 0; i < 3; i++) S.schools.push(newSchool(W, H, i, true));
+  for(let i = 0; i < 6; i++)
+    S.caustics.push({ x: Math.random()*W, y: Math.random()*H,
+                      r: 60 + Math.random()*80, vx: (Math.random() - 0.5)*14,
+                      vy: (Math.random() - 0.5)*8, ph: Math.random()*TAU });
+}
+
+function active(){ return !!S; }
+
+/* ------------------------------------------------------------------ */
+/*  FISH                                                                */
+/* ------------------------------------------------------------------ */
+
+function newSchool(W, H, id, anywhere){
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const n = 8 + Math.floor(Math.random()*6);
+  const fish = [];
+  for(let i = 0; i < n; i++)
+    fish.push({ ox: (Math.random() - 0.5)*70, oy: (Math.random() - 0.5)*40,
+                ph: Math.random()*TAU, s: 0.8 + Math.random()*0.5 });
+  return {
+    id, dir, fish,
+    x: anywhere ? Math.random()*W : (dir > 0 ? -70 : W + 70),
+    y: H*(0.15 + Math.random()*0.6),
+    speed: 42 + Math.random()*26,
+    drift: 0,                     // vertical lean, mostly from dodging pilots
+  };
+}
+
+function updateSchool(sc, dt, W, H, pilots){
+  // The school flees any pilot inside its comfort circle; otherwise the
+  // vertical lean relaxes away and it settles back to level swimming.
+  let flee = 0;
+  for(const p of pilots){
+    if(!p) continue;
+    const dx = sc.x - p.x, dy = sc.y - p.y;
+    const d2 = dx*dx + dy*dy;
+    if(d2 < 130*130) flee += (dy >= 0 ? 1 : -1) * (1 - Math.sqrt(d2)/130);
+  }
+  sc.drift += (flee*90 - sc.drift) * Math.min(1, dt*3);
+  sc.x += sc.dir * sc.speed * dt;
+  sc.y += (sc.drift + Math.sin(sc.id*3 + performanceT(sc)) * 6) * dt;
+  sc.y = Math.max(H*0.08, Math.min(H*0.9, sc.y));
+  return sc.dir > 0 ? sc.x > W + 90 : sc.x < -90;
+}
+/* The school's own slow bob rides the module clock. */
+function performanceT(sc){ return S ? S.t*0.6 + sc.id : 0; }
+
+/* ------------------------------------------------------------------ */
+/*  UPDATE                                                              */
+/* ------------------------------------------------------------------ */
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+  const pilots = world.players || (world.player ? [world.player] : []);
+
+  for(let i = 0; i < S.schools.length; i++)
+    if(updateSchool(S.schools[i], dt, W, H, pilots))
+      S.schools[i] = newSchool(W, H, S.schools[i].id, false);
+
+  // Ambient bubbles from the floor...
+  S.vent -= dt;
+  if(S.vent <= 0 && S.bubbles.length < 40){
+    S.vent = 0.16 + Math.random()*0.2;
+    S.bubbles.push({ x: Math.random()*W, y: H + 8,
+                     r: 1.5 + Math.random()*3,
+                     vy: 36 + Math.random()*48, ph: Math.random()*TAU });
+  }
+  // ...and a thin stream off every thruster, because the ships breathe too.
+  S.thrust -= dt;
+  if(S.thrust <= 0 && S.bubbles.length < 46){
+    S.thrust = 0.32;
+    for(const p of pilots){
+      if(!p) continue;
+      S.bubbles.push({ x: p.x + (Math.random() - 0.5)*8, y: p.y + 16,
+                       r: 1 + Math.random()*1.6,
+                       vy: 60 + Math.random()*30, ph: Math.random()*TAU });
+    }
+  }
+  for(let i = S.bubbles.length - 1; i >= 0; i--){
+    const b = S.bubbles[i];
+    b.y -= b.vy*dt;
+    b.x += Math.sin(S.t*3 + b.ph)*12*dt;
+    b.r += dt*0.6;                       // pressure lets go as they climb
+    if(b.y < H*0.04) S.bubbles.splice(i, 1);
+  }
+
+  for(const c of S.caustics){
+    c.x += c.vx*dt; c.y += c.vy*dt;
+    if(c.x < -c.r) c.x = W + c.r; if(c.x > W + c.r) c.x = -c.r;
+    if(c.y < -c.r) c.y = H + c.r; if(c.y > H + c.r) c.y = -c.r;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world                                              */
+/* ------------------------------------------------------------------ */
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+
+  // The fish, under the fight - the level's civilians. No transforms: at
+  // thirty-six fish a frame, save/translate/restore per fish measured as a
+  // quarter of the whole level's draw cost. Direction is a sign, not a scale.
+  ctx.fillStyle = "rgba(185,226,234,0.72)";
+  for(const sc of S.schools){
+    const d = sc.dir;
+    for(const f of sc.fish){
+      const fx2 = sc.x + f.ox, fy = sc.y + f.oy + Math.sin(S.t*2 + f.ph)*3;
+      const flick = Math.sin(S.t*9 + f.ph)*2.2;
+      ctx.beginPath(); ctx.ellipse(fx2, fy, 4.6*f.s, 1.8*f.s, 0, 0, TAU); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(fx2 - d*4*f.s, fy);
+      ctx.lineTo(fx2 - d*7*f.s, fy - 2*f.s + flick);
+      ctx.lineTo(fx2 - d*7*f.s, fy + 2*f.s + flick);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world                                               */
+/* ------------------------------------------------------------------ */
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+  const VW = SF.game.VW || 600, VH = SF.game.VH || 800;
+
+  // The whole water column - rays, dapple, depth - in a single blit.
+  if(colAt < 0 || S.t - colAt > 0.09 ||
+     colW !== Math.max(1, Math.round(VW*0.5)) || colH !== Math.max(1, Math.round(VH*0.5))){
+    paintColumn(VW, VH);
+    colAt = S.t;
+  }
+  ctx.drawImage(column, 0, 0, VW, VH);
+
+  // Bubbles ride over even the light - right against the glass. One stroke
+  // each; only the big ones can afford a highlight.
+  ctx.strokeStyle = "rgba(205,240,248,0.5)";
+  ctx.lineWidth = 1;
+  for(const b of S.bubbles){
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.stroke();
+    if(b.r > 2.6){
+      ctx.beginPath(); ctx.arc(b.x - b.r*0.3, b.y - b.r*0.3, b.r*0.3, -2.4, -0.9); ctx.stroke();
+    }
+  }
+}
+
+SF.dive = { _state: () => S, reset, begin, active, update, drawSky, drawOver };
 })();
 
 
@@ -24104,6 +24462,23 @@ const SKIES = [
     lum:1.0, density:0.85, stars:0, bright:0,
     props:[ {k:"wild", x:0.50, y:0.50, dark:"#101c12"},
             {k:"ruin", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE DROWNED SKY (The Dive) - the other side of the crack, where the sky
+   * river landed as a sea. Appended at the end for the same reason the farms
+   * were: the Drawing Board's saves hold bare sky indices.
+   *
+   * The third surface in the game and the first one that is not land: the
+   * "ground seen from above" rule holds, but the ground is an ocean floor -
+   * sand, kelp, coral, one trench - under a water column the live layer
+   * (dive.js) fills with light shafts, fish and bubbles. The sunken flagship
+   * passes once, the way home's farm does.
+   */
+  { name:"The Drowned Sky", surface:true,
+    clouds:["#0f4a5e","#2aa5b8","#052030"], dust:"#03141c", star:"#d8fbff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"seabed",  x:0.50, y:0.50},
+            {k:"drowned", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -26005,6 +26380,378 @@ function drawRuin(ctx, W, H, p, rand){
   ctx.restore();
 }
 
+/* ---------------------------------------------------------
+   THE DROWNED SKY - an ocean floor from above.
+   ---------------------------------------------------------
+   Everything below is water-filtered on purpose: there is no local colour
+   down here, only what survives the column - teals, grey-greens, and the
+   coral's dimmed reds. The two loud things in the level (the spilled
+   starlight, the trench glow) are loud BECAUSE everything else obeys that.
+
+   One CURRENT crosses the whole floor, the way one dawn crossed the whole
+   farm: every kelp strand leans the same way and every sand ripple runs
+   square to it. A floor where each clump sways to itself reads as clip-art;
+   a floor that agrees on the water reads as a place. */
+
+const CURRENT = -0.42;                  // radians off vertical; everything agrees
+const SEA = {
+  water:"#04222e", deep:"#021820", light:"#0d4152",
+  sand:"#5d8a84", sandLit:"#7aa89b",
+  rock:"#0c333c", rockLit:"#1d5c60",
+  kelp:"#0d4034", kelpLit:"#1a6b4d",
+  coral:["#a35a6e","#b3854e","#6b5a96","#7fbdb2"],
+  glow:"#ffe9a8", trench:"#37d9bd",
+};
+
+/** One kelp strand: a ribbon leaning into the current, leaves alternating.
+ *  Shared by the tile (groves) and the once-layer (growth on the wreck). */
+function kelpStrand(ctx, x, y, len, rand){
+  const lean = CURRENT + (rand() - 0.5)*0.3;
+  const sway = 8 + rand()*14;
+  const tipX = x + Math.sin(lean)*len, tipY = y - Math.cos(lean)*len;
+  const midX = (x + tipX)/2 + Math.cos(lean)*sway, midY = (y + tipY)/2 + Math.sin(lean)*sway;
+  ctx.strokeStyle = SEA.kelp; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(midX, midY, tipX, tipY); ctx.stroke();
+  ctx.fillStyle = SEA.kelpLit;
+  for(let i = 1; i <= 4; i++){
+    const t = i/5, side = i % 2 ? 1 : -1, u = 1 - t;
+    const lx = u*u*x + 2*u*t*midX + t*t*tipX;
+    const ly = u*u*y + 2*u*t*midY + t*t*tipY;
+    ctx.beginPath(); ctx.ellipse(lx, ly, 4.5, 1.7, lean + side*0.7, 0, TAU); ctx.fill();
+  }
+}
+
+/** A pinch of spilled sky: soft gold glow with a four-point glint. The
+ *  campaign's own star shape, so a child recognises WHAT is on the floor. */
+function starGlint(ctx, x, y, r, a){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r*3.2);
+  g.addColorStop(0, rgba(SEA.glow, a));
+  g.addColorStop(1, rgba(SEA.glow, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r*3.2, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba("#fff6d8", Math.min(1, a*1.8));
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
+  ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+  ctx.stroke();
+}
+
+function drawSeabed(ctx, W, H, p, rand){
+  /* The floor, in the order the sea put it there: sand, then what the sand
+     buries, then what grows out of it. */
+  ctx.fillStyle = SEA.water;
+  ctx.fillRect(0, 0, W, H);
+
+  // Broad light wells and deeps - the mottling sunlight leaves on a bottom.
+  for(let i = 0; i < 11; i++){
+    const x = rand()*W, y = rand()*H, r = (0.16 + rand()*0.30)*W;
+    const col = i % 3 ? SEA.light : SEA.deep;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.30 : 0.34));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  // Sand flats: pale banks the rest of the furniture stands on.
+  const banks = [];
+  for(let i = 0; i < 6; i++){
+    const x = rand()*W, y = rand()*H, r = (0.10 + rand()*0.15)*W;
+    banks.push({ x, y, r });
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(SEA.sand, 0.30));
+      g.addColorStop(0.7, rgba(SEA.sand, 0.16));
+      g.addColorStop(1, rgba(SEA.sand, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // Ripples run square to the current, everywhere sand shows.
+  ctx.lineWidth = 1;
+  banks.forEach(b => {
+    for(let i = 0; i < 10; i++){
+      const a2 = rand()*TAU, d = Math.sqrt(rand())*b.r*0.8;
+      const cx = b.x + Math.cos(a2)*d, cy = b.y + Math.sin(a2)*d;
+      const len = 8 + rand()*18, wob = 2 + rand()*2;
+      ctx.strokeStyle = rgba(SEA.sandLit, 0.10 + rand()*0.08);
+      tiled(ctx, H, cy, yy => {
+        ctx.beginPath();
+        // square to the current: the ripple runs along CURRENT's normal
+        const nx = Math.cos(CURRENT), ny = Math.sin(CURRENT);
+        ctx.moveTo(cx - nx*len, yy - ny*len);
+        ctx.quadraticCurveTo(cx + ny*wob, yy - nx*wob, cx + nx*len, yy + ny*len);
+        ctx.stroke();
+      });
+    }
+  });
+
+  /*
+   * THE TRENCH - one, like the farm's through-lane, and for the same wrap
+   * reason: it runs the full height and leaves the top at the exact x it
+   * entered the bottom, so the seam never lands on a kink. It is the darkest
+   * thing in the game's darkest-bottomed level, and the spilled light pools
+   * along it - deep water finds the deepest place.
+   */
+  const tx0 = W*(0.62 + rand()*0.16), tW = W*0.055 + rand()*W*0.02;
+  const sway1 = (rand() - 0.5)*W*0.16, sway2 = (rand() - 0.5)*W*0.16;
+  // Both sway terms are whole periods of t, so position AND slope agree at
+  // the wrap - the farm's through-lane got this for free by being straight.
+  const edge = t => tx0 + Math.sin(t*TAU)*sway1 + Math.sin(t*TAU*2)*sway2*0.5;
+  ctx.beginPath();
+  for(let i = 0; i <= 24; i++){ const t = i/24; const x = edge(t) - tW/2; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  for(let i = 24; i >= 0; i--){ const t = i/24; ctx.lineTo(edge(t) + tW/2, t*H); }
+  ctx.closePath();
+  const tg = ctx.createLinearGradient(tx0 - tW, 0, tx0 + tW, 0);
+  tg.addColorStop(0, rgba(SEA.deep, 0.0));
+  tg.addColorStop(0.25, "#010c12");
+  tg.addColorStop(0.75, "#010c12");
+  tg.addColorStop(1, rgba(SEA.deep, 0.0));
+  ctx.fillStyle = tg; ctx.fill();
+  // The rim catches what light is left...
+  ctx.strokeStyle = rgba(SEA.trench, 0.18); ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for(let i = 0; i <= 24; i++){ const t = i/24; const x = edge(t) - tW/2; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  ctx.stroke();
+  // ...and the drowned stars pool in the dark below it.
+  for(let i = 0; i < 7; i++){
+    const t = rand(); const gx = edge(t) + (rand() - 0.5)*tW*0.5;
+    tiled(ctx, H, t*H, yy => starGlint(ctx, gx, yy, 1.6 + rand()*1.4, 0.20 + rand()*0.14));
+  }
+
+  // Rock gardens: rounded stones, lit from the surface like everything else.
+  for(let c = 0; c < 7; c++){
+    const cx = rand()*W, cy = rand()*H, n = 4 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 4 + rand()*9;
+      tiled(ctx, H, y, yy => {
+        ctx.fillStyle = SEA.rock;
+        ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.8, rand()*TAU, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(SEA.rockLit, 0.7);
+        ctx.beginPath(); ctx.ellipse(x - r*0.2, yy - r*0.3, r*0.55, r*0.35, 0, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  // Kelp groves: every strand leans into the same current.
+  for(let g = 0; g < 7; g++){
+    const gx = rand()*W, gy = rand()*H, n = 5 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = gx + (rand() - 0.5)*W*0.09, y = gy + (rand() - 0.5)*W*0.07;
+      const len = 26 + rand()*30;
+      tiled(ctx, H, y, yy => kelpStrand(ctx, x, yy, len, rngFor(g*100 + i)));
+    }
+  }
+
+  // Coral heads: the only warm colour on the floor, and even it is dimmed.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.08, y = cy + (rand() - 0.5)*W*0.06;
+      const col = SEA.coral[Math.floor(rand()*SEA.coral.length)];
+      const kind = rand();
+      tiled(ctx, H, y, yy => {
+        if(kind < 0.4){
+          // brain coral: a mound with wobbled growth rings
+          const r = 6 + rand()*8;
+          ctx.fillStyle = rgba(col, 0.7);
+          ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+          ctx.strokeStyle = rgba("#031a20", 0.35); ctx.lineWidth = 1;
+          for(let q = 1; q <= 2; q++){
+            ctx.beginPath();
+            for(let i2 = 0; i2 <= 16; i2++){
+              const a3 = (i2/16)*TAU;
+              const rr = r*(q/3 + 0.12) + Math.sin(a3*3 + q)*1.1;
+              const px2 = x + Math.cos(a3)*rr, py2 = yy + Math.sin(a3)*rr;
+              i2 ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2);
+            }
+            ctx.closePath(); ctx.stroke();
+          }
+        } else if(kind < 0.75){
+          // staghorn: short forked branches reaching into the current
+          ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = 2; ctx.lineCap = "round";
+          for(let b = 0; b < 3; b++){
+            const a4 = CURRENT + (b - 1)*0.55 + (rand() - 0.5)*0.2, l2 = 8 + rand()*9;
+            const ex = x + Math.sin(a4)*l2, ey = yy - Math.cos(a4)*l2;
+            ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(ex, ey);
+            ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.sin(a4 + 0.5)*4, ey - Math.cos(a4 + 0.5)*4);
+            ctx.stroke();
+          }
+        } else {
+          // fan coral: a webbed arc, face square to the current
+          const r = 7 + rand()*7;
+          ctx.strokeStyle = rgba(col, 0.8); ctx.lineWidth = 1.2;
+          for(let b = 0; b < 5; b++){
+            const a5 = CURRENT - 0.8 + (b/4)*1.6;
+            ctx.beginPath(); ctx.moveTo(x, yy);
+            ctx.lineTo(x + Math.sin(a5)*r, yy - Math.cos(a5)*r);
+            ctx.stroke();
+          }
+          ctx.beginPath(); ctx.arc(x, yy, r*0.75, CURRENT - Math.PI/2 - 0.8, CURRENT - Math.PI/2 + 0.8); ctx.stroke();
+        }
+      });
+    }
+  }
+
+  // Loose spilled light, thinning away from the trench.
+  for(let i = 0; i < 8; i++){
+    const x = rand()*W, y = rand()*H;
+    tiled(ctx, H, y, yy => starGlint(ctx, x, yy, 1.2 + rand(), 0.10 + rand()*0.08));
+  }
+
+  // Sediment: the fine grain that stops the floor reading as flat paint.
+  for(let i = 0; i < 260; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? SEA.sandLit : SEA.deep, 0.05 + rand()*0.07);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE FLAGSHIP - the once-layer. One of theirs, down long enough for the
+ * reef to claim it, cracked open across the middle with the stolen light
+ * still spilling out of the hold. Top-down like everything on a surface,
+ * with its own sand apron so it sits ON the floor wherever the scroll has
+ * carried the tile - the apron is what spares the two bakes having to agree
+ * the way the farm and its fields do.
+ */
+function drawDrowned(ctx, W, H, p, rand){
+  const cx = W*0.40, cy = H*0.52;
+  const ang = -0.38 + (rand() - 0.5)*0.1;       // came down mid-turn; nothing sinks square
+  const L = W*0.62, B = L*0.21;                 // length and beam
+
+  // The sand it threw up when it hit, and the shadow it throws now.
+  const apron = ctx.createRadialGradient(cx, cy, 0, cx, cy, L*0.72);
+  apron.addColorStop(0, rgba(SEA.sand, 0.34));
+  apron.addColorStop(0.55, rgba(SEA.sand, 0.16));
+  apron.addColorStop(1, rgba(SEA.sand, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.ellipse(cx, cy, L*0.72, L*0.5, ang, 0, TAU); ctx.fill();
+
+  const hull = "#1a3038", plate = "#24424c", plateLit = "#33565e", scar = "#0b1a20";
+
+  /** One section of hull in local coords: x along the keel, y across it. */
+  const section = (x0, x1, jagAt, taper) => {
+    ctx.beginPath();
+    const nose = x1 - (x1 - x0)*(taper || 0.18);
+    ctx.moveTo(x0, -B*0.5);
+    ctx.lineTo(nose, -B*0.5); ctx.quadraticCurveTo(x1, -B*0.15, x1, 0);
+    ctx.quadraticCurveTo(x1, B*0.15, nose, B*0.5);
+    ctx.lineTo(x0, B*0.5);
+    if(jagAt){ // the break: a torn edge, not a cut
+      for(let i = 0; i <= 6; i++)
+        ctx.lineTo(x0 + (i % 2 ? -7 : 4), B*0.5 - (B/6)*i - (i % 2 ? 4 : 0));
+    }
+    ctx.closePath();
+  };
+
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(ang);
+
+  // Shadow under both sections, sunk-side.
+  ctx.fillStyle = rgba("#01090d", 0.5);
+  ctx.beginPath(); ctx.ellipse(-L*0.12, B*0.42, L*0.46, B*0.5, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(L*0.36, B*0.44, L*0.17, B*0.36, 0, 0, TAU); ctx.fill();
+
+  // STERN SECTION - two thirds of her, listing into the sand.
+  section(-L*0.5, L*0.12, true);
+  ctx.fillStyle = hull; ctx.fill();
+  ctx.strokeStyle = scar; ctx.lineWidth = 2; ctx.stroke();
+  // deck plates
+  ctx.fillStyle = plate;
+  ctx.fillRect(-L*0.47, -B*0.34, L*0.55, B*0.68);
+  ctx.strokeStyle = rgba(scar, 0.8); ctx.lineWidth = 1;
+  for(let i = 1; i < 6; i++){
+    const x = -L*0.47 + (L*0.55)*(i/6);
+    ctx.beginPath(); ctx.moveTo(x, -B*0.34); ctx.lineTo(x, B*0.34); ctx.stroke();
+  }
+  // the centreline stripe their carriers wear, faded
+  ctx.fillStyle = rgba("#c8d4d8", 0.13);
+  ctx.fillRect(-L*0.47, -B*0.045, L*0.55, B*0.09);
+  // the island tower, knocked loose, leaning off-axis with its own shadow
+  ctx.save();
+  ctx.translate(-L*0.18, -B*0.16); ctx.rotate(0.34);
+  ctx.fillStyle = rgba("#01090d", 0.45); ctx.fillRect(-9, 4, 34, 14);
+  ctx.fillStyle = plateLit; ctx.fillRect(-11, -8, 30, 15);
+  ctx.fillStyle = scar; ctx.fillRect(-11, -8, 30, 4);
+  // three portholes still warm - somebody's lights outlasted the ship
+  ctx.fillStyle = "#ffd9a0";
+  for(let i = 0; i < 3; i++){ ctx.beginPath(); ctx.arc(-4 + i*8, 1.5, 1.4, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  // sand drifted over the stern quarter - the sea is halfway through burying her
+  const drift = ctx.createLinearGradient(-L*0.5, 0, -L*0.28, 0);
+  drift.addColorStop(0, rgba(SEA.sand, 0.55));
+  drift.addColorStop(1, rgba(SEA.sand, 0));
+  ctx.fillStyle = drift;
+  section(-L*0.5, L*0.12, false); ctx.fill();
+
+  // BOW SECTION - snapped clean off, a length ahead and turned further.
+  ctx.save();
+  ctx.translate(L*0.36, B*0.10); ctx.rotate(0.24);
+  section(-L*0.12, L*0.16, true, 0.42);
+  ctx.fillStyle = hull; ctx.fill();
+  ctx.strokeStyle = scar; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = plate; ctx.fillRect(-L*0.10, -B*0.30, L*0.14, B*0.60);
+  ctx.strokeStyle = rgba(scar, 0.8); ctx.lineWidth = 1;
+  for(let i = 1; i < 3; i++){
+    const x = -L*0.10 + (L*0.14)*(i/3);
+    ctx.beginPath(); ctx.moveTo(x, -B*0.30); ctx.lineTo(x, B*0.30); ctx.stroke();
+  }
+  // the stripe carries across the break - one ship, told in two pieces
+  ctx.fillStyle = rgba("#c8d4d8", 0.13);
+  ctx.fillRect(-L*0.10, -B*0.045, L*0.17, B*0.09);
+  // the anchor she dropped too late: chain paying out to a half-buried fluke
+  ctx.strokeStyle = rgba("#0e2228", 0.9); ctx.lineWidth = 2;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(L*0.15, 2); ctx.quadraticCurveTo(L*0.26, B*0.5, L*0.30, B*0.9); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#0e2228";
+  ctx.beginPath(); ctx.arc(L*0.30, B*0.9, 3.5, Math.PI*0.1, Math.PI*1.1); ctx.fill();
+  ctx.restore();
+
+  // THE BREAK, and what it spilled: the hold was full of the river's light.
+  const gx = L*0.20, gy = B*0.06;
+  const burst = ctx.createRadialGradient(gx, gy, 0, gx, gy, L*0.24);
+  burst.addColorStop(0, rgba(SEA.glow, 0.65));
+  burst.addColorStop(0.4, rgba(SEA.glow, 0.24));
+  burst.addColorStop(1, rgba(SEA.glow, 0));
+  ctx.fillStyle = burst;
+  ctx.beginPath(); ctx.arc(gx, gy, L*0.24, 0, TAU); ctx.fill();
+  // debris between the halves, silhouetted against the spill
+  ctx.fillStyle = scar;
+  for(let i = 0; i < 7; i++){
+    const dx = gx + (rand() - 0.5)*L*0.16, dy = gy + (rand() - 0.5)*B*0.8;
+    ctx.save(); ctx.translate(dx, dy); ctx.rotate(rand()*TAU);
+    ctx.fillRect(-3 - rand()*3, -1.5, 6 + rand()*6, 3);
+    ctx.restore();
+  }
+  // the light itself, leaking out in a trail the current carries
+  for(let i = 0; i < 9; i++){
+    const t = i/9;
+    const sx = gx + Math.sin(CURRENT - ang)*t*L*0.34 + (rand() - 0.5)*14;
+    const sy = gy - Math.cos(CURRENT - ang)*t*L*0.34 + (rand() - 0.5)*14;
+    starGlint(ctx, sx, sy, 1.4 + (1 - t)*1.6, 0.34*(1 - t) + 0.10);
+  }
+
+  // The reef is claiming her: coral crusts and a few kelp strands on the hull.
+  for(let i = 0; i < 8; i++){
+    const x = -L*0.46 + rand()*L*0.5, y = (rand() < 0.5 ? -1 : 1)*B*(0.30 + rand()*0.18);
+    const col = SEA.coral[Math.floor(rand()*SEA.coral.length)];
+    ctx.fillStyle = rgba(col, 0.75);
+    for(let q = 0; q < 4; q++){
+      ctx.beginPath(); ctx.arc(x + (rand() - 0.5)*8, y + (rand() - 0.5)*5, 1.6 + rand()*2.2, 0, TAU); ctx.fill();
+    }
+  }
+  for(let i = 0; i < 4; i++)
+    kelpStrand(ctx, -L*0.42 + rand()*L*0.36, (rand() < 0.5 ? -1 : 1)*B*0.5, 20 + rand()*16, rngFor(700 + i));
+
+  ctx.restore();
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -26399,6 +27146,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "farm") drawFarm(px, W, H, pr, rand);
     else if(pr.k === "wild") drawWild(px, W, H, pr, rand);
     else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
+    else if(pr.k === "seabed") drawSeabed(px, W, H, pr, rand);
+    else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
   });
 }
 
@@ -29409,6 +30158,8 @@ function startMission(missionIndex, difficultyId){
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
+  SF.dive.reset();                        // the sea drains until the dive
+  if(mission.dive) SF.dive.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -29794,6 +30545,7 @@ function startMission(missionIndex, difficultyId){
              : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
+             : mission.dive ? "diveStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -32404,6 +33156,7 @@ function update(dt, timeMs){
   if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
+  if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -32805,6 +33558,7 @@ function draw(timeMs){
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint over everything
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
+  SF.dive.drawSky(ctx, timeMs, VW, VH);              // the water column: rays, fish
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -32934,7 +33688,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -35443,11 +36197,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-37
-  { at:38, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 38-40
-  { at:40, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 40
+    sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
+  { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 39-41
+  { at:41, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 41
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -38344,6 +39098,112 @@ function drawStoryArt(ctx, art, levels, mate){
       ctx.beginPath(); ctx.moveTo(px, py - 5); ctx.lineTo(px + 3.4, py + 3);
       ctx.lineTo(px - 3.4, py + 3); ctx.closePath(); ctx.fill();
     }
+  } else if(art === "seafall"){
+    /*
+     * The Dive's establishing shot: the sky river pouring through the crack
+     * and landing in a sea. Space keeps the top third; the bottom two thirds
+     * are already water, and the stars that fell glow on THROUGH it.
+     */
+    const water = H*0.34;
+    const sea = ctx.createLinearGradient(0, water, 0, H);
+    sea.addColorStop(0, "#0d4152"); sea.addColorStop(1, "#04222e");
+    ctx.fillStyle = sea; ctx.fillRect(0, water, W, H - water);
+    // the crack, and the river falling out of it
+    ctx.strokeStyle = "rgba(167,139,250,0.8)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W*0.44, 4); ctx.lineTo(W*0.52, H*0.10);
+    ctx.lineTo(W*0.47, H*0.16); ctx.stroke();
+    const riv = ctx.createLinearGradient(0, H*0.12, 0, water + 14);
+    riv.addColorStop(0, "rgba(255,233,168,0.85)");
+    riv.addColorStop(1, "rgba(255,233,168,0.15)");
+    ctx.fillStyle = riv;
+    ctx.beginPath();
+    ctx.moveTo(W*0.47, H*0.14);
+    ctx.quadraticCurveTo(W*0.43, H*0.24, W*0.46, water + 10);
+    ctx.lineTo(W*0.54, water + 10);
+    ctx.quadraticCurveTo(W*0.53, H*0.22, W*0.50, H*0.14);
+    ctx.closePath(); ctx.fill();
+    // the splash halo where sky meets sea
+    const sp = ctx.createRadialGradient(W*0.5, water + 8, 1, W*0.5, water + 8, 30);
+    sp.addColorStop(0, "rgba(255,233,168,0.7)"); sp.addColorStop(1, "rgba(255,233,168,0)");
+    ctx.fillStyle = sp; ctx.beginPath(); ctx.arc(W*0.5, water + 8, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(215,245,250,0.5)";
+    ctx.fillRect(0, water, W, 1.5);                  // the surface line
+    // drowned stars, still shining from under
+    ctx.fillStyle = "rgba(255,233,168,0.75)";
+    [[0.2,0.62],[0.34,0.78],[0.52,0.7],[0.66,0.84],[0.8,0.66],[0.72,0.5]].forEach(([px2,py2]) => {
+      ctx.beginPath(); ctx.arc(W*px2, H*py2, 2, 0, Math.PI*2); ctx.fill();
+      const g2 = ctx.createRadialGradient(W*px2, H*py2, 0, W*px2, H*py2, 8);
+      g2.addColorStop(0, "rgba(255,233,168,0.4)"); g2.addColorStop(1, "rgba(255,233,168,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(W*px2, H*py2, 8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "rgba(255,233,168,0.75)";
+    });
+  } else if(art === "dredger"){
+    /*
+     * The villain of the level, mid-crime: a dredger hauling a drowned star
+     * off the floor on a line. All silhouette - the star is the light source.
+     */
+    const sea = ctx.createLinearGradient(0, 0, 0, H);
+    sea.addColorStop(0, "#0d4152"); sea.addColorStop(1, "#04222e");
+    ctx.fillStyle = sea; ctx.fillRect(0, 0, W, H);
+    const ray = ctx.createLinearGradient(0, 0, 0, H);
+    ray.addColorStop(0, "rgba(150,230,240,0.18)"); ray.addColorStop(1, "rgba(150,230,240,0)");
+    ctx.fillStyle = ray;
+    ctx.beginPath(); ctx.moveTo(W*0.6, 0); ctx.lineTo(W*0.74, 0);
+    ctx.lineTo(W*0.92, H); ctx.lineTo(W*0.62, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(93,138,132,0.5)";          // the floor
+    ctx.fillRect(0, H*0.88, W, H*0.12);
+    const dx = W*0.38, dy = H*0.30;                  // the dredger, squat and greedy
+    ctx.fillStyle = "#0b1a20";
+    ctx.beginPath(); ctx.ellipse(dx, dy, 26, 12, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(dx - 8, dy + 8, 6, 10);             // claw arm
+    ctx.strokeStyle = "rgba(11,26,32,0.9)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(dx - 5, dy + 18); ctx.lineTo(dx + 2, H*0.66); ctx.stroke();
+    ctx.setLineDash([]);
+    // the star on the line - and its friends still safe on the floor
+    const star = (sx, sy, r) => {
+      const g2 = ctx.createRadialGradient(sx, sy, 0, sx, sy, r*4);
+      g2.addColorStop(0, "rgba(255,233,168,0.8)"); g2.addColorStop(1, "rgba(255,233,168,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(sx, sy, r*4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
+    };
+    star(dx + 2, H*0.68, 3);
+    star(W*0.2, H*0.9, 2.4); star(W*0.55, H*0.92, 2); star(W*0.78, H*0.9, 2.6);
+  } else if(art === "lamps"){
+    /*
+     * The wreck, kept small and mostly dark: what the panel is FOR is the
+     * three portholes that never went out. Kids look for them in the level.
+     */
+    const sea = ctx.createLinearGradient(0, 0, 0, H);
+    sea.addColorStop(0, "#0a3644"); sea.addColorStop(1, "#031a22");
+    ctx.fillStyle = sea; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(93,138,132,0.4)";
+    ctx.beginPath(); ctx.ellipse(W*0.5, H*0.74, W*0.42, H*0.16, 0, 0, Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.translate(W*0.5, H*0.62); ctx.rotate(-0.12);
+    ctx.fillStyle = "#12262e";
+    ctx.beginPath();
+    ctx.moveTo(-W*0.34, -12); ctx.lineTo(W*0.16, -14); ctx.quadraticCurveTo(W*0.30, -4, W*0.32, 0);
+    ctx.quadraticCurveTo(W*0.30, 6, W*0.16, 12); ctx.lineTo(-W*0.34, 14);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#1c3841";
+    ctx.fillRect(-W*0.22, -18, 26, 12);              // the leaning tower
+    // the three lamps, plus their glow - the whole point of the picture
+    for(let k = 0; k < 3; k++){
+      const lx = -W*0.16 + k*13;
+      const g2 = ctx.createRadialGradient(lx, -2, 0, lx, -2, 10);
+      g2.addColorStop(0, "rgba(255,217,160,0.8)"); g2.addColorStop(1, "rgba(255,217,160,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(lx, -2, 10, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffd9a0";
+      ctx.beginPath(); ctx.arc(lx, -2, 1.8, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    // a curious fish, keeping its distance
+    ctx.fillStyle = "rgba(185,226,234,0.7)";
+    ctx.beginPath(); ctx.ellipse(W*0.8, H*0.36, 5, 2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.8 - 4, H*0.36); ctx.lineTo(W*0.8 - 7, H*0.36 - 2);
+    ctx.lineTo(W*0.8 - 7, H*0.36 + 2); ctx.closePath(); ctx.fill();
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -38401,7 +39261,8 @@ function renderCoopLine(){
 /* Mission flag -> the page it opens with. See openBriefing. */
 const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
-                         ["garden",   "secondHarvest"]];
+                         ["garden",   "secondHarvest"],
+                         ["dive",     "theDive"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

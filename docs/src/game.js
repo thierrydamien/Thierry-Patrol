@@ -410,6 +410,8 @@ function startMission(missionIndex, difficultyId){
   SF.papadeath.reset();                   // no mini-Papas left over from last time
   SF.sky29.reset();                       // the easel waits for its mission
   if(mission.sky29) SF.sky29.begin();
+  SF.dive.reset();                        // the sea drains until the dive
+  if(mission.dive) SF.dive.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -795,6 +797,7 @@ function startMission(missionIndex, difficultyId){
              : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
+             : mission.dive ? "diveStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -3405,6 +3408,7 @@ function update(dt, timeMs){
   if(run.mission.prologue) SF.prologue.update(dt, run, game.world, simMs, VW, VH);
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
+  if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -3806,6 +3810,7 @@ function draw(timeMs){
   SF.backstage.drawSky(ctx, timeMs, VW, VH);         // the blueprint over everything
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
+  SF.dive.drawSky(ctx, timeMs, VW, VH);              // the water column: rays, fish
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -3935,7 +3940,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

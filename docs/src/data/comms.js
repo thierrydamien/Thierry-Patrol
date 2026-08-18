@@ -378,6 +378,11 @@ const COMMS = {
     "No cannons this run, {you}. Slip through quiet and don't get touched.",
     "The crew's working on the guns. Until then: dodge everything.",
   ]},
+  diveStart: { speaker:"control", cooldown:999, lines:[
+    "Guns work fine down here, {you}. Breathing is the hard part - good thing ships don't.",
+    "Mind the water, {you} - every shot swims slower. Theirs too.",
+    "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",

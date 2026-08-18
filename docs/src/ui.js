@@ -1642,11 +1642,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-37
-  { at:38, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 38-40
-  { at:40, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 40
+    sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
+  { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 39-41
+  { at:41, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 41
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -4543,6 +4543,112 @@ function drawStoryArt(ctx, art, levels, mate){
       ctx.beginPath(); ctx.moveTo(px, py - 5); ctx.lineTo(px + 3.4, py + 3);
       ctx.lineTo(px - 3.4, py + 3); ctx.closePath(); ctx.fill();
     }
+  } else if(art === "seafall"){
+    /*
+     * The Dive's establishing shot: the sky river pouring through the crack
+     * and landing in a sea. Space keeps the top third; the bottom two thirds
+     * are already water, and the stars that fell glow on THROUGH it.
+     */
+    const water = H*0.34;
+    const sea = ctx.createLinearGradient(0, water, 0, H);
+    sea.addColorStop(0, "#0d4152"); sea.addColorStop(1, "#04222e");
+    ctx.fillStyle = sea; ctx.fillRect(0, water, W, H - water);
+    // the crack, and the river falling out of it
+    ctx.strokeStyle = "rgba(167,139,250,0.8)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W*0.44, 4); ctx.lineTo(W*0.52, H*0.10);
+    ctx.lineTo(W*0.47, H*0.16); ctx.stroke();
+    const riv = ctx.createLinearGradient(0, H*0.12, 0, water + 14);
+    riv.addColorStop(0, "rgba(255,233,168,0.85)");
+    riv.addColorStop(1, "rgba(255,233,168,0.15)");
+    ctx.fillStyle = riv;
+    ctx.beginPath();
+    ctx.moveTo(W*0.47, H*0.14);
+    ctx.quadraticCurveTo(W*0.43, H*0.24, W*0.46, water + 10);
+    ctx.lineTo(W*0.54, water + 10);
+    ctx.quadraticCurveTo(W*0.53, H*0.22, W*0.50, H*0.14);
+    ctx.closePath(); ctx.fill();
+    // the splash halo where sky meets sea
+    const sp = ctx.createRadialGradient(W*0.5, water + 8, 1, W*0.5, water + 8, 30);
+    sp.addColorStop(0, "rgba(255,233,168,0.7)"); sp.addColorStop(1, "rgba(255,233,168,0)");
+    ctx.fillStyle = sp; ctx.beginPath(); ctx.arc(W*0.5, water + 8, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(215,245,250,0.5)";
+    ctx.fillRect(0, water, W, 1.5);                  // the surface line
+    // drowned stars, still shining from under
+    ctx.fillStyle = "rgba(255,233,168,0.75)";
+    [[0.2,0.62],[0.34,0.78],[0.52,0.7],[0.66,0.84],[0.8,0.66],[0.72,0.5]].forEach(([px2,py2]) => {
+      ctx.beginPath(); ctx.arc(W*px2, H*py2, 2, 0, Math.PI*2); ctx.fill();
+      const g2 = ctx.createRadialGradient(W*px2, H*py2, 0, W*px2, H*py2, 8);
+      g2.addColorStop(0, "rgba(255,233,168,0.4)"); g2.addColorStop(1, "rgba(255,233,168,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(W*px2, H*py2, 8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "rgba(255,233,168,0.75)";
+    });
+  } else if(art === "dredger"){
+    /*
+     * The villain of the level, mid-crime: a dredger hauling a drowned star
+     * off the floor on a line. All silhouette - the star is the light source.
+     */
+    const sea = ctx.createLinearGradient(0, 0, 0, H);
+    sea.addColorStop(0, "#0d4152"); sea.addColorStop(1, "#04222e");
+    ctx.fillStyle = sea; ctx.fillRect(0, 0, W, H);
+    const ray = ctx.createLinearGradient(0, 0, 0, H);
+    ray.addColorStop(0, "rgba(150,230,240,0.18)"); ray.addColorStop(1, "rgba(150,230,240,0)");
+    ctx.fillStyle = ray;
+    ctx.beginPath(); ctx.moveTo(W*0.6, 0); ctx.lineTo(W*0.74, 0);
+    ctx.lineTo(W*0.92, H); ctx.lineTo(W*0.62, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(93,138,132,0.5)";          // the floor
+    ctx.fillRect(0, H*0.88, W, H*0.12);
+    const dx = W*0.38, dy = H*0.30;                  // the dredger, squat and greedy
+    ctx.fillStyle = "#0b1a20";
+    ctx.beginPath(); ctx.ellipse(dx, dy, 26, 12, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(dx - 8, dy + 8, 6, 10);             // claw arm
+    ctx.strokeStyle = "rgba(11,26,32,0.9)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(dx - 5, dy + 18); ctx.lineTo(dx + 2, H*0.66); ctx.stroke();
+    ctx.setLineDash([]);
+    // the star on the line - and its friends still safe on the floor
+    const star = (sx, sy, r) => {
+      const g2 = ctx.createRadialGradient(sx, sy, 0, sx, sy, r*4);
+      g2.addColorStop(0, "rgba(255,233,168,0.8)"); g2.addColorStop(1, "rgba(255,233,168,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(sx, sy, r*4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
+    };
+    star(dx + 2, H*0.68, 3);
+    star(W*0.2, H*0.9, 2.4); star(W*0.55, H*0.92, 2); star(W*0.78, H*0.9, 2.6);
+  } else if(art === "lamps"){
+    /*
+     * The wreck, kept small and mostly dark: what the panel is FOR is the
+     * three portholes that never went out. Kids look for them in the level.
+     */
+    const sea = ctx.createLinearGradient(0, 0, 0, H);
+    sea.addColorStop(0, "#0a3644"); sea.addColorStop(1, "#031a22");
+    ctx.fillStyle = sea; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(93,138,132,0.4)";
+    ctx.beginPath(); ctx.ellipse(W*0.5, H*0.74, W*0.42, H*0.16, 0, 0, Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.translate(W*0.5, H*0.62); ctx.rotate(-0.12);
+    ctx.fillStyle = "#12262e";
+    ctx.beginPath();
+    ctx.moveTo(-W*0.34, -12); ctx.lineTo(W*0.16, -14); ctx.quadraticCurveTo(W*0.30, -4, W*0.32, 0);
+    ctx.quadraticCurveTo(W*0.30, 6, W*0.16, 12); ctx.lineTo(-W*0.34, 14);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#1c3841";
+    ctx.fillRect(-W*0.22, -18, 26, 12);              // the leaning tower
+    // the three lamps, plus their glow - the whole point of the picture
+    for(let k = 0; k < 3; k++){
+      const lx = -W*0.16 + k*13;
+      const g2 = ctx.createRadialGradient(lx, -2, 0, lx, -2, 10);
+      g2.addColorStop(0, "rgba(255,217,160,0.8)"); g2.addColorStop(1, "rgba(255,217,160,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(lx, -2, 10, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffd9a0";
+      ctx.beginPath(); ctx.arc(lx, -2, 1.8, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    // a curious fish, keeping its distance
+    ctx.fillStyle = "rgba(185,226,234,0.7)";
+    ctx.beginPath(); ctx.ellipse(W*0.8, H*0.36, 5, 2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.8 - 4, H*0.36); ctx.lineTo(W*0.8 - 7, H*0.36 - 2);
+    ctx.lineTo(W*0.8 - 7, H*0.36 + 2); ctx.closePath(); ctx.fill();
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4600,7 +4706,8 @@ function renderCoopLine(){
 /* Mission flag -> the page it opens with. See openBriefing. */
 const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
-                         ["garden",   "secondHarvest"]];
+                         ["garden",   "secondHarvest"],
+                         ["dive",     "theDive"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

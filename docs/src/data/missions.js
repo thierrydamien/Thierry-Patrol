@@ -1669,7 +1669,52 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:34, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE DIVE - the first stop past the crack, and the answer to the
+     * question The Sky River leaves hanging: where does a draining sky GO?
+     * Down. On the other side it landed as a sea, the drowned light pooled
+     * on the bottom, and their dredgers got there first. The rule act four
+     * breaks here is the medium itself - this stop is not flown, it is swum:
+     * the water slows every shot (mods.water, both sides, same 0.8), the
+     * floor is skygen's third surface, and dive.js fills the column with
+     * rays, fish and the game's only upward-travelling bubbles.
+     *
+     * The thieves ARE the dredgers - the coins they steal are the drowned
+     * light the brief is about, which is why coinRush is the star here.
+     */
+    id:34, sky:42, name:"The Dive", subtitle:"The sky fell in the sea",
+    brief:"The river poured through the crack and landed HERE, {you} - a whole sea with our sky sunk inside it. Every star it swallowed is still glowing on the bottom... and their dredgers are already scooping them up. Dive. Take back every coin of light they touch.",
+    goal:"Take back the drowned light!",
+    dive:true, mods:{ water:true },
+    face:"balloon",
+    waves: [
+      w(1,   "balloon",  6, "arc"),            // jellyfish first: the sea says hello
+      w(9,   "weaver",   7, "sides"),
+      w(17,  "swooper",  6, "pincer"),
+      w(25,  "limpet",   4, "scatter"),        // barnacles want your hull
+      w(28,  "thief",    2, "column"),         // the dredgers show themselves
+      w(34,  "mine",     5, "scatter"),
+      w(40,  "carrier",  1, "column"),
+      w(46,  "balloon",  7, "vee"),
+      w(53,  "splitter", 4, "scatter"),
+      w(59,  "hive",     2, "sides"),
+      w(65,  "thief",    2, "sides"),
+      w(70,  "weaver",   9, "twinColumns"),
+      w(77,  "limpet",   6, "sides"),
+      w(83,  "mine",     6, "scatter"),
+      w(89,  "swooper",  8, "arc", { elite: 2 }),
+      w(95,  "carrier",  1, "column"),
+      w(99,  "mender",   2, "column"),
+      w(103, "thief",    3, "column"),         // the last dredge is the greedy one
+      w(107, "splitter", 6, "pincer", { elite: 2 }),
+      w(113, "brute",    5, "twinColumns", { elite: 1 }),
+      w(119, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(126, "balloon",  9, "wall"),
+    ],
+    objectives: ["complete","coinRush","rescueAll"],
+  },
+  {
+    id:35, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1712,7 +1757,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:35, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:36, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1744,7 +1789,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:36, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:37, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1786,7 +1831,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:37, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:38, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1821,7 +1866,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:38, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:39, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1853,7 +1898,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:39, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:40, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1892,7 +1937,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:40, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:41, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -1920,7 +1965,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:41, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:42, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,

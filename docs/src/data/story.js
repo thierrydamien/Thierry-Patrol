@@ -131,6 +131,18 @@ const STORY = {
   },
 
   /* The TRUE ending now: the workshop is beaten, the sky is painted. */
+  /* The pre-flight page for The Dive: read every time the stop is opened,
+     like every pre-flight page (see ui.js PREFLIGHT_STORY). */
+  theDive: {
+    title: "THE DROWNED SKY",
+    panels: [
+      { art:"seafall", text:"The river didn't stop at the crack, {you}. It fell through - and on the other side, a whole sea caught it. Every star it swallowed is still down there, glowing on the bottom." },
+      { art:"dredger", text:"Their dredgers found it first, and they're hauling our sky up coin by coin. So today the patrol doesn't fly - it DIVES. The water slows every shot down there... theirs just as much as yours." },
+      { art:"lamps",   text:"One more thing, {you}. There's an old wreck on the floor - it went down full of the light they stole, and three of its lamps are somehow still burning. Nobody knows who's keeping them lit." },
+    ],
+    button:"DIVE",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [

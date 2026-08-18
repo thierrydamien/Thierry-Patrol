@@ -596,12 +596,12 @@ async function run(){
    */
   check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Behind the Sky" && gift.id === 41 &&
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 42 &&
            gift.backstage === true && gift.sky29 === true &&
            !gift.boss;                       // the Brush is backstage's, not a slot
   })());
-  check("42 campaign missions defined, ids sequential from Earth",
-    SF.missions.MISSIONS.length === 42 &&
+  check("43 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 43 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i));
   /*
    * The sky contract, after Mission 0: every mission points at its own sky
@@ -610,21 +610,26 @@ async function run(){
    */
   check("every mission kept its painting; the new grounds were appended", (() => {
     const M = SF.missions.MISSIONS;
-    // Second Harvest pushed 22-40 up one, so every shifted stop carries its
-    // HISTORICAL sky stamped explicitly (old id minus one) - the id-based
-    // default would have handed The Narrows the Fortress Wall. Untouched
-    // stops (1-21) still ride the default; the two farms name theirs.
+    // Second Harvest pushed 22-40 up one and The Dive pushed 34-41 up again,
+    // so every shifted stop carries its HISTORICAL sky stamped explicitly -
+    // the id-based default would have handed The Narrows the Fortress Wall.
+    // Untouched stops (1-21) still ride the default; the three grounds (two
+    // farms and the sea) name theirs, appended so no Drawing Board sky
+    // re-bases: ids 23-33 sit one insertion deep, 35-42 two.
     return M.every(m => m.prologue ? m.sky === 40
                       : m.garden   ? m.sky === 41
+                      : m.dive     ? m.sky === 42
                       : m.id <= 21 ? m.sky === m.id - 1
-                      : m.sky === m.id - 2) &&
-           SF.skygen.SKIES.length === 42 &&
+                      : m.id <= 34 ? m.sky === m.id - 2
+                      : m.sky === m.id - 3) &&
+           SF.skygen.SKIES.length === 43 &&
            SF.skygen.SKIES[40].surface === true &&
            SF.skygen.SKIES[40].props.some(pr => pr.k === "fields") &&
            SF.skygen.SKIES[41].surface === true &&
            SF.skygen.SKIES[41].props.some(pr => pr.k === "wild") &&
-           // ...and the dead farmstead passes once, like home does.
-           SF.skygen.SKIES[41].props.some(pr => pr.k === "ruin" && pr.once === true);
+           SF.skygen.SKIES[42].surface === true &&
+           SF.skygen.SKIES[42].props.some(pr => pr.k === "seabed") &&
+           SF.skygen.SKIES[42].props.some(pr => pr.k === "drowned" && pr.once);
   })());
   /*
    * ...and by NAME, which is what the stamp exists to protect: the missions
@@ -702,9 +707,9 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 120 && (() => {
+    SF.profile.maxStars() === 123 && (() => {
       const p = SF.profile.load("LEDGER");
-      p.missions[41] = { cleared:true, stars:{ pilot:3 } };
+      p.missions[SF.missions.MISSIONS.find(m => m.gift).id] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
     })());
   check("the workshop curtain doesn't wait for the gift", (() => {
@@ -2753,7 +2758,7 @@ async function run(){
       // A SURFACE is its own carve-out: the ground is the thing you fly
       // through, so it tiles by definition - only the landmarks on it (the
       // farm) must pass once. In space the rule stays absolute.
-      const GROUND = ["fields", "ground", "wild"];
+      const GROUND = ["fields", "ground", "wild", "seabed"];
       return SF.skygen.SKIES.every(sky => {
         const props = sky.props || [];
         if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
@@ -3163,7 +3168,7 @@ async function run(){
    * the Sky 29 gate for a pilot already at 116/117.
    */
   check("Earth's stars stay off the campaign ledger",
-    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 120);
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 123);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
@@ -4231,7 +4236,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,40");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,41");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -4518,11 +4523,12 @@ async function run(){
       const si = SF.missions.skyOf(i);
       return SF.skygen.isSurface(si) && SF.skygen.SKIES[si].stars === 0 &&
              (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
-             // ...and the only other grounds are the two farms: Earth,
-             // and the taken world whose story needs one.
-             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 3 &&
+             // ...and the only other grounds are the two farms and the sea:
+             // Earth, the taken world, and the drowned sky the dive swims.
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 4 &&
              SF.skygen.isSurface(SF.missions.skyOf(0)) &&
-             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden)));
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden))) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.dive)));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -9679,6 +9685,91 @@ async function run(){
     G.run.ended = true; G.state = "idle";
     G.coopWith = null; G.coopMate = null;
     SF.input.setCoop(false);
+    G.world.reset();
+  }
+
+  /*
+   * THE DIVE - the sea past the crack, tested the way the family will meet
+   * it: the stop is where the story says, an old save rides the insert, the
+   * water slows BOTH sides' fire by the same amount, and the column is alive
+   * - fish schooling, bubbles actually travelling UP the screen, which no
+   * other object in this game does.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const di = SF.missions.MISSIONS.findIndex(m => m.dive);
+    check("the drowned sky is a real stop, first past the crack",
+      di === 34 && SF.missions.MISSIONS[di].name === "The Dive" &&
+      SF.missions.skyOf(di) === 42 && SF.skygen.isSurface(42) &&
+      SF.missions.MISSIONS[di].mods && SF.missions.MISSIONS[di].mods.water === true);
+    check("the wreck passes once; the floor tiles",
+      !!SF.skygen.buildOnce(42, 300, 400, 1) &&
+      !!SF.skygen.build(42, 300, 400, 1));
+
+    /* --- v10: an old family save rides the insert --- */
+    {
+      const v9 = P.migrate({ name:"V9", missionsVer: 9, tune:"nova",
+        missions: { "32": { cleared:true, stars:{pilot:1}, best:{} },
+                    "33": { cleared:true, stars:{pilot:2}, best:{} },
+                    "34": { cleared:true, stars:{pilot:3}, best:{pilot:700} },
+                    "41": { cleared:true, stars:{pilot:1}, best:{} } },
+        lastMission: 34, reached: 35 });
+      check("a v9 save shifts 34-41 up one and nothing below",
+        v9.missions["33"] && v9.missions["33"].stars.pilot === 2 &&
+        !v9.missions["34"] &&
+        v9.missions["35"] && v9.missions["35"].stars.pilot === 3 &&
+        v9.missions["42"] && v9.missions["42"].stars.pilot === 1 &&
+        v9.lastMission === 35 && v9.missionsVer >= 10);
+      check("being carried survives this insert too", v9.reached === 36);
+      // Every hand-written mission id sits BELOW this insert - the NOVA tune
+      // named 32 before and must name 32 after, or a child's trophy un-earns.
+      check("the NOVA tune still counts as earned",
+        v9.tune === "nova" &&
+        SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
+        !!(v9.missions[32] && v9.missions[32].cleared) &&
+        SF.config.TUNE_BY_ID.ghost.unlockMission === 23);
+    }
+
+    /* --- the dive itself --- */
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("Diver");
+    G.coopWith = null;
+    G.profile = P.load("Diver");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(di, "pilot");
+    await runFrames(45, true);                  // past the launch autopilot
+    const w = G.world, run = G.run;
+    check("the level opens underwater",
+      run.mission.dive === true && SF.dive.active() && w.mods.water === true);
+
+    const S = SF.dive._state();
+    check("the sea has civilians: three schools of fish",
+      S.schools.length === 3 && S.schools.every(sc => sc.fish.length >= 8));
+
+    /* Bubbles are the one thing in the game that travels UP the screen. */
+    await runFrames(30, true);
+    const b0 = S.bubbles.find(b => b.y > 100 && b.y < 700);
+    const y0 = b0 ? b0.y : null;
+    await runFrames(20, true);
+    check("bubbles rise while the world scrolls down",
+      !!b0 && (S.bubbles.indexOf(b0) < 0 || b0.y < y0));
+
+    /* The water slows fire the same on both sides: 0.8, theirs and yours. */
+    const pb = (() => {
+      // fire the real gun and read the real round
+      w.fireWeapons(99999, w.player);
+      const mine = w.bullets.items.filter(b => b.alive && !b.fromDrone);
+      return mine[mine.length - 1];
+    })();
+    check("your shots swim at 0.8",
+      !!pb && Math.abs(pb.vy - (-660*0.8)) < 0.001);
+    const eb = w.spawnEnemyBullet(300, 100, 0, 200, "bolt", 4);
+    check("their shots swim at 0.8 too",
+      !!eb && Math.abs(eb.vy - 160) < 0.001 && eb.vx === 0);
+
+    check("the water column draws without errors", errors.length === 0);
+    G.run.ended = true; G.state = "idle";
     G.world.reset();
   }
 

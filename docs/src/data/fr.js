@@ -618,6 +618,28 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Their Treasury": "Leur Trésor",
 "Shake Them Off": "Décroche-les !",
 "Second Harvest": "Seconde Récolte",
+
+/* ----- The Dive (mission 34) ----- */
+"The Dive": "La Plongée",
+"The sky fell in the sea": "le ciel est tombé dans la mer",
+"The river poured through the crack and landed HERE, {you} - a whole sea with our sky sunk inside it. Every star it swallowed is still glowing on the bottom... and their dredgers are already scooping them up. Dive. Take back every coin of light they touch.":
+  "La rivière a traversé la fissure et elle est tombée ICI, {you} — une mer entière, avec notre ciel englouti dedans. Chaque étoile avalée brille encore au fond... et leurs dragueurs sont déjà en train de les ramasser. Plonge. Reprends-leur chaque pièce de lumière.",
+"Take back the drowned light!": "Reprends la lumière engloutie !",
+"The Drowned Sky": "Le Ciel Englouti",
+"THE DROWNED SKY": "LE CIEL ENGLOUTI",
+"The river didn't stop at the crack, {you}. It fell through - and on the other side, a whole sea caught it. Every star it swallowed is still down there, glowing on the bottom.":
+  "La rivière ne s'est pas arrêtée à la fissure, {you}. Elle est tombée de l'autre côté — et là, une mer entière l'a recueillie. Chaque étoile qu'elle a avalée est encore au fond, et elle brille toujours.",
+"Their dredgers found it first, and they're hauling our sky up coin by coin. So today the patrol doesn't fly - it DIVES. The water slows every shot down there... theirs just as much as yours.":
+  "Leurs dragueurs l'ont trouvée les premiers, et ils remontent notre ciel pièce par pièce. Alors aujourd'hui, la patrouille ne vole pas : elle PLONGE. Sous l'eau, chaque tir est ralenti... les leurs autant que les tiens.",
+"One more thing, {you}. There's an old wreck on the floor - it went down full of the light they stole, and three of its lamps are somehow still burning. Nobody knows who's keeping them lit.":
+  "Encore une chose, {you}. Il y a une vieille épave au fond — elle a coulé pleine de la lumière qu'ils avaient volée, et trois de ses lampes brûlent encore. Personne ne sait qui les garde allumées.",
+"DIVE": "PLONGE !",
+"Guns work fine down here, {you}. Breathing is the hard part - good thing ships don't.":
+  "Les canons marchent très bien ici, {you}. C'est respirer qui est difficile — heureusement, les vaisseaux ne respirent pas.",
+"Mind the water, {you} - every shot swims slower. Theirs too.":
+  "Attention à l'eau, {you} — chaque tir nage plus lentement. Les leurs aussi.",
+"The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.":
+  "Tout le ciel est couché au fond de cette mer, {you}. Ramène-le à la maison, pièce par pièce.",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
