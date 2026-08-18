@@ -184,6 +184,7 @@ function updateFleet(dt, world, timeMs){
       b.x = f.x; b.y = f.y - 16; b.vx = 0; b.vy = -700;
       b.r = 4.5; b.dmg = 3; b.pierce = 0; b.homing = 0;
       b.tier = 2; b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
+      b.fromMirror = false; b.petal = false;   // recycled slot: state every flag
       fx.muzzle(f.x, f.y - 18, f.color, 0.7);
     }
   }

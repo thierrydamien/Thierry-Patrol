@@ -12,40 +12,40 @@
  *     1901  src/data/config.js
  *     2371  src/data/enemies.js
  *     3242  src/data/missions.js
- *     5235  src/wacky.js
- *     5451  src/data/comms.js
- *     5872  src/data/story.js
- *     6010  src/data/fr.js
- *     7347  src/profile.js
- *     7980  src/cloud.js
- *     8585  src/fx.js
- *     9698  src/input.js
- *    10192  src/entities.js
- *    11569  src/bossart.js
- *    12435  src/bosses.js
- *    13185  src/bossintro.js
- *    13308  src/rewind.js
- *    13839  src/finale.js
- *    14160  src/papadeath.js
- *    14482  src/backstage.js
- *    15431  src/sky29.js
- *    15676  src/mirrorduel.js
- *    16023  src/homecoming.js
- *    16223  src/prologue.js
- *    16702  src/systems.js
- *    17357  src/render.js
- *    22027  src/enemyart.js
- *    22979  src/insignia.js
- *    23224  src/skygen.js
- *    26318  src/shipart.js
- *    27518  src/paintjob.js
- *    27680  src/pilotart.js
- *    27775  src/comms.js
- *    27914  src/netcode.js
- *    28436  src/game.js
- *    32372  src/workshop.js
- *    33069  src/data/i18nbind.js
- *    33140  src/ui.js
+ *     5280  src/wacky.js
+ *     5496  src/data/comms.js
+ *     5926  src/data/story.js
+ *     6076  src/data/fr.js
+ *     7436  src/profile.js
+ *     8092  src/cloud.js
+ *     8697  src/fx.js
+ *     9810  src/input.js
+ *    10304  src/entities.js
+ *    11681  src/bossart.js
+ *    12547  src/bosses.js
+ *    13297  src/bossintro.js
+ *    13420  src/rewind.js
+ *    13951  src/finale.js
+ *    14273  src/papadeath.js
+ *    14595  src/backstage.js
+ *    15544  src/sky29.js
+ *    15789  src/mirrorduel.js
+ *    16136  src/homecoming.js
+ *    16336  src/prologue.js
+ *    16815  src/systems.js
+ *    17470  src/render.js
+ *    22241  src/enemyart.js
+ *    23193  src/insignia.js
+ *    23438  src/skygen.js
+ *    26839  src/shipart.js
+ *    28039  src/paintjob.js
+ *    28201  src/pilotart.js
+ *    28296  src/comms.js
+ *    28435  src/netcode.js
+ *    28966  src/game.js
+ *    33000  src/workshop.js
+ *    33697  src/data/i18nbind.js
+ *    33768  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2340,15 +2340,15 @@ const TUNES = [
     blurb:"The Warden's collector rig. A golden scoop under the nose.",
     pros:["coins fly to you","+15% pay"], cons:[],
     speed:1.00, fire:1.00, lives:0, magnet:1.7, money:1.15 },
-  { id:"ghost",    name:"GHOST", unlockMission:22,
+  { id:"ghost",    name:"GHOST", unlockMission:23,
     blurb:"The Phantom's phase plating. A shimmer that shrugs off trouble.",
     pros:["+8% speed","longer safety after a hit"], cons:[],
     speed:1.08, fire:1.00, lives:0, invuln:1.5 },
-  { id:"nova",     name:"NOVA", unlockMission:31, apex:true,
+  { id:"nova",     name:"NOVA", unlockMission:32, apex:true,
     blurb:"The Devourer's own core, cut down and caged in your hull. It hums.",
     pros:["+12% speed","+10% fire rate","+1 life","coins fly to you"], cons:[],
     speed:1.12, fire:0.90, lives:1, magnet:1.5 },
-  { id:"apex",     name:"APEX", unlockMission:27, apex:true,
+  { id:"apex",     name:"APEX", unlockMission:28, apex:true,
     blurb:"The Leviathan's core, fitted to your ship. Gold trim. You earned it.",
     pros:["+8% speed","+5% fire rate","+1 life"], cons:[],
     speed:1.08, fire:0.95, lives:1 },
@@ -3281,6 +3281,9 @@ const OBJECTIVES = {
   coinRush:  { label:"Grab 60 coins", icon:"🪙",
                test: s => s.coins >= 60,
                progress: s => (s.coins || 0) + "/60" },
+  garden:    { label:"Grow 6 flowers", icon:"🌼",
+               test: s => (s.flowersGrown || 0) >= 6,
+               progress: s => (s.flowersGrown || 0) + "/6" },
   /*
    * FOUR STARS THAT ASK FOR THE LEVEL'S OWN LESSON.
    *
@@ -4478,7 +4481,49 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:22, name:"Cold Approach", subtitle:"Line up the shot",
+    /*
+     * MISSION 22 - the other farm.
+     *
+     * The campaign's second surface, and the first green thing since Launch
+     * Day. It exists because Earth's farm is the best-loved picture in the
+     * game and the only other ground (the Red Canyon) is bare rock: one
+     * great surface at each end of the route and nothing in between. This
+     * is the in-between - a farm world like ours, already emptied by the
+     * people we are chasing, with its windsock still up and nobody home.
+     *
+     * Its rule is the one mechanic the campaign never had: the level plants
+     * things ON YOUR SIDE. Seeds drift down the wind; catch one and a
+     * flower-gun grows where it lands and fights beside you for a while.
+     * Star two asks for a garden of them. On a stop whose whole story is
+     * "they took everything", the answer the level teaches is: grow it
+     * back.
+     */
+    id:22, sky:41, name:"Second Harvest", subtitle:"somebody lived here",
+    brief:"The first green world since home, {you} - and it used to be somebody's. Their fields have gone wild, their windsock is still flying, and the thieves are back picking the place clean. Catch the seeds on the wind: what you plant, fights. Take the world back, and leave it growing.",
+    goal:"Catch SEEDS — what you plant fights",
+    garden:true,
+    face:"thief",
+    waves: [
+      w(1,   "grunt",    6, "line"),
+      w(9,   "thief",    2, "sides"),
+      w(16,  "weaver",   7, "arc"),
+      w(24,  "carrier",  1, "column"),
+      w(31,  "striker",  6, "vee"),
+      w(38,  "thief",    3, "scatter"),
+      w(46,  "grunt",    9, "wall"),
+      w(54,  "carrier",  1, "column"),
+      w(61,  "kamikaze", 4, "sides"),
+      w(68,  "weaver",   8, "tripleColumns"),
+      w(76,  "thief",    3, "sides"),
+      w(84,  "brute",    2, "twinColumns"),
+      w(92,  "carrier",  1, "column"),
+      w(99,  "striker",  7, "pincer"),
+      w(108, "grunt",   10, "scatter"),
+    ],
+    objectives: ["complete","garden","rescueAll"],
+  },
+  {
+    id:23, sky:21, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -4529,7 +4574,7 @@ const MISSIONS = [
    * rather than from the crowd. Nothing here dives at you; the walls do that.
    */
   {
-    id:23, name:"The Narrows", subtitle:"Under their guns",
+    id:24, sky:22, name:"The Narrows", subtitle:"Under their guns",
     brief:"Their fortress guns watch every road in the sky, {you} - so we go UNDER the sky. Down their own canyon, below the radar. The walls breathe in and out; fly the middle when they squeeze.",
     goal:"The canyon SQUEEZES — fly the middle",
     narrows:true,
@@ -4553,7 +4598,7 @@ const MISSIONS = [
     objectives: ["complete","squeeze","rescueAll"],
   },
   {
-    id:24, name:"The Trench Run", subtitle:"Thread the walls",
+    id:25, sky:23, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -4580,7 +4625,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:25, name:"All Hands", subtitle:"Everyone who is left",
+    id:26, sky:24, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -4627,7 +4672,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:26, name:"The Bright Side", subtitle:"standing on their sun",
+    id:27, sky:25, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -4655,7 +4700,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:27, name:"The Leviathan", subtitle:"The last one",
+    id:28, sky:26, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -4694,7 +4739,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:28, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:29, sky:27, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -4738,7 +4783,7 @@ const MISSIONS = [
    * read, which is a kind of pressure the game has never applied.
    */
   {
-    id:29, name:"Nightfall", subtitle:"While the light lasts",
+    id:30, sky:28, name:"Nightfall", subtitle:"While the light lasts",
     brief:"Their sun is going out, {you}, and it's going out WHILE we're in here. Everything you can see now, you'll be flying blind against by the end. Learn them early.",
     goal:"It gets DARKER. Learn them early",
     nightfall:true,
@@ -4762,7 +4807,7 @@ const MISSIONS = [
     objectives: ["complete","afterDark","rescueAll"],
   },
   {
-    id:30, name:"The Long Dark", subtitle:"Something is out there",
+    id:31, sky:29, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -4793,7 +4838,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:31, name:"The Devourer", subtitle:"The last star",
+    id:32, sky:30, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -4831,7 +4876,7 @@ const MISSIONS = [
    * band and watch yourself drift downstream - that moment is the level.
    */
   {
-    id:32, name:"The Sky River", subtitle:"The sky is draining",
+    id:33, sky:31, name:"The Sky River", subtitle:"The sky is draining",
     brief:"See that bright band, {you}? That's the sky itself, pouring toward the crack the Devourer left. Drop in and it carries you - and their shots, and the money. Ride it to travel. Climb out to aim.",
     goal:"The sky is DRAINING — ride it!",
     current:true,
@@ -4865,7 +4910,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:33, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:34, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -4908,7 +4953,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:34, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:35, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -4940,7 +4985,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:35, name:"The Chorus", subtitle:"They fire on the beat",
+    id:36, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -4982,7 +5027,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:36, name:"The Glass Sea", subtitle:"two of you",
+    id:37, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -5017,7 +5062,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:37, name:"The Foundry", subtitle:"Stop the production line",
+    id:38, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5049,7 +5094,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:38, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:39, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5088,7 +5133,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:39, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:40, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5116,7 +5161,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:40, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:41, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -5796,6 +5841,15 @@ const COMMS = {
   limpetStart: { speaker:"mate", cooldown:999, lines:[
     "Those little green things don't shoot, {you} - they STICK. If one gets you, waggle her hard, left-right-left, and shake it loose.",
   ]},
+  gardenStart: { speaker:"control", cooldown:999, lines:[
+    "This was somebody's farm, {you}. Their windsock is still up. Catch the seeds on the wind - what you plant, fights.",
+  ]},
+  gardenSeed: { speaker:"mate", cooldown:999, lines:[
+    "There - a seed, {you}! Catch it before it lands!",
+  ]},
+  gardenGrow: { speaker:"mate", cooldown:999, lines:[
+    "It GREW! Look at it go - plant more, {you}!",
+  ]},
   flareStart: { speaker:"control", cooldown:999, lines:[
     "We're right over the star itself, {you}. When the surface flares, CLIMB - anything low burns, them and us both.",
   ]},
@@ -5987,6 +6041,18 @@ const STORY = {
       { art:"sky",  text:"One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it." },
     ],
     button:"COME HOME",
+  },
+
+  /* Mission 22's page: the other farm, found empty. Read before flying, so
+     the ruined yard on the ground - and the seeds - land as a story rather
+     than as scenery. Fires once, from the briefing, like every other beat. */
+  secondHarvest: {
+    title: "SECOND HARVEST",
+    panels: [
+      { art:"taken", text:"There's a green world on the scanner, {you} - fields, a lane, a farm. Just like home. But nobody is answering, and nothing down there has been mown in a long, long time." },
+      { art:"crew",  text:"The thieves came through here first. They took the ships, the lights, the people's sky - and left the windsock flying. Now they're back for whatever is left. So are we." },
+      { art:"sky",   text:"Papa always said a farm isn't the buildings - it's what you plant. The wind down there is FULL of seeds. Catch them, {you}. Leave this world growing." },
+    ],
   },
 
   /* The TRUE ending now: the workshop is beaten, the sky is painted. */
@@ -6315,6 +6381,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Rescue every stranded pilot": "Sauver tous les pilotes en perdition",
 "Take no damage at all": "Ne subir aucun dégât",
 "Grab 60 coins": "Ramasser 60 pièces",
+"Grow 6 flowers": "Faire pousser 6 fleurs",
 "Bag 10 WANTED ships": "Abattre 10 vaisseaux RECHERCHÉS",
 "Cut 20 near misses": "Frôler 20 ennemis",
 "Destroy 15 unseen": "Détruire 15 ennemis sans être vu",
@@ -6342,6 +6409,8 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE SUPPLY ROAD": "LA ROUTE DU RAVITAILLEMENT",
 "ENEMY SPACE": "TERRITOIRE ENNEMI",
 "WARDEN'S REACH": "LE DOMAINE DU GEÔLIER",
+"THE TAKEN WORLD": "LE MONDE VOLÉ",
+"somebody's farm, before they came": "la ferme de quelqu'un, avant leur passage",
 "THE TRENCHES": "LES TRANCHÉES",
 "THEIR STAR": "LEUR ÉTOILE",
 "THE DARK": "LES TÉNÈBRES",
@@ -6584,6 +6653,13 @@ SF.i18n.register("fr", { name: "Français", s: {
 "One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it.":
   "Une dernière chose avant d'atterrir, {you}. Là où le Dévoreur est tombé, le ciel n'a pas guéri — il y a une fissure là-haut, fine comme un trait de crayon, et la lumière qui la traverse n'est pas celle des étoiles. La carte l'a déjà trouvée.",
 "COME HOME": "RENTRE À LA MAISON",
+"SECOND HARVEST": "SECONDE RÉCOLTE",
+"There's a green world on the scanner, {you} - fields, a lane, a farm. Just like home. But nobody is answering, and nothing down there has been mown in a long, long time.":
+  "Il y a un monde vert au scanner, {you} — des champs, une route, une ferme. Comme à la maison. Mais personne ne répond, et rien là-dessous n'a été fauché depuis très, très longtemps.",
+"The thieves came through here first. They took the ships, the lights, the people's sky - and left the windsock flying. Now they're back for whatever is left. So are we.":
+  "Les voleurs sont passés ici en premier. Ils ont pris les vaisseaux, les lumières, le ciel de ces gens — et laissé la manche à air au vent. Ils reviennent pour ce qui reste. Nous aussi.",
+"Papa always said a farm isn't the buildings - it's what you plant. The wind down there is FULL of seeds. Catch them, {you}. Leave this world growing.":
+  "Papa a toujours dit qu'une ferme, ce n'est pas les bâtiments — c'est ce qu'on y plante. Le vent là-dessous est PLEIN de graines. Attrape-les, {you}. Laisse ce monde en train de pousser.",
 "THE PAINTED SKY": "LE CIEL PEINT",
 "The Royal Brush went up like a firework with every colour the workshop owns - and where it burst, the sky isn't blank any more. You painted it, {you}. It's yours.":
   "Le Pinceau Royal a explosé comme un feu d'artifice avec toutes les couleurs de l'atelier — et là où il a éclaté, le ciel n'est plus vide. C'est toi qui l'as peint, {you}. Il est à toi.",
@@ -6614,6 +6690,12 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The Warden": "Le Geôlier",
 "Their Treasury": "Leur Trésor",
 "Shake Them Off": "Décroche-les !",
+"Second Harvest": "Seconde Récolte",
+"somebody lived here": "quelqu'un vivait ici",
+"Catch SEEDS — what you plant fights":
+  "Attrape les GRAINES — elles se battent",
+"The first green world since home, {you} - and it used to be somebody's. Their fields have gone wild, their windsock is still flying, and the thieves are back picking the place clean. Catch the seeds on the wind: what you plant, fights. Take the world back, and leave it growing.":
+  "Le premier monde vert depuis la maison, {you} — et il appartenait à quelqu'un. Leurs champs sont retournés à l'état sauvage, leur manche à air flotte encore, et les voleurs reviennent finir le pillage. Attrape les graines dans le vent : ce que tu plantes se bat. Reprends ce monde, et laisse-le en train de pousser.",
 "Cold Approach": "Approche Glacée",
 "The Narrows": "Le Goulet",
 "The Trench Run": "La Tranchée",
@@ -7199,6 +7281,13 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Aujourd'hui c'est toi le camion, {you}. Attrape une caisse, monte-la à la porte verte — un coup encaissé et tu lâches tout, alors sois prudent ET rapide.",
 "There's no edge to this place, {you} - fly out one side and you'll come right back in the other. Use it.":
   "Cet endroit n'a pas de bord, {you} — sors d'un côté et tu reviens aussitôt par l'autre. Sers-t'en.",
+"This was somebody's farm, {you}. Their windsock is still up. Catch the seeds on the wind - what you plant, fights.":
+  "C'était la ferme de quelqu'un, {you}. Leur manche à air flotte encore. Attrape les graines dans le vent — ce que tu plantes se bat.",
+"There - a seed, {you}! Catch it before it lands!":
+  "Là — une graine, {you} ! Attrape-la avant qu'elle touche le sol !",
+"It GREW! Look at it go - plant more, {you}!":
+  "Elle a POUSSÉ ! Regarde-la faire — plantes-en d'autres, {you} !",
+"PLANTED!": "PLANTÉ !",
 "Those little green things don't shoot, {you} - they STICK. If one gets you, waggle her hard, left-right-left, and shake it loose.":
   "Ces petits trucs verts ne tirent pas, {you} — ils S'ACCROCHENT. Si l'un d'eux t'attrape, secoue fort, gauche-droite-gauche, et décroche-le.",
 "We're right over the star itself, {you}. When the surface flares, CLIMB - anything low burns, them and us both.":
@@ -7673,6 +7762,29 @@ function migrate(p){
     }
     p.missionsVer = 8;
   }
+  /*
+   * v9: Second Harvest landed as mission 22 - the other farm, the campaign's
+   * second surface - pushing the old 22-40 up one. A single offset,
+   * descending so nothing is overwritten before it moves, exactly like v5
+   * and v7.
+   *
+   * `reached` moves with it: it is a mission INDEX (the furthest stop a
+   * wingman has carried this pilot to), and an index that stays put while
+   * the map grows underneath it would quietly open one stop too few.
+   *
+   * The hand-written mission ids move in the same release: the tune unlocks
+   * (data/config.js: ghost 22->23, apex 27->28, nova 31->32) and
+   * devourerDown below (31->32). This loop cannot reach them, and getting
+   * one wrong silently un-earns something a child worked for.
+   */
+  if((p.missionsVer || 1) < 9){
+    for(let id = 40; id >= 22; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 22) p.lastMission += 1;
+    if((p.reached || 0) >= 22) p.reached += 1;
+    p.missionsVer = 9;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -7873,7 +7985,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[31] && p.missions[31].cleared),
+    devourerDown: !!(p.missions[32] && p.missions[32].cleared),
   };
 }
 
@@ -10915,7 +11027,7 @@ class World {
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
-      b.fromMirror = false;
+      b.fromMirror = false; b.petal = false;
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
@@ -10928,7 +11040,7 @@ class World {
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
-      b.fromMirror = false;
+      b.fromMirror = false; b.petal = false;
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -10957,7 +11069,7 @@ class World {
         b.r = s.r; b.dmg = Math.max(1, Math.round(s.dmg*0.6)); b.pierce = s.pierce;
         b.homing = s.homing; b.tier = s.tier; b.age = 0;
         b.fromDrone = s.fromDrone; b.hitBoss = false; b.hitWeak = false;
-        b.fromMirror = true;
+        b.fromMirror = true; b.petal = false;
       }
       fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }
@@ -14022,6 +14134,7 @@ function updateFleet(dt, world, timeMs){
       b.x = f.x; b.y = f.y - 16; b.vx = 0; b.vy = -700;
       b.r = 4.5; b.dmg = 3; b.pierce = 0; b.homing = 0;
       b.tier = 2; b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
+      b.fromMirror = false; b.petal = false;   // recycled slot: state every flag
       fx.muzzle(f.x, f.y - 18, f.color, 0.7);
     }
   }
@@ -18759,6 +18872,19 @@ function drawBullets(ctx, world){
     if(!b.alive) continue;
     const t = BULLET_TIERS[b.tier] || BULLET_TIERS[0];
     const k = b.fromDrone ? 0.7 : 1;
+    if(b.petal){
+      // A flower's round: a petal, not a bolt. Same physics, gentler face.
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Math.atan2(b.vy, b.vx) + Math.PI/2);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "#b8f4c6";
+      ctx.beginPath(); ctx.ellipse(0, 0, 3.1, 5.4, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(255,244,190,0.95)";
+      ctx.beginPath(); ctx.arc(0, -1.4, 1.5, 0, TAU); ctx.fill();
+      ctx.restore();
+      continue;
+    }
     const spr = boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
@@ -19112,6 +19238,65 @@ let darkCv = null, darkCtx = null;
  */
 function drawAct4(ctx, run, world, timeMs){
   if(!run || run.ended) return;
+
+  /* --- SECOND HARVEST: the garden ----------------------------------------
+     Flower-guns, drawn under the traffic they are shooting at. Each one
+     grows where its seed was caught: a swaying stem out of the ground, two
+     leaves, and a blossom that opens as `bloom` runs 0 to 1 - so a plant
+     visibly GROWS in under half a second, which is the whole reward for
+     catching the seed. The last second of its life it dims, so a wilt never
+     reads as a bug. */
+  if(run.garden && run.garden.flowers.length){
+    const fls = run.garden.flowers;
+    for(let i = 0; i < fls.length; i++){
+      const f = fls[i];
+      const left = (f.until - timeMs)/1000;
+      const a2 = Math.min(1, Math.max(0.25, left/1.4));
+      const sway = Math.sin(timeMs/640 + f.x*0.05) * 2.4 * f.bloom;
+      const h = 26 * f.bloom;
+      ctx.save();
+      ctx.globalAlpha = a2;
+      // rooted: a soft shadow where it meets the land
+      ctx.fillStyle = "rgba(10,20,8,0.45)";
+      ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 10*f.bloom + 2, 3.4, 0, 0, TAU); ctx.fill();
+      // stem and leaves
+      ctx.strokeStyle = "#3f7d4a";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.quadraticCurveTo(f.x + sway*0.4, f.y - h*0.55, f.x + sway, f.y - h);
+      ctx.stroke();
+      ctx.fillStyle = "#4e9459";
+      ctx.beginPath();
+      ctx.ellipse(f.x - 4.5*f.bloom, f.y - h*0.42, 4.6*f.bloom, 1.9*f.bloom, -0.55, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(f.x + 4.5*f.bloom, f.y - h*0.60, 4.2*f.bloom, 1.8*f.bloom, 0.5, 0, TAU);
+      ctx.fill();
+      // the blossom: six petals about a warm core, opening with bloom
+      const bx = f.x + sway, by = f.y - h;
+      const pr = 7.5 * f.bloom;
+      ctx.fillStyle = "#b8f4c6";
+      for(let pt = 0; pt < 6; pt++){
+        const an = pt/6*TAU + timeMs/2400;
+        ctx.beginPath();
+        ctx.ellipse(bx + Math.cos(an)*pr*0.72, by + Math.sin(an)*pr*0.72,
+                    pr*0.55, pr*0.3, an, 0, TAU);
+        ctx.fill();
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const cg = ctx.createRadialGradient(bx, by, 0.5, bx, by, pr*1.6 + 2);
+      cg.addColorStop(0, "rgba(255,233,168,0.8)");
+      cg.addColorStop(1, "rgba(184,244,198,0)");
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(bx, by, pr*1.6 + 2, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(bx, by, 2.6*f.bloom, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
 
   /* --- THE CURRENT: the river ---------------------------------------------
      Drawn as a band and the things IN it. The band alone reads as a coloured
@@ -19823,6 +20008,35 @@ function drawPickups(ctx, world, timeMs){
         ctx.fillStyle = "#ffd23f";
         ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
       }
+    } else if(it.kind === "seed"){
+      /*
+       * Second Harvest's seed: a dandelion puff riding the wind. Drawn soft
+       * and pale against the dark overgrowth, with a slow spin and a warm
+       * heart, so a child reads "catch me" before anybody says it.
+       */
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const sg = ctx.createRadialGradient(0, 0, 1, 0, 0, 18);
+      sg.addColorStop(0, "rgba(235,255,235,0.6)");
+      sg.addColorStop(1, "rgba(180,244,198,0)");
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.rotate(it.angle + timeMs/1400);
+      ctx.strokeStyle = "rgba(240,255,240,0.85)";
+      ctx.lineWidth = 1.2;
+      for(let fl = 0; fl < 7; fl++){
+        const a2 = fl/7*TAU;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a2)*9, Math.sin(a2)*9);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(Math.cos(a2)*9.6, Math.sin(a2)*9.6, 1.3, 0, TAU);
+        ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fill();
+      }
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(0, 0, 2.6, 0, TAU); ctx.fill();
     } else if(it.kind === "star"){
       // The Star Vault's treasure: a spinning gold star in a warm halo.
       ctx.save();
@@ -23844,6 +24058,18 @@ const SKIES = [
     // The ground tiles; home does not. See drawFarm for why the split exists.
     props:[ {k:"fields", x:0.50, y:0.50, dark:"#2a3418"},
             {k:"farm",   x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * GREENFALL (Second Harvest) - the taken world. Appended at the end for
+   * the same reason Earth was: the Drawing Board's saves hold bare sky
+   * indices, and inserting mid-list would repaint the family's drawings
+   * onto shifted bases. The empty farmstead passes once, like home does.
+   */
+  { name:"Greenfall", surface:true,
+    clouds:["#3f7d5a","#79c9a2","#16281c"], dust:"#0a140c", star:"#eaffea",
+    lum:1.0, density:0.85, stars:0, bright:0,
+    props:[ {k:"wild", x:0.50, y:0.50, dark:"#101c12"},
+            {k:"ruin", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -25099,8 +25325,8 @@ function drawVortex(ctx, W, H, p, rand){
  * different positions - so the plan draws from its OWN fixed seed instead.
  * Same numbers in both bakes, by construction, forever.
  */
-function fieldPlan(W, H){
-  const rand = rngFor(90400077);
+function fieldPlan(W, H, seed){
+  const rand = rngFor(seed || 90400077);
   const ROWS = 12;
   const homeRow = 2 + Math.floor(rand()*3);
   const rowE = [0];
@@ -25130,12 +25356,13 @@ function fieldPlan(W, H){
  * because the copses tile with the ground and the windbreak leaves with
  * the farm, and the two must still look planted by the same morning.
  */
-function fieldTree(ctx, tx, ty, tr){
-  ctx.fillStyle = "rgba(18,26,10,0.5)";
+function fieldTree(ctx, tx, ty, tr, pal){
+  const P2 = pal || {};
+  ctx.fillStyle = P2.shadow || "rgba(18,26,10,0.5)";
   ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#2c3d1c";
+  ctx.fillStyle = P2.canopy || "#2c3d1c";
   ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
-  ctx.strokeStyle = "rgba(255,214,140,0.5)";
+  ctx.strokeStyle = P2.rim || "rgba(255,214,140,0.5)";
   ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
 }
@@ -25452,6 +25679,298 @@ function drawFields(ctx, W, H, p, rand){
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
+
+/*
+ * GREENFALL - the taken world. The campaign's second farm, and the reason
+ * it looks like the first one is the whole story: somebody lived here, and
+ * the people we are chasing came through. The land is dealt by the same
+ * fieldPlan as Earth's (its own seed, its own lie of the land) because it
+ * IS the same kind of place - fields against a lane, a paddock, a yard -
+ * and every difference is what happened to it: hedgerows breached, the
+ * lane cracked and going green, whole fields gone over to teal blossom
+ * that nobody planted.
+ */
+const WILD_SEED = 51230990;
+function drawWild(ctx, W, H, p, rand){
+  const { ROWS, homeRow, rowE, laneX, sideY, padX0, padX1, trackY, ax0 } =
+    fieldPlan(W, H, WILD_SEED);
+  const rowCols = [];
+  for(let r = 0; r < ROWS; r++){
+    const rx = laneX;
+    const e = [0];
+    const split = (a, b) => {
+      const span = b - a;
+      const n = Math.max(1, Math.round(span/(W*0.19)*(0.65 + rand()*0.8)));
+      const raw2 = []; let acc2 = 0;
+      for(let i = 0; i < n; i++){ const w2 = 0.55 + rand()*0.9; raw2.push(w2); acc2 += w2; }
+      let x = a;
+      for(let i = 0; i < n - 1; i++){ x += raw2[i]/acc2*span; e.push(x); }
+    };
+    split(0, rx); e.push(rx);
+    if(r === homeRow){ if(padX1 < W){ e.push(padX1); split(padX1, W); } }
+    else split(rx, W);
+    e.push(W);
+    rowCols.push(e);
+  }
+  /*
+   * The overgrowth palette: mosses first, then the teal bloom that has had
+   * the run of the place, then the dry rust of a crop nobody brought in.
+   * Cooler and darker than Earth's dawn on purpose - this world is in
+   * shadow until you do something about it, and the seeds and flower-guns
+   * are the brightest things on it.
+   */
+  const WILDS = ["#2c4630", "#35543a", "#243d28", "#2f6b5a", "#3c8a6e",
+                 "#31502e", "#274433", "#57503a", "#3b5a40", "#2a4a3e"];
+  const wrapY = (y, r, draw) => {
+    draw(y);
+    if(y - r < 0) draw(y + H);
+    if(y + r > H) draw(y - H);
+  };
+  ctx.save();
+  ctx.fillStyle = p.dark || "#101c12";
+  ctx.fillRect(-2, -2, W + 4, H + 4);
+  let prevCrop = null;
+  for(let r = 0; r < ROWS; r++){
+    const e = rowCols[r], ry0 = rowE[r], ry1 = rowE[r+1];
+    for(let c = 0; c < e.length - 1; c++){
+      const x0 = e[c], x1 = e[c+1], cw = x1 - x0;
+      const isPaddock = r === homeRow && Math.abs(x0 - padX0) < 0.5;
+      const crop = isPaddock ? "#3a5a3c"
+                 : (prevCrop && rand() < 0.3) ? prevCrop
+                 : WILDS[Math.floor(rand()*WILDS.length)];
+      prevCrop = crop;
+      const g = ctx.createLinearGradient(x0, ry0, x1, ry1);
+      g.addColorStop(0, mixA(crop, "#9fe8c8", 0.10, 1));
+      g.addColorStop(1, mixA(crop, "#0a140c", 0.42, 1));
+      ctx.fillStyle = g;
+      ctx.globalAlpha = isPaddock ? 1 : 0.85 + rand()*0.15;
+      ctx.fillRect(x0, ry0, cw + 1, ry1 - ry0 + 1);
+      // The bloom-fields glow faintly with their own speckle - drifts of the
+      // same flowers the seeds grow, wild here, which is the level quietly
+      // telling you the mechanic before the radio does.
+      if(!isPaddock && (crop === "#2f6b5a" || crop === "#3c8a6e")){
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = "#b8f4c6";
+        const n = Math.floor(cw*(ry1 - ry0)/900);
+        for(let d = 0; d < n; d++){
+          ctx.beginPath();
+          ctx.arc(x0 + 3 + rand()*(cw - 6), ry0 + 3 + rand()*(ry1 - ry0 - 6),
+                  0.8 + rand()*0.9, 0, TAU);
+          ctx.fill();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  /*
+   * Breached hedgerows: the stitching, with pieces missing. Earth's run
+   * unbroken; here every seam is dashed - segments and gaps - because a
+   * hedge stops being a wall the year nobody trims it, and a broken line
+   * is the fastest way a picture says "untended".
+   */
+  ctx.strokeStyle = "rgba(14,24,12,0.9)";
+  for(let r = 0; r <= ROWS; r++){
+    ctx.lineWidth = 2 + rand()*2.4;
+    let x = 0;
+    while(x < W){
+      const seg = 26 + rand()*70, gap = 8 + rand()*26;
+      ctx.beginPath(); ctx.moveTo(x, rowE[r]); ctx.lineTo(Math.min(W, x + seg), rowE[r]); ctx.stroke();
+      x += seg + gap;
+    }
+  }
+  for(let r = 0; r < ROWS; r++){
+    const e = rowCols[r];
+    for(let c = 1; c < e.length - 1; c++){
+      ctx.lineWidth = 2 + rand()*2;
+      let y = rowE[r];
+      while(y < rowE[r+1]){
+        const seg = 20 + rand()*46, gap = 8 + rand()*22;
+        ctx.beginPath(); ctx.moveTo(e[c], y); ctx.lineTo(e[c], Math.min(rowE[r+1], y + seg)); ctx.stroke();
+        y += seg + gap;
+      }
+    }
+  }
+  /*
+   * The lane, still dead straight - a road does not forget where it went -
+   * but cracked and going green: painted paler and thinner than Earth's,
+   * with weed-dashes across it. The side lane still leaves at its T.
+   */
+  const paintRoads = (grow, col, alpha) => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.lineCap = "butt";
+    ctx.lineWidth = W*0.013 + grow;
+    ctx.beginPath(); ctx.moveTo(laneX, -10); ctx.lineTo(laneX, H + 10); ctx.stroke();
+    ctx.lineWidth = W*0.010 + grow;
+    ctx.beginPath(); ctx.moveTo(-6, sideY); ctx.lineTo(laneX + 1, sideY); ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  ctx.save(); ctx.translate(1.2, 0.7);
+  paintRoads(W*0.008, "rgba(12,20,10,0.8)", 0.8);
+  ctx.restore();
+  paintRoads(0, "#6f6b4e", 0.75);
+  ctx.strokeStyle = "rgba(63,125,74,0.7)";                 // the weeds win
+  ctx.lineWidth = 1.6;
+  for(let y = 6 + rand()*10; y < H; y += 14 + rand()*26){
+    ctx.beginPath();
+    ctx.moveTo(laneX - W*0.006, y);
+    ctx.lineTo(laneX + W*0.006, y + 2);
+    ctx.stroke();
+  }
+  // The wild copses - denser than Earth's, because nothing has been cut
+  // back in years, and they walk right over where the roads used to matter.
+  const pal = { shadow:"rgba(6,14,8,0.55)", canopy:"#1d3524",
+                rim:"rgba(140,240,200,0.45)" };
+  const inPaddock = (bx, by) => by > rowE[homeRow] - 14 && by < rowE[homeRow + 1] + 14 &&
+    bx > padX0 - 14 && bx < padX1 + 14;
+  for(let i = 0; i < 24; i++){
+    const bx = rand()*W, by = rand()*H, n = 3 + Math.floor(rand()*5);
+    if(Math.abs(bx - laneX) < 20 || inPaddock(bx, by)) continue;
+    wrapY(by, 44, y => {
+      for(let t2 = 0; t2 < n; t2++)
+        fieldTree(ctx, bx + (rand() - 0.5)*52, y + (rand() - 0.5)*38, 5 + rand()*8, pal);
+    });
+  }
+  // The evening of a taken world: a cool teal wash from the key side and a
+  // deep shade opposite. x-only, same as Earth's dawn, for the same reason:
+  // this texture wraps vertically and must not know where its edges are.
+  const dusk = ctx.createLinearGradient(0, 0, W, 0);
+  dusk.addColorStop(0, "rgba(110,230,190,0.14)");
+  dusk.addColorStop(0.55, "rgba(110,230,190,0.03)");
+  dusk.addColorStop(1, "rgba(8,18,30,0.24)");
+  ctx.fillStyle = dusk;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+/*
+ * THE EMPTY FARMSTEAD - Greenfall's pass-once landmark, and the mirror of
+ * Launch Day's. Same bones on purpose: an apron, a workshop, a house, an
+ * airstrip, a windbreak. Every light is off, the roof is holed, the ships'
+ * cradles are empty, and the windsock is still flying - which is the one
+ * detail the brief points at, because a windsock nobody took down is how a
+ * picture says "they left in a hurry" to a seven-year-old.
+ */
+function drawRuin(ctx, W, H, p, rand){
+  const { y1, ax0, ay0, apW, apH, trackY, laneX, padX1, rowE, homeRow } =
+    fieldPlan(W, H, WILD_SEED);
+  ctx.save();
+  // the track in, faded to a memory of itself
+  const spur = (grow, col, alpha) => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.lineCap = "butt";
+    ctx.lineWidth = W*0.006 + grow;
+    ctx.beginPath(); ctx.moveTo(laneX, trackY); ctx.lineTo(ax0 + 2, trackY); ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  ctx.save(); ctx.translate(1.2, 0.7);
+  spur(W*0.008, "rgba(12,20,10,0.8)", 0.7);
+  ctx.restore();
+  spur(0, "#6f6b4e", 0.65);
+  /*
+   * Moonlight on the dead yard - the cold answer to Launch Day's warm lamp
+   * spill. Without it the ruin sank into the overgrowth and the level's own
+   * landmark could scroll past unnoticed; a pale glint makes the eye stop
+   * exactly once, which is what a pass-once landmark is for.
+   */
+  { const moon = ctx.createRadialGradient(ax0 + apW*0.5, ay0 + apH*0.7, 2,
+                                          ax0 + apW*0.5, ay0 + apH*0.7, apW*1.5);
+    moon.addColorStop(0, "rgba(190,225,235,0.20)");
+    moon.addColorStop(1, "rgba(190,225,235,0)");
+    ctx.fillStyle = moon;
+    ctx.beginPath(); ctx.arc(ax0 + apW*0.5, ay0 + apH*0.7, apW*1.5, 0, TAU); ctx.fill(); }
+  // the apron, cracked and going green
+  ctx.fillStyle = "#77735a";
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath();
+  ctx.moveTo(ax0, ay0);
+  ctx.lineTo(ax0 + apW, ay0 + 2 + rand()*3);
+  ctx.lineTo(ax0 + apW - 2 - rand()*4, ay0 + apH);
+  ctx.lineTo(ax0 + 3 + rand()*4, ay0 + apH - 2);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = "#3f7d4a";
+  for(let i = 0; i < 14; i++){
+    ctx.beginPath();
+    ctx.arc(ax0 + 3 + rand()*(apW - 6), ay0 + 3 + rand()*(apH - 6),
+            1 + rand()*1.6, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // a roof with the morning missing: the lit slope is torn open instead
+  const deadRoof = (bx, by, bw, bh, base, holed) => {
+    ctx.fillStyle = "rgba(6,12,6,0.5)";
+    ctx.beginPath(); ctx.ellipse(bx + bw*0.62, by + bh*0.72, bw*0.62, bh*0.5, 0.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = mixA(base, "#9fe8c8", 0.10, 1);
+    ctx.fillRect(bx, by, bw, bh/2);
+    ctx.fillStyle = mixA(base, "#060a06", 0.5, 1);
+    ctx.fillRect(bx, by + bh/2, bw, bh/2);
+    ctx.strokeStyle = "rgba(160,200,170,0.3)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx + 0.5, by + bh/2); ctx.lineTo(bx + bw - 0.5, by + bh/2); ctx.stroke();
+    if(holed){
+      // the hole: sky-dark, jagged, through the upper slope
+      ctx.fillStyle = "#0b140d";
+      ctx.beginPath();
+      ctx.moveTo(bx + bw*0.32, by + 1.5);
+      ctx.lineTo(bx + bw*0.58, by + 1);
+      ctx.lineTo(bx + bw*0.52, by + bh*0.42);
+      ctx.lineTo(bx + bw*0.40, by + bh*0.36);
+      ctx.closePath(); ctx.fill();
+    }
+  };
+  const wx = ax0 - 2, wy = ay0 + apH + 3;
+  deadRoof(wx, wy, 30, 15, "#5c5c52", true);         // the workshop, holed
+  ctx.fillStyle = "#0b140d";
+  ctx.fillRect(wx + 9, wy - 1.4, 7, 2.8);            // the door, open on dark
+  deadRoof(ax0 + apW + 5, ay0 + 3, 15, 10, "#5e4a42", false);   // the house, asleep for good
+  ctx.fillStyle = "#0b140d";                          // shed: down to a smear
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(ax0 + apW + 12, ay0 + 25, 7, 4, 0.4, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // two empty cradles where the darts were wheeled out and never came back
+  const cradle = (dx, dy, s) => {
+    ctx.strokeStyle = "rgba(210,230,215,0.6)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(dx, dy - s);
+    ctx.lineTo(dx + s*0.85, dy + s*0.8);
+    ctx.lineTo(dx, dy + s*0.35);
+    ctx.lineTo(dx - s*0.85, dy + s*0.8);
+    ctx.closePath(); ctx.stroke();
+  };
+  cradle(ax0 + apW*0.30, ay0 + 16, 6);
+  cradle(ax0 + apW*0.62, ay0 + 24, 6);
+  // the airstrip, nearly swallowed - thresholds just showing through
+  const sx = Math.min(padX1 - 26, ax0 + apW + 34);
+  const sy0 = y1 + 14, sy1 = rowE[homeRow + 1] - 12;
+  ctx.globalAlpha = 0.4;
+  for(let d = sy0; d < sy1; d += 9)
+    { ctx.fillStyle = "rgba(220,232,200," + (((d - sy0)/9|0) % 2 ? 0.06 : 0.14) + ")";
+      ctx.fillRect(sx, d, 13, Math.min(9, sy1 - d)); }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(sx + 2, sy0 + 2, 9, 2.4);
+  ctx.fillRect(sx + 2, sy1 - 4.4, 9, 2.4);
+  // ...and the windsock, still up, still flying, torn at the tip
+  ctx.strokeStyle = "rgba(240,240,240,0.85)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx - 5, sy0 + 9); ctx.stroke();
+  ctx.fillStyle = "#f09048";
+  ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx + 1, sy0 + 4.2);
+  ctx.lineTo(sx - 1.5, sy0 + 5.0); ctx.lineTo(sx + 2, sy0 + 5.6);
+  ctx.lineTo(sx - 5, sy0 + 6); ctx.closePath(); ctx.fill();
+  // the windbreak: five planted trees, two of them dead and grey
+  const alive = { shadow:"rgba(6,14,8,0.55)", canopy:"#1d3524",
+                  rim:"rgba(140,240,200,0.45)" };
+  const dead  = { shadow:"rgba(6,14,8,0.45)", canopy:"#3a423c",
+                  rim:"rgba(190,200,195,0.3)" };
+  for(let i = 0; i < 5; i++){
+    const tx = ax0 + 4 + (apW - 8)*(i/4) + (rand() - 0.5)*6;
+    fieldTree(ctx, tx, y1 - 7 - rand()*4, 5 + rand()*3, (i === 1 || i === 3) ? dead : alive);
+  }
+  ctx.restore();
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -25844,6 +26363,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
     else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
     else if(pr.k === "farm") drawFarm(px, W, H, pr, rand);
+    else if(pr.k === "wild") drawWild(px, W, H, pr, rand);
+    else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
   });
 }
 
@@ -28238,7 +28759,7 @@ function packBullets(pool){
   for(let i = 0; i < items.length; i++){
     const b = items[i];
     if(!b.alive) continue;
-    out.push([R(b.x), R(b.y), R(b.vx), R(b.vy), R(b.r), b.tier || 0, b.kind || 0]);
+    out.push([R(b.x), R(b.y), R(b.vx), R(b.vy), R(b.r), b.tier || 0, b.kind || 0, b.petal ? 1 : 0]);
   }
   return out;
 }
@@ -28283,6 +28804,9 @@ function sendSnapshot(dt, world, run){
        ? [R(boss.x), R(boss.y), R(boss.hp), R(boss.maxHp), boss.typeId || boss.id || ""]
        : null,
     r: run ? {
+      // The garden is host state the guest cannot grow for itself.
+      gd: run.garden ? run.garden.flowers.map(f =>
+            [R(f.x), R(f.y), R((f.bloom || 0)*100), R(f.until - SF.game.now())]) : null,
       score: run.score, money: R(run.money), combo: run.combo,
       prog: R(run.progress*1000), boss: run.bossActive ? 1 : 0,
       bt: run.bannerText || "", bs: run.bannerSub || "",
@@ -28378,6 +28902,7 @@ function applySnapshot(world){
       const r = rows[i], b = pool.spawn();
       b.x = r[0]; b.y = r[1]; b.vx = r[2]; b.vy = r[3];
       b.r = r[4]; b.tier = r[5]; b.kind = r[6];
+      b.petal = !!r[7];               // a flower's round stays a petal far away
       b.life = 0; b.pierce = 0; b.owner = null;
     }
   };
@@ -28404,6 +28929,11 @@ function applySnapshot(world){
 
   const run = SF.game.run;
   if(run && s.r){
+    if(run.garden && s.r.gd){
+      run.garden.flowers = s.r.gd.map(a2 => ({
+        x: a2[0], y: a2[1], bloom: a2[2]/100,
+        until: SF.game.now() + a2[3], fireT: 9, owner: null }));
+    }
     run.score = s.r.score; run.money = s.r.money; run.combo = s.r.combo;
     run.progress = s.r.prog/1000; run.bossActive = !!s.r.boss;
     run.bannerText = s.r.bt; run.bannerSub = s.r.bs;
@@ -28944,7 +29474,7 @@ function startMission(missionIndex, difficultyId){
     partsDenied: 0, serpentAte: 0, serpentSlain: false, painted: 0,
     // The six newer stops each count their own thing.
     delivered: 0, dropped: 0, wraps: 0, limpetsShaken: 0,
-    flareHits: 0, crushed: 0, mirrorKills: 0,
+    flareHits: 0, crushed: 0, mirrorKills: 0, flowersGrown: 0,
     // Three things the game already DID and never scored: the gold-ringed
     // ship on the bounty level, the cut-it-fine swerve on the kamikaze level,
     // and the weak points a boss brief tells you to shoot off. Counted here
@@ -29038,6 +29568,13 @@ function startMission(missionIndex, difficultyId){
       hitThisBurn: false } : null,
     // The Stampede: three or four Sky Oxen on the field at all times.
     stampede: mission.stampede ? { next: 3 } : null,
+    /*
+     * Second Harvest: seeds ride the wind down the screen; a caught one
+     * grows a flower-gun that fights beside whoever caught it. The one
+     * mechanic in the campaign that builds FOR you - on the stop whose
+     * story is "they took everything", the lesson is: grow it back.
+     */
+    garden: mission.garden ? { seedT: 5, flowers: [] } : null,
     /*
      * The Lifeline: you ARE the hauler. doorX drifts so the drop point is
      * never the same twice, and the crate hangs under the hull so a child can
@@ -29223,6 +29760,7 @@ function startMission(missionIndex, difficultyId){
              : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
+             : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
              : mission.stampede ? "stampedeStart"
@@ -30888,6 +31426,68 @@ function update(dt, timeMs){
     * sideways until the 1.6s safety net ended the scene.
     */
   /*
+   * SECOND HARVEST: the level that plants things on your side.
+   *
+   * Seeds ride the wind down the screen on the seeded stream (a seed's
+   * timing is gameplay - two children racing to catch one must see the same
+   * wind). Catching one is handled with every other pickup (updatePickups
+   * finds the nearest seat; onPickupCollected grows the flower), so co-op
+   * attribution comes free: the flower belongs to whoever caught the seed,
+   * and everything its petals kill pays that child.
+   *
+   * Flowers are deliberately modest guns - half a second between petals, a
+   * short reach, a nine-second life. Six of them at once feels like a
+   * garden fighting beside you; one of them is never a turret you hide
+   * behind.
+   */
+  if(run.garden && !run.ended){
+    const g = run.garden;
+    if(run.phase === "waves"){
+      g.seedT -= dt;
+      if(g.seedT <= 0){
+        g.seedT = 6.5 + rand(0, 3);
+        const sd = game.world.spawnPickup("seed", rand(50, VW - 50), -24);
+        sd.vy = 42; sd.vx = rand(-16, 16);
+        if(!g.said){ g.said = true; SF.comms.say("gardenSeed"); }
+      }
+    }
+    const es = game.world.enemies.items;
+    for(let i = g.flowers.length - 1; i >= 0; i--){
+      const f = g.flowers[i];
+      f.bloom = Math.min(1, (f.bloom || 0) + dt*2.4);
+      if(timeMs > f.until){
+        fx.sparks(f.x, f.y, 9, "#8ef0a8", 140);
+        fx.ring(f.x, f.y, 26, "#5dbf7f", 2, 0.3);
+        g.flowers.splice(i, 1);
+        continue;
+      }
+      f.fireT -= dt;
+      if(f.fireT > 0) continue;
+      let best = null, bd = Infinity;
+      for(let k = 0; k < es.length; k++){
+        const e = es[k];
+        if(!e.alive || e.entering || e.hazard || e.attached) continue;
+        const d = (e.x - f.x)*(e.x - f.x) + (e.y - f.y)*(e.y - f.y);
+        if(d < bd){ bd = d; best = e; }
+      }
+      if(best && bd < 330*330){
+        f.fireT = 0.55;
+        const d = Math.sqrt(bd) || 1;
+        const b = game.world.bullets.spawn();
+        b.x = f.x; b.y = f.y - 10;
+        b.vx = (best.x - f.x)/d * 470; b.vy = (best.y - f.y - 10)/d * 470;
+        b.r = 5; b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false;
+        b.petal = true;                     // drawn as a petal, pays as a shot
+        b.owner = f.owner;                  // the child who caught the seed
+        fx.spark(f.x, f.y - 8, b.vx*0.08, b.vy*0.08, "#b8f4c6", 0.28, 2.4);
+      } else {
+        f.fireT = 0.2;                      // nothing in reach: look again soon
+      }
+    }
+  }
+
+  /*
    * SHAKE THEM OFF. Every limpet on the hull makes the ship heavier, and you
    * get it off by waggling - which is a gesture a seven-year-old invents
    * before anyone explains it, and the reason this level exists.
@@ -32067,6 +32667,34 @@ function onPickupCollected(item, lost, who){
       audio.play("supplyGet");
       fx.ring(item.x, item.y, 34, "#7dd3fc", 3, 0.3);
       fx.text(item.x, item.y - 20, "LOADED", "#7dd3fc", 17, true);
+    }
+  } else if(item.kind === "seed"){
+    /*
+     * A caught seed becomes a flower-gun, planted on the ground BELOW where
+     * it was caught - a garden grows out of the land, not in mid-air. It
+     * belongs to whoever reached it (`p` is the nearest seat, same rule as
+     * every coin), so in co-op each child grows their own side of the
+     * garden and everything a flower kills pays its gardener.
+     */
+    const g = run.garden;
+    if(g){
+      const gx = clamp(item.x, 34, VW - 34);
+      const gy = clamp(Math.max(item.y + 90, VH*0.60), VH*0.60,
+                       SF.entityConst.PLAY_BOTTOM - 28);
+      g.flowers.push({ x: gx, y: gy, born: simMs, until: simMs + 9000,
+                       fireT: 0.5, bloom: 0, owner: p });
+      // A garden, not a wall: the oldest wilts early past four.
+      if(g.flowers.length > 4){
+        const old = g.flowers.shift();
+        fx.sparks(old.x, old.y, 7, "#8ef0a8", 120);
+      }
+      run.stats.flowersGrown++;
+      run.score += 50;
+      if(run.stats.flowersGrown === 1) SF.comms.say("gardenGrow");
+      audio.play("supplyGet");
+      fx.ring(gx, gy, 42, "#7ef0a0", 3, 0.45);
+      fx.sparks(gx, gy, 12, "#b8f4c6", 200);
+      fx.text(gx, gy - 26, T("PLANTED!"), "#8ef0a8", 17, true);
     }
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;
@@ -34517,6 +35145,7 @@ const FACE_KINDS = {
   canyon:  { c0:"#c9793d", c1:"#3a1d0c" },   // The Narrows: rock, not sky
   dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
+  garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -34644,6 +35273,7 @@ function missionFace(m){
              : m.narrows ? "canyon"
              : m.nightfall ? "dusk"
              : m.current ? "flow"
+             : m.garden ? "garden"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -34763,21 +35393,23 @@ const SECTORS = [
     sub:"behind their lines, where nobody is friendly" },   // 13-17
   { at:18, name:"WARDEN'S REACH",  hue:"#34d399",
     sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
-  { at:22, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 22-25
+  { at:22, name:"THE TAKEN WORLD", hue:"#a3e635",
+    sub:"somebody's farm, before they came" },              // 22
+  { at:23, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 23-26
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:26, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 26-27
-  { at:28, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 28-30
-  { at:32, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 32-36
-  { at:37, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 37-39
+  { at:27, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 27-28
+  { at:29, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 29-32
+  { at:33, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 33-37
+  { at:38, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 38-40
   { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
@@ -37507,6 +38139,63 @@ function drawStoryArt(ctx, art, levels, mate){
       ctx.beginPath(); ctx.moveTo(bx - 4, by); ctx.quadraticCurveTo(bx - 2, by - 3.5, bx, by);
       ctx.quadraticCurveTo(bx + 2, by - 3.5, bx + 4, by); ctx.stroke();
     });
+  } else if(art === "taken"){
+    /*
+     * Second Harvest's establishing shot: dawn's mirror. Same horizon, same
+     * field strips, same farmhouse shape - and every light off, the strips
+     * gone wild-teal, a torn windsock instead of a sun, and one bright seed
+     * on the wind. A child who has seen Launch Day's panel reads this one
+     * in a heartbeat, which is the point.
+     */
+    const horizon = H*0.68;
+    const d = ctx.createLinearGradient(0, 0, 0, horizon);
+    d.addColorStop(0, "rgba(8,16,24,0)");
+    d.addColorStop(0.55, "rgba(24,52,44,0.8)");
+    d.addColorStop(1, "#2f6b5a");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, horizon);
+    ctx.fillStyle = "#101c12";
+    ctx.fillRect(0, horizon, W, H - horizon);
+    const strip = ["#243d28", "#2f6b5a", "#1d3524", "#35543a"];
+    for(let s2 = 0; s2 < 5; s2++){
+      ctx.fillStyle = strip[s2 % strip.length];
+      ctx.fillRect(0, horizon + 5 + s2*9, W, 7);
+    }
+    ctx.strokeStyle = "rgba(111,107,78,0.55)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W*0.42, H + 2);
+    ctx.quadraticCurveTo(W*0.5, H*0.86, W*0.72, horizon + 6); ctx.stroke();
+    const fx2 = W*0.72, fy = horizon + 2;
+    ctx.fillStyle = "#0b140d";
+    ctx.fillRect(fx2 - 13, fy - 8, 26, 9);
+    ctx.beginPath(); ctx.moveTo(fx2 - 15, fy - 8); ctx.lineTo(fx2, fy - 16);
+    ctx.lineTo(fx2 + 15, fy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#060a08";                                  // every window dark
+    ctx.fillRect(fx2 - 9, fy - 6, 4, 4); ctx.fillRect(fx2 - 2, fy - 6, 4, 4);
+    ctx.fillRect(fx2 + 5, fy - 6, 4, 4);
+    ctx.fillStyle = "#0b140d";
+    ctx.fillRect(fx2 + 20, fy - 6, 14, 7);
+    ctx.beginPath(); ctx.moveTo(fx2 + 18, fy - 6); ctx.lineTo(fx2 + 27, fy - 12);
+    ctx.lineTo(fx2 + 36, fy - 6); ctx.closePath(); ctx.fill();
+    // the windsock, still flying over an empty yard
+    ctx.strokeStyle = "rgba(240,240,240,0.7)"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(W*0.30, horizon - 2); ctx.lineTo(W*0.30, horizon - 18); ctx.stroke();
+    ctx.fillStyle = "#e8823c";
+    ctx.beginPath(); ctx.moveTo(W*0.30, horizon - 18);
+    ctx.lineTo(W*0.30 + 15, horizon - 15.4);
+    ctx.lineTo(W*0.30 + 9, horizon - 13.8);
+    ctx.lineTo(W*0.30 + 16, horizon - 12.4);
+    ctx.lineTo(W*0.30, horizon - 11); ctx.closePath(); ctx.fill();
+    // one seed on the wind, lit like a promise
+    const seed = ctx.createRadialGradient(W*0.52, H*0.30, 1, W*0.52, H*0.30, 16);
+    seed.addColorStop(0, "rgba(235,255,235,0.9)");
+    seed.addColorStop(1, "rgba(184,244,198,0)");
+    ctx.fillStyle = seed;
+    ctx.beginPath(); ctx.arc(W*0.52, H*0.30, 16, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(240,255,240,0.9)"; ctx.lineWidth = 1.2;
+    for(let fl = 0; fl < 7; fl++){
+      const a2 = fl/7*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(W*0.52, H*0.30);
+      ctx.lineTo(W*0.52 + Math.cos(a2)*7, H*0.30 + Math.sin(a2)*7); ctx.stroke();
+    }
   } else if(art === "dark"){
     /*
      * The first night. The star field gets buried under near-black - all but
@@ -37686,6 +38375,8 @@ function openBriefing(index){
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");
+  // The other farm's page: read before the ruined yard scrolls past.
+  if(m.garden) maybeStory("secondHarvest");
   /*
    * Launch Day's briefing is the story's first page: the family, the farm,
    * and why there are six new ships in the workshop - read BEFORE flying.

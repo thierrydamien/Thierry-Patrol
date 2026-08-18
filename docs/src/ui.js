@@ -1378,6 +1378,7 @@ const FACE_KINDS = {
   canyon:  { c0:"#c9793d", c1:"#3a1d0c" },   // The Narrows: rock, not sky
   dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
+  garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1505,6 +1506,7 @@ function missionFace(m){
              : m.narrows ? "canyon"
              : m.nightfall ? "dusk"
              : m.current ? "flow"
+             : m.garden ? "garden"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -1624,21 +1626,23 @@ const SECTORS = [
     sub:"behind their lines, where nobody is friendly" },   // 13-17
   { at:18, name:"WARDEN'S REACH",  hue:"#34d399",
     sub:"his nest, his ring, his money — and what crawled aboard after" }, // 18-21
-  { at:22, name:"THE TRENCHES",    hue:"#8ab4f8",
-    sub:"straight down the middle of their fortress" },     // 22-25
+  { at:22, name:"THE TAKEN WORLD", hue:"#a3e635",
+    sub:"somebody's farm, before they came" },              // 22
+  { at:23, name:"THE TRENCHES",    hue:"#8ab4f8",
+    sub:"straight down the middle of their fortress" },     // 23-26
   /*
    * THEIR STAR used to run 20-23 and mash a fire sector and a dark sector
    * under one caption - "the dark at the end" was printed over the brightest
    * three stops on the route. Split, so each half says what it is.
    */
-  { at:26, name:"THEIR STAR",      hue:"#fb7185",
-    sub:"over their sun, and the last big ship" },          // 26-27
-  { at:28, name:"THE DARK",        hue:"#64748b",
-    sub:"their star went out, and something ate it" },      // 28-30
-  { at:32, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 32-36
-  { at:37, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 37-39
+  { at:27, name:"THEIR STAR",      hue:"#fb7185",
+    sub:"over their sun, and the last big ship" },          // 27-28
+  { at:29, name:"THE DARK",        hue:"#64748b",
+    sub:"their star went out, and something ate it" },      // 29-32
+  { at:33, name:"THE CRACK",       hue:"#a78bfa",
+    sub:"where space stops behaving itself" },              // 33-37
+  { at:38, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 38-40
   { at:40, name:"THE EASEL",       hue:"#ffd23f",
     sub:"the one Papa never finished" },                    // 40
 ];
@@ -4368,6 +4372,63 @@ function drawStoryArt(ctx, art, levels, mate){
       ctx.beginPath(); ctx.moveTo(bx - 4, by); ctx.quadraticCurveTo(bx - 2, by - 3.5, bx, by);
       ctx.quadraticCurveTo(bx + 2, by - 3.5, bx + 4, by); ctx.stroke();
     });
+  } else if(art === "taken"){
+    /*
+     * Second Harvest's establishing shot: dawn's mirror. Same horizon, same
+     * field strips, same farmhouse shape - and every light off, the strips
+     * gone wild-teal, a torn windsock instead of a sun, and one bright seed
+     * on the wind. A child who has seen Launch Day's panel reads this one
+     * in a heartbeat, which is the point.
+     */
+    const horizon = H*0.68;
+    const d = ctx.createLinearGradient(0, 0, 0, horizon);
+    d.addColorStop(0, "rgba(8,16,24,0)");
+    d.addColorStop(0.55, "rgba(24,52,44,0.8)");
+    d.addColorStop(1, "#2f6b5a");
+    ctx.fillStyle = d; ctx.fillRect(0, 0, W, horizon);
+    ctx.fillStyle = "#101c12";
+    ctx.fillRect(0, horizon, W, H - horizon);
+    const strip = ["#243d28", "#2f6b5a", "#1d3524", "#35543a"];
+    for(let s2 = 0; s2 < 5; s2++){
+      ctx.fillStyle = strip[s2 % strip.length];
+      ctx.fillRect(0, horizon + 5 + s2*9, W, 7);
+    }
+    ctx.strokeStyle = "rgba(111,107,78,0.55)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W*0.42, H + 2);
+    ctx.quadraticCurveTo(W*0.5, H*0.86, W*0.72, horizon + 6); ctx.stroke();
+    const fx2 = W*0.72, fy = horizon + 2;
+    ctx.fillStyle = "#0b140d";
+    ctx.fillRect(fx2 - 13, fy - 8, 26, 9);
+    ctx.beginPath(); ctx.moveTo(fx2 - 15, fy - 8); ctx.lineTo(fx2, fy - 16);
+    ctx.lineTo(fx2 + 15, fy - 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#060a08";                                  // every window dark
+    ctx.fillRect(fx2 - 9, fy - 6, 4, 4); ctx.fillRect(fx2 - 2, fy - 6, 4, 4);
+    ctx.fillRect(fx2 + 5, fy - 6, 4, 4);
+    ctx.fillStyle = "#0b140d";
+    ctx.fillRect(fx2 + 20, fy - 6, 14, 7);
+    ctx.beginPath(); ctx.moveTo(fx2 + 18, fy - 6); ctx.lineTo(fx2 + 27, fy - 12);
+    ctx.lineTo(fx2 + 36, fy - 6); ctx.closePath(); ctx.fill();
+    // the windsock, still flying over an empty yard
+    ctx.strokeStyle = "rgba(240,240,240,0.7)"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(W*0.30, horizon - 2); ctx.lineTo(W*0.30, horizon - 18); ctx.stroke();
+    ctx.fillStyle = "#e8823c";
+    ctx.beginPath(); ctx.moveTo(W*0.30, horizon - 18);
+    ctx.lineTo(W*0.30 + 15, horizon - 15.4);
+    ctx.lineTo(W*0.30 + 9, horizon - 13.8);
+    ctx.lineTo(W*0.30 + 16, horizon - 12.4);
+    ctx.lineTo(W*0.30, horizon - 11); ctx.closePath(); ctx.fill();
+    // one seed on the wind, lit like a promise
+    const seed = ctx.createRadialGradient(W*0.52, H*0.30, 1, W*0.52, H*0.30, 16);
+    seed.addColorStop(0, "rgba(235,255,235,0.9)");
+    seed.addColorStop(1, "rgba(184,244,198,0)");
+    ctx.fillStyle = seed;
+    ctx.beginPath(); ctx.arc(W*0.52, H*0.30, 16, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(240,255,240,0.9)"; ctx.lineWidth = 1.2;
+    for(let fl = 0; fl < 7; fl++){
+      const a2 = fl/7*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(W*0.52, H*0.30);
+      ctx.lineTo(W*0.52 + Math.cos(a2)*7, H*0.30 + Math.sin(a2)*7); ctx.stroke();
+    }
   } else if(art === "dark"){
     /*
      * The first night. The star field gets buried under near-black - all but
@@ -4547,6 +4608,8 @@ function openBriefing(index){
   // First look at a no-guns mission: the GUNS DOWN card explains WHY the
   // ship can't shoot before anyone launches confused.
   if(m.noGuns) maybeStory("silent");
+  // The other farm's page: read before the ruined yard scrolls past.
+  if(m.garden) maybeStory("secondHarvest");
   /*
    * Launch Day's briefing is the story's first page: the family, the farm,
    * and why there are six new ships in the workshop - read BEFORE flying.

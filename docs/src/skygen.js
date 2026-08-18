@@ -621,6 +621,18 @@ const SKIES = [
     // The ground tiles; home does not. See drawFarm for why the split exists.
     props:[ {k:"fields", x:0.50, y:0.50, dark:"#2a3418"},
             {k:"farm",   x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * GREENFALL (Second Harvest) - the taken world. Appended at the end for
+   * the same reason Earth was: the Drawing Board's saves hold bare sky
+   * indices, and inserting mid-list would repaint the family's drawings
+   * onto shifted bases. The empty farmstead passes once, like home does.
+   */
+  { name:"Greenfall", surface:true,
+    clouds:["#3f7d5a","#79c9a2","#16281c"], dust:"#0a140c", star:"#eaffea",
+    lum:1.0, density:0.85, stars:0, bright:0,
+    props:[ {k:"wild", x:0.50, y:0.50, dark:"#101c12"},
+            {k:"ruin", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -1876,8 +1888,8 @@ function drawVortex(ctx, W, H, p, rand){
  * different positions - so the plan draws from its OWN fixed seed instead.
  * Same numbers in both bakes, by construction, forever.
  */
-function fieldPlan(W, H){
-  const rand = rngFor(90400077);
+function fieldPlan(W, H, seed){
+  const rand = rngFor(seed || 90400077);
   const ROWS = 12;
   const homeRow = 2 + Math.floor(rand()*3);
   const rowE = [0];
@@ -1907,12 +1919,13 @@ function fieldPlan(W, H){
  * because the copses tile with the ground and the windbreak leaves with
  * the farm, and the two must still look planted by the same morning.
  */
-function fieldTree(ctx, tx, ty, tr){
-  ctx.fillStyle = "rgba(18,26,10,0.5)";
+function fieldTree(ctx, tx, ty, tr, pal){
+  const P2 = pal || {};
+  ctx.fillStyle = P2.shadow || "rgba(18,26,10,0.5)";
   ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#2c3d1c";
+  ctx.fillStyle = P2.canopy || "#2c3d1c";
   ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
-  ctx.strokeStyle = "rgba(255,214,140,0.5)";
+  ctx.strokeStyle = P2.rim || "rgba(255,214,140,0.5)";
   ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
 }
@@ -2229,6 +2242,298 @@ function drawFields(ctx, W, H, p, rand){
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
+
+/*
+ * GREENFALL - the taken world. The campaign's second farm, and the reason
+ * it looks like the first one is the whole story: somebody lived here, and
+ * the people we are chasing came through. The land is dealt by the same
+ * fieldPlan as Earth's (its own seed, its own lie of the land) because it
+ * IS the same kind of place - fields against a lane, a paddock, a yard -
+ * and every difference is what happened to it: hedgerows breached, the
+ * lane cracked and going green, whole fields gone over to teal blossom
+ * that nobody planted.
+ */
+const WILD_SEED = 51230990;
+function drawWild(ctx, W, H, p, rand){
+  const { ROWS, homeRow, rowE, laneX, sideY, padX0, padX1, trackY, ax0 } =
+    fieldPlan(W, H, WILD_SEED);
+  const rowCols = [];
+  for(let r = 0; r < ROWS; r++){
+    const rx = laneX;
+    const e = [0];
+    const split = (a, b) => {
+      const span = b - a;
+      const n = Math.max(1, Math.round(span/(W*0.19)*(0.65 + rand()*0.8)));
+      const raw2 = []; let acc2 = 0;
+      for(let i = 0; i < n; i++){ const w2 = 0.55 + rand()*0.9; raw2.push(w2); acc2 += w2; }
+      let x = a;
+      for(let i = 0; i < n - 1; i++){ x += raw2[i]/acc2*span; e.push(x); }
+    };
+    split(0, rx); e.push(rx);
+    if(r === homeRow){ if(padX1 < W){ e.push(padX1); split(padX1, W); } }
+    else split(rx, W);
+    e.push(W);
+    rowCols.push(e);
+  }
+  /*
+   * The overgrowth palette: mosses first, then the teal bloom that has had
+   * the run of the place, then the dry rust of a crop nobody brought in.
+   * Cooler and darker than Earth's dawn on purpose - this world is in
+   * shadow until you do something about it, and the seeds and flower-guns
+   * are the brightest things on it.
+   */
+  const WILDS = ["#2c4630", "#35543a", "#243d28", "#2f6b5a", "#3c8a6e",
+                 "#31502e", "#274433", "#57503a", "#3b5a40", "#2a4a3e"];
+  const wrapY = (y, r, draw) => {
+    draw(y);
+    if(y - r < 0) draw(y + H);
+    if(y + r > H) draw(y - H);
+  };
+  ctx.save();
+  ctx.fillStyle = p.dark || "#101c12";
+  ctx.fillRect(-2, -2, W + 4, H + 4);
+  let prevCrop = null;
+  for(let r = 0; r < ROWS; r++){
+    const e = rowCols[r], ry0 = rowE[r], ry1 = rowE[r+1];
+    for(let c = 0; c < e.length - 1; c++){
+      const x0 = e[c], x1 = e[c+1], cw = x1 - x0;
+      const isPaddock = r === homeRow && Math.abs(x0 - padX0) < 0.5;
+      const crop = isPaddock ? "#3a5a3c"
+                 : (prevCrop && rand() < 0.3) ? prevCrop
+                 : WILDS[Math.floor(rand()*WILDS.length)];
+      prevCrop = crop;
+      const g = ctx.createLinearGradient(x0, ry0, x1, ry1);
+      g.addColorStop(0, mixA(crop, "#9fe8c8", 0.10, 1));
+      g.addColorStop(1, mixA(crop, "#0a140c", 0.42, 1));
+      ctx.fillStyle = g;
+      ctx.globalAlpha = isPaddock ? 1 : 0.85 + rand()*0.15;
+      ctx.fillRect(x0, ry0, cw + 1, ry1 - ry0 + 1);
+      // The bloom-fields glow faintly with their own speckle - drifts of the
+      // same flowers the seeds grow, wild here, which is the level quietly
+      // telling you the mechanic before the radio does.
+      if(!isPaddock && (crop === "#2f6b5a" || crop === "#3c8a6e")){
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = "#b8f4c6";
+        const n = Math.floor(cw*(ry1 - ry0)/900);
+        for(let d = 0; d < n; d++){
+          ctx.beginPath();
+          ctx.arc(x0 + 3 + rand()*(cw - 6), ry0 + 3 + rand()*(ry1 - ry0 - 6),
+                  0.8 + rand()*0.9, 0, TAU);
+          ctx.fill();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  /*
+   * Breached hedgerows: the stitching, with pieces missing. Earth's run
+   * unbroken; here every seam is dashed - segments and gaps - because a
+   * hedge stops being a wall the year nobody trims it, and a broken line
+   * is the fastest way a picture says "untended".
+   */
+  ctx.strokeStyle = "rgba(14,24,12,0.9)";
+  for(let r = 0; r <= ROWS; r++){
+    ctx.lineWidth = 2 + rand()*2.4;
+    let x = 0;
+    while(x < W){
+      const seg = 26 + rand()*70, gap = 8 + rand()*26;
+      ctx.beginPath(); ctx.moveTo(x, rowE[r]); ctx.lineTo(Math.min(W, x + seg), rowE[r]); ctx.stroke();
+      x += seg + gap;
+    }
+  }
+  for(let r = 0; r < ROWS; r++){
+    const e = rowCols[r];
+    for(let c = 1; c < e.length - 1; c++){
+      ctx.lineWidth = 2 + rand()*2;
+      let y = rowE[r];
+      while(y < rowE[r+1]){
+        const seg = 20 + rand()*46, gap = 8 + rand()*22;
+        ctx.beginPath(); ctx.moveTo(e[c], y); ctx.lineTo(e[c], Math.min(rowE[r+1], y + seg)); ctx.stroke();
+        y += seg + gap;
+      }
+    }
+  }
+  /*
+   * The lane, still dead straight - a road does not forget where it went -
+   * but cracked and going green: painted paler and thinner than Earth's,
+   * with weed-dashes across it. The side lane still leaves at its T.
+   */
+  const paintRoads = (grow, col, alpha) => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.lineCap = "butt";
+    ctx.lineWidth = W*0.013 + grow;
+    ctx.beginPath(); ctx.moveTo(laneX, -10); ctx.lineTo(laneX, H + 10); ctx.stroke();
+    ctx.lineWidth = W*0.010 + grow;
+    ctx.beginPath(); ctx.moveTo(-6, sideY); ctx.lineTo(laneX + 1, sideY); ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  ctx.save(); ctx.translate(1.2, 0.7);
+  paintRoads(W*0.008, "rgba(12,20,10,0.8)", 0.8);
+  ctx.restore();
+  paintRoads(0, "#6f6b4e", 0.75);
+  ctx.strokeStyle = "rgba(63,125,74,0.7)";                 // the weeds win
+  ctx.lineWidth = 1.6;
+  for(let y = 6 + rand()*10; y < H; y += 14 + rand()*26){
+    ctx.beginPath();
+    ctx.moveTo(laneX - W*0.006, y);
+    ctx.lineTo(laneX + W*0.006, y + 2);
+    ctx.stroke();
+  }
+  // The wild copses - denser than Earth's, because nothing has been cut
+  // back in years, and they walk right over where the roads used to matter.
+  const pal = { shadow:"rgba(6,14,8,0.55)", canopy:"#1d3524",
+                rim:"rgba(140,240,200,0.45)" };
+  const inPaddock = (bx, by) => by > rowE[homeRow] - 14 && by < rowE[homeRow + 1] + 14 &&
+    bx > padX0 - 14 && bx < padX1 + 14;
+  for(let i = 0; i < 24; i++){
+    const bx = rand()*W, by = rand()*H, n = 3 + Math.floor(rand()*5);
+    if(Math.abs(bx - laneX) < 20 || inPaddock(bx, by)) continue;
+    wrapY(by, 44, y => {
+      for(let t2 = 0; t2 < n; t2++)
+        fieldTree(ctx, bx + (rand() - 0.5)*52, y + (rand() - 0.5)*38, 5 + rand()*8, pal);
+    });
+  }
+  // The evening of a taken world: a cool teal wash from the key side and a
+  // deep shade opposite. x-only, same as Earth's dawn, for the same reason:
+  // this texture wraps vertically and must not know where its edges are.
+  const dusk = ctx.createLinearGradient(0, 0, W, 0);
+  dusk.addColorStop(0, "rgba(110,230,190,0.14)");
+  dusk.addColorStop(0.55, "rgba(110,230,190,0.03)");
+  dusk.addColorStop(1, "rgba(8,18,30,0.24)");
+  ctx.fillStyle = dusk;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+/*
+ * THE EMPTY FARMSTEAD - Greenfall's pass-once landmark, and the mirror of
+ * Launch Day's. Same bones on purpose: an apron, a workshop, a house, an
+ * airstrip, a windbreak. Every light is off, the roof is holed, the ships'
+ * cradles are empty, and the windsock is still flying - which is the one
+ * detail the brief points at, because a windsock nobody took down is how a
+ * picture says "they left in a hurry" to a seven-year-old.
+ */
+function drawRuin(ctx, W, H, p, rand){
+  const { y1, ax0, ay0, apW, apH, trackY, laneX, padX1, rowE, homeRow } =
+    fieldPlan(W, H, WILD_SEED);
+  ctx.save();
+  // the track in, faded to a memory of itself
+  const spur = (grow, col, alpha) => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.lineCap = "butt";
+    ctx.lineWidth = W*0.006 + grow;
+    ctx.beginPath(); ctx.moveTo(laneX, trackY); ctx.lineTo(ax0 + 2, trackY); ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  ctx.save(); ctx.translate(1.2, 0.7);
+  spur(W*0.008, "rgba(12,20,10,0.8)", 0.7);
+  ctx.restore();
+  spur(0, "#6f6b4e", 0.65);
+  /*
+   * Moonlight on the dead yard - the cold answer to Launch Day's warm lamp
+   * spill. Without it the ruin sank into the overgrowth and the level's own
+   * landmark could scroll past unnoticed; a pale glint makes the eye stop
+   * exactly once, which is what a pass-once landmark is for.
+   */
+  { const moon = ctx.createRadialGradient(ax0 + apW*0.5, ay0 + apH*0.7, 2,
+                                          ax0 + apW*0.5, ay0 + apH*0.7, apW*1.5);
+    moon.addColorStop(0, "rgba(190,225,235,0.20)");
+    moon.addColorStop(1, "rgba(190,225,235,0)");
+    ctx.fillStyle = moon;
+    ctx.beginPath(); ctx.arc(ax0 + apW*0.5, ay0 + apH*0.7, apW*1.5, 0, TAU); ctx.fill(); }
+  // the apron, cracked and going green
+  ctx.fillStyle = "#77735a";
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath();
+  ctx.moveTo(ax0, ay0);
+  ctx.lineTo(ax0 + apW, ay0 + 2 + rand()*3);
+  ctx.lineTo(ax0 + apW - 2 - rand()*4, ay0 + apH);
+  ctx.lineTo(ax0 + 3 + rand()*4, ay0 + apH - 2);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = "#3f7d4a";
+  for(let i = 0; i < 14; i++){
+    ctx.beginPath();
+    ctx.arc(ax0 + 3 + rand()*(apW - 6), ay0 + 3 + rand()*(apH - 6),
+            1 + rand()*1.6, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // a roof with the morning missing: the lit slope is torn open instead
+  const deadRoof = (bx, by, bw, bh, base, holed) => {
+    ctx.fillStyle = "rgba(6,12,6,0.5)";
+    ctx.beginPath(); ctx.ellipse(bx + bw*0.62, by + bh*0.72, bw*0.62, bh*0.5, 0.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = mixA(base, "#9fe8c8", 0.10, 1);
+    ctx.fillRect(bx, by, bw, bh/2);
+    ctx.fillStyle = mixA(base, "#060a06", 0.5, 1);
+    ctx.fillRect(bx, by + bh/2, bw, bh/2);
+    ctx.strokeStyle = "rgba(160,200,170,0.3)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx + 0.5, by + bh/2); ctx.lineTo(bx + bw - 0.5, by + bh/2); ctx.stroke();
+    if(holed){
+      // the hole: sky-dark, jagged, through the upper slope
+      ctx.fillStyle = "#0b140d";
+      ctx.beginPath();
+      ctx.moveTo(bx + bw*0.32, by + 1.5);
+      ctx.lineTo(bx + bw*0.58, by + 1);
+      ctx.lineTo(bx + bw*0.52, by + bh*0.42);
+      ctx.lineTo(bx + bw*0.40, by + bh*0.36);
+      ctx.closePath(); ctx.fill();
+    }
+  };
+  const wx = ax0 - 2, wy = ay0 + apH + 3;
+  deadRoof(wx, wy, 30, 15, "#5c5c52", true);         // the workshop, holed
+  ctx.fillStyle = "#0b140d";
+  ctx.fillRect(wx + 9, wy - 1.4, 7, 2.8);            // the door, open on dark
+  deadRoof(ax0 + apW + 5, ay0 + 3, 15, 10, "#5e4a42", false);   // the house, asleep for good
+  ctx.fillStyle = "#0b140d";                          // shed: down to a smear
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(ax0 + apW + 12, ay0 + 25, 7, 4, 0.4, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // two empty cradles where the darts were wheeled out and never came back
+  const cradle = (dx, dy, s) => {
+    ctx.strokeStyle = "rgba(210,230,215,0.6)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(dx, dy - s);
+    ctx.lineTo(dx + s*0.85, dy + s*0.8);
+    ctx.lineTo(dx, dy + s*0.35);
+    ctx.lineTo(dx - s*0.85, dy + s*0.8);
+    ctx.closePath(); ctx.stroke();
+  };
+  cradle(ax0 + apW*0.30, ay0 + 16, 6);
+  cradle(ax0 + apW*0.62, ay0 + 24, 6);
+  // the airstrip, nearly swallowed - thresholds just showing through
+  const sx = Math.min(padX1 - 26, ax0 + apW + 34);
+  const sy0 = y1 + 14, sy1 = rowE[homeRow + 1] - 12;
+  ctx.globalAlpha = 0.4;
+  for(let d = sy0; d < sy1; d += 9)
+    { ctx.fillStyle = "rgba(220,232,200," + (((d - sy0)/9|0) % 2 ? 0.06 : 0.14) + ")";
+      ctx.fillRect(sx, d, 13, Math.min(9, sy1 - d)); }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(sx + 2, sy0 + 2, 9, 2.4);
+  ctx.fillRect(sx + 2, sy1 - 4.4, 9, 2.4);
+  // ...and the windsock, still up, still flying, torn at the tip
+  ctx.strokeStyle = "rgba(240,240,240,0.85)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx - 5, sy0 + 9); ctx.stroke();
+  ctx.fillStyle = "#f09048";
+  ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx + 1, sy0 + 4.2);
+  ctx.lineTo(sx - 1.5, sy0 + 5.0); ctx.lineTo(sx + 2, sy0 + 5.6);
+  ctx.lineTo(sx - 5, sy0 + 6); ctx.closePath(); ctx.fill();
+  // the windbreak: five planted trees, two of them dead and grey
+  const alive = { shadow:"rgba(6,14,8,0.55)", canopy:"#1d3524",
+                  rim:"rgba(140,240,200,0.45)" };
+  const dead  = { shadow:"rgba(6,14,8,0.45)", canopy:"#3a423c",
+                  rim:"rgba(190,200,195,0.3)" };
+  for(let i = 0; i < 5; i++){
+    const tx = ax0 + 4 + (apW - 8)*(i/4) + (rand() - 0.5)*6;
+    fieldTree(ctx, tx, y1 - 7 - rand()*4, 5 + rand()*3, (i === 1 || i === 3) ? dead : alive);
+  }
+  ctx.restore();
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -2621,6 +2926,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
     else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
     else if(pr.k === "farm") drawFarm(px, W, H, pr, rand);
+    else if(pr.k === "wild") drawWild(px, W, H, pr, rand);
+    else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
   });
 }
 

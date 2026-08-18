@@ -509,7 +509,7 @@ function startMission(missionIndex, difficultyId){
     partsDenied: 0, serpentAte: 0, serpentSlain: false, painted: 0,
     // The six newer stops each count their own thing.
     delivered: 0, dropped: 0, wraps: 0, limpetsShaken: 0,
-    flareHits: 0, crushed: 0, mirrorKills: 0,
+    flareHits: 0, crushed: 0, mirrorKills: 0, flowersGrown: 0,
     // Three things the game already DID and never scored: the gold-ringed
     // ship on the bounty level, the cut-it-fine swerve on the kamikaze level,
     // and the weak points a boss brief tells you to shoot off. Counted here
@@ -603,6 +603,13 @@ function startMission(missionIndex, difficultyId){
       hitThisBurn: false } : null,
     // The Stampede: three or four Sky Oxen on the field at all times.
     stampede: mission.stampede ? { next: 3 } : null,
+    /*
+     * Second Harvest: seeds ride the wind down the screen; a caught one
+     * grows a flower-gun that fights beside whoever caught it. The one
+     * mechanic in the campaign that builds FOR you - on the stop whose
+     * story is "they took everything", the lesson is: grow it back.
+     */
+    garden: mission.garden ? { seedT: 5, flowers: [] } : null,
     /*
      * The Lifeline: you ARE the hauler. doorX drifts so the drop point is
      * never the same twice, and the crate hangs under the hull so a child can
@@ -788,6 +795,7 @@ function startMission(missionIndex, difficultyId){
              : mission.backstage ? "backstageStart"
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
+             : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
              : mission.stampede ? "stampedeStart"
@@ -2453,6 +2461,68 @@ function update(dt, timeMs){
     * sideways until the 1.6s safety net ended the scene.
     */
   /*
+   * SECOND HARVEST: the level that plants things on your side.
+   *
+   * Seeds ride the wind down the screen on the seeded stream (a seed's
+   * timing is gameplay - two children racing to catch one must see the same
+   * wind). Catching one is handled with every other pickup (updatePickups
+   * finds the nearest seat; onPickupCollected grows the flower), so co-op
+   * attribution comes free: the flower belongs to whoever caught the seed,
+   * and everything its petals kill pays that child.
+   *
+   * Flowers are deliberately modest guns - half a second between petals, a
+   * short reach, a nine-second life. Six of them at once feels like a
+   * garden fighting beside you; one of them is never a turret you hide
+   * behind.
+   */
+  if(run.garden && !run.ended){
+    const g = run.garden;
+    if(run.phase === "waves"){
+      g.seedT -= dt;
+      if(g.seedT <= 0){
+        g.seedT = 6.5 + rand(0, 3);
+        const sd = game.world.spawnPickup("seed", rand(50, VW - 50), -24);
+        sd.vy = 42; sd.vx = rand(-16, 16);
+        if(!g.said){ g.said = true; SF.comms.say("gardenSeed"); }
+      }
+    }
+    const es = game.world.enemies.items;
+    for(let i = g.flowers.length - 1; i >= 0; i--){
+      const f = g.flowers[i];
+      f.bloom = Math.min(1, (f.bloom || 0) + dt*2.4);
+      if(timeMs > f.until){
+        fx.sparks(f.x, f.y, 9, "#8ef0a8", 140);
+        fx.ring(f.x, f.y, 26, "#5dbf7f", 2, 0.3);
+        g.flowers.splice(i, 1);
+        continue;
+      }
+      f.fireT -= dt;
+      if(f.fireT > 0) continue;
+      let best = null, bd = Infinity;
+      for(let k = 0; k < es.length; k++){
+        const e = es[k];
+        if(!e.alive || e.entering || e.hazard || e.attached) continue;
+        const d = (e.x - f.x)*(e.x - f.x) + (e.y - f.y)*(e.y - f.y);
+        if(d < bd){ bd = d; best = e; }
+      }
+      if(best && bd < 330*330){
+        f.fireT = 0.55;
+        const d = Math.sqrt(bd) || 1;
+        const b = game.world.bullets.spawn();
+        b.x = f.x; b.y = f.y - 10;
+        b.vx = (best.x - f.x)/d * 470; b.vy = (best.y - f.y - 10)/d * 470;
+        b.r = 5; b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false;
+        b.petal = true;                     // drawn as a petal, pays as a shot
+        b.owner = f.owner;                  // the child who caught the seed
+        fx.spark(f.x, f.y - 8, b.vx*0.08, b.vy*0.08, "#b8f4c6", 0.28, 2.4);
+      } else {
+        f.fireT = 0.2;                      // nothing in reach: look again soon
+      }
+    }
+  }
+
+  /*
    * SHAKE THEM OFF. Every limpet on the hull makes the ship heavier, and you
    * get it off by waggling - which is a gesture a seven-year-old invents
    * before anyone explains it, and the reason this level exists.
@@ -3632,6 +3702,34 @@ function onPickupCollected(item, lost, who){
       audio.play("supplyGet");
       fx.ring(item.x, item.y, 34, "#7dd3fc", 3, 0.3);
       fx.text(item.x, item.y - 20, "LOADED", "#7dd3fc", 17, true);
+    }
+  } else if(item.kind === "seed"){
+    /*
+     * A caught seed becomes a flower-gun, planted on the ground BELOW where
+     * it was caught - a garden grows out of the land, not in mid-air. It
+     * belongs to whoever reached it (`p` is the nearest seat, same rule as
+     * every coin), so in co-op each child grows their own side of the
+     * garden and everything a flower kills pays its gardener.
+     */
+    const g = run.garden;
+    if(g){
+      const gx = clamp(item.x, 34, VW - 34);
+      const gy = clamp(Math.max(item.y + 90, VH*0.60), VH*0.60,
+                       SF.entityConst.PLAY_BOTTOM - 28);
+      g.flowers.push({ x: gx, y: gy, born: simMs, until: simMs + 9000,
+                       fireT: 0.5, bloom: 0, owner: p });
+      // A garden, not a wall: the oldest wilts early past four.
+      if(g.flowers.length > 4){
+        const old = g.flowers.shift();
+        fx.sparks(old.x, old.y, 7, "#8ef0a8", 120);
+      }
+      run.stats.flowersGrown++;
+      run.score += 50;
+      if(run.stats.flowersGrown === 1) SF.comms.say("gardenGrow");
+      audio.play("supplyGet");
+      fx.ring(gx, gy, 42, "#7ef0a0", 3, 0.45);
+      fx.sparks(gx, gy, 12, "#b8f4c6", 200);
+      fx.text(gx, gy - 26, T("PLANTED!"), "#8ef0a8", 17, true);
     }
   } else if(item.kind === "star"){
     run.stats.stars = (run.stats.stars || 0) + 1;

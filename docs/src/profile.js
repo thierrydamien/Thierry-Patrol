@@ -327,6 +327,29 @@ function migrate(p){
     }
     p.missionsVer = 8;
   }
+  /*
+   * v9: Second Harvest landed as mission 22 - the other farm, the campaign's
+   * second surface - pushing the old 22-40 up one. A single offset,
+   * descending so nothing is overwritten before it moves, exactly like v5
+   * and v7.
+   *
+   * `reached` moves with it: it is a mission INDEX (the furthest stop a
+   * wingman has carried this pilot to), and an index that stays put while
+   * the map grows underneath it would quietly open one stop too few.
+   *
+   * The hand-written mission ids move in the same release: the tune unlocks
+   * (data/config.js: ghost 22->23, apex 27->28, nova 31->32) and
+   * devourerDown below (31->32). This loop cannot reach them, and getting
+   * one wrong silently un-earns something a child worked for.
+   */
+  if((p.missionsVer || 1) < 9){
+    for(let id = 40; id >= 22; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 22) p.lastMission += 1;
+    if((p.reached || 0) >= 22) p.reached += 1;
+    p.missionsVer = 9;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {
@@ -527,7 +550,7 @@ function achievementStats(p){
     bossRushBest: p.bossRushBest || 0,
     // 23, not 18: act 3 renumbered the Devourer and this check never moved -
     // the medal was quietly awarded for clearing the Trench Run instead.
-    devourerDown: !!(p.missions[31] && p.missions[31].cleared),
+    devourerDown: !!(p.missions[32] && p.missions[32].cleared),
   };
 }
 

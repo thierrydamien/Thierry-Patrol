@@ -582,24 +582,51 @@ async function run(){
    */
   check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Behind the Sky" && gift.id === 40 &&
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 41 &&
            gift.backstage === true && gift.sky29 === true &&
            !gift.boss;                       // the Brush is backstage's, not a slot
   })());
-  check("41 campaign missions defined, ids sequential from Earth",
-    SF.missions.MISSIONS.length === 41 &&
+  check("42 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 42 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i));
   /*
    * The sky contract, after Mission 0: every mission points at its own sky
    * explicitly, the pre-Earth missions kept their historical painting, and
    * Earth's dawn was APPENDED so no saved Drawing Board sky re-bases.
    */
-  check("every mission kept its painting; Earth's dawn was appended", (() => {
+  check("every mission kept its painting; the new grounds were appended", (() => {
     const M = SF.missions.MISSIONS;
-    return M.every(m => m.prologue ? m.sky === 40 : m.sky === m.id - 1) &&
-           SF.skygen.SKIES.length === 41 &&
+    // Second Harvest pushed 22-40 up one, so every shifted stop carries its
+    // HISTORICAL sky stamped explicitly (old id minus one) - the id-based
+    // default would have handed The Narrows the Fortress Wall. Untouched
+    // stops (1-21) still ride the default; the two farms name theirs.
+    return M.every(m => m.prologue ? m.sky === 40
+                      : m.garden   ? m.sky === 41
+                      : m.id <= 21 ? m.sky === m.id - 1
+                      : m.sky === m.id - 2) &&
+           SF.skygen.SKIES.length === 42 &&
            SF.skygen.SKIES[40].surface === true &&
-           SF.skygen.SKIES[40].props.some(pr => pr.k === "fields");
+           SF.skygen.SKIES[40].props.some(pr => pr.k === "fields") &&
+           SF.skygen.SKIES[41].surface === true &&
+           SF.skygen.SKIES[41].props.some(pr => pr.k === "wild") &&
+           // ...and the dead farmstead passes once, like home does.
+           SF.skygen.SKIES[41].props.some(pr => pr.k === "ruin" && pr.once === true);
+  })());
+  /*
+   * ...and by NAME, which is what the stamp exists to protect: the missions
+   * that shifted still fly the exact painting they always flew.
+   */
+  check("the shifted stops still fly their own paintings", (() => {
+    const pair = (mn, sn) => {
+      const m = SF.missions.MISSIONS.find(x => x.name === mn);
+      return m && SF.skygen.SKIES[SF.missions.skyOf(m.id)].name === sn;
+    };
+    return pair("The Narrows", "Red Canyon") &&
+           pair("Cold Approach", "Cold Approach") &&
+           pair("The Trench Run", "The Fortress Wall") &&
+           pair("The Glass Sea", "The Glass Sea") &&
+           pair("Behind the Sky", "Sky 40") &&
+           pair("Second Harvest", "Greenfall");
   })());
   /*
    * The farmland's two honesty rules, pinned at the source. "The fields are
@@ -661,9 +688,9 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 117 && (() => {
+    SF.profile.maxStars() === 120 && (() => {
       const p = SF.profile.load("LEDGER");
-      p.missions[40] = { cleared:true, stars:{ pilot:3 } };
+      p.missions[41] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
     })());
   check("the workshop curtain doesn't wait for the gift", (() => {
@@ -679,13 +706,14 @@ async function run(){
   check("the gift opens on beating the war, not on every star", (() => {
     const p = SF.profile.load("GATE");
     const idx = SF.missions.MISSIONS.findIndex(m => m.gift);
-    // Everything cleared EXCEPT 39, with perfect stars: still locked.
+    // Everything cleared EXCEPT the war, with perfect stars: still locked.
+    const war = idx - 1;
     SF.missions.MISSIONS.forEach(m => {
-      if(!m.gift && m.id !== 39) p.missions[m.id] = { cleared:true, stars:{pilot:3} };
+      if(!m.gift && m.id !== war) p.missions[m.id] = { cleared:true, stars:{pilot:3} };
     });
     const before = SF.missions.isMissionUnlocked(p, idx);
-    // 39 cleared with a single lowly star: open.
-    p.missions[39] = { cleared:true, stars:{pilot:1} };
+    // the war cleared with a single lowly star: open.
+    p.missions[war] = { cleared:true, stars:{pilot:1} };
     return !before && SF.missions.isMissionUnlocked(p, idx);
   })());
   check("the gift level has its own theatre",
@@ -712,7 +740,7 @@ async function run(){
    * reflection, so two of them on screen would be a continuity error.
    */
   check("the Glass Sea's reflection turns at the end", (() => {
-    const m36 = SF.missions.MISSIONS[36];
+    const m36 = SF.missions.MISSIONS.find(m => m.mirrorDuel);
     const b = fs.readFileSync(path.join(__dirname, "src/mirrorduel.js"), "utf8");
     return m36.mirror === true && m36.mirrorDuel === true && !m36.boss &&
            /world\.mirror = false/.test(b) &&        // the ghost gun retires
@@ -992,6 +1020,7 @@ async function run(){
       lentDrones:"dronesStart", bounty:"bountyStart", cover:"coverStart",
       nearMiss:"nearMissStart", ferry:"ferryStart", wrap:"wrapStart",
       limpets:"limpetStart", flare:"flareStart", stampede:"stampedeStart",
+      garden:"gardenStart",
       mirror:"mirrorStart" };
     return Object.keys(FLAGS).every(flag => {
       const key = FLAGS[flag];
@@ -2329,7 +2358,7 @@ async function run(){
     check("with the road finished, the button chases a star instead of a stop",
       /GRAB A STAR/.test(id("campaignNext").textContent));
     check("the rail lists every sector, newest stretch first",
-      qa("#sectorRail .rail-stop").length === 12 &&
+      qa("#sectorRail .rail-stop").length === SF.ui.SECTORS.length &&
       /THE EASEL/.test(qa("#sectorRail .rail-stop")[0].textContent));
     /*
      * A name on its own explained nothing: "DEEP RUN" beside a dot tells a
@@ -2347,10 +2376,10 @@ async function run(){
     check("the rail chip carries the number, the name and the score", (() => {
       const chips = qa("#sectorRail .rail-stop");
       const easel = chips[0];                       // the last stretch, at the top
-      return chips.length === 12 &&
+      return chips.length === SF.ui.SECTORS.length &&
              easel.querySelector("span b") && easel.querySelector("em") &&
              chips.every(c => !!c.style.getPropertyValue("--sec")) &&
-             /12/.test(easel.querySelector("span b").textContent);
+             new RegExp(String(SF.ui.SECTORS.length)).test(easel.querySelector("span b").textContent);
     })());
     /*
      * The band label and its one-line description. Both now go through T:
@@ -2476,7 +2505,7 @@ async function run(){
     check("the sectors tile the whole campaign, with no stop in two of them",
       (() => {
         let expect = 0;
-        for(let si = 0; si < 12; si++){
+        for(let si = 0; si < SF.ui.SECTORS.length; si++){
           const s = SF.ui.sectorStats(si);
           if(s.from !== expect) return false;
           expect = s.to + 1;
@@ -3044,7 +3073,7 @@ async function run(){
    * the Sky 29 gate for a pilot already at 116/117.
    */
   check("Earth's stars stay off the campaign ledger",
-    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 117);
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 120);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
@@ -4112,7 +4141,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,22,27,31,39");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,40");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -4399,9 +4428,11 @@ async function run(){
       const si = SF.missions.skyOf(i);
       return SF.skygen.isSurface(si) && SF.skygen.SKIES[si].stars === 0 &&
              (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
-             // ...and the ONLY other mission over ground is Earth itself.
-             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 2 &&
-             SF.skygen.isSurface(SF.missions.skyOf(0));
+             // ...and the only other grounds are the two farms: Earth,
+             // and the taken world whose story needs one.
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 3 &&
+             SF.skygen.isSurface(SF.missions.skyOf(0)) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden)));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -4639,13 +4670,13 @@ async function run(){
     SF.profile.addName("Shift");
     const shifted = SF.profile.load("Shift");
     /*
-     * SEVEN inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
+     * EIGHT inserts deep now: v2 (Silent Running at 9), v3 (Treasury at 13),
      * v4's four-level map, v5 (The Rival at 13), v6's six-level map, v7 (The
-     * Anchor at 3) and v8's four at once. Old 8 rides to 12; old 9 to 15; old
-     * 14 to 27; and old 3 - which never moved for the game's first six
-     * releases - is now at 4.
+     * Anchor at 3), v8's four at once and v9 (Second Harvest at 22). Old 8
+     * rides to 12; old 9 to 15; old 14 to 28; and old 3 - which never moved
+     * for the game's first six releases - is now at 4.
      *
-     * Fifteen levels have been inserted into the middle of this campaign over
+     * Sixteen levels have been inserted into the middle of this campaign over
      * its life. A save from the very first release still has to arrive with
      * every star filed against the level it was actually won on, and that is
      * the only thing this chain exists to guarantee.
@@ -4653,23 +4684,23 @@ async function run(){
     check("pre-insert records ride every shift",
       shifted.missions["12"] && shifted.missions["12"].stars.pilot === 2 &&
       shifted.missions["15"] && shifted.missions["15"].stars.pilot === 3 &&
-      shifted.missions["27"] && shifted.missions["27"].stars.pilot === 1 &&
+      shifted.missions["28"] && shifted.missions["28"].stars.pilot === 1 &&
       !shifted.missions["8"] && !shifted.missions["9"] && !shifted.missions["10"] &&
       !shifted.missions["11"] && !shifted.missions["13"] && !shifted.missions["14"] &&
-      !shifted.missions["20"] && !shifted.missions["24"] && !shifted.missions["25"] &&
+      !shifted.missions["20"] && !shifted.missions["24"] && !shifted.missions["27"] &&
       shifted.lastMission === 15);
     check("the oldest record rides the newest insert too",
       shifted.missions["4"] && shifted.missions["4"].stars.pilot === 2 &&
       !shifted.missions["3"]);
     check("the shifts run exactly once",
       SF.profile.migrate(shifted).missions["15"].stars.pilot === 3 &&
-      SF.profile.migrate(shifted).missions["27"].stars.pilot === 1);
+      SF.profile.migrate(shifted).missions["28"].stars.pilot === 1);
     // A v2-era save (Silent Running already counted) picks up v3 onward only.
     const v2era = SF.profile.migrate({ name:"V2", missionsVer: 2,
       missions: { "13": { cleared:true, stars:{pilot:2}, best:{} } }, lastMission: 13 });
     check("a v2-era save shifts only the later inserts",
-      v2era.missions["22"] && !v2era.missions["13"] && !v2era.missions["21"] &&
-      v2era.lastMission === 22);
+      v2era.missions["23"] && !v2era.missions["13"] && !v2era.missions["22"] &&
+      v2era.lastMission === 23);
   }
 
   /* ---------- settings ---------- */
@@ -5982,7 +6013,7 @@ async function run(){
     };
 
     /* --- the Glass Sea: the reflection helps all level, then turns --- */
-    SF.game.startMission(36, "pilot");
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.mirrorDuel), "pilot");
     id("overlayResults").classList.add("hidden");   // stale from earlier flows
     SF.game.world.player.invuln = 9999;
     check("the Glass Sea flies with the helper ghost", SF.game.world.mirror === true);
@@ -6009,7 +6040,7 @@ async function run(){
     clickEl(id("resultsMenuBtn"));
 
     /* --- the Long Way Home: the Titan, then the descent to the farm --- */
-    SF.game.startMission(39, "pilot");
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.homecoming), "pilot");
     id("overlayResults").classList.add("hidden");
     SF.game.world.player.invuln = 9999;
     await runFrames(90);
@@ -6043,10 +6074,10 @@ async function run(){
     dismissStory();
     clickEl(id("resultsMenuBtn"));
     check("beating the war opens the gift, no stars asked",
-      SF.missions.isMissionUnlocked(SF.game.profile, 40));
+      SF.missions.isMissionUnlocked(SF.game.profile, SF.missions.MISSIONS.findIndex(m => m.gift)));
 
     /* --- Behind the Sky: parade, pranks, tear, brush, stroke, photo --- */
-    SF.game.startMission(40, "pilot");
+    SF.game.startMission(SF.missions.MISSIONS.findIndex(m => m.gift), "pilot");
     id("overlayResults").classList.add("hidden");
     SF.game.world.player.invuln = 9999;
     check("the bonus level runs both theatres at once",
@@ -9359,6 +9390,143 @@ async function run(){
     SF.input.setCoop(false);
     if(G.run) G.run.ended = true;
     G.state = "idle";
+  }
+
+  /* ---------- Second Harvest: the garden, flown ----------
+   * The campaign's new stop, tested the way the family will meet it: seeds
+   * on the wind, a catch, a flower that fights, and both books kept straight
+   * in co-op. Plus the v9 save shift, because sixteen levels of inserts have
+   * taught this suite exactly where a new stop can silently break an old
+   * pilot's ledger.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const gi = SF.missions.MISSIONS.findIndex(m => m.garden);
+    check("the taken world is a real stop with the garden rule",
+      gi === 22 && SF.missions.MISSIONS[gi].name === "Second Harvest" &&
+      SF.missions.skyOf(gi) === 41 && SF.skygen.isSurface(41));
+
+    /* --- v9: an old family save rides the insert --- */
+    {
+      const v8 = P.migrate({ name:"V8", missionsVer: 8, tune:"ghost",
+        missions: { "21": { cleared:true, stars:{pilot:2}, best:{} },
+                    "22": { cleared:true, stars:{pilot:3}, best:{pilot:900} },
+                    "30": { cleared:true, stars:{pilot:1}, best:{} } },
+        lastMission: 22, reached: 25 });
+      check("a v8 save shifts 22-40 up one and nothing below",
+        v8.missions["21"] && v8.missions["21"].stars.pilot === 2 &&
+        !v8.missions["22"] &&
+        v8.missions["23"] && v8.missions["23"].stars.pilot === 3 &&
+        v8.missions["31"] && v8.missions["31"].stars.pilot === 1 &&
+        v8.lastMission === 23 && v8.missionsVer >= 9);
+      check("being carried survives the insert too", v8.reached === 26);
+      check("the GHOST tune still counts as earned",
+        v8.tune === "ghost" &&
+        SF.config.TUNE_BY_ID.ghost.unlockMission === 23 &&
+        !!(v8.missions[23] && v8.missions[23].cleared));
+    }
+
+    /* --- the garden itself, solo --- */
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("GardenA"); mk("GardenB");
+    G.coopWith = null;
+    G.profile = P.load("GardenA");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(gi, "pilot");
+    await runFrames(45, true);                  // past the launch autopilot
+    const w = G.world, run = G.run;
+    check("the level opens with the garden armed and the sky green",
+      !!run.garden && run.mission.garden === true &&
+      run.stats.flowersGrown === 0);
+    const p1 = w.players[0];
+    p1.lives = 99; p1.invuln = 0;
+    // the wind blows on its own: a seed arrives without help. (The wind
+    // waits for the fight proper - the spawner is gated on the waves phase,
+    // so the launch flourish is seedless on purpose.)
+    for(let i = 0; i < 200 && run.phase !== "waves"; i++) await runFrames(1, true);
+    run.garden.seedT = 0.01;
+    await runFrames(8, true);
+    check("seeds ride the wind down the screen on their own",
+      w.pickups.items.some(it => it.alive && it.kind === "seed"));
+    w.pickups.killAll();
+
+    // a catch grows a flower, owned by the catcher
+    p1.x = p1.targetX = 200; p1.y = p1.targetY = 500; p1.vx = p1.vy = 0;
+    run.garden.seedT = 999;                     // only OUR seed in the test
+    const sd = w.spawnPickup("seed", p1.x, p1.y - 4);
+    sd.vx = 0; sd.vy = 10;
+    await runFrames(4, true);
+    check("a caught seed becomes a flower where it landed, owned by the catcher",
+      !sd.alive && run.garden.flowers.length === 1 &&
+      run.stats.flowersGrown === 1 &&
+      run.garden.flowers[0].owner === p1 &&
+      run.garden.flowers[0].y >= 800*0.60 - 1);
+
+    // ...and the flower FIGHTS: a parked grunt dies to a petal, paid to the
+    // gardener under the same guard as every other kill.
+    w.enemies.killAll(); w.enemyBullets.killAll();
+    const fl = run.garden.flowers[0];
+    fl.until = SF.game.now() + 60000;           // hold it alive to measure
+    const kills0 = p1.killsGot;
+    const e = w.spawnEnemy("grunt", fl.x, Math.max(80, fl.y - 150),
+                           { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+    e.vx = 0; e.vy = 0; e.hp = 1;
+    p1.x = p1.targetX = 640;                    // the pilot is nowhere near it
+    await runFrames(60, true);
+    check("the flower's petals kill, and the kill pays its gardener",
+      !e.alive && p1.killsGot === kills0 + 1);
+
+    // the cap: a garden, not a wall
+    for(let i = 0; i < 6; i++){
+      const s2 = w.spawnPickup("seed", p1.x, p1.y - 4);
+      s2.vx = 0; s2.vy = 10;
+      await runFrames(3, true);
+    }
+    check("past four flowers the oldest wilts early, and the tally keeps counting",
+      run.garden.flowers.length <= 4 && run.stats.flowersGrown >= 6);
+    check("six flowers is the star, and the objective can say how far along you are",
+      SF.missions.OBJECTIVES.garden.test(run.stats) &&
+      /6/.test(SF.missions.OBJECTIVES.garden.progress(run.stats)));
+
+    // a flower is a visitor, not a fixture
+    run.garden.flowers.forEach(f => { f.until = SF.game.now() - 1; });
+    await runFrames(4, true);
+    check("flowers wilt when their time is up", run.garden.flowers.length === 0);
+    run.ended = true; G.state = "idle";
+    G.world.reset();
+
+    /* --- co-op: seat two's catch is seat two's garden --- */
+    G.coopWith = "GardenB";
+    G.profile = P.load("GardenA");
+    id("overlayResults").classList.add("hidden");
+    G.startMission(gi, "pilot");
+    await runFrames(45, true);
+    const q1 = G.world.players[0], q2 = G.world.players[1];
+    q1.lives = q2.lives = 99;
+    G.run.garden.seedT = 999;
+    q1.x = q1.targetX = 60;  q1.y = q1.targetY = 700;
+    q2.x = q2.targetX = 560; q2.y = q2.targetY = 400; q2.vx = q2.vy = 0;
+    const sd2 = G.world.spawnPickup("seed", q2.x, q2.y - 4);
+    sd2.vx = 0; sd2.vy = 10;
+    await runFrames(4, true);
+    const fl2 = G.run.garden.flowers[0];
+    check("in co-op the flower belongs to the child who caught the seed",
+      !!fl2 && fl2.owner === q2);
+    G.world.enemies.killAll();
+    fl2.until = SF.game.now() + 60000;
+    const k1 = q1.killsGot, k2 = q2.killsGot;
+    const e2 = G.world.spawnEnemy("grunt", fl2.x, Math.max(80, fl2.y - 150),
+                                  { difficulty: SF.config.DIFFICULTY_BY_ID.pilot });
+    e2.vx = 0; e2.vy = 0; e2.hp = 1;
+    q2.x = q2.targetX = 60; q2.y = q2.targetY = 700;   // both pilots far away
+    await runFrames(60, true);
+    check("...and everything it kills pays that child, not seat one",
+      !e2.alive && q2.killsGot === k2 + 1 && q1.killsGot === k1);
+    G.run.ended = true; G.state = "idle";
+    G.coopWith = null; G.coopMate = null;
+    SF.input.setCoop(false);
+    G.world.reset();
   }
 
   /* ---------- report ---------- */

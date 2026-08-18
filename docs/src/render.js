@@ -1403,6 +1403,19 @@ function drawBullets(ctx, world){
     if(!b.alive) continue;
     const t = BULLET_TIERS[b.tier] || BULLET_TIERS[0];
     const k = b.fromDrone ? 0.7 : 1;
+    if(b.petal){
+      // A flower's round: a petal, not a bolt. Same physics, gentler face.
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Math.atan2(b.vy, b.vx) + Math.PI/2);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "#b8f4c6";
+      ctx.beginPath(); ctx.ellipse(0, 0, 3.1, 5.4, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(255,244,190,0.95)";
+      ctx.beginPath(); ctx.arc(0, -1.4, 1.5, 0, TAU); ctx.fill();
+      ctx.restore();
+      continue;
+    }
     const spr = boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
@@ -1756,6 +1769,65 @@ let darkCv = null, darkCtx = null;
  */
 function drawAct4(ctx, run, world, timeMs){
   if(!run || run.ended) return;
+
+  /* --- SECOND HARVEST: the garden ----------------------------------------
+     Flower-guns, drawn under the traffic they are shooting at. Each one
+     grows where its seed was caught: a swaying stem out of the ground, two
+     leaves, and a blossom that opens as `bloom` runs 0 to 1 - so a plant
+     visibly GROWS in under half a second, which is the whole reward for
+     catching the seed. The last second of its life it dims, so a wilt never
+     reads as a bug. */
+  if(run.garden && run.garden.flowers.length){
+    const fls = run.garden.flowers;
+    for(let i = 0; i < fls.length; i++){
+      const f = fls[i];
+      const left = (f.until - timeMs)/1000;
+      const a2 = Math.min(1, Math.max(0.25, left/1.4));
+      const sway = Math.sin(timeMs/640 + f.x*0.05) * 2.4 * f.bloom;
+      const h = 26 * f.bloom;
+      ctx.save();
+      ctx.globalAlpha = a2;
+      // rooted: a soft shadow where it meets the land
+      ctx.fillStyle = "rgba(10,20,8,0.45)";
+      ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 10*f.bloom + 2, 3.4, 0, 0, TAU); ctx.fill();
+      // stem and leaves
+      ctx.strokeStyle = "#3f7d4a";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.quadraticCurveTo(f.x + sway*0.4, f.y - h*0.55, f.x + sway, f.y - h);
+      ctx.stroke();
+      ctx.fillStyle = "#4e9459";
+      ctx.beginPath();
+      ctx.ellipse(f.x - 4.5*f.bloom, f.y - h*0.42, 4.6*f.bloom, 1.9*f.bloom, -0.55, 0, TAU);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(f.x + 4.5*f.bloom, f.y - h*0.60, 4.2*f.bloom, 1.8*f.bloom, 0.5, 0, TAU);
+      ctx.fill();
+      // the blossom: six petals about a warm core, opening with bloom
+      const bx = f.x + sway, by = f.y - h;
+      const pr = 7.5 * f.bloom;
+      ctx.fillStyle = "#b8f4c6";
+      for(let pt = 0; pt < 6; pt++){
+        const an = pt/6*TAU + timeMs/2400;
+        ctx.beginPath();
+        ctx.ellipse(bx + Math.cos(an)*pr*0.72, by + Math.sin(an)*pr*0.72,
+                    pr*0.55, pr*0.3, an, 0, TAU);
+        ctx.fill();
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const cg = ctx.createRadialGradient(bx, by, 0.5, bx, by, pr*1.6 + 2);
+      cg.addColorStop(0, "rgba(255,233,168,0.8)");
+      cg.addColorStop(1, "rgba(184,244,198,0)");
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(bx, by, pr*1.6 + 2, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(bx, by, 2.6*f.bloom, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
 
   /* --- THE CURRENT: the river ---------------------------------------------
      Drawn as a band and the things IN it. The band alone reads as a coloured
@@ -2467,6 +2539,35 @@ function drawPickups(ctx, world, timeMs){
         ctx.fillStyle = "#ffd23f";
         ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
       }
+    } else if(it.kind === "seed"){
+      /*
+       * Second Harvest's seed: a dandelion puff riding the wind. Drawn soft
+       * and pale against the dark overgrowth, with a slow spin and a warm
+       * heart, so a child reads "catch me" before anybody says it.
+       */
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const sg = ctx.createRadialGradient(0, 0, 1, 0, 0, 18);
+      sg.addColorStop(0, "rgba(235,255,235,0.6)");
+      sg.addColorStop(1, "rgba(180,244,198,0)");
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.rotate(it.angle + timeMs/1400);
+      ctx.strokeStyle = "rgba(240,255,240,0.85)";
+      ctx.lineWidth = 1.2;
+      for(let fl = 0; fl < 7; fl++){
+        const a2 = fl/7*TAU;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a2)*9, Math.sin(a2)*9);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(Math.cos(a2)*9.6, Math.sin(a2)*9.6, 1.3, 0, TAU);
+        ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fill();
+      }
+      ctx.fillStyle = "#ffe9a8";
+      ctx.beginPath(); ctx.arc(0, 0, 2.6, 0, TAU); ctx.fill();
     } else if(it.kind === "star"){
       // The Star Vault's treasure: a spinning gold star in a warm halo.
       ctx.save();

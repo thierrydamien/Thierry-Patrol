@@ -118,6 +118,18 @@ const STORY = {
     button:"COME HOME",
   },
 
+  /* Mission 22's page: the other farm, found empty. Read before flying, so
+     the ruined yard on the ground - and the seeds - land as a story rather
+     than as scenery. Fires once, from the briefing, like every other beat. */
+  secondHarvest: {
+    title: "SECOND HARVEST",
+    panels: [
+      { art:"taken", text:"There's a green world on the scanner, {you} - fields, a lane, a farm. Just like home. But nobody is answering, and nothing down there has been mown in a long, long time." },
+      { art:"crew",  text:"The thieves came through here first. They took the ships, the lights, the people's sky - and left the windsock flying. Now they're back for whatever is left. So are we." },
+      { art:"sky",   text:"Papa always said a farm isn't the buildings - it's what you plant. The wind down there is FULL of seeds. Catch them, {you}. Leave this world growing." },
+    ],
+  },
+
   /* The TRUE ending now: the workshop is beaten, the sky is painted. */
   workshop: {
     title: "THE PAINTED SKY",

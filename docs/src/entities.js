@@ -724,7 +724,7 @@ class World {
       b.x = p.x + vx*0.02; b.y = p.y - 18; b.vx = vx; b.vy = -660;
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
-      b.fromMirror = false;
+      b.fromMirror = false; b.petal = false;
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
@@ -737,7 +737,7 @@ class World {
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
-      b.fromMirror = false;
+      b.fromMirror = false; b.petal = false;
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -766,7 +766,7 @@ class World {
         b.r = s.r; b.dmg = Math.max(1, Math.round(s.dmg*0.6)); b.pierce = s.pierce;
         b.homing = s.homing; b.tier = s.tier; b.age = 0;
         b.fromDrone = s.fromDrone; b.hitBoss = false; b.hitWeak = false;
-        b.fromMirror = true;
+        b.fromMirror = true; b.petal = false;
       }
       fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }

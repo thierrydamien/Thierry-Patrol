@@ -40,6 +40,9 @@ const OBJECTIVES = {
   coinRush:  { label:"Grab 60 coins", icon:"🪙",
                test: s => s.coins >= 60,
                progress: s => (s.coins || 0) + "/60" },
+  garden:    { label:"Grow 6 flowers", icon:"🌼",
+               test: s => (s.flowersGrown || 0) >= 6,
+               progress: s => (s.flowersGrown || 0) + "/6" },
   /*
    * FOUR STARS THAT ASK FOR THE LEVEL'S OWN LESSON.
    *
@@ -1237,7 +1240,49 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:22, name:"Cold Approach", subtitle:"Line up the shot",
+    /*
+     * MISSION 22 - the other farm.
+     *
+     * The campaign's second surface, and the first green thing since Launch
+     * Day. It exists because Earth's farm is the best-loved picture in the
+     * game and the only other ground (the Red Canyon) is bare rock: one
+     * great surface at each end of the route and nothing in between. This
+     * is the in-between - a farm world like ours, already emptied by the
+     * people we are chasing, with its windsock still up and nobody home.
+     *
+     * Its rule is the one mechanic the campaign never had: the level plants
+     * things ON YOUR SIDE. Seeds drift down the wind; catch one and a
+     * flower-gun grows where it lands and fights beside you for a while.
+     * Star two asks for a garden of them. On a stop whose whole story is
+     * "they took everything", the answer the level teaches is: grow it
+     * back.
+     */
+    id:22, sky:41, name:"Second Harvest", subtitle:"somebody lived here",
+    brief:"The first green world since home, {you} - and it used to be somebody's. Their fields have gone wild, their windsock is still flying, and the thieves are back picking the place clean. Catch the seeds on the wind: what you plant, fights. Take the world back, and leave it growing.",
+    goal:"Catch SEEDS — what you plant fights",
+    garden:true,
+    face:"thief",
+    waves: [
+      w(1,   "grunt",    6, "line"),
+      w(9,   "thief",    2, "sides"),
+      w(16,  "weaver",   7, "arc"),
+      w(24,  "carrier",  1, "column"),
+      w(31,  "striker",  6, "vee"),
+      w(38,  "thief",    3, "scatter"),
+      w(46,  "grunt",    9, "wall"),
+      w(54,  "carrier",  1, "column"),
+      w(61,  "kamikaze", 4, "sides"),
+      w(68,  "weaver",   8, "tripleColumns"),
+      w(76,  "thief",    3, "sides"),
+      w(84,  "brute",    2, "twinColumns"),
+      w(92,  "carrier",  1, "column"),
+      w(99,  "striker",  7, "pincer"),
+      w(108, "grunt",   10, "scatter"),
+    ],
+    objectives: ["complete","garden","rescueAll"],
+  },
+  {
+    id:23, sky:21, name:"Cold Approach", subtitle:"Line up the shot",
     brief:"Snipers draw a line before they fire. If the line is on you, move - simple as that.",
     goal:"BOSS! It goes invisible — watch",
     waves: [
@@ -1288,7 +1333,7 @@ const MISSIONS = [
    * rather than from the crowd. Nothing here dives at you; the walls do that.
    */
   {
-    id:23, name:"The Narrows", subtitle:"Under their guns",
+    id:24, sky:22, name:"The Narrows", subtitle:"Under their guns",
     brief:"Their fortress guns watch every road in the sky, {you} - so we go UNDER the sky. Down their own canyon, below the radar. The walls breathe in and out; fly the middle when they squeeze.",
     goal:"The canyon SQUEEZES — fly the middle",
     narrows:true,
@@ -1312,7 +1357,7 @@ const MISSIONS = [
     objectives: ["complete","squeeze","rescueAll"],
   },
   {
-    id:24, name:"The Trench Run", subtitle:"Thread the walls",
+    id:25, sky:23, name:"The Trench Run", subtitle:"Thread the walls",
     brief:"Straight down the supply trench of their star fortress. The walls come in waves - read each gate, find the gap, and thread it. Or blast your own door through, if your guns are up to it.",
     goal:"WALLS! Find the gap and fly through",
     trench:true,
@@ -1339,7 +1384,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:25, name:"All Hands", subtitle:"Everyone who is left",
+    id:26, sky:24, name:"All Hands", subtitle:"Everyone who is left",
     brief:"Every prisoner they still hold is on these ships. Bring all of them home.",
     face:"carrier",                   // the brief says it: the ships ARE the level
     goal:"Save every last pilot!",
@@ -1386,7 +1431,7 @@ const MISSIONS = [
      * toward the BOTTOM of the screen, so the flare will take your rescues if
      * you are slow. It is the most legible reason to hurry the game has.
      */
-    id:26, name:"The Bright Side", subtitle:"standing on their sun",
+    id:27, sky:25, name:"The Bright Side", subtitle:"standing on their sun",
     brief:"We are flying over the surface of their star. Every minute or so it throws a sheet of fire up at us — it burns them as happily as it burns you, so anything you were saving for later will be gone. When the warning line lights, climb.",
     goal:"CLIMB when the star flares",
     flare:true,
@@ -1414,7 +1459,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","unburned"],
   },
   {
-    id:27, name:"The Leviathan", subtitle:"The last one",
+    id:28, sky:26, name:"The Leviathan", subtitle:"The last one",
     brief:"Their biggest ship, and the last thing between us and home. Four weak points. Take your time.",
     goal:"BOSS! Break off all four parts",
     waves: [
@@ -1453,7 +1498,7 @@ const MISSIONS = [
      is the fight the whole campaign has been walking toward.
      ========================================================= */
   {
-    id:28, name:"The Searchlight", subtitle:"Your glow is the only light",
+    id:29, sky:27, name:"The Searchlight", subtitle:"Your glow is the only light",
     brief:"They cut the power to this whole sector. Your ship's glow is the only lamp left - and there are stranded pilots drifting out there in the dark, waiting for somebody to come looking.",
     goal:"DARK! Find the lost pilots",
     blackout:true, podDrops:4,
@@ -1497,7 +1542,7 @@ const MISSIONS = [
    * read, which is a kind of pressure the game has never applied.
    */
   {
-    id:29, name:"Nightfall", subtitle:"While the light lasts",
+    id:30, sky:28, name:"Nightfall", subtitle:"While the light lasts",
     brief:"Their sun is going out, {you}, and it's going out WHILE we're in here. Everything you can see now, you'll be flying blind against by the end. Learn them early.",
     goal:"It gets DARKER. Learn them early",
     nightfall:true,
@@ -1521,7 +1566,7 @@ const MISSIONS = [
     objectives: ["complete","afterDark","rescueAll"],
   },
   {
-    id:30, name:"The Long Dark", subtitle:"Something is out there",
+    id:31, sky:29, name:"The Long Dark", subtitle:"Something is out there",
     brief:"Their star went out last night. Fly quiet, keep your eyes open - and look at what is sitting where the light used to be.",
     // "soft": the Searchlight's veil at half strength. 21 is the hard black
     // with a job to do; 22 is dread, so the dark here is thinner but the
@@ -1552,7 +1597,7 @@ const MISSIONS = [
     objectives: ["complete","kill80","rescueAll"],
   },
   {
-    id:31, name:"The Devourer", subtitle:"The last star",
+    id:32, sky:30, name:"The Devourer", subtitle:"The last star",
     brief:"This is the one, {you}. It ate their sun and it is coming for ours. Everything you have learned, everything you have built - all of it, right now.",
     goal:"THE LAST BOSS. Everything you have!",
     // A short escort screen, then the only thing that matters. The waves are
@@ -1590,7 +1635,7 @@ const MISSIONS = [
    * band and watch yourself drift downstream - that moment is the level.
    */
   {
-    id:32, name:"The Sky River", subtitle:"The sky is draining",
+    id:33, sky:31, name:"The Sky River", subtitle:"The sky is draining",
     brief:"See that bright band, {you}? That's the sky itself, pouring toward the crack the Devourer left. Drop in and it carries you - and their shots, and the money. Ride it to travel. Climb out to aim.",
     goal:"The sky is DRAINING — ride it!",
     current:true,
@@ -1624,7 +1669,7 @@ const MISSIONS = [
      the rules are made.
      ========================================================= */
   {
-    id:33, name:"The Undertow", subtitle:"Gravity gone wrong",
+    id:34, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1667,7 +1712,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:34, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:35, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1699,7 +1744,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:35, name:"The Chorus", subtitle:"They fire on the beat",
+    id:36, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1741,7 +1786,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:36, name:"The Glass Sea", subtitle:"two of you",
+    id:37, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1776,7 +1821,7 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:37, name:"The Foundry", subtitle:"Stop the production line",
+    id:38, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1808,7 +1853,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:38, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:39, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1847,7 +1892,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:39, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:40, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -1875,7 +1920,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:40, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:41, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,

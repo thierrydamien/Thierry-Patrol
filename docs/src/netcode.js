@@ -325,7 +325,7 @@ function packBullets(pool){
   for(let i = 0; i < items.length; i++){
     const b = items[i];
     if(!b.alive) continue;
-    out.push([R(b.x), R(b.y), R(b.vx), R(b.vy), R(b.r), b.tier || 0, b.kind || 0]);
+    out.push([R(b.x), R(b.y), R(b.vx), R(b.vy), R(b.r), b.tier || 0, b.kind || 0, b.petal ? 1 : 0]);
   }
   return out;
 }
@@ -370,6 +370,9 @@ function sendSnapshot(dt, world, run){
        ? [R(boss.x), R(boss.y), R(boss.hp), R(boss.maxHp), boss.typeId || boss.id || ""]
        : null,
     r: run ? {
+      // The garden is host state the guest cannot grow for itself.
+      gd: run.garden ? run.garden.flowers.map(f =>
+            [R(f.x), R(f.y), R((f.bloom || 0)*100), R(f.until - SF.game.now())]) : null,
       score: run.score, money: R(run.money), combo: run.combo,
       prog: R(run.progress*1000), boss: run.bossActive ? 1 : 0,
       bt: run.bannerText || "", bs: run.bannerSub || "",
@@ -465,6 +468,7 @@ function applySnapshot(world){
       const r = rows[i], b = pool.spawn();
       b.x = r[0]; b.y = r[1]; b.vx = r[2]; b.vy = r[3];
       b.r = r[4]; b.tier = r[5]; b.kind = r[6];
+      b.petal = !!r[7];               // a flower's round stays a petal far away
       b.life = 0; b.pierce = 0; b.owner = null;
     }
   };
@@ -491,6 +495,11 @@ function applySnapshot(world){
 
   const run = SF.game.run;
   if(run && s.r){
+    if(run.garden && s.r.gd){
+      run.garden.flowers = s.r.gd.map(a2 => ({
+        x: a2[0], y: a2[1], bloom: a2[2]/100,
+        until: SF.game.now() + a2[3], fireT: 9, owner: null }));
+    }
     run.score = s.r.score; run.money = s.r.money; run.combo = s.r.combo;
     run.progress = s.r.prog/1000; run.bossActive = !!s.r.boss;
     run.bannerText = s.r.bt; run.bannerSub = s.r.bs;

@@ -306,6 +306,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Rescue every stranded pilot": "Sauver tous les pilotes en perdition",
 "Take no damage at all": "Ne subir aucun dégât",
 "Grab 60 coins": "Ramasser 60 pièces",
+"Grow 6 flowers": "Faire pousser 6 fleurs",
 "Bag 10 WANTED ships": "Abattre 10 vaisseaux RECHERCHÉS",
 "Cut 20 near misses": "Frôler 20 ennemis",
 "Destroy 15 unseen": "Détruire 15 ennemis sans être vu",
@@ -333,6 +334,8 @@ SF.i18n.register("fr", { name: "Français", s: {
 "THE SUPPLY ROAD": "LA ROUTE DU RAVITAILLEMENT",
 "ENEMY SPACE": "TERRITOIRE ENNEMI",
 "WARDEN'S REACH": "LE DOMAINE DU GEÔLIER",
+"THE TAKEN WORLD": "LE MONDE VOLÉ",
+"somebody's farm, before they came": "la ferme de quelqu'un, avant leur passage",
 "THE TRENCHES": "LES TRANCHÉES",
 "THEIR STAR": "LEUR ÉTOILE",
 "THE DARK": "LES TÉNÈBRES",
@@ -575,6 +578,13 @@ SF.i18n.register("fr", { name: "Français", s: {
 "One more thing before you land, {you}. Where the Devourer fell, the sky didn't heal - there's a crack up there, thin as a pencil line, and the light coming through it isn't starlight. The map has already found it.":
   "Une dernière chose avant d'atterrir, {you}. Là où le Dévoreur est tombé, le ciel n'a pas guéri — il y a une fissure là-haut, fine comme un trait de crayon, et la lumière qui la traverse n'est pas celle des étoiles. La carte l'a déjà trouvée.",
 "COME HOME": "RENTRE À LA MAISON",
+"SECOND HARVEST": "SECONDE RÉCOLTE",
+"There's a green world on the scanner, {you} - fields, a lane, a farm. Just like home. But nobody is answering, and nothing down there has been mown in a long, long time.":
+  "Il y a un monde vert au scanner, {you} — des champs, une route, une ferme. Comme à la maison. Mais personne ne répond, et rien là-dessous n'a été fauché depuis très, très longtemps.",
+"The thieves came through here first. They took the ships, the lights, the people's sky - and left the windsock flying. Now they're back for whatever is left. So are we.":
+  "Les voleurs sont passés ici en premier. Ils ont pris les vaisseaux, les lumières, le ciel de ces gens — et laissé la manche à air au vent. Ils reviennent pour ce qui reste. Nous aussi.",
+"Papa always said a farm isn't the buildings - it's what you plant. The wind down there is FULL of seeds. Catch them, {you}. Leave this world growing.":
+  "Papa a toujours dit qu'une ferme, ce n'est pas les bâtiments — c'est ce qu'on y plante. Le vent là-dessous est PLEIN de graines. Attrape-les, {you}. Laisse ce monde en train de pousser.",
 "THE PAINTED SKY": "LE CIEL PEINT",
 "The Royal Brush went up like a firework with every colour the workshop owns - and where it burst, the sky isn't blank any more. You painted it, {you}. It's yours.":
   "Le Pinceau Royal a explosé comme un feu d'artifice avec toutes les couleurs de l'atelier — et là où il a éclaté, le ciel n'est plus vide. C'est toi qui l'as peint, {you}. Il est à toi.",
@@ -605,6 +615,12 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The Warden": "Le Geôlier",
 "Their Treasury": "Leur Trésor",
 "Shake Them Off": "Décroche-les !",
+"Second Harvest": "Seconde Récolte",
+"somebody lived here": "quelqu'un vivait ici",
+"Catch SEEDS — what you plant fights":
+  "Attrape les GRAINES — elles se battent",
+"The first green world since home, {you} - and it used to be somebody's. Their fields have gone wild, their windsock is still flying, and the thieves are back picking the place clean. Catch the seeds on the wind: what you plant, fights. Take the world back, and leave it growing.":
+  "Le premier monde vert depuis la maison, {you} — et il appartenait à quelqu'un. Leurs champs sont retournés à l'état sauvage, leur manche à air flotte encore, et les voleurs reviennent finir le pillage. Attrape les graines dans le vent : ce que tu plantes se bat. Reprends ce monde, et laisse-le en train de pousser.",
 "Cold Approach": "Approche Glacée",
 "The Narrows": "Le Goulet",
 "The Trench Run": "La Tranchée",
@@ -1190,6 +1206,13 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Aujourd'hui c'est toi le camion, {you}. Attrape une caisse, monte-la à la porte verte — un coup encaissé et tu lâches tout, alors sois prudent ET rapide.",
 "There's no edge to this place, {you} - fly out one side and you'll come right back in the other. Use it.":
   "Cet endroit n'a pas de bord, {you} — sors d'un côté et tu reviens aussitôt par l'autre. Sers-t'en.",
+"This was somebody's farm, {you}. Their windsock is still up. Catch the seeds on the wind - what you plant, fights.":
+  "C'était la ferme de quelqu'un, {you}. Leur manche à air flotte encore. Attrape les graines dans le vent — ce que tu plantes se bat.",
+"There - a seed, {you}! Catch it before it lands!":
+  "Là — une graine, {you} ! Attrape-la avant qu'elle touche le sol !",
+"It GREW! Look at it go - plant more, {you}!":
+  "Elle a POUSSÉ ! Regarde-la faire — plantes-en d'autres, {you} !",
+"PLANTED!": "PLANTÉ !",
 "Those little green things don't shoot, {you} - they STICK. If one gets you, waggle her hard, left-right-left, and shake it loose.":
   "Ces petits trucs verts ne tirent pas, {you} — ils S'ACCROCHENT. Si l'un d'eux t'attrape, secoue fort, gauche-droite-gauche, et décroche-le.",
 "We're right over the star itself, {you}. When the surface flares, CLIMB - anything low burns, them and us both.":

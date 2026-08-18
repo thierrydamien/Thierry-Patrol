@@ -346,6 +346,15 @@ const COMMS = {
   limpetStart: { speaker:"mate", cooldown:999, lines:[
     "Those little green things don't shoot, {you} - they STICK. If one gets you, waggle her hard, left-right-left, and shake it loose.",
   ]},
+  gardenStart: { speaker:"control", cooldown:999, lines:[
+    "This was somebody's farm, {you}. Their windsock is still up. Catch the seeds on the wind - what you plant, fights.",
+  ]},
+  gardenSeed: { speaker:"mate", cooldown:999, lines:[
+    "There - a seed, {you}! Catch it before it lands!",
+  ]},
+  gardenGrow: { speaker:"mate", cooldown:999, lines:[
+    "It GREW! Look at it go - plant more, {you}!",
+  ]},
   flareStart: { speaker:"control", cooldown:999, lines:[
     "We're right over the star itself, {you}. When the surface flares, CLIMB - anything low burns, them and us both.",
   ]},
