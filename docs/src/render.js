@@ -210,6 +210,9 @@ let skyCanvas = null, skyScroll = 0, skyIndex = -1, skyPhoto = null;
  * leaves the frame and stays gone.
  */
 let skyOnce = null, skyDrift = 0;
+// Whether this sky IS the ground (Red Canyon set the rule). The once-layer's
+// speed hangs off it: a landmark ON the ground has to move WITH the ground.
+let skySurface = false;
 
 function initBackground(missionIndex){
   /*
@@ -244,6 +247,7 @@ function initBackground(missionIndex){
    * like when you are the thing that is moving.
    */
   const surface = SF.skygen.isSurface(idx);
+  skySurface = surface;
   stars = [];
   // Star counts are per-area, not per-layer-constant: the playfield is 2.5x
   // the area it used to be, so a fixed count would read as empty space.
@@ -283,14 +287,22 @@ function updateBackground(dt){
   // purpose: the nebula is the far plane the star layers measure against.
   skyScroll = (skyScroll + dt*7.5*wf) % VH;
   /*
-   * The once-layer drifts SLOWER than the nebula, because it is further away
+   * The once-layer's speed depends on what it is.
+   *
+   * Over SPACE it drifts SLOWER than the nebula, because it is further away
    * - a planet is the most distant thing in the frame and parallax says the
    * far plane moves least. At sky speed Earth cleared the screen in forty
    * seconds, which is neither how distance looks nor long enough to be the
    * thing this mission is climbing away from. At a fifth of it, it sinks for
    * most of the patrol and is gone by the end.
+   *
+   * Over a SURFACE it moves at exactly the ground's speed, because it is not
+   * behind the world - it is ON it. The farm is glued to the paddock it was
+   * baked over (same texture, same plan, same rate), passes once, and is
+   * behind you. Any other speed would have home sliding across its own
+   * fields like a sticker coming loose.
    */
-  if(skyOnce && skyDrift < VH*2) skyDrift += dt*7.5*0.22*wf;
+  if(skyOnce && skyDrift < VH*2) skyDrift += dt*7.5*(skySurface ? 1 : 0.22)*wf;
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
     s.y += s.speed*wf*dt;

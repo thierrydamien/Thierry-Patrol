@@ -618,7 +618,9 @@ const SKIES = [
      */
     clouds:["#f0b168","#dd8f7e","#7f9cc8"], dust:"#18220f", star:"#fff2d8",
     lum:1.3, density:0.8, stars:0, bright:0,
-    props:[ {k:"fields", x:0.50, y:0.50, dark:"#2a3418"} ] },
+    // The ground tiles; home does not. See drawFarm for why the split exists.
+    props:[ {k:"fields", x:0.50, y:0.50, dark:"#2a3418"},
+            {k:"farm",   x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -1863,14 +1865,19 @@ function drawVortex(ctx, W, H, p, rand){
  * the key-light side, varying only in x, so the land agrees with every lit
  * hull in the game about where the sun is.
  */
-function drawFields(ctx, W, H, p, rand){
-  /*
-   * Rows first: irregular heights, because equal strips are the single
-   * biggest tell of painted farmland. Only the two ends are sacred - the
-   * first row starts at 0 and the last ends at H, so the seam still lands
-   * on a hedgerow. One row is dealt a double share on purpose: that is the
-   * home field, and it has to hold a farmyard and an airstrip.
-   */
+/*
+ * THE LIE OF THE LAND, decided once and shared.
+ *
+ * The farm is leaving the tiling ground for its own pass-once layer (a
+ * landmark repeating every wrap is what "you should only see the farm once"
+ * is about), which means two different bakes now have to agree on where the
+ * lane runs and which field is the home paddock. They cannot share the
+ * paint stream - each bake only runs its own props, so the streams sit at
+ * different positions - so the plan draws from its OWN fixed seed instead.
+ * Same numbers in both bakes, by construction, forever.
+ */
+function fieldPlan(W, H){
+  const rand = rngFor(90400077);
   const ROWS = 12;
   const homeRow = 2 + Math.floor(rand()*3);
   const rowE = [0];
@@ -1882,6 +1889,171 @@ function drawFields(ctx, W, H, p, rand){
     let y = 0;
     for(let r = 0; r < ROWS; r++){ y += raw[r]/acc*H; rowE.push(y); }
     rowE[ROWS] = H; }
+  const laneX = W*(0.34 + rand()*0.10);
+  const sideY = rowE[Math.min(homeRow + 4 + Math.floor(rand()*3), ROWS - 1)];
+  const padX0 = laneX, padX1 = laneX + W*0.34 < W*0.93 ? laneX + W*0.34 : W;
+  // The yard's own geometry rides along: the ground pass needs it to keep
+  // copses off the apron, and the farm pass needs it to build the apron.
+  const y1 = rowE[homeRow];
+  const ax0 = laneX + W*0.075, ay0 = y1 + 9, apW = W*0.105, apH = 40;
+  const trackY = ay0 + apH*0.45;
+  return { ROWS, homeRow, rowE, laneX, sideY, padX0, padX1, y1, ax0, ay0, apW, apH, trackY };
+}
+
+/*
+ * One shared crown so the copses and the farm's windbreak match: dark
+ * canopy, one lit arc on the key-light side, soft long shadow the other
+ * way - the morning light, drawn twice so it cannot be missed. Shared
+ * because the copses tile with the ground and the windbreak leaves with
+ * the farm, and the two must still look planted by the same morning.
+ */
+function fieldTree(ctx, tx, ty, tr){
+  ctx.fillStyle = "rgba(18,26,10,0.5)";
+  ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#2c3d1c";
+  ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
+  ctx.strokeStyle = "rgba(255,214,140,0.5)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
+}
+
+/*
+ * THE FARM ITSELF - painted by the once-layer bake, not the tiling one.
+ *
+ * "On level 0 you should only see the farm once. It doesn't make sense to
+ * see it multiple times." It didn't: the ground texture tiles (fields
+ * repeating IS what countryside looks like from a cockpit), but the ground
+ * carried the farmyard with it, so home came round again every wrap like a
+ * carousel. The yard, the airstrip, the windbreak somebody planted and the
+ * track that only exists to reach it are a LANDMARK, and a landmark is a
+ * place you pass.
+ *
+ * It rides the once-layer at GROUND speed (see render.js: a surface sky's
+ * once-layer moves with the ground, not at the far-plane crawl), glued to
+ * the same paddock it was always drawn on - fieldPlan deals both bakes the
+ * same land - and then it is behind you, which is what Launch Day is about.
+ */
+function drawFarm(ctx, W, H, p, rand){
+  const { y1, ax0, ay0, apW, apH, trackY, laneX, padX1, rowE, homeRow } = fieldPlan(W, H);
+  ctx.save();
+  // The spur road leaves with the yard it serves - same two-pass cut as the
+  // lanes it joins: dark banks first, the packed surface over them.
+  const spur = (grow, col) => {
+    ctx.strokeStyle = col; ctx.lineCap = "butt";
+    ctx.lineWidth = W*0.007 + grow;
+    ctx.beginPath(); ctx.moveTo(laneX, trackY); ctx.lineTo(ax0 + 2, trackY); ctx.stroke();
+  };
+  ctx.save(); ctx.translate(1.2, 0.7);
+  spur(W*0.009, "rgba(26,34,15,0.8)");
+  ctx.restore();
+  spur(0, "#8d7f57");
+  {
+    ctx.fillStyle = "#8d7f57";
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.moveTo(ax0, ay0);
+    ctx.lineTo(ax0 + apW, ay0 + 2 + rand()*3);
+    ctx.lineTo(ax0 + apW - 2 - rand()*4, ay0 + apH);
+    ctx.lineTo(ax0 + 3 + rand()*4, ay0 + apH - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    // A roof seen from straight above: two slopes about the ridge, the
+    // north-west slope catching the dawn, the other in its own shade, and
+    // a soft shadow thrown the same way the trees throw theirs.
+    const roof = (bx, by, bw, bh, base, vert) => {
+      ctx.fillStyle = "rgba(18,26,10,0.5)";
+      ctx.beginPath(); ctx.ellipse(bx + bw*0.62, by + bh*0.72, bw*0.62, bh*0.5, 0.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = mixA(base, "#ffd9a0", 0.30, 1);
+      if(vert) ctx.fillRect(bx, by, bw/2, bh); else ctx.fillRect(bx, by, bw, bh/2);
+      ctx.fillStyle = mixA(base, "#141a0c", 0.42, 1);
+      if(vert) ctx.fillRect(bx + bw/2, by, bw/2, bh); else ctx.fillRect(bx, by + bh/2, bw, bh/2);
+      ctx.strokeStyle = "rgba(255,224,160,0.55)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      if(vert){ ctx.moveTo(bx + bw/2, by + 0.5); ctx.lineTo(bx + bw/2, by + bh - 0.5); }
+      else { ctx.moveTo(bx + 0.5, by + bh/2); ctx.lineTo(bx + bw - 0.5, by + bh/2); }
+      ctx.stroke();
+    };
+    // the workshop, south of the apron, doors facing it
+    const wx = ax0 - 2, wy = ay0 + apH + 3;
+    const spill = ctx.createRadialGradient(wx + 12, wy - 1, 1, wx + 12, wy - 1, 13);
+    spill.addColorStop(0, "rgba(255,214,110,0.8)");
+    spill.addColorStop(1, "rgba(255,214,110,0)");
+    ctx.fillStyle = spill;
+    ctx.beginPath(); ctx.arc(wx + 12, wy - 1, 13, 0, TAU); ctx.fill();
+    roof(wx, wy, 30, 15, "#6d5a4a", false);
+    ctx.fillStyle = "#ffd76e";
+    ctx.fillRect(wx + 9, wy - 1.4, 7, 2.8);              // the open door
+    ctx.fillRect(wx + 6, wy + 9.6, 2.2, 2.2);            // rooflights, lit
+    ctx.fillRect(wx + 20, wy + 9.6, 2.2, 2.2);
+    roof(ax0 + apW + 5, ay0 + 3, 15, 10, "#7a4a3a", false);   // the house
+    roof(ax0 + apW + 7, ay0 + 22, 10, 7, "#5a6055", true);    // a shed
+    // two of the six, wheeled out and waiting for the morning's check
+    const dart = (dx, dy, s) => {
+      ctx.fillStyle = "rgba(18,26,10,0.45)";
+      ctx.beginPath(); ctx.ellipse(dx + s*0.5, dy + s*0.55, s*0.8, s*0.4, 0.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#cfd6da";
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - s);
+      ctx.lineTo(dx + s*0.85, dy + s*0.8);
+      ctx.lineTo(dx, dy + s*0.35);
+      ctx.lineTo(dx - s*0.85, dy + s*0.8);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#7fb0c8";
+      ctx.fillRect(dx - 1, dy - s*0.45, 2, 2.6);
+    };
+    dart(ax0 + apW*0.30, ay0 + 16, 6);
+    dart(ax0 + apW*0.62, ay0 + 24, 6);
+  }
+  /*
+   * The airstrip: a mown pale strip down the paddock with white thresholds
+   * and a windsock - Launch Day's actual runway, visible from the sky. A
+   * worn footpath ties it back to the apron so the yard reads as one place.
+   */
+  const sx = Math.min(padX1 - 26, ax0 + apW + 34);
+  const sy0 = y1 + 14, sy1 = rowE[homeRow + 1] - 12;
+  {
+    for(let d = sy0; d < sy1; d += 9)
+      { ctx.fillStyle = "rgba(230,238,170," + (((d - sy0)/9|0) % 2 ? 0.12 : 0.26) + ")";
+        ctx.fillRect(sx, d, 13, Math.min(9, sy1 - d)); }
+    ctx.strokeStyle = "rgba(28,36,16,0.5)"; ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, sy0 + 0.5, 12, sy1 - sy0 - 1);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(sx + 2, sy0 + 2, 9, 2.4);
+    ctx.fillRect(sx + 2, sy1 - 4.4, 9, 2.4);
+    ctx.strokeStyle = "rgba(141,127,87,0.75)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ax0 + apW - 2, ay0 + apH*0.5);
+    ctx.quadraticCurveTo((ax0 + apW + sx)/2, ay0 + apH*0.72, sx + 6, sy0 + 10);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(240,240,240,0.7)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx - 5, sy0 + 9); ctx.stroke();
+    ctx.fillStyle = "#e8823c";
+    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx + 2, sy0 + 4.5);
+    ctx.lineTo(sx - 5, sy0 + 6); ctx.closePath(); ctx.fill();
+  }
+  // The windbreak: a planted line on the hedgerow above the yard, sheltering
+  // it from the open field - the one row of trees on this map that somebody
+  // chose to put where it is. Planted, so it belongs to the farm, not to
+  // the countryside that keeps rolling underneath.
+  for(let i = 0; i < 5; i++){
+    const tx = ax0 + 4 + (apW - 8)*(i/4) + (rand() - 0.5)*6;
+    fieldTree(ctx, tx, y1 - 7 - rand()*4, 5 + rand()*3);
+  }
+  ctx.restore();
+}
+
+function drawFields(ctx, W, H, p, rand){
+  /*
+   * Rows first: irregular heights, because equal strips are the single
+   * biggest tell of painted farmland. Only the two ends are sacred - the
+   * first row starts at 0 and the last ends at H, so the seam still lands
+   * on a hedgerow. One row is dealt a double share on purpose: that is the
+   * home field, and it has to hold a farmyard and an airstrip. The deal
+   * itself lives in fieldPlan (rowE[ROWS] = H; is pinned there), because the
+   * farm is painted by a different bake now and both have to read the same
+   * land.
+   */
+  const { ROWS, homeRow, rowE, laneX, sideY, padX0, padX1,
+          y1, ax0, apW, trackY } = fieldPlan(W, H);
   /*
    * The roads, before the fields - because the fields have to know where
    * they are. Real country roads are STRAIGHT. A lane follows the boundary
@@ -1898,16 +2070,11 @@ function drawFields(ctx, W, H, p, rand){
    *     off the edge of the map towards wherever it goes next. It never
    *     comes back, so it never has to bend to get home.
    *   the farm track - the short spur into the yard, narrower and paler.
-   *     The one reason anything would leave the road here.
+   *     The one reason anything would leave the road here. It is painted by
+   *     drawFarm now, because the yard it serves passes ONCE and the spur
+   *     must leave with it - a track to nowhere every wrap would be worse
+   *     than the repeated farm it used to serve.
    */
-  const laneX = W*(0.34 + rand()*0.10);
-  const y1 = rowE[homeRow];                       // the home field's top edge
-  // The side lane meets it well clear of the farm, on a hedgerow of its own.
-  const sideY = rowE[Math.min(homeRow + 4 + Math.floor(rand()*3), ROWS - 1)];
-  // The home paddock: one wide field beside the lane, sized for a yard and a
-  // strip of mown runway. If it would leave only a sliver before the map
-  // edge, it runs to the edge instead.
-  const padX0 = laneX, padX1 = laneX + W*0.34 < W*0.93 ? laneX + W*0.34 : W;
   /*
    * Each row divides on its own - shared column lines are what made the
    * first draft read as a chessboard. The lane's x is always one of the
@@ -2004,15 +2171,6 @@ function drawFields(ctx, W, H, p, rand){
     }
   }
   /*
-   * The farmyard sits beside the lane, a field's width off it, with the
-   * track running in - so the buildings are the track's reason and the
-   * track is the only turn on the whole map. Packed-dirt apron, the big
-   * workshop with its doors open and every light on (the story starts
-   * here), the house still asleep, and two ships already wheeled out.
-   */
-  const ax0 = laneX + W*0.075, ay0 = y1 + 9, apW = W*0.105, apH = 40;
-  const trackY = ay0 + apH*0.45;                  // the track meets the yard
-  /*
    * The three roads, each one straight. Drawn banks-first and with the dark
    * only barely off-centre, because a country lane is a cut between two
    * hedges - dark down BOTH sides, a little heavier on the shaded one. Offset
@@ -2028,118 +2186,18 @@ function drawFields(ctx, W, H, p, rand){
       ctx.beginPath(); ctx.moveTo(laneX, -10); ctx.lineTo(laneX, H + 10); ctx.stroke();
       ctx.lineWidth = W*0.011 + grow;             // the side lane, off the map
       ctx.beginPath(); ctx.moveTo(-6, sideY); ctx.lineTo(laneX + 1, sideY); ctx.stroke();
-      ctx.lineWidth = W*0.007 + grow;             // the farm track
-      ctx.beginPath(); ctx.moveTo(laneX, trackY); ctx.lineTo(ax0 + 2, trackY); ctx.stroke();
     };
     ctx.save(); ctx.translate(1.2, 0.7);
     paintRoads(W*0.009, "rgba(26,34,15,0.8)");
     ctx.restore();
     paintRoads(0, "#8d7f57");
   }
-  {
-    ctx.fillStyle = "#8d7f57";
-    ctx.globalAlpha = 0.92;
-    ctx.beginPath();
-    ctx.moveTo(ax0, ay0);
-    ctx.lineTo(ax0 + apW, ay0 + 2 + rand()*3);
-    ctx.lineTo(ax0 + apW - 2 - rand()*4, ay0 + apH);
-    ctx.lineTo(ax0 + 3 + rand()*4, ay0 + apH - 2);
-    ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 1;
-    // A roof seen from straight above: two slopes about the ridge, the
-    // north-west slope catching the dawn, the other in its own shade, and
-    // a soft shadow thrown the same way the trees throw theirs.
-    const roof = (bx, by, bw, bh, base, vert) => {
-      ctx.fillStyle = "rgba(18,26,10,0.5)";
-      ctx.beginPath(); ctx.ellipse(bx + bw*0.62, by + bh*0.72, bw*0.62, bh*0.5, 0.5, 0, TAU); ctx.fill();
-      ctx.fillStyle = mixA(base, "#ffd9a0", 0.30, 1);
-      if(vert) ctx.fillRect(bx, by, bw/2, bh); else ctx.fillRect(bx, by, bw, bh/2);
-      ctx.fillStyle = mixA(base, "#141a0c", 0.42, 1);
-      if(vert) ctx.fillRect(bx + bw/2, by, bw/2, bh); else ctx.fillRect(bx, by + bh/2, bw, bh/2);
-      ctx.strokeStyle = "rgba(255,224,160,0.55)"; ctx.lineWidth = 1;
-      ctx.beginPath();
-      if(vert){ ctx.moveTo(bx + bw/2, by + 0.5); ctx.lineTo(bx + bw/2, by + bh - 0.5); }
-      else { ctx.moveTo(bx + 0.5, by + bh/2); ctx.lineTo(bx + bw - 0.5, by + bh/2); }
-      ctx.stroke();
-    };
-    // the workshop, south of the apron, doors facing it
-    const wx = ax0 - 2, wy = ay0 + apH + 3;
-    const spill = ctx.createRadialGradient(wx + 12, wy - 1, 1, wx + 12, wy - 1, 13);
-    spill.addColorStop(0, "rgba(255,214,110,0.8)");
-    spill.addColorStop(1, "rgba(255,214,110,0)");
-    ctx.fillStyle = spill;
-    ctx.beginPath(); ctx.arc(wx + 12, wy - 1, 13, 0, TAU); ctx.fill();
-    roof(wx, wy, 30, 15, "#6d5a4a", false);
-    ctx.fillStyle = "#ffd76e";
-    ctx.fillRect(wx + 9, wy - 1.4, 7, 2.8);              // the open door
-    ctx.fillRect(wx + 6, wy + 9.6, 2.2, 2.2);            // rooflights, lit
-    ctx.fillRect(wx + 20, wy + 9.6, 2.2, 2.2);
-    roof(ax0 + apW + 5, ay0 + 3, 15, 10, "#7a4a3a", false);   // the house
-    roof(ax0 + apW + 7, ay0 + 22, 10, 7, "#5a6055", true);    // a shed
-    // two of the six, wheeled out and waiting for the morning's check
-    const dart = (dx, dy, s) => {
-      ctx.fillStyle = "rgba(18,26,10,0.45)";
-      ctx.beginPath(); ctx.ellipse(dx + s*0.5, dy + s*0.55, s*0.8, s*0.4, 0.5, 0, TAU); ctx.fill();
-      ctx.fillStyle = "#cfd6da";
-      ctx.beginPath();
-      ctx.moveTo(dx, dy - s);
-      ctx.lineTo(dx + s*0.85, dy + s*0.8);
-      ctx.lineTo(dx, dy + s*0.35);
-      ctx.lineTo(dx - s*0.85, dy + s*0.8);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#7fb0c8";
-      ctx.fillRect(dx - 1, dy - s*0.45, 2, 2.6);
-    };
-    dart(ax0 + apW*0.30, ay0 + 16, 6);
-    dart(ax0 + apW*0.62, ay0 + 24, 6);
-  }
-  /*
-   * The airstrip: a mown pale strip down the paddock with white thresholds
-   * and a windsock - Launch Day's actual runway, visible from the sky. A
-   * worn footpath ties it back to the apron so the yard reads as one place.
-   */
-  const sx = Math.min(padX1 - 26, ax0 + apW + 34);
-  const sy0 = y1 + 14, sy1 = rowE[homeRow + 1] - 12;
-  {
-    for(let d = sy0; d < sy1; d += 9)
-      { ctx.fillStyle = "rgba(230,238,170," + (((d - sy0)/9|0) % 2 ? 0.12 : 0.26) + ")";
-        ctx.fillRect(sx, d, 13, Math.min(9, sy1 - d)); }
-    ctx.strokeStyle = "rgba(28,36,16,0.5)"; ctx.lineWidth = 1;
-    ctx.strokeRect(sx + 0.5, sy0 + 0.5, 12, sy1 - sy0 - 1);
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillRect(sx + 2, sy0 + 2, 9, 2.4);
-    ctx.fillRect(sx + 2, sy1 - 4.4, 9, 2.4);
-    ctx.strokeStyle = "rgba(141,127,87,0.75)"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(ax0 + apW - 2, ay0 + apH*0.5);
-    ctx.quadraticCurveTo((ax0 + apW + sx)/2, ay0 + apH*0.72, sx + 6, sy0 + 10);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(240,240,240,0.7)"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx - 5, sy0 + 9); ctx.stroke();
-    ctx.fillStyle = "#e8823c";
-    ctx.beginPath(); ctx.moveTo(sx - 5, sy0 + 3); ctx.lineTo(sx + 2, sy0 + 4.5);
-    ctx.lineTo(sx - 5, sy0 + 6); ctx.closePath(); ctx.fill();
-  }
   /*
    * Trees. One shared crown so the copses and the farm's windbreak match:
    * dark canopy, one lit arc on the key-light side, soft long shadow the
    * other way - the morning light, drawn twice so it cannot be missed.
    */
-  const tree = (tx, ty, tr) => {
-    ctx.fillStyle = "rgba(18,26,10,0.5)";
-    ctx.beginPath(); ctx.ellipse(tx + tr*1.1, ty + tr*0.9, tr*1.15, tr*0.5, 0.6, 0, TAU); ctx.fill();
-    ctx.fillStyle = "#2c3d1c";
-    ctx.beginPath(); ctx.arc(tx, ty, tr, 0, TAU); ctx.fill();
-    ctx.strokeStyle = "rgba(255,214,140,0.5)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(tx, ty, tr - 0.8, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
-  };
-  // The windbreak: a planted line on the hedgerow above the yard, sheltering
-  // it from the open field - the one row of trees on this map that somebody
-  // chose to put where it is.
-  for(let i = 0; i < 5; i++){
-    const tx = ax0 + 4 + (apW - 8)*(i/4) + (rand() - 0.5)*6;
-    tree(tx, y1 - 7 - rand()*4, 5 + rand()*3);
-  }
+  const tree = (tx, ty, tr) => fieldTree(ctx, tx, ty, tr);
   // Copses keep clear of the roads and the paddock - trees grow anywhere
   // except where somebody drives or mows.
   const nearRoad = (bx, by) => Math.abs(bx - laneX) < 32
@@ -2562,6 +2620,7 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
     else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
     else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
+    else if(pr.k === "farm") drawFarm(px, W, H, pr, rand);
   });
 }
 

@@ -65,7 +65,10 @@ function start(){
   S.t = 0;
   // The ground they are coming home to - Earth's own sky texture, baked here
   // under the death blast's hit-stop so the stall never shows.
-  try { S.earth = SF.skygen.build(40, SF.game.VW || 600, SF.game.VH || 800, 1); }
+  // `still` mode: the descent wants the WHOLE ground in one canvas, farm
+  // included - the farm arriving under the wheels is the entire point of the
+  // shot, and the split bake leaves it out of the plain tile now.
+  try { S.earth = SF.skygen.build(40, SF.game.VW || 600, SF.game.VH || 800, 1, true); }
   catch(e){ S.earth = null; }
   for(let i = 0; i < 9; i++){
     S.clouds.push({ spr: bakeCloud(),

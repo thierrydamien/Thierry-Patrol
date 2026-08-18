@@ -614,7 +614,10 @@ async function run(){
    */
   check("every road is straight, and every turning has a reason", (() => {
     const s2 = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
-    const f2 = s2.slice(s2.indexOf("function drawFields"), s2.indexOf("function drawGround"));
+    // The land is dealt in fieldPlan and painted by TWO bakes now (the
+    // tiling ground and the pass-once farm), so the honesty rules are
+    // checked across the whole span - plan, fields and farm together.
+    const f2 = s2.slice(s2.indexOf("function fieldPlan"), s2.indexOf("function drawGround"));
     return /moveTo\(laneX, -10\); ctx\.lineTo\(laneX, H \+ 10\)/.test(f2) &&  // one straight run
            !/arcTo\(/.test(f2) &&             // no jogs left in it at all
            !/Math\.sin\(y\*k1/.test(f2) &&    // and no wander either
@@ -623,6 +626,33 @@ async function run(){
            /homeRow/.test(f2) &&              // the farmyard's field exists
            /const rx = laneX;/.test(f2) &&    // every row aligns its edges to the lane
            /rowE\[ROWS\] = H;/.test(f2);      // the wrap still lands on a hedgerow
+  })());
+  /*
+   * "On level 0 you should only see the farm once. It doesn't make sense to
+   * see it multiple times." The countryside tiles - fields repeating IS what
+   * farmland looks like from a cockpit - but home is a landmark, and a
+   * landmark is a place you pass. So the farm is a `once` prop on its own
+   * layer, and on a SURFACE sky that layer moves at the ground's own speed:
+   * glued to the paddock while it is on screen, then behind you for good.
+   */
+  check("the farm is a landmark you pass once, not wallpaper", (() => {
+    const props = SF.skygen.SKIES[SF.missions.skyOf(0)].props || [];
+    const farm = props.filter(pr => pr.k === "farm");
+    const fields = props.filter(pr => pr.k === "fields");
+    return farm.length === 1 && farm[0].once === true &&
+           fields.length === 1 && !fields[0].once &&
+           !!SF.skygen.buildOnce(SF.missions.skyOf(0), 300, 400, 1);
+  })());
+  check("...and on the ground, the once-layer moves WITH the ground", (() => {
+    const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+    return /skyDrift \+= dt\*7\.5\*\(skySurface \? 1 : 0\.22\)\*wf/.test(r) &&
+           /skySurface = surface;/.test(r);
+  })());
+  check("the homecoming descent still lands at a farm", (() => {
+    // still mode: the whole ground in one canvas, farm included - the plain
+    // tile no longer carries it.
+    const h = fs.readFileSync(path.join(__dirname, "src/homecoming.js"), "utf8");
+    return /SF\.skygen\.build\(40, SF\.game\.VW \|\| 600, SF\.game\.VH \|\| 800, 1, true\)/.test(h);
   })());
   /*
    * Sky 29 is a GIFT, and three rules keep it one. It never inflates the star
@@ -2601,10 +2631,15 @@ async function run(){
      */
     check("on a sky with a once-layer, nothing with an edge is left on the fast one", (() => {
       const DIFFUSE = ["galaxy", "aurora", "nebula"];
+      // A SURFACE is its own carve-out: the ground is the thing you fly
+      // through, so it tiles by definition - only the landmarks on it (the
+      // farm) must pass once. In space the rule stays absolute.
+      const GROUND = ["fields", "ground", "wild"];
       return SF.skygen.SKIES.every(sky => {
         const props = sky.props || [];
         if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
-        return props.every(pr => pr.once || DIFFUSE.indexOf(pr.k) >= 0);
+        return props.every(pr => pr.once || DIFFUSE.indexOf(pr.k) >= 0 ||
+                                 (sky.surface && GROUND.indexOf(pr.k) >= 0));
       });
     })());
     check("...and that layer is built, while a sky without one builds none", (() => {
@@ -2623,8 +2658,10 @@ async function run(){
     /* It drifts on its own clock, and slower: a planet is the far plane. At
        sky speed Earth cleared the screen in forty seconds. */
     check("the once-layer drifts slower than the sky it hangs behind", (() => {
+      // ...in SPACE. On a surface it moves at the ground's own speed, or the
+      // farm would slide across its own fields like a sticker coming loose.
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
-      return /skyDrift \+= dt\*7\.5\*0\.22\*wf/.test(r) &&
+      return /skyDrift \+= dt\*7\.5\*\(skySurface \? 1 : 0\.22\)\*wf/.test(r) &&
              /if\(skyOnce && skyDrift < VH\) ctx\.drawImage\(skyOnce/.test(r);
     })());
     check("the field is matched to the measured box, not a guess at the screen",
