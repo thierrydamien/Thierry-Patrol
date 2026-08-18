@@ -2584,6 +2584,29 @@ async function run(){
       const earths = props.filter(pr => pr.earth);
       return earths.length === 1 && earths.every(pr => pr.once === true);
     })());
+    /*
+     * ...and NOTHING WITH AN EDGE IS LEFT BEHIND ON THE FAST LAYER.
+     *
+     * "The moon goes down the screen faster than earth on level 1" - it did,
+     * and that is the bill for a second layer with its own parallax. Earth
+     * had moved to the slow one and the moon had not, so two round bodies
+     * sitting side by side at the same obvious distance travelled at four
+     * times the rate of each other.
+     *
+     * The rule, pinned rather than remembered: the tiling layer is the dust
+     * you fly THROUGH and the once-layer is the bodies you fly PAST, so on a
+     * sky that has a once-layer at all, every hard-edged body belongs on it.
+     * Only diffuse things may stay behind - a galaxy really is at infinity,
+     * and a smear has no edge to catch the eye repeating.
+     */
+    check("on a sky with a once-layer, nothing with an edge is left on the fast one", (() => {
+      const DIFFUSE = ["galaxy", "aurora", "nebula"];
+      return SF.skygen.SKIES.every(sky => {
+        const props = sky.props || [];
+        if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
+        return props.every(pr => pr.once || DIFFUSE.indexOf(pr.k) >= 0);
+      });
+    })());
     check("...and that layer is built, while a sky without one builds none", (() => {
       const one = SF.skygen.buildOnce(SF.missions.skyOf(1), 300, 400, 1);
       const none = SF.skygen.buildOnce(SF.missions.skyOf(2), 300, 400, 1);

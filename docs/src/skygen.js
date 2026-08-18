@@ -94,8 +94,22 @@ const SKIES = [
      */
     props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
             {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true, once:true},
-            {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
-            {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
+            /*
+             * The moon and the sun ride WITH Earth, and this is what the
+             * once-layer's parallax costs if you forget it: "the moon goes
+             * down the screen faster than earth on level 1". It did - Earth
+             * had moved to the slow layer and the moon had not, so two round
+             * bodies sitting side by side at the same obvious distance were
+             * travelling at four times the rate of each other.
+             *
+             * The rule this settles: the tiling layer is the dust you fly
+             * THROUGH, and the once-layer is the bodies you fly PAST. A thing
+             * with an edge on it belongs on the second one. Only the galaxy
+             * stays behind, because a galaxy really is at infinity and a
+             * diffuse smear has no edge to catch the eye repeating.
+             */
+            {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true, once:true},
+            {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86", once:true} ] },
 
 
   { name:"Violet Drift", clouds:["#7c3aed","#a855f7","#4c1d95"], dust:"#0a0518", star:"#f3e8ff",
