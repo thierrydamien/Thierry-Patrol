@@ -426,7 +426,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Two Players": "À deux",
 "both on this screen": "sur le même écran",
 "go back to one": "revenir à un seul",
-"a tablet each": "une tablette chacun",
+"one screen each": "un écran chacun",
 "Just one player": "Tout seul",
 "Two players — tap the first pilot": "À deux — touche le premier pilote",
 "...and now the second pilot": "…et maintenant le deuxième pilote",
@@ -446,12 +446,12 @@ SF.i18n.register("fr", { name: "Français", s: {
 "I have a code": "J'ai un code",
 "Cancel": "Annuler",
 "CODE": "CODE",
-"{who} is flying. Is this tablet starting the game, or joining one?":
-  "{who} est aux commandes. Cette tablette lance la partie, ou en rejoint une ?",
+"{who} is flying. Is this device starting the game, or joining one?":
+  "{who} est aux commandes. Cet appareil lance la partie, ou en rejoint une ?",
 "Pick your pilot first.": "Choisis d'abord ton pilote.",
 "Opening a game...": "Ouverture de la partie…",
-"Read this code out to the other tablet.": "Lis ce code à l'autre tablette.",
-"Type the code from the other tablet.": "Tape le code de l'autre tablette.",
+"Read this code out to the other device.": "Lis ce code à l'autre appareil.",
+"Type the code from the other device.": "Tape le code de l'autre appareil.",
 "A code is four characters.": "Un code, c'est quatre caractères.",
 "No game with that code. Check it and try again.":
   "Aucune partie avec ce code. Vérifie et réessaie.",
@@ -460,7 +460,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "The sync server needs updating before two devices can play.":
   "Le serveur de synchro doit être mis à jour pour jouer à deux appareils.",
 "LINK LOST": "CONNEXION PERDUE",
-"the other tablet went quiet": "l'autre tablette ne répond plus",
+"the other device went quiet": "l'autre appareil ne répond plus",
 "NOT HERE": "PAS ICI",
 "this browser can't talk to another device":
   "ce navigateur ne peut pas parler à un autre appareil",

@@ -5958,7 +5958,7 @@ function netShow(on){
   $("netCode").classList.add("hidden");
   $("netEntry").classList.add("hidden");
   $("netSay").textContent = netPending
-    ? T("{who} is flying. Is this tablet starting the game, or joining one?",
+    ? T("{who} is flying. Is this device starting the game, or joining one?",
         { who: (netPending.callsign || netPending.name).toUpperCase() })
     : T("Pick your pilot first.");
 }
@@ -5968,10 +5968,10 @@ function netDropped(){
   if(SF.game.state !== "playing") return;
   SF.game.state = "paused";
   queueToast({ glyph:"lock", label:T("LINK LOST"),
-               name:T("the other tablet went quiet") });
+               name:T("the other device went quiet") });
 }
 SF.netcode.onPhase(p => {
-  if(p === "waiting") netSay(T("Read this code out to the other tablet."));
+  if(p === "waiting") netSay(T("Read this code out to the other device."));
   if(p === "live"){
     netShow(false);
     const mate = SF.netcode.mate();
@@ -6033,7 +6033,7 @@ click($("netHostBtn"), async () => {
 click($("netJoinBtn"), () => {
   $("netChoice").classList.add("hidden");
   $("netEntry").classList.remove("hidden");
-  netSay(T("Type the code from the other tablet."));
+  netSay(T("Type the code from the other device."));
   $("netCodeInput").value = "";
   $("netCodeInput").focus();
 });
