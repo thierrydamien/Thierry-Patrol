@@ -1243,8 +1243,10 @@ function buildSky(W, H){
   c.font = "italic 16px Rajdhani, Arial, sans-serif";
   c.textAlign = "left";
   // Papa's own note names the sky, so it tracks the sky's name - lowercased,
-  // because he wrote it in pencil and not in a stylesheet.
-  c.fillText(T("{sky} — for the boys", { sky: SF.missions.GIFT.name.toLowerCase() }), W*0.33, tearY*0.13);
+  // because he wrote it in pencil and not in a stylesheet. It used to carry a
+  // dedication that named only two of the pilots this note is really for -
+  // this squadron is not only sons, so the dedication is gone, not reworded.
+  c.fillText(SF.missions.GIFT.name.toLowerCase(), W*0.33, tearY*0.13);
   c.fillStyle = "rgba(174,195,239,0.32)";
   c.font = "italic 12px Rajdhani, Arial, sans-serif";
   c.fillText(T("never finished it"), W*0.33, tearY*0.13 + 19);

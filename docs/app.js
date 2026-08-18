@@ -16,36 +16,36 @@
  *     5496  src/data/comms.js
  *     5926  src/data/story.js
  *     6076  src/data/fr.js
- *     7436  src/profile.js
- *     8092  src/cloud.js
- *     8697  src/fx.js
- *     9810  src/input.js
- *    10304  src/entities.js
- *    11681  src/bossart.js
- *    12547  src/bosses.js
- *    13297  src/bossintro.js
- *    13420  src/rewind.js
- *    13951  src/finale.js
- *    14273  src/papadeath.js
- *    14595  src/backstage.js
- *    15544  src/sky29.js
- *    15789  src/mirrorduel.js
- *    16136  src/homecoming.js
- *    16336  src/prologue.js
- *    16815  src/systems.js
- *    17470  src/render.js
- *    22241  src/enemyart.js
- *    23193  src/insignia.js
- *    23438  src/skygen.js
- *    26839  src/shipart.js
- *    28039  src/paintjob.js
- *    28201  src/pilotart.js
- *    28296  src/comms.js
- *    28435  src/netcode.js
- *    28966  src/game.js
- *    33000  src/workshop.js
- *    33697  src/data/i18nbind.js
- *    33768  src/ui.js
+ *     7435  src/profile.js
+ *     8091  src/cloud.js
+ *     8696  src/fx.js
+ *     9809  src/input.js
+ *    10303  src/entities.js
+ *    11680  src/bossart.js
+ *    12546  src/bosses.js
+ *    13296  src/bossintro.js
+ *    13419  src/rewind.js
+ *    13950  src/finale.js
+ *    14272  src/papadeath.js
+ *    14594  src/backstage.js
+ *    15545  src/sky29.js
+ *    15791  src/mirrorduel.js
+ *    16138  src/homecoming.js
+ *    16338  src/prologue.js
+ *    16817  src/systems.js
+ *    17472  src/render.js
+ *    22243  src/enemyart.js
+ *    23195  src/insignia.js
+ *    23440  src/skygen.js
+ *    26841  src/shipart.js
+ *    28041  src/paintjob.js
+ *    28203  src/pilotart.js
+ *    28298  src/comms.js
+ *    28437  src/netcode.js
+ *    28968  src/game.js
+ *    33002  src/workshop.js
+ *    33699  src/data/i18nbind.js
+ *    33770  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -7356,7 +7356,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "✓ PAINTED": "✓ PEINT",
 "READY TO PAINT": "PRÊT À PEINDRE",
 "? ? ? ? ?": "? ? ? ? ?",
-"{sky} — for the boys": "{sky} — pour les garçons",
 "never finished it": "ne l'a jamais fini",
 "their star": "leur étoile",
 "{n} more ★ to open {sky} — the sky Papa never finished": "encore {n} ★ pour ouvrir {sky} — le ciel que Papa n'a jamais fini",
@@ -15186,7 +15185,9 @@ function drawSky(ctx, timeMs, VWpx, VHpx){
   ctx.setLineDash([]);
   ctx.font = "12px Rajdhani, Arial, sans-serif";
   ctx.fillStyle = "rgba(150,180,225,0.35)";
-  ctx.fillText("sky 29 — for the boys", VWpx*0.16, VHpx*0.24 - 100);
+  // The scrawl is the plan for the gift stop, so it reads that stop's own
+  // name rather than a stop number that moves every time a level lands.
+  ctx.fillText(SF.missions.GIFT.name.toLowerCase(), VWpx*0.16, VHpx*0.24 - 100);
   ctx.fillText("planet here?", VWpx*0.74, VHpx*0.62 - 140);
 
   // The brush repaints acts over the blueprint while it fights.
@@ -15544,8 +15545,8 @@ SF.backstage = { _state: () => S,
 /*
  * SKY 29 - the gift level.
  *
- * The finale's drafting table has "sky 29 — for the boys" pencilled in its
- * margin, and this is that canvas: the one Papa never finished, unlocked only
+ * The finale's drafting table has this sky's name pencilled in its margin, and
+ * this is that canvas: the one Papa never finished, unlocked only
  * when every star in the campaign is home. It is not a challenge level. It is
  * a thank-you - the sky starts as pencil and the player paints it by flying,
  * every kill a splash of colour, and when the last wave falls the final
@@ -15718,7 +15719,7 @@ function drawSky(ctx, timeMs, VW, VH){
     ctx.fillStyle = "rgba(195,205,235," + (0.55*a).toFixed(3) + ")";
     ctx.font = "italic 600 14px Rajdhani, Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("sky 29 — for the boys", VW*0.07, VH*0.115);
+    ctx.fillText(SF.missions.GIFT.name.toLowerCase(), VW*0.07, VH*0.115);
     ctx.font = "italic 600 12px Rajdhani, Arial, sans-serif";
     S.notes.forEach((n, i) => {
       ctx.fillText("for " + n.toLowerCase(), VW*(0.62 + (i%2)*0.13), VH*(0.52 + i*0.045));
@@ -15771,7 +15772,8 @@ function drawOver(ctx, timeMs){
   ctx.font = "italic 700 19px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "center";
   const who = (SF.game.profile && (SF.game.profile.callsign || SF.game.profile.name)) || "us";
-  ctx.fillText("sky 29 — " + who.toLowerCase() + " & the squadron", VW/2, VH - 24);
+  ctx.fillText(SF.missions.GIFT.name.toLowerCase() + " — " + who.toLowerCase() +
+               " & the squadron", VW/2, VH - 24);
   ctx.fillStyle = "#b8912f";
   ctx.font = "700 13px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "right";
@@ -35010,8 +35012,10 @@ function buildSky(W, H){
   c.font = "italic 16px Rajdhani, Arial, sans-serif";
   c.textAlign = "left";
   // Papa's own note names the sky, so it tracks the sky's name - lowercased,
-  // because he wrote it in pencil and not in a stylesheet.
-  c.fillText(T("{sky} — for the boys", { sky: SF.missions.GIFT.name.toLowerCase() }), W*0.33, tearY*0.13);
+  // because he wrote it in pencil and not in a stylesheet. It used to carry a
+  // dedication that named only two of the pilots this note is really for -
+  // this squadron is not only sons, so the dedication is gone, not reworded.
+  c.fillText(SF.missions.GIFT.name.toLowerCase(), W*0.33, tearY*0.13);
   c.fillStyle = "rgba(174,195,239,0.32)";
   c.font = "italic 12px Rajdhani, Arial, sans-serif";
   c.fillText(T("never finished it"), W*0.33, tearY*0.13 + 19);

@@ -1,8 +1,8 @@
 /*
  * SKY 29 - the gift level.
  *
- * The finale's drafting table has "sky 29 — for the boys" pencilled in its
- * margin, and this is that canvas: the one Papa never finished, unlocked only
+ * The finale's drafting table has this sky's name pencilled in its margin, and
+ * this is that canvas: the one Papa never finished, unlocked only
  * when every star in the campaign is home. It is not a challenge level. It is
  * a thank-you - the sky starts as pencil and the player paints it by flying,
  * every kill a splash of colour, and when the last wave falls the final
@@ -175,7 +175,7 @@ function drawSky(ctx, timeMs, VW, VH){
     ctx.fillStyle = "rgba(195,205,235," + (0.55*a).toFixed(3) + ")";
     ctx.font = "italic 600 14px Rajdhani, Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("sky 29 — for the boys", VW*0.07, VH*0.115);
+    ctx.fillText(SF.missions.GIFT.name.toLowerCase(), VW*0.07, VH*0.115);
     ctx.font = "italic 600 12px Rajdhani, Arial, sans-serif";
     S.notes.forEach((n, i) => {
       ctx.fillText("for " + n.toLowerCase(), VW*(0.62 + (i%2)*0.13), VH*(0.52 + i*0.045));
@@ -228,7 +228,8 @@ function drawOver(ctx, timeMs){
   ctx.font = "italic 700 19px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "center";
   const who = (SF.game.profile && (SF.game.profile.callsign || SF.game.profile.name)) || "us";
-  ctx.fillText("sky 29 — " + who.toLowerCase() + " & the squadron", VW/2, VH - 24);
+  ctx.fillText(SF.missions.GIFT.name.toLowerCase() + " — " + who.toLowerCase() +
+               " & the squadron", VW/2, VH - 24);
   ctx.fillStyle = "#b8912f";
   ctx.font = "700 13px Rajdhani, Arial, sans-serif";
   ctx.textAlign = "right";

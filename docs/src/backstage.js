@@ -592,7 +592,9 @@ function drawSky(ctx, timeMs, VWpx, VHpx){
   ctx.setLineDash([]);
   ctx.font = "12px Rajdhani, Arial, sans-serif";
   ctx.fillStyle = "rgba(150,180,225,0.35)";
-  ctx.fillText("sky 29 — for the boys", VWpx*0.16, VHpx*0.24 - 100);
+  // The scrawl is the plan for the gift stop, so it reads that stop's own
+  // name rather than a stop number that moves every time a level lands.
+  ctx.fillText(SF.missions.GIFT.name.toLowerCase(), VWpx*0.16, VHpx*0.24 - 100);
   ctx.fillText("planet here?", VWpx*0.74, VHpx*0.62 - 140);
 
   // The brush repaints acts over the blueprint while it fights.

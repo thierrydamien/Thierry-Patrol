@@ -1281,7 +1281,6 @@ SF.i18n.register("fr", { name: "Français", s: {
 "✓ PAINTED": "✓ PEINT",
 "READY TO PAINT": "PRÊT À PEINDRE",
 "? ? ? ? ?": "? ? ? ? ?",
-"{sky} — for the boys": "{sky} — pour les garçons",
 "never finished it": "ne l'a jamais fini",
 "their star": "leur étoile",
 "{n} more ★ to open {sky} — the sky Papa never finished": "encore {n} ★ pour ouvrir {sky} — le ciel que Papa n'a jamais fini",

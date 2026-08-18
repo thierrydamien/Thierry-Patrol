@@ -2530,7 +2530,28 @@ async function run(){
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
              return /function mapTearY/.test(u) &&
                     /THE EDGE OF THE MAP/.test(u) &&
-                    /— for the boys/.test(u); })());
+                    // Papa's handwritten note on the torn page. It used to add
+                    // "for the boys", which named only two of the pilots this
+                    // family actually flies - removed, not replaced.
+                    /never finished it/.test(u) &&
+                    !/for the boys/.test(u); })());
+  /* The same pencil note is scrawled in three places - the torn map, the
+     finale's drafting table and the gift sky's own margin. The dedication that
+     used to follow it named only two of the pilots this family actually flies,
+     so it is gone from all three, and from the French line that carried it. */
+  check("the workshop's drafting table drops the dedication too",
+    (() => { const bs = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+             const s29 = fs.readFileSync(path.join(__dirname, "src/sky29.js"), "utf8");
+             const fr = fs.readFileSync(path.join(__dirname, "src/data/fr.js"), "utf8");
+             return !/for the boys/.test(bs) && !/for the boys/.test(s29) &&
+                    !/pour les gar/.test(fr); })());
+  // ...and having dropped it, both scrawls still NAME the sky - from the
+  // mission data, so they keep telling the truth when a level lands ahead.
+  check("both scrawls still name the gift sky, from its mission data",
+    (() => { const bs = fs.readFileSync(path.join(__dirname, "src/backstage.js"), "utf8");
+             const s29 = fs.readFileSync(path.join(__dirname, "src/sky29.js"), "utf8");
+             const named = /SF\.missions\.GIFT\.name\.toLowerCase\(\)/g;
+             return named.test(bs) && (s29.match(named) || []).length >= 2; })());
   /*
    * The gift stop's NAME is one fact, not a dozen string literals. It used to
    * be written out by hand in the map caption, the star-hunt line, both node
@@ -2539,7 +2560,8 @@ async function run(){
    * Adding a level anywhere before it made every one of them lie at once.
    */
   check("nothing hard-codes the gift stop's name",
-    (() => { const files = ["src/ui.js", "src/sky29.js", "src/game.js"];
+    (() => { const files = ["src/ui.js", "src/sky29.js", "src/game.js",
+                            "src/backstage.js"];
              return files.every(f =>
                !/"[Ss][Kk][Yy] 29"/.test(fs.readFileSync(path.join(__dirname, f), "utf8"))); })());
   check("the gift stop names itself from the mission data",
