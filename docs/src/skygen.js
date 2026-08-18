@@ -79,8 +79,21 @@ const SKIES = [
      * Lit rather than crescent, and low, so it is unmistakably our planet
      * and still well clear of where the first wave comes down.
      */
+    /*
+     * `once`, and this is the one the family actually reported: "on level 1 I
+     * want earth to only appear once. Right now there are multiple earth
+     * which makes no sense."
+     *
+     * The backdrop is a vertically TILING texture, so everything baked into
+     * it comes round again - and `tiled` draws each prop at y and y-H, so a
+     * planet hung this low reaches the frame from the top at the same moment
+     * it is sitting at the bottom. Two Earths, in one sky, at once.
+     *
+     * On its own layer it goes past exactly once and is gone, which is also
+     * what this mission is: minutes after wheels-up, climbing away from home.
+     */
     props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
-            {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true},
+            {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true, once:true},
             {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
             {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
 
@@ -2475,10 +2488,33 @@ let propLayer = null;
  * their tiling math in logical units and blit with an explicit destination
  * size: drawImage(sky, 0, y, W, H), and again at y - H.
  */
-function build(missionIndex, W, H, dpr = 1){
+function build(missionIndex, W, H, dpr = 1, still){
   const sky = SKIES[missionIndex % SKIES.length];
   if(sky.photo) return null;                       // the renderer uses the artwork
-  return paint(sky, missionIndex*137 + 7, W, H, dpr, true);
+  // `still` for anything that never scrolls: it wants the whole sky in one
+  // picture, once-props included. See paint's three modes.
+  return paint(sky, missionIndex*137 + 7, W, H, dpr, true, still ? "all" : "tile");
+}
+
+/*
+ * THE THINGS YOU ONLY PASS ONCE.
+ *
+ * A transparent layer holding this sky's `once` props, or null if it has
+ * none - which is all but one of them. The backdrop tiles, so anything baked
+ * into it comes round again, and a planet two thirds of a screen across shows
+ * both of its wrap copies at the same moment. Earth over the first patrol has
+ * to be a place you leave, not wallpaper.
+ *
+ * It is painted by the same function, from the same seed, and the sky under
+ * it is thrown away at the last moment rather than skipped - so Earth is lit
+ * by the same nebula core it has always been lit by, instead of by a second
+ * guess at where the light was. One wasted bake at mission start buys that.
+ */
+function buildOnce(missionIndex, W, H, dpr = 1){
+  const sky = SKIES[missionIndex % SKIES.length];
+  if(sky.photo) return null;
+  if(!(sky.props || []).some(pr => pr.once)) return null;
+  return paint(sky, missionIndex*137 + 7, W, H, dpr, false, "once");
 }
 
 /**
@@ -2487,7 +2523,35 @@ function build(missionIndex, W, H, dpr = 1){
  * screen use the game's OWN planets - banded, ringed, limb-lit - instead of
  * the hand-rolled sphere it used to draw for itself.
  */
-function paint(sky, seed, W, H, dpr, wrap){
+/*
+ * THE PROP DISPATCH, in one place because there are now two bakes that need
+ * it: the tiling backdrop, and the once-only layer that drifts past the
+ * camera a single time (see paintOnce).
+ */
+function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
+  list.forEach(pr => {
+    if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), dpr);
+    else if(pr.k === "sun") drawSun(px, W, H, pr);
+    else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
+    // Rocks light from the same core the planets do, and borrow the sky's
+    // own star tint, so a field belongs to the sky it is floating in
+    // instead of being the same slate grey in all thirteen of them.
+    else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
+    else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
+    else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
+    else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
+    else if(pr.k === "comet") drawComet(px, W, H, pr);
+    else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
+    else if(pr.k === "ring") drawRing(px, W, H, pr, rand);
+    else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
+    else if(pr.k === "station") drawStation(px, W, H, pr, rand);
+    else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
+    else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
+    else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
+  });
+}
+
+function paint(sky, seed, W, H, dpr, wrap, mode){
   wrapTiles = !!wrap;
   const rand = rngFor(seed);
   const cv = document.createElement("canvas");
@@ -2788,7 +2852,39 @@ function paint(sky, seed, W, H, dpr, wrap){
     ctx.globalCompositeOperation = "source-over";
   }
 
-  const props = sky.props || [];
+  /*
+   * PROPS THAT ONLY HAPPEN ONCE.
+   *
+   * The backdrop is a vertically tiling texture, so everything baked into it
+   * comes round again - and a big enough prop shows BOTH its copies at the
+   * same moment, because `tiled` draws it at y and y-H and a planet 0.68H
+   * across spans far enough to reach the frame from either side. That is
+   * fine for a nebula and wrong for a planet: "on level 1 I want earth to
+   * only appear once. Right now there are multiple earth which makes no
+   * sense."
+   *
+   * So a prop can opt out of the loop. `once` props are baked into their own
+   * transparent layer instead, which the renderer drifts past the camera a
+   * single time and then never draws again - you leave Earth behind on the
+   * first patrol, which is also what the mission is about.
+   */
+  /*
+   * The once-layer wants the props and nothing else. Everything above is
+   * painted anyway and cleared HERE, at the last possible moment, because
+   * `cores` - which decides where each planet's light comes from - is a
+   * product of painting the nebula. Skipping the sky would mean re-deriving
+   * that, and a second derivation is a second answer.
+   */
+  if(mode === "once") ctx.clearRect(0, 0, W, H);
+  /*
+   * Three customers, three answers. "tile" is the scrolling backdrop and
+   * leaves the once-props out; "once" is their own layer; "all" is a STILL -
+   * a briefing hero, a map preview, the workshop's thumbnail - where nothing
+   * ever scrolls, so a planet cannot come round twice and leaving it out
+   * would just make the picture emptier for no reason.
+   */
+  const props = (sky.props || []).filter(pr =>
+    mode === "all" ? true : (!!pr.once === (mode === "once")));
   if(props.length){
     if(!propLayer) propLayer = document.createElement("canvas");
     if(propLayer.width !== cv.width) propLayer.width = cv.width;
@@ -2805,26 +2901,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         const dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy) || 1;
         return [dx/d, dy/d];
       };
-      props.forEach(pr => {
-        if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), dpr);
-        else if(pr.k === "sun") drawSun(px, W, H, pr);
-        else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
-        // Rocks light from the same core the planets do, and borrow the sky's
-        // own star tint, so a field belongs to the sky it is floating in
-        // instead of being the same slate grey in all thirteen of them.
-        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
-        else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
-        else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
-        else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
-        else if(pr.k === "comet") drawComet(px, W, H, pr);
-        else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
-        else if(pr.k === "ring") drawRing(px, W, H, pr, rand);
-        else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
-        else if(pr.k === "station") drawStation(px, W, H, pr, rand);
-        else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
-        else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
-        else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
-      });
+      drawPropList(px, W, H, props, rand, coreDir, sky, dpr);
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";
       px.fillRect(0, 0, W, H);
@@ -2937,5 +3014,5 @@ function isSurface(missionIndex){
   return !!(SKIES[missionIndex % SKIES.length] || {}).surface;
 }
 
-SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES, earthSprite, EARTH_LIT };
+SF.skygen = { build, buildOnce, buildTitle, photoFor, isSurface, SKIES, earthSprite, EARTH_LIT };
 })();

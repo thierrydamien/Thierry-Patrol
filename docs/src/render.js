@@ -202,6 +202,14 @@ let dust = [];
 let vignette = null;
 // The generated backdrop for this mission, and how far we've flown through it.
 let skyCanvas = null, skyScroll = 0, skyIndex = -1, skyPhoto = null;
+/*
+ * The layer that goes past ONCE. `skyScroll` wraps every screen height, which
+ * is the whole point of a tiling backdrop and exactly wrong for a planet -
+ * Earth over the first patrol came round again every cycle. `skyDrift` does
+ * not wrap: it counts the sky travelled this mission, so anything riding it
+ * leaves the frame and stays gone.
+ */
+let skyOnce = null, skyDrift = 0;
 
 function initBackground(missionIndex){
   /*
@@ -221,9 +229,11 @@ function initBackground(missionIndex){
     // the explicit destination size below keeps this working even if build
     // ignores the dpr argument.
     skyCanvas = skyPhoto ? null : SF.skygen.build(idx, VW, VH, BAKE);
+    skyOnce = skyPhoto ? null : SF.skygen.buildOnce(idx, VW, VH, BAKE);
     skyIndex = idx;
   }
   skyScroll = 0;
+  skyDrift = 0;
   /*
    * THE ONE LEVEL FLOWN OVER GROUND.
    *
@@ -272,6 +282,15 @@ function updateBackground(dt){
   // than drift - you are flying through it, not past a photograph. Slow on
   // purpose: the nebula is the far plane the star layers measure against.
   skyScroll = (skyScroll + dt*7.5*wf) % VH;
+  /*
+   * The once-layer drifts SLOWER than the nebula, because it is further away
+   * - a planet is the most distant thing in the frame and parallax says the
+   * far plane moves least. At sky speed Earth cleared the screen in forty
+   * seconds, which is neither how distance looks nor long enough to be the
+   * thing this mission is climbing away from. At a fifth of it, it sinks for
+   * most of the patrol and is gone by the end.
+   */
+  if(skyOnce && skyDrift < VH*2) skyDrift += dt*7.5*0.22*wf;
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
     s.y += s.speed*wf*dt;
@@ -340,6 +359,13 @@ function drawBackground(ctx){
     const y = skyScroll;
     ctx.drawImage(skyCanvas, 0, y, VW, VH);
     ctx.drawImage(skyCanvas, 0, y - VH, VW, VH);
+    /*
+     * ...and on top of it, the things you only pass once. Drawn at the drift
+     * rather than the wrapped scroll, so this one sinks below the frame and
+     * never returns - and skipped entirely once it has, which is why the
+     * drift is allowed to stop counting.
+     */
+    if(skyOnce && skyDrift < VH) ctx.drawImage(skyOnce, 0, skyDrift, VW, VH);
   } else {
     ctx.fillStyle = "#05040f"; ctx.fillRect(0,0,VW,VH);
   }
@@ -4607,6 +4633,10 @@ SF.render = {
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,
+  // The HUD wings draw shields too, and there must be exactly one thing that
+  // knows what a shield pip looks like - two copies would drift, and the
+  // panel beside the sky would stop matching the sky.
+  drawShieldPip,
   tinted,
   // Exposed so the suite can prove the rocks are actually distinct sprites
   // rather than one shape drawn six times, and so the cost of baking them

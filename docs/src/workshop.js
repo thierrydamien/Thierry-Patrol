@@ -347,7 +347,7 @@ function previewSky(W, H){
   if(preview.skyKey === key) return preview.sky;
   preview.skyKey = key;
   preview.sky = null;
-  try { preview.sky = SF.skygen.build(draft.sky, W, H, 1); } catch(e){ /* fall back below */ }
+  try { preview.sky = SF.skygen.build(draft.sky, W, H, 1, true); } catch(e){ /* fall back below */ }
   return preview.sky;
 }
 

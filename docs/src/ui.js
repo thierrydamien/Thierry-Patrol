@@ -4754,7 +4754,8 @@ function drawBriefHero(index){
     const cover = Math.max(W/iw, H/ih);
     ctx.drawImage(art, (W - iw*cover)/2, (H - ih*cover)/2, iw*cover, ih*cover);
   } else {
-    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25));
+    // A still: the whole sky in one picture, once-props included.
+    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25), 1, true);
     if(sky) ctx.drawImage(sky, 0, -(Math.round(W*1.25) - H)*0.45);
   }
   // The in-game skies are deliberately near-black so bullets read on them;
@@ -5205,10 +5206,41 @@ function syncHudWings(){
   set(mate ? "hwTeamScore" : "hwScore", String(run.score).padStart(6, "0"));
   set("hwMoney", money(mate ? p.purse : run.money));
   set("hwLives", hearts(Math.max(0, p.lives | 0)));
+  /*
+   * SHIELDS, drawn as the pips the canvas HUD has always used rather than as
+   * a number or a row of text - a child who has learned what a full pip means
+   * mid-fight should not have to learn a second language to read the panel.
+   * The painter comes from render.js so there is only ever one shield shape.
+   *
+   * Empty pips matter as much as full ones: "two of three" is the useful
+   * reading, and a bare count of what is left cannot say it. A pilot who owns
+   * no shield at all gets no row, because an empty row reads as loss.
+   *
+   * Repainted only when the numbers move - this runs every frame.
+   */
+  const pips = (rowId, cvId, memo, q) => {
+    const max = Math.max(q.shieldMax | 0, q.shield | 0);
+    const row = $(rowId);
+    if(row) row.classList.toggle("hidden", max <= 0);
+    const key = q.shield + "/" + max;
+    if(max <= 0 || wingWas[memo] === key) return;
+    wingWas[memo] = key;
+    const cv = $(cvId), c2 = cv && cv.getContext("2d");
+    if(!c2) return;
+    c2.clearRect(0, 0, cv.width, cv.height);
+    // Right-aligned, because the wing is: the pips have to end where the
+    // hearts above them end or the card reads as two ragged columns.
+    const R = 7, GAP = 18;
+    const x0 = cv.width - (max - 1)*GAP - R - 1;
+    for(let i = 0; i < max; i++)
+      SF.render.drawShieldPip(c2, x0 + i*GAP, cv.height/2, R, i < q.shield);
+  };
+  pips("hwShieldRow", "hwShield", "hwPips", p);
   if(p2){
     set("hwName2", mate.callsign || mate.name);
     set("hwMoney2", money(p2.purse));
     set("hwLives2", p2.alive ? hearts(Math.max(0, p2.lives | 0)) : T("DOWN"));
+    pips("hwShieldRow2", "hwShield2", "hwPips2", p2);
   }
   set("hwNum", T("MISSION {n}", { n: run.mission.id }));
   set("hwTitle", run.mission.name.toUpperCase());

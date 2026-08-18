@@ -2568,6 +2568,42 @@ async function run(){
     /* The field lands in the screen MINUS the status bar and home indicator -
        ~93px of difference on an iPhone, which was the entire remaining gap.
        Measure the reserved strips rather than assuming them. */
+    /*
+     * ONE EARTH. "On level 1 I want earth to only appear once. Right now
+     * there are multiple earth which makes no sense."
+     *
+     * The backdrop is a vertically TILING texture and `tiled` draws each prop
+     * at y AND y-H, so a planet hung low enough reaches the frame from the
+     * top at the same moment it is sitting at the bottom. The fix is a layer
+     * that does not tile, so this pins both halves: the planet is off the
+     * looping texture, and it is on the layer that goes past once.
+     */
+    check("the sky mission 1 flies keeps its Earth off the looping backdrop", (() => {
+      const idx = SF.missions.skyOf(1);
+      const props = SF.skygen.SKIES[idx].props || [];
+      const earths = props.filter(pr => pr.earth);
+      return earths.length === 1 && earths.every(pr => pr.once === true);
+    })());
+    check("...and that layer is built, while a sky without one builds none", (() => {
+      const one = SF.skygen.buildOnce(SF.missions.skyOf(1), 300, 400, 1);
+      const none = SF.skygen.buildOnce(SF.missions.skyOf(2), 300, 400, 1);
+      return !!one && one.width > 0 && none === null;
+    })());
+    /* A still never scrolls, so nothing can come round twice in one - and
+       leaving Earth out of a briefing hero would just make it emptier. */
+    check("a still asks for the whole sky, once-props and all", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/skygen.js"), "utf8");
+      const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+      return /mode === "all" \? true : \(!!pr\.once === \(mode === "once"\)\)/.test(r) &&
+             /SF\.skygen\.build\(skyIx, W, Math\.round\(W\*1\.25\), 1, true\)/.test(u);
+    })());
+    /* It drifts on its own clock, and slower: a planet is the far plane. At
+       sky speed Earth cleared the screen in forty seconds. */
+    check("the once-layer drifts slower than the sky it hangs behind", (() => {
+      const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
+      return /skyDrift \+= dt\*7\.5\*0\.22\*wf/.test(r) &&
+             /if\(skyOnce && skyDrift < VH\) ctx\.drawImage\(skyOnce/.test(r);
+    })());
     check("the field is matched to the measured box, not a guess at the screen",
       /env\(safe-area-inset-/.test(fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8")));
 
@@ -9087,6 +9123,48 @@ async function run(){
             id("hwMoney").textContent !== id("hwMoney2").textContent &&
             /340/.test(id("hwMoney2").textContent) &&
             /120/.test(id("hwMoney").textContent));
+          /*
+           * SHIELDS. A pilot who owns none gets no row at all - an empty row
+           * of pips reads as "yours are gone" rather than "you have none" -
+           * and a pilot who owns some gets one pip per shield they COULD
+           * hold, filled to what they have. Empty pips are the useful half:
+           * "two of three" is a thing a number cannot say.
+           */
+          {
+            const q1 = G.world.players[0], q2 = G.world.players[1];
+            q1.shieldMax = 0; q1.shield = 0;
+            q2.shieldMax = 3; q2.shield = 2;
+            SF.ui.resetHudWings();
+            SF.ui.syncHudWings();
+            const drawn = [];
+            const cv = id("hwShield2");
+            const real = cv.getContext;
+            // Count the pips by counting the paints: the stub canvas draws
+            // nothing, so the painter itself is what gets watched.
+            let pipCalls = 0;
+            const realPip = SF.render.drawShieldPip;
+            SF.render.drawShieldPip = function(c, x, y, r, up){
+              pipCalls++; drawn.push(!!up); return realPip.apply(null, arguments);
+            };
+            SF.ui.resetHudWings();
+            SF.ui.syncHudWings();
+            SF.render.drawShieldPip = realPip;
+            check("the wing shows shields as pips, filled to what you hold",
+              id("hwShieldRow").classList.contains("hidden") &&
+              !id("hwShieldRow2").classList.contains("hidden") &&
+              pipCalls === 3 &&
+              drawn.filter(Boolean).length === 2 && !!cv && !!real);
+            // A shield picked up beyond the fitted maximum still gets a pip,
+            // or the HUD would say you have fewer than you are flying with.
+            q2.shield = 4;
+            SF.ui.resetHudWings();
+            let over = 0;
+            SF.render.drawShieldPip = function(){ over++; return realPip.apply(null, arguments); };
+            SF.ui.syncHudWings();
+            SF.render.drawShieldPip = realPip;
+            check("an over-full shield still gets a pip of its own", over === 4);
+            q2.shieldMax = 0; q2.shield = 0;
+          }
           // ...and hands the wing straight back the moment it is one pilot.
           G.coopMate = null;
           SF.ui.resetHudWings();

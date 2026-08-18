@@ -16,36 +16,36 @@
  *     5413  src/data/comms.js
  *     5834  src/data/story.js
  *     5972  src/data/fr.js
- *     7305  src/profile.js
- *     7938  src/cloud.js
- *     8543  src/fx.js
- *     9656  src/input.js
- *    10150  src/entities.js
- *    11527  src/bossart.js
- *    12393  src/bosses.js
- *    13143  src/bossintro.js
- *    13266  src/rewind.js
- *    13797  src/finale.js
- *    14118  src/papadeath.js
- *    14440  src/backstage.js
- *    15389  src/sky29.js
- *    15634  src/mirrorduel.js
- *    15981  src/homecoming.js
- *    16178  src/prologue.js
- *    16657  src/systems.js
- *    17312  src/render.js
- *    21940  src/enemyart.js
- *    22892  src/insignia.js
- *    23137  src/skygen.js
- *    26081  src/shipart.js
- *    27281  src/paintjob.js
- *    27443  src/pilotart.js
- *    27538  src/comms.js
- *    27677  src/netcode.js
- *    28199  src/game.js
- *    32135  src/workshop.js
- *    32832  src/data/i18nbind.js
- *    32903  src/ui.js
+ *     7306  src/profile.js
+ *     7939  src/cloud.js
+ *     8544  src/fx.js
+ *     9657  src/input.js
+ *    10151  src/entities.js
+ *    11528  src/bossart.js
+ *    12394  src/bosses.js
+ *    13144  src/bossintro.js
+ *    13267  src/rewind.js
+ *    13798  src/finale.js
+ *    14119  src/papadeath.js
+ *    14441  src/backstage.js
+ *    15390  src/sky29.js
+ *    15635  src/mirrorduel.js
+ *    15982  src/homecoming.js
+ *    16179  src/prologue.js
+ *    16658  src/systems.js
+ *    17313  src/render.js
+ *    21971  src/enemyart.js
+ *    22923  src/insignia.js
+ *    23168  src/skygen.js
+ *    26189  src/shipart.js
+ *    27389  src/paintjob.js
+ *    27551  src/pilotart.js
+ *    27646  src/comms.js
+ *    27785  src/netcode.js
+ *    28307  src/game.js
+ *    32243  src/workshop.js
+ *    32940  src/data/i18nbind.js
+ *    33011  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -6097,6 +6097,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "MISSION {n}%": "MISSION {n} %",
 "BOSS FIGHT": "COMBAT DE BOSS",
 "Lives": "Vies",
+"Shields": "Boucliers",
 /* the three toasts that pop over the results card */
 "TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
 "{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",
@@ -17513,6 +17514,14 @@ let dust = [];
 let vignette = null;
 // The generated backdrop for this mission, and how far we've flown through it.
 let skyCanvas = null, skyScroll = 0, skyIndex = -1, skyPhoto = null;
+/*
+ * The layer that goes past ONCE. `skyScroll` wraps every screen height, which
+ * is the whole point of a tiling backdrop and exactly wrong for a planet -
+ * Earth over the first patrol came round again every cycle. `skyDrift` does
+ * not wrap: it counts the sky travelled this mission, so anything riding it
+ * leaves the frame and stays gone.
+ */
+let skyOnce = null, skyDrift = 0;
 
 function initBackground(missionIndex){
   /*
@@ -17532,9 +17541,11 @@ function initBackground(missionIndex){
     // the explicit destination size below keeps this working even if build
     // ignores the dpr argument.
     skyCanvas = skyPhoto ? null : SF.skygen.build(idx, VW, VH, BAKE);
+    skyOnce = skyPhoto ? null : SF.skygen.buildOnce(idx, VW, VH, BAKE);
     skyIndex = idx;
   }
   skyScroll = 0;
+  skyDrift = 0;
   /*
    * THE ONE LEVEL FLOWN OVER GROUND.
    *
@@ -17583,6 +17594,15 @@ function updateBackground(dt){
   // than drift - you are flying through it, not past a photograph. Slow on
   // purpose: the nebula is the far plane the star layers measure against.
   skyScroll = (skyScroll + dt*7.5*wf) % VH;
+  /*
+   * The once-layer drifts SLOWER than the nebula, because it is further away
+   * - a planet is the most distant thing in the frame and parallax says the
+   * far plane moves least. At sky speed Earth cleared the screen in forty
+   * seconds, which is neither how distance looks nor long enough to be the
+   * thing this mission is climbing away from. At a fifth of it, it sinks for
+   * most of the patrol and is gone by the end.
+   */
+  if(skyOnce && skyDrift < VH*2) skyDrift += dt*7.5*0.22*wf;
   for(let i=0;i<stars.length;i++){
     const s = stars[i];
     s.y += s.speed*wf*dt;
@@ -17651,6 +17671,13 @@ function drawBackground(ctx){
     const y = skyScroll;
     ctx.drawImage(skyCanvas, 0, y, VW, VH);
     ctx.drawImage(skyCanvas, 0, y - VH, VW, VH);
+    /*
+     * ...and on top of it, the things you only pass once. Drawn at the drift
+     * rather than the wrapped scroll, so this one sinks below the frame and
+     * never returns - and skipped entirely once it has, which is why the
+     * drift is allowed to stop counting.
+     */
+    if(skyOnce && skyDrift < VH) ctx.drawImage(skyOnce, 0, skyDrift, VW, VH);
   } else {
     ctx.fillStyle = "#05040f"; ctx.fillRect(0,0,VW,VH);
   }
@@ -21918,6 +21945,10 @@ SF.render = {
   // The campaign map borrows this to draw the Devourer looming at the final
   // stop - the same hull the fight uses, so the destination IS the monster.
   drawDevourerHull,
+  // The HUD wings draw shields too, and there must be exactly one thing that
+  // knows what a shield pip looks like - two copies would drift, and the
+  // panel beside the sky would stop matching the sky.
+  drawShieldPip,
   tinted,
   // Exposed so the suite can prove the rocks are actually distinct sprites
   // rather than one shape drawn six times, and so the cost of baking them
@@ -23215,8 +23246,21 @@ const SKIES = [
      * Lit rather than crescent, and low, so it is unmistakably our planet
      * and still well clear of where the first wave comes down.
      */
+    /*
+     * `once`, and this is the one the family actually reported: "on level 1 I
+     * want earth to only appear once. Right now there are multiple earth
+     * which makes no sense."
+     *
+     * The backdrop is a vertically TILING texture, so everything baked into
+     * it comes round again - and `tiled` draws each prop at y and y-H, so a
+     * planet hung this low reaches the frame from the top at the same moment
+     * it is sitting at the bottom. Two Earths, in one sky, at once.
+     *
+     * On its own layer it goes past exactly once and is gone, which is also
+     * what this mission is: minutes after wheels-up, climbing away from home.
+     */
     props:[ {k:"galaxy", x:0.26, y:0.20, r:0.22},
-            {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true},
+            {k:"planet", x:0.74, y:0.78, r:0.160, lit:EARTH_LIT, dark:EARTH_DARK, earth:true, once:true},
             {k:"planet", x:0.18, y:0.80, r:0.042, lit:"#a09bbd", dark:"#14121e", craters:true},
             {k:"sun",    x:0.86, y:0.15, r:0.026, color:"#e8cf86"} ] },
 
@@ -25611,10 +25655,33 @@ let propLayer = null;
  * their tiling math in logical units and blit with an explicit destination
  * size: drawImage(sky, 0, y, W, H), and again at y - H.
  */
-function build(missionIndex, W, H, dpr = 1){
+function build(missionIndex, W, H, dpr = 1, still){
   const sky = SKIES[missionIndex % SKIES.length];
   if(sky.photo) return null;                       // the renderer uses the artwork
-  return paint(sky, missionIndex*137 + 7, W, H, dpr, true);
+  // `still` for anything that never scrolls: it wants the whole sky in one
+  // picture, once-props included. See paint's three modes.
+  return paint(sky, missionIndex*137 + 7, W, H, dpr, true, still ? "all" : "tile");
+}
+
+/*
+ * THE THINGS YOU ONLY PASS ONCE.
+ *
+ * A transparent layer holding this sky's `once` props, or null if it has
+ * none - which is all but one of them. The backdrop tiles, so anything baked
+ * into it comes round again, and a planet two thirds of a screen across shows
+ * both of its wrap copies at the same moment. Earth over the first patrol has
+ * to be a place you leave, not wallpaper.
+ *
+ * It is painted by the same function, from the same seed, and the sky under
+ * it is thrown away at the last moment rather than skipped - so Earth is lit
+ * by the same nebula core it has always been lit by, instead of by a second
+ * guess at where the light was. One wasted bake at mission start buys that.
+ */
+function buildOnce(missionIndex, W, H, dpr = 1){
+  const sky = SKIES[missionIndex % SKIES.length];
+  if(sky.photo) return null;
+  if(!(sky.props || []).some(pr => pr.once)) return null;
+  return paint(sky, missionIndex*137 + 7, W, H, dpr, false, "once");
 }
 
 /**
@@ -25623,7 +25690,35 @@ function build(missionIndex, W, H, dpr = 1){
  * screen use the game's OWN planets - banded, ringed, limb-lit - instead of
  * the hand-rolled sphere it used to draw for itself.
  */
-function paint(sky, seed, W, H, dpr, wrap){
+/*
+ * THE PROP DISPATCH, in one place because there are now two bakes that need
+ * it: the tiling backdrop, and the once-only layer that drifts past the
+ * camera a single time (see paintOnce).
+ */
+function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
+  list.forEach(pr => {
+    if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), dpr);
+    else if(pr.k === "sun") drawSun(px, W, H, pr);
+    else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
+    // Rocks light from the same core the planets do, and borrow the sky's
+    // own star tint, so a field belongs to the sky it is floating in
+    // instead of being the same slate grey in all thirteen of them.
+    else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
+    else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
+    else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
+    else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
+    else if(pr.k === "comet") drawComet(px, W, H, pr);
+    else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
+    else if(pr.k === "ring") drawRing(px, W, H, pr, rand);
+    else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
+    else if(pr.k === "station") drawStation(px, W, H, pr, rand);
+    else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
+    else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
+    else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
+  });
+}
+
+function paint(sky, seed, W, H, dpr, wrap, mode){
   wrapTiles = !!wrap;
   const rand = rngFor(seed);
   const cv = document.createElement("canvas");
@@ -25924,7 +26019,39 @@ function paint(sky, seed, W, H, dpr, wrap){
     ctx.globalCompositeOperation = "source-over";
   }
 
-  const props = sky.props || [];
+  /*
+   * PROPS THAT ONLY HAPPEN ONCE.
+   *
+   * The backdrop is a vertically tiling texture, so everything baked into it
+   * comes round again - and a big enough prop shows BOTH its copies at the
+   * same moment, because `tiled` draws it at y and y-H and a planet 0.68H
+   * across spans far enough to reach the frame from either side. That is
+   * fine for a nebula and wrong for a planet: "on level 1 I want earth to
+   * only appear once. Right now there are multiple earth which makes no
+   * sense."
+   *
+   * So a prop can opt out of the loop. `once` props are baked into their own
+   * transparent layer instead, which the renderer drifts past the camera a
+   * single time and then never draws again - you leave Earth behind on the
+   * first patrol, which is also what the mission is about.
+   */
+  /*
+   * The once-layer wants the props and nothing else. Everything above is
+   * painted anyway and cleared HERE, at the last possible moment, because
+   * `cores` - which decides where each planet's light comes from - is a
+   * product of painting the nebula. Skipping the sky would mean re-deriving
+   * that, and a second derivation is a second answer.
+   */
+  if(mode === "once") ctx.clearRect(0, 0, W, H);
+  /*
+   * Three customers, three answers. "tile" is the scrolling backdrop and
+   * leaves the once-props out; "once" is their own layer; "all" is a STILL -
+   * a briefing hero, a map preview, the workshop's thumbnail - where nothing
+   * ever scrolls, so a planet cannot come round twice and leaving it out
+   * would just make the picture emptier for no reason.
+   */
+  const props = (sky.props || []).filter(pr =>
+    mode === "all" ? true : (!!pr.once === (mode === "once")));
   if(props.length){
     if(!propLayer) propLayer = document.createElement("canvas");
     if(propLayer.width !== cv.width) propLayer.width = cv.width;
@@ -25941,26 +26068,7 @@ function paint(sky, seed, W, H, dpr, wrap){
         const dx = c.x - x, dy = c.y - y, d = Math.hypot(dx, dy) || 1;
         return [dx/d, dy/d];
       };
-      props.forEach(pr => {
-        if(pr.k === "planet") drawPlanet(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), dpr);
-        else if(pr.k === "sun") drawSun(px, W, H, pr);
-        else if(pr.k === "galaxy") drawGalaxy(px, W, H, pr, rand);
-        // Rocks light from the same core the planets do, and borrow the sky's
-        // own star tint, so a field belongs to the sky it is floating in
-        // instead of being the same slate grey in all thirteen of them.
-        else if(pr.k === "rocks") drawRocks(px, W, H, pr, rand, coreDir(pr.x*W, pr.y*H), sky);
-        else if(pr.k === "aurora") drawAurora(px, W, H, pr, rand);
-        else if(pr.k === "wreck") drawWreck(px, W, H, pr, rand);
-        else if(pr.k === "pillars") drawPillars(px, W, H, pr, rand);
-        else if(pr.k === "comet") drawComet(px, W, H, pr);
-        else if(pr.k === "devourer") drawDevourerSilhouette(px, W, H, pr);
-        else if(pr.k === "ring") drawRing(px, W, H, pr, rand);
-        else if(pr.k === "eggs") drawEggs(px, W, H, pr, rand);
-        else if(pr.k === "station") drawStation(px, W, H, pr, rand);
-        else if(pr.k === "vortex") drawVortex(px, W, H, pr, rand);
-        else if(pr.k === "ground") drawGround(px, W, H, pr, rand);
-        else if(pr.k === "fields") drawFields(px, W, H, pr, rand);
-      });
+      drawPropList(px, W, H, props, rand, coreDir, sky, dpr);
       px.globalCompositeOperation = "source-atop";
       px.fillStyle = "rgba(0,0,0,0.35)";
       px.fillRect(0, 0, W, H);
@@ -26073,7 +26181,7 @@ function isSurface(missionIndex){
   return !!(SKIES[missionIndex % SKIES.length] || {}).surface;
 }
 
-SF.skygen = { build, buildTitle, photoFor, isSurface, SKIES, earthSprite, EARTH_LIT };
+SF.skygen = { build, buildOnce, buildTitle, photoFor, isSurface, SKIES, earthSprite, EARTH_LIT };
 })();
 
 
@@ -32481,7 +32589,7 @@ function previewSky(W, H){
   if(preview.skyKey === key) return preview.sky;
   preview.skyKey = key;
   preview.sky = null;
-  try { preview.sky = SF.skygen.build(draft.sky, W, H, 1); } catch(e){ /* fall back below */ }
+  try { preview.sky = SF.skygen.build(draft.sky, W, H, 1, true); } catch(e){ /* fall back below */ }
   return preview.sky;
 }
 
@@ -37656,7 +37764,8 @@ function drawBriefHero(index){
     const cover = Math.max(W/iw, H/ih);
     ctx.drawImage(art, (W - iw*cover)/2, (H - ih*cover)/2, iw*cover, ih*cover);
   } else {
-    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25));
+    // A still: the whole sky in one picture, once-props included.
+    const sky = SF.skygen.build(skyIx, W, Math.round(W*1.25), 1, true);
     if(sky) ctx.drawImage(sky, 0, -(Math.round(W*1.25) - H)*0.45);
   }
   // The in-game skies are deliberately near-black so bullets read on them;
@@ -38107,10 +38216,41 @@ function syncHudWings(){
   set(mate ? "hwTeamScore" : "hwScore", String(run.score).padStart(6, "0"));
   set("hwMoney", money(mate ? p.purse : run.money));
   set("hwLives", hearts(Math.max(0, p.lives | 0)));
+  /*
+   * SHIELDS, drawn as the pips the canvas HUD has always used rather than as
+   * a number or a row of text - a child who has learned what a full pip means
+   * mid-fight should not have to learn a second language to read the panel.
+   * The painter comes from render.js so there is only ever one shield shape.
+   *
+   * Empty pips matter as much as full ones: "two of three" is the useful
+   * reading, and a bare count of what is left cannot say it. A pilot who owns
+   * no shield at all gets no row, because an empty row reads as loss.
+   *
+   * Repainted only when the numbers move - this runs every frame.
+   */
+  const pips = (rowId, cvId, memo, q) => {
+    const max = Math.max(q.shieldMax | 0, q.shield | 0);
+    const row = $(rowId);
+    if(row) row.classList.toggle("hidden", max <= 0);
+    const key = q.shield + "/" + max;
+    if(max <= 0 || wingWas[memo] === key) return;
+    wingWas[memo] = key;
+    const cv = $(cvId), c2 = cv && cv.getContext("2d");
+    if(!c2) return;
+    c2.clearRect(0, 0, cv.width, cv.height);
+    // Right-aligned, because the wing is: the pips have to end where the
+    // hearts above them end or the card reads as two ragged columns.
+    const R = 7, GAP = 18;
+    const x0 = cv.width - (max - 1)*GAP - R - 1;
+    for(let i = 0; i < max; i++)
+      SF.render.drawShieldPip(c2, x0 + i*GAP, cv.height/2, R, i < q.shield);
+  };
+  pips("hwShieldRow", "hwShield", "hwPips", p);
   if(p2){
     set("hwName2", mate.callsign || mate.name);
     set("hwMoney2", money(p2.purse));
     set("hwLives2", p2.alive ? hearts(Math.max(0, p2.lives | 0)) : T("DOWN"));
+    pips("hwShieldRow2", "hwShield2", "hwPips2", p2);
   }
   set("hwNum", T("MISSION {n}", { n: run.mission.id }));
   set("hwTitle", run.mission.name.toUpperCase());

@@ -2105,6 +2105,10 @@ body.rewinding #muteBtn { opacity: 0; pointer-events: none; }
 .hw-score{ font:700 26px Rajdhani, Arial, sans-serif; color:#fff; line-height:1.05; }
 .hw-money{ font:700 20px Rajdhani, Arial, sans-serif; color:#ffd23f; line-height:1.1; }
 .hw-lives{ font:700 17px Rajdhani, Arial, sans-serif; color:#ff5d73; letter-spacing:0.06em; }
+/* Shield pips. The canvas is backed at 200x26 and drawn right-aligned inside
+   itself, so it can shrink with the card without the pips ever re-flowing. */
+.hw-pips{ display:block; width:100%; max-width:200px; height:26px; margin-left:auto; }
+#hwShieldRow.hidden, #hwShieldRow2.hidden{ display:none; }
 /*
  * CO-OP: three cards in the wing instead of one - a shared score, then a
  * pilot each. The wing clips rather than scrolls, so the hull portraits give

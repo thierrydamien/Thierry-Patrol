@@ -126,6 +126,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "MISSION {n}%": "MISSION {n} %",
 "BOSS FIGHT": "COMBAT DE BOSS",
 "Lives": "Vies",
+"Shields": "Boucliers",
 /* the three toasts that pop over the results card */
 "TUNE UNLOCKED": "RÉGLAGE DÉBLOQUÉ",
 "{name} tune won! Fit it in MY SHIP": "Réglage {name} gagné ! Monte-le dans MON VAISSEAU",

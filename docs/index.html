@@ -393,6 +393,13 @@
         <div class="hw-money" id="hwMoney"></div>
         <div class="hw-label">Lives</div>
         <div class="hw-lives" id="hwLives"></div>
+        <!-- Shields, in the same pips the canvas HUD has always drawn them
+             with. Hidden for a pilot who has not bought one, so an empty row
+             never reads as "yours are gone". -->
+        <div id="hwShieldRow" class="hidden">
+          <div class="hw-label">Shields</div>
+          <canvas id="hwShield" class="hw-pips" width="200" height="26"></canvas>
+        </div>
       </div>
       <!-- Seat two's own card: their ship, their purse, their lives. Mounted
            only when somebody is actually in that seat. -->
@@ -403,6 +410,10 @@
         <div class="hw-money" id="hwMoney2"></div>
         <div class="hw-label">Lives</div>
         <div class="hw-lives" id="hwLives2"></div>
+        <div id="hwShieldRow2" class="hidden">
+          <div class="hw-label">Shields</div>
+          <canvas id="hwShield2" class="hw-pips" width="200" height="26"></canvas>
+        </div>
       </div>
     </aside>
     <aside id="hudRight" class="hud-wing right hidden" aria-hidden="true">
