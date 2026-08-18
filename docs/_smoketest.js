@@ -1789,21 +1789,45 @@ async function run(){
    * each fires exactly once per pilot - the functional side is asserted in
    * the mission 0 flow below, where the cards actually pop.
    */
+  /* The briefing's own flag -> page table, read out of the source so these
+     pins cover whatever it holds today rather than a copy that can drift. */
+  const PREFLIGHT = (() => {
+    const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
+    const tbl = u.match(/const PREFLIGHT_STORY = \[([\s\S]*?)\];/);
+    return tbl ? Array.from(tbl[1].matchAll(/\["([a-zA-Z]+)", *"([a-zA-Z]+)"\]/g))
+                      .map(mm => [mm[1], mm[2]])
+               : [];
+  })();
   check("Launch Day opens the book and the first night turns the page",
     !!SF.storyData.STORY.launchDay && !!SF.storyData.STORY.skyTaken &&
     (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
-             return /if\(m\.prologue\) showStory\(SF\.storyData\.STORY\.launchDay\)/.test(u) &&
+             return /\["prologue", *"launchDay"\]/.test(u) &&
                     /run\.mission\.prologue\) maybeStory\("skyTaken"\)/.test(u); })());
   /*
-   * ...and the opening page is the ONE beat that is not once-only: it plays
-   * every time the stop is picked, because it is the story's first page and
-   * the mission gets replayed for fun. `maybeStory` would silence it after
-   * the first look, so the hook must call `showStory` directly.
+   * ...and NO pre-flight page is once-only. A chapter close reports what just
+   * happened, so it lands once; a pre-flight page is the reason you are about
+   * to fly, and these stops get replayed for fun - by children, over and over.
+   * `maybeStory` would silence the page after the first look and tell a
+   * seven-year-old the story is used up, so the briefing dispatches with
+   * `showStory` and no pre-flight id may appear behind the save's gate.
    */
-  check("the opening page is never gated by the save", (() => {
+  check("no pre-flight page is gated by the save", (() => {
     const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
-    return !/maybeStory\("launchDay"\)/.test(u);
+    return /const page = PREFLIGHT_STORY\.find/.test(u) &&
+           /if\(page\) showStory\(SF\.storyData\.STORY\[page\[1\]\]\)/.test(u) &&
+           PREFLIGHT.every(([, id]) => !new RegExp('maybeStory\\("' + id + '"').test(u));
   })());
+  /*
+   * Every row of that table has to still MEAN something at both ends. A page
+   * keyed on a flag no mission carries any more is a page nobody will ever
+   * see again, and renaming a mission flag is exactly how that happens - the
+   * briefing keeps running, silently opening nothing.
+   */
+  check("every pre-flight page is reachable and real",
+    PREFLIGHT.length >= 3 && PREFLIGHT.every(([flag, id]) =>
+      !!SF.storyData.STORY[id] &&
+      SF.storyData.STORY[id].panels.length >= 2 &&
+      SF.missions.MISSIONS.some(m => m[flag])));
   /*
    * The pages were English in every language for months, because only the
    * beat's SHELL was registered with the binder - the panels' prose (the
@@ -2460,6 +2484,36 @@ async function run(){
     clickEl(first);
     await runFrames(4);
     check("tapping it comes home from anywhere", id("screen-menu").classList.contains("active"));
+
+    /*
+     * The pages themselves, opened twice. Every pin above this one reads the
+     * SOURCE - which catches a rewritten dispatch but not a page that stops
+     * appearing for some other reason - so this one actually opens each stop
+     * a second time and looks for the page on the screen. That is the bug the
+     * family reported: Second Harvest told its story once and never again.
+     */
+    {
+      const overlay = id("storyOverlay"), heading = id("storyTitle");
+      const opened = flag => {
+        const idx = SF.missions.MISSIONS.findIndex(m => m[flag]);
+        if(idx < 0) return null;
+        const shown = [];
+        for(let pass = 0; pass < 2; pass++){
+          overlay.classList.add("hidden");         // whoever read it, closed it
+          heading.textContent = "";
+          SF.ui.openBriefing(idx);
+          shown.push(overlay.classList.contains("hidden") ? "" : heading.textContent);
+        }
+        return shown;
+      };
+      PREFLIGHT.forEach(([flag, storyId]) => {
+        const shown = opened(flag);
+        check("the " + storyId + " page is still there the second time the stop is opened",
+          !!shown && !!shown[0] && shown[0] === shown[1]);
+      });
+      overlay.classList.add("hidden");
+      SF.ui.show("screen-missions");
+    }
 
     check("the phone's own back gesture is wired, not ignored",
       (() => { const u = fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8");
@@ -4097,7 +4151,7 @@ async function run(){
     check("the broken guns are explained before launch",
       /guns/i.test(SF.missions.MISSIONS.find(m => m.noGuns).brief) &&
       !!SF.storyData.STORY.silent && SF.storyData.STORY.silent.panels.length >= 2 &&
-      /maybeStory\("silent"\)/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")) &&
+      /\["noGuns", *"silent"\]/.test(fs.readFileSync(path.join(__dirname, "src/ui.js"), "utf8")) &&
       !!SF.commsData.COMMS.silentStart);
 
     /* Freeing people stays an objective even with the guns cold: pilots

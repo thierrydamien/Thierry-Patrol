@@ -38366,6 +38366,11 @@ function renderCoopLine(){
                        { a: mine, b: theirs });
 }
 
+/* Mission flag -> the page it opens with. See openBriefing. */
+const PREFLIGHT_STORY = [["prologue", "launchDay"],
+                         ["noGuns",   "silent"],
+                         ["garden",   "secondHarvest"]];
+
 function openBriefing(index){
   selectedMissionIndex = index;
   const m = MISSIONS[index];
@@ -38376,19 +38381,23 @@ function openBriefing(index){
   // creating the element to sound, and this screen is up for several seconds.
   if(SF.audio.warm) SF.audio.warm(m.boss || m.mirrorDuel || m.backstage ? "boss" : "combat");
 
-  // First look at a no-guns mission: the GUNS DOWN card explains WHY the
-  // ship can't shoot before anyone launches confused.
-  if(m.noGuns) maybeStory("silent");
-  // The other farm's page: read before the ruined yard scrolls past.
-  if(m.garden) maybeStory("secondHarvest");
   /*
-   * Launch Day's briefing is the story's first page: the family, the farm,
-   * and why there are six new ships in the workshop - read BEFORE flying.
-   * Unlike every other beat this one is NOT once-only. It is the opening of
-   * the story and the mission is replayed for fun, so it plays every time
-   * the stop is picked - `showStory` directly, never `maybeStory`.
+   * A stop's own page, if it has one. These are pre-flight pages - the
+   * family and the farm before Launch Day, the GUNS DOWN card before a
+   * mission that cannot shoot, the other farm's page before the ruined yard
+   * scrolls past - and every one of them plays EVERY time the stop is
+   * opened, `showStory` directly and never `maybeStory`.
+   *
+   * They are not chapter closes. A chapter close reports something that just
+   * happened, so it lands once; a pre-flight page is the reason you are about
+   * to fly, and the levels with one get replayed for fun. Reading it again is
+   * the point, and a seven-year-old who reopens the stop tomorrow should not
+   * be told the story is used up. Adding one is a line in this table.
+   *
+   * First match wins, so a stop carrying two flags still opens one page.
    */
-  if(m.prologue) showStory(SF.storyData.STORY.launchDay);
+  const page = PREFLIGHT_STORY.find(([flag]) => m[flag]);
+  if(page) showStory(SF.storyData.STORY[page[1]]);
 
   $("briefNum").textContent = "MISSION " + m.id;
   // The badge warns about any boss-SHAPED ending, not just a BOSSES-table
@@ -40209,6 +40218,7 @@ SF.ui = { show, togglePause, syncAbilityButtons, syncHudWings, resetHudWings,
           netDropped,
           renderMissions, renderArmory, renderProfiles,
           queueToast, maybeStory, missionFace, openPaintEditor, renderSettings,
+          openBriefing,                 // the stop's own page, opened twice in the suite
           showStory: id => showStory(SF.storyData.STORY[id]),
           getProfile: () => profile,
           sectorStats, SECTORS,         // the map's per-stretch scoreboard
