@@ -1306,6 +1306,51 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 
 /* ===================== SQUAD SYNC ===================== */
 .picker-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+/*
+ * HOW MANY ARE PLAYING.
+ *
+ * These were two of four identical ghost buttons in one row, sitting beside
+ * ADD PILOT and SETTINGS - so the only way to discover that the game can be
+ * played together was to read four labels and notice that two of them were
+ * not housekeeping. A seven-year-old does not audit a button row.
+ *
+ * Their own row above the utilities, card-sized, with a picture of what each
+ * one means and a line saying it in words. The utilities keep the small ghost
+ * treatment, which is now a statement about them rather than an accident.
+ */
+.picker-modes {
+  display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+  margin:4px 0 14px;
+}
+.mode-btn {
+  display:flex; align-items:center; gap:12px;
+  min-height:64px; padding:10px 20px 10px 14px;
+  border:2px solid rgba(127,196,255,0.34); border-radius:15px;
+  background:linear-gradient(180deg, rgba(30,58,110,0.5), rgba(14,24,52,0.42));
+  color:#eaf4ff; font-family:inherit; cursor:pointer; text-align:left;
+  box-shadow:0 3px 16px rgba(0,0,0,0.3);
+}
+.mode-btn:hover, .mode-btn.vhover { border-color:rgba(127,196,255,0.7); }
+.mode-btn .mode-ico { flex:0 0 auto; }
+.mode-text { display:flex; flex-direction:column; line-height:1.2; }
+.mode-text b {
+  font:700 15px Rajdhani, Arial, sans-serif; letter-spacing:0.07em;
+  text-transform:uppercase;
+}
+.mode-text span {
+  font:600 11px Rajdhani, Arial, sans-serif; letter-spacing:0.04em;
+  color:rgba(200,226,255,0.66); margin-top:1px;
+}
+/* Latched on: this is now the way BACK to one player, so it stops looking
+   like an invitation and starts looking like a live setting. */
+.mode-btn.on {
+  border-color:#ffd23f; color:#fff;
+  background:linear-gradient(180deg, rgba(120,90,20,0.5), rgba(50,36,8,0.42));
+}
+@media (max-width: 520px) {
+  .picker-modes { flex-direction:column; align-items:stretch; }
+  .mode-btn { justify-content:flex-start; }
+}
 /* A panel, not floating text: the home screen's artwork is directly behind
    this and every label was competing with a starfield. */
 .cloud-inner {

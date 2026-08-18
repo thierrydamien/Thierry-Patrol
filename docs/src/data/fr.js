@@ -424,6 +424,9 @@ SF.i18n.register("fr", { name: "Français", s: {
 /* --- à deux dans le même ciel --- */
 "FLY TOGETHER": "VOLER À DEUX",
 "Two Players": "À deux",
+"both on this screen": "sur le même écran",
+"go back to one": "revenir à un seul",
+"a tablet each": "une tablette chacun",
 "Just one player": "Tout seul",
 "Two players — tap the first pilot": "À deux — touche le premier pilote",
 "...and now the second pilot": "…et maintenant le deuxième pilote",

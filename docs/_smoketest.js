@@ -9056,6 +9056,39 @@ async function run(){
         /first pilot|premier pilote/i.test(id("pickerTagline").textContent) &&
         id("coopModeBtn").classList.contains("on") &&
         !!cardFor(/COOPA/i) && !!cardFor(/COOPB/i));
+      /*
+       * ...and the two ways to play together are FINDABLE. They used to be
+       * two of four identical ghost buttons in one row, next to ADD PILOT and
+       * SETTINGS - so discovering that the game can be played together meant
+       * reading four labels and noticing that two of them were not
+       * housekeeping. A seven-year-old does not audit a button row.
+       *
+       * Pinned as the structure rather than as a look: they live in their own
+       * row, above the utilities, they carry a picture and a line of plain
+       * words, and the housekeeping is what stays small.
+       */
+      check("the two ways to play together are their own row, not more chrome", (() => {
+        const modes = q(".picker-modes");
+        if(!modes) return false;
+        const btns = Array.from(modes.querySelectorAll(".mode-btn"));
+        const utils = qa(".picker-actions .ghost-btn");
+        return btns.length === 2 &&
+               btns.every(bn => bn.querySelector(".mode-ico[data-glyph]") &&
+                                bn.querySelector(".mode-text b") &&
+                                bn.querySelector(".mode-text span")) &&
+               btns.indexOf(id("coopModeBtn")) === 0 &&
+               btns.indexOf(id("netModeBtn")) === 1 &&
+               // the utilities kept their small treatment, and kept it ONLY
+               utils.length === 2 &&
+               !utils.some(u => u.id === "coopModeBtn" || u.id === "netModeBtn");
+      })());
+      check("...and the label swaps without taking the picture with it", (() => {
+        // The button's text lives in its own element now: setting textContent
+        // on the button would delete the icon and the sub-line.
+        const bn = id("coopModeBtn");
+        return /just one|tout seul/i.test(id("coopModeLabel").textContent) &&
+               !!bn.querySelector(".mode-ico") && !!id("coopModeSub").textContent;
+      })());
       const mine = cardFor(/COOPA/i);
       if(mine){
         clickEl(mine);

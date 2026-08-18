@@ -7,45 +7,45 @@
  *       51  src/core.js
  *      221  src/i18n.js
  *      420  src/icons.js
- *      986  src/haptics.js
- *     1165  src/audio.js
- *     1863  src/data/config.js
- *     2333  src/data/enemies.js
- *     3204  src/data/missions.js
- *     5197  src/wacky.js
- *     5413  src/data/comms.js
- *     5834  src/data/story.js
- *     5972  src/data/fr.js
- *     7306  src/profile.js
- *     7939  src/cloud.js
- *     8544  src/fx.js
- *     9657  src/input.js
- *    10151  src/entities.js
- *    11528  src/bossart.js
- *    12394  src/bosses.js
- *    13144  src/bossintro.js
- *    13267  src/rewind.js
- *    13798  src/finale.js
- *    14119  src/papadeath.js
- *    14441  src/backstage.js
- *    15390  src/sky29.js
- *    15635  src/mirrorduel.js
- *    15982  src/homecoming.js
- *    16179  src/prologue.js
- *    16658  src/systems.js
- *    17313  src/render.js
- *    21971  src/enemyart.js
- *    22923  src/insignia.js
- *    23168  src/skygen.js
- *    26189  src/shipart.js
- *    27389  src/paintjob.js
- *    27551  src/pilotart.js
- *    27646  src/comms.js
- *    27785  src/netcode.js
- *    28307  src/game.js
- *    32243  src/workshop.js
- *    32940  src/data/i18nbind.js
- *    33011  src/ui.js
+ *     1024  src/haptics.js
+ *     1203  src/audio.js
+ *     1901  src/data/config.js
+ *     2371  src/data/enemies.js
+ *     3242  src/data/missions.js
+ *     5235  src/wacky.js
+ *     5451  src/data/comms.js
+ *     5872  src/data/story.js
+ *     6010  src/data/fr.js
+ *     7347  src/profile.js
+ *     7980  src/cloud.js
+ *     8585  src/fx.js
+ *     9698  src/input.js
+ *    10192  src/entities.js
+ *    11569  src/bossart.js
+ *    12435  src/bosses.js
+ *    13185  src/bossintro.js
+ *    13308  src/rewind.js
+ *    13839  src/finale.js
+ *    14160  src/papadeath.js
+ *    14482  src/backstage.js
+ *    15431  src/sky29.js
+ *    15676  src/mirrorduel.js
+ *    16023  src/homecoming.js
+ *    16220  src/prologue.js
+ *    16699  src/systems.js
+ *    17354  src/render.js
+ *    22012  src/enemyart.js
+ *    22964  src/insignia.js
+ *    23209  src/skygen.js
+ *    26230  src/shipart.js
+ *    27430  src/paintjob.js
+ *    27592  src/pilotart.js
+ *    27687  src/comms.js
+ *    27826  src/netcode.js
+ *    28348  src/game.js
+ *    32284  src/workshop.js
+ *    32981  src/data/i18nbind.js
+ *    33052  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -476,6 +476,44 @@ const P = {
     c.closePath(); c.stroke();
     c.beginPath(); c.moveTo(13, 24); c.lineTo(7, 30); c.moveTo(27, 24); c.lineTo(33, 30); c.stroke();
     c.beginPath(); c.moveTo(16, 31); c.lineTo(20, 37); c.lineTo(24, 31); c.stroke();
+  },
+  /*
+   * The two ways to play together, told apart at a glance rather than by
+   * reading. Two hulls sharing one frame is "the same screen"; two handsets
+   * side by side is "one each". They were four identical ghost buttons in a
+   * row before, and the two that matter read as utilities.
+   */
+  twoships(c){      // two hulls in formation, sharing one frame
+    /*
+     * The game's OWN ship glyph, twice. A bespoke pair drawn small enough to
+     * fit read as two letter As: at this size a nose and a pair of fins
+     * collapse into an arch. Staggered rather than level, so it reads as a
+     * formation and not as a mirrored pattern.
+     */
+    // Half the usual glow: at this size the bloom bridges the gap between the
+    // two hulls and they smear back into one shape.
+    c.shadowBlur = 2;
+    const one = (x, y, k) => {
+      c.save();
+      c.translate(x, y); c.scale(k, k); c.translate(-20, -20);
+      c.lineWidth = 3 / k;                      // strokes stay the same weight
+      P.ship(c);
+      c.restore();
+    };
+    one(11, 23, 0.62);
+    one(29, 16, 0.62);
+  },
+  twophones(c){     // two slabs of glass, one each
+    const one = (x) => {
+      c.beginPath();
+      if(c.roundRect) c.roundRect(x - 6.5, 8, 13, 24, 2.5);
+      else c.rect(x - 6.5, 8, 13, 24);
+      c.stroke();
+      c.beginPath();                            // the screen's bottom edge
+      c.moveTo(x - 3, 28.5); c.lineTo(x + 3, 28.5); c.stroke();
+    };
+    one(11.5);
+    one(28.5);
   },
   extras(c){        // four-point sparkle
     c.beginPath();
@@ -6395,6 +6433,9 @@ SF.i18n.register("fr", { name: "Français", s: {
 /* --- à deux dans le même ciel --- */
 "FLY TOGETHER": "VOLER À DEUX",
 "Two Players": "À deux",
+"both on this screen": "sur le même écran",
+"go back to one": "revenir à un seul",
+"a tablet each": "une tablette chacun",
 "Just one player": "Tout seul",
 "Two players — tap the first pilot": "À deux — touche le premier pilote",
 "...and now the second pilot": "…et maintenant le deuxième pilote",
@@ -33634,11 +33675,10 @@ function renderProfiles(){
                     : pairPick === ""   ? T("Two players — tap the first pilot")
                     : T("...and now the second pilot");
   }
-  const btn = $("coopModeBtn");
-  if(btn){
-    btn.textContent = pairPick === null ? T("Two Players") : T("Just one player");
-    btn.classList.toggle("on", pairPick !== null);
-  }
+  const btn = $("coopModeBtn"), lab = $("coopModeLabel"), sub = $("coopModeSub");
+  if(btn) btn.classList.toggle("on", pairPick !== null);
+  if(lab) lab.textContent = pairPick === null ? T("Two Players") : T("Just one player");
+  if(sub) sub.textContent = pairPick === null ? T("both on this screen") : T("go back to one");
   const grid = $("profileGrid");
   grid.innerHTML = "";
   P.listNames().forEach(name => {
@@ -39253,6 +39293,12 @@ qa(".btn-ico[data-glyph], .back-ico[data-glyph]").forEach(cv => {
   const host = cv.closest("button, span, div") || cv.parentElement;
   cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
   SF.icons.paint(cv, cv.dataset.glyph, host ? getComputedStyle(host).color : "#ffffff");
+});
+// The two play-mode cards on the pilot screen, in their own accent colour so
+// the pair reads as a choice about the game rather than as more chrome.
+qa(".mode-ico[data-glyph]").forEach(cv => {
+  cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
+  SF.icons.paint(cv, cv.dataset.glyph, "#7fc4ff");
 });
 ["settingsBtnPicker", "settingsBtnMenu"].forEach(id => {
   const b = $(id);

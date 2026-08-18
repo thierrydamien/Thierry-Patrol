@@ -58,6 +58,44 @@ const P = {
     c.beginPath(); c.moveTo(13, 24); c.lineTo(7, 30); c.moveTo(27, 24); c.lineTo(33, 30); c.stroke();
     c.beginPath(); c.moveTo(16, 31); c.lineTo(20, 37); c.lineTo(24, 31); c.stroke();
   },
+  /*
+   * The two ways to play together, told apart at a glance rather than by
+   * reading. Two hulls sharing one frame is "the same screen"; two handsets
+   * side by side is "one each". They were four identical ghost buttons in a
+   * row before, and the two that matter read as utilities.
+   */
+  twoships(c){      // two hulls in formation, sharing one frame
+    /*
+     * The game's OWN ship glyph, twice. A bespoke pair drawn small enough to
+     * fit read as two letter As: at this size a nose and a pair of fins
+     * collapse into an arch. Staggered rather than level, so it reads as a
+     * formation and not as a mirrored pattern.
+     */
+    // Half the usual glow: at this size the bloom bridges the gap between the
+    // two hulls and they smear back into one shape.
+    c.shadowBlur = 2;
+    const one = (x, y, k) => {
+      c.save();
+      c.translate(x, y); c.scale(k, k); c.translate(-20, -20);
+      c.lineWidth = 3 / k;                      // strokes stay the same weight
+      P.ship(c);
+      c.restore();
+    };
+    one(11, 23, 0.62);
+    one(29, 16, 0.62);
+  },
+  twophones(c){     // two slabs of glass, one each
+    const one = (x) => {
+      c.beginPath();
+      if(c.roundRect) c.roundRect(x - 6.5, 8, 13, 24, 2.5);
+      else c.rect(x - 6.5, 8, 13, 24);
+      c.stroke();
+      c.beginPath();                            // the screen's bottom edge
+      c.moveTo(x - 3, 28.5); c.lineTo(x + 3, 28.5); c.stroke();
+    };
+    one(11.5);
+    one(28.5);
+  },
   extras(c){        // four-point sparkle
     c.beginPath();
     c.moveTo(20, 4); c.quadraticCurveTo(22, 18, 36, 20);

@@ -624,11 +624,10 @@ function renderProfiles(){
                     : pairPick === ""   ? T("Two players — tap the first pilot")
                     : T("...and now the second pilot");
   }
-  const btn = $("coopModeBtn");
-  if(btn){
-    btn.textContent = pairPick === null ? T("Two Players") : T("Just one player");
-    btn.classList.toggle("on", pairPick !== null);
-  }
+  const btn = $("coopModeBtn"), lab = $("coopModeLabel"), sub = $("coopModeSub");
+  if(btn) btn.classList.toggle("on", pairPick !== null);
+  if(lab) lab.textContent = pairPick === null ? T("Two Players") : T("Just one player");
+  if(sub) sub.textContent = pairPick === null ? T("both on this screen") : T("go back to one");
   const grid = $("profileGrid");
   grid.innerHTML = "";
   P.listNames().forEach(name => {
@@ -6243,6 +6242,12 @@ qa(".btn-ico[data-glyph], .back-ico[data-glyph]").forEach(cv => {
   const host = cv.closest("button, span, div") || cv.parentElement;
   cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
   SF.icons.paint(cv, cv.dataset.glyph, host ? getComputedStyle(host).color : "#ffffff");
+});
+// The two play-mode cards on the pilot screen, in their own accent colour so
+// the pair reads as a choice about the game rather than as more chrome.
+qa(".mode-ico[data-glyph]").forEach(cv => {
+  cv.style.width = (cv.width/2) + "px"; cv.style.height = (cv.height/2) + "px";
+  SF.icons.paint(cv, cv.dataset.glyph, "#7fc4ff");
 });
 ["settingsBtnPicker", "settingsBtnMenu"].forEach(id => {
   const b = $(id);
