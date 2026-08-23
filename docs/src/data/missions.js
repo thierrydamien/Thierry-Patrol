@@ -86,6 +86,9 @@ const OBJECTIVES = {
   afterDark: { label:"Destroy 20 after dark", icon:"🌑",
                test: s => (s.lateKills || 0) >= 20,
                progress: s => (s.lateKills || 0) + "/20" },
+  melt:      { label:"Let the volcano melt 10", icon:"🌋",
+               test: s => (s.lavaMelts || 0) >= 10,
+               progress: s => (s.lavaMelts || 0) + "/10" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -1866,7 +1869,49 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:39, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    /*
+     * THE FORGE WORLD - where the Foundry's fire comes from, one stop before
+     * the Foundry itself: cut the supply, then the production line. The
+     * fourth surface (Emberfall), and the level whose hazard is the LEVEL:
+     * vents roar a long readable warning, then throw molten bombs to ship
+     * altitude. The bombs hurt the squadron like any shot - and MELT the
+     * enemy's metal, no pay, no combo (the flare's path), so the tactic the
+     * level teaches is lure-and-dodge and its own star pays for it.
+     * volcano.js owns the theatrics; the costs live in game.js by the flare.
+     */
+    id:39, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
+    goal:"The ground erupts — USE it!",
+    volcano:true,
+    face:"boulder",                       // molten rock: the level's actual author
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(9,   "kamikaze", 5, "scatter"),          // embers with engines
+      w(16,  "striker",  6, "vee"),
+      w(23,  "bomber",   3, "sides"),
+      w(29,  "asteroid", 6, "scatter"),          // cinders shaken loose
+      w(35,  "carrier",  1, "column"),
+      w(41,  "weaver",   8, "arc"),
+      w(48,  "shard",    5, "scatter"),
+      w(54,  "turret",   4, "sides"),
+      w(60,  "kamikaze", 6, "pincer"),
+      w(66,  "boulder",  1, "column"),
+      w(70,  "grunt",   10, "wall"),
+      w(76,  "bomber",   4, "twinColumns", { elite: 1 }),
+      w(83,  "mender",   2, "column"),
+      w(87,  "striker",  7, "sides", { elite: 2 }),
+      w(93,  "carrier",  1, "column"),
+      w(97,  "splitter", 5, "scatter"),
+      w(103, "sniper",   4, "sides"),
+      w(109, "brute",    5, "pincer", { elite: 1 }),
+      w(115, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(122, "kamikaze", 8, "wall"),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","melt","rescueAll"],
+  },
+  {
+    id:40, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1898,7 +1943,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:40, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:41, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1937,7 +1982,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:41, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:42, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -1965,7 +2010,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:42, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:43, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,

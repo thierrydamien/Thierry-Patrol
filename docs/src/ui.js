@@ -1644,9 +1644,9 @@ const SECTORS = [
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
   { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 39-41
-  { at:41, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 41
+    sub:"their last works, the last fight — and the farm" }, // 39-41 (the forge world opens it)
+  { at:42, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 42
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -4649,6 +4649,88 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.beginPath(); ctx.ellipse(W*0.8, H*0.36, 5, 2, 0, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(W*0.8 - 4, H*0.36); ctx.lineTo(W*0.8 - 7, H*0.36 - 2);
     ctx.lineTo(W*0.8 - 7, H*0.36 + 2); ctx.closePath(); ctx.fill();
+  } else if(art === "drills"){
+    /*
+     * The Forge World's establishing shot: black ground, one bright vein,
+     * and their rig drinking from it. The story is machinery-on-a-wound.
+     */
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#1a0c06"); grd.addColorStop(1, "#0a0403");
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+    // drifting embers where stars would be
+    for(let i = 0; i < 16; i++){
+      const ex = ((Math.sin(i*87.3)*43758.5453) % 1 + 1) % 1 * W;
+      const ey = ((Math.sin(i*39.1)*43758.5453) % 1 + 1) % 1 * H*0.5;
+      ctx.fillStyle = i % 3 ? "rgba(255,138,60,0.5)" : "rgba(255,233,160,0.6)";
+      ctx.fillRect(ex, ey, 1.6, 1.6);
+    }
+    // the vein, crossing the whole frame
+    const vein = y => H*0.72 + Math.sin(y)*0;   // straight, glowing
+    ctx.strokeStyle = "#5e1606"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    ctx.strokeStyle = "#ff8a3c"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    ctx.strokeStyle = "#ffe9a0"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    // its glow on the ground
+    const vg = ctx.createRadialGradient(W*0.5, H*0.69, 2, W*0.5, H*0.69, H*0.4);
+    vg.addColorStop(0, "rgba(255,138,60,0.30)"); vg.addColorStop(1, "rgba(255,138,60,0)");
+    ctx.fillStyle = vg; ctx.fillRect(0, H*0.3, W, H*0.7);
+    // the rig: dark derrick, feed pipe into the vein, warning eye
+    const rx = W*0.62, ry = H*0.50;
+    ctx.strokeStyle = "#26222c"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + 6, H*0.685); ctx.stroke();
+    ctx.strokeStyle = "#1c1a20"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(rx - 16, ry + 26); ctx.lineTo(rx, ry - 18); ctx.lineTo(rx + 16, ry + 26);
+    ctx.moveTo(rx - 10, ry + 12); ctx.lineTo(rx + 10, ry + 12);
+    ctx.stroke();
+    ctx.fillStyle = "#26222c"; ctx.fillRect(rx - 13, ry + 24, 26, 8);
+    ctx.fillStyle = "#ff5d73";
+    ctx.beginPath(); ctx.arc(rx, ry - 18, 2, 0, Math.PI*2); ctx.fill();
+  } else if(art === "eruption"){
+    /*
+     * The lesson, in one picture: the vent roaring below, bombs arcing up,
+     * and one of THEIR ships already glowing at the edges. Nothing needs
+     * a caption - melting is a shape a seven-year-old reads instantly.
+     */
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#140806"); grd.addColorStop(1, "#0a0403");
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+    const vx = W*0.42, vy = H*0.82;
+    // the roar: rings closing on the vent
+    ctx.strokeStyle = "rgba(255,138,60,0.65)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(vx, vy, 26, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,138,60,0.3)";
+    ctx.beginPath(); ctx.arc(vx, vy, 40, 0, Math.PI*2); ctx.stroke();
+    const vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, 34);
+    vg.addColorStop(0, "rgba(255,233,160,0.9)"); vg.addColorStop(1, "rgba(184,58,16,0)");
+    ctx.fillStyle = vg;
+    ctx.beginPath(); ctx.arc(vx, vy, 34, 0, Math.PI*2); ctx.fill();
+    // bombs on their arcs
+    [[0.34,0.55,4],[0.48,0.42,5],[0.6,0.3,4.4],[0.28,0.34,3.6]].forEach(([px, py, r]) => {
+      const bx = W*px, by = H*py;
+      const g2 = ctx.createRadialGradient(bx - 1, by - 1, 0, bx, by, r);
+      g2.addColorStop(0, "#ffe9a0"); g2.addColorStop(0.6, "#ff8a3c"); g2.addColorStop(1, "#b83a10");
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(255,138,60,0.25)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(vx, vy); ctx.quadraticCurveTo((vx + bx)/2 - 10, (vy + by)/2, bx, by); ctx.stroke();
+    });
+    // one of theirs, caught: a dark hull already glowing at its seams
+    const ex = W*0.72, ey = H*0.24;
+    ctx.fillStyle = "#1e1524";
+    ctx.beginPath();
+    ctx.moveTo(ex, ey - 10); ctx.lineTo(ex + 14, ey + 8); ctx.lineTo(ex, ey + 4);
+    ctx.lineTo(ex - 14, ey + 8); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#ff8a3c"; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey - 10); ctx.lineTo(ex + 14, ey + 8); ctx.lineTo(ex, ey + 4);
+    ctx.lineTo(ex - 14, ey + 8); ctx.closePath(); ctx.stroke();
+    // droplets already coming off it
+    ctx.fillStyle = "#ff8a3c";
+    ctx.beginPath(); ctx.arc(ex + 4, ey + 14, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex - 6, ey + 17, 1.4, 0, Math.PI*2); ctx.fill();
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4707,7 +4789,8 @@ function renderCoopLine(){
 const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
                          ["garden",   "secondHarvest"],
-                         ["dive",     "theDive"]];
+                         ["dive",     "theDive"],
+                         ["volcano",  "forgeWorld"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

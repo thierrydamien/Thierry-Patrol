@@ -4,49 +4,50 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       52  src/core.js
- *      222  src/i18n.js
- *      451  src/icons.js
- *     1055  src/haptics.js
- *     1234  src/audio.js
- *     1932  src/data/config.js
- *     2402  src/data/enemies.js
- *     3273  src/data/missions.js
- *     5356  src/wacky.js
- *     5572  src/data/comms.js
- *     6007  src/data/story.js
- *     6169  src/data/fr.js
- *     7552  src/profile.js
- *     8225  src/cloud.js
- *     8830  src/fx.js
- *     9943  src/input.js
- *    10437  src/entities.js
- *    11820  src/bossart.js
- *    12686  src/bosses.js
- *    13436  src/bossintro.js
- *    13559  src/rewind.js
- *    14090  src/finale.js
- *    14412  src/papadeath.js
- *    14734  src/backstage.js
- *    15685  src/sky29.js
- *    15931  src/dive.js
- *    16181  src/mirrorduel.js
- *    16528  src/homecoming.js
- *    16728  src/prologue.js
- *    17207  src/systems.js
- *    17862  src/render.js
- *    22633  src/enemyart.js
- *    23585  src/insignia.js
- *    23830  src/skygen.js
- *    27622  src/shipart.js
- *    28822  src/paintjob.js
- *    28984  src/pilotart.js
- *    29079  src/comms.js
- *    29218  src/netcode.js
- *    29749  src/game.js
- *    33788  src/workshop.js
- *    34485  src/data/i18nbind.js
- *    34556  src/ui.js
+ *       53  src/core.js
+ *      223  src/i18n.js
+ *      452  src/icons.js
+ *     1056  src/haptics.js
+ *     1235  src/audio.js
+ *     1933  src/data/config.js
+ *     2403  src/data/enemies.js
+ *     3274  src/data/missions.js
+ *     5402  src/wacky.js
+ *     5618  src/data/comms.js
+ *     6066  src/data/story.js
+ *     6239  src/data/fr.js
+ *     7652  src/profile.js
+ *     8339  src/cloud.js
+ *     8944  src/fx.js
+ *    10057  src/input.js
+ *    10551  src/entities.js
+ *    11934  src/bossart.js
+ *    12800  src/bosses.js
+ *    13550  src/bossintro.js
+ *    13673  src/rewind.js
+ *    14204  src/finale.js
+ *    14526  src/papadeath.js
+ *    14848  src/backstage.js
+ *    15799  src/sky29.js
+ *    16045  src/dive.js
+ *    16295  src/volcano.js
+ *    16532  src/mirrorduel.js
+ *    16879  src/homecoming.js
+ *    17079  src/prologue.js
+ *    17558  src/systems.js
+ *    18213  src/render.js
+ *    22984  src/enemyart.js
+ *    23936  src/insignia.js
+ *    24181  src/skygen.js
+ *    28318  src/shipart.js
+ *    29518  src/paintjob.js
+ *    29680  src/pilotart.js
+ *    29775  src/comms.js
+ *    29914  src/netcode.js
+ *    30445  src/game.js
+ *    34539  src/workshop.js
+ *    35236  src/data/i18nbind.js
+ *    35307  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -3358,6 +3359,9 @@ const OBJECTIVES = {
   afterDark: { label:"Destroy 20 after dark", icon:"🌑",
                test: s => (s.lateKills || 0) >= 20,
                progress: s => (s.lateKills || 0) + "/20" },
+  melt:      { label:"Let the volcano melt 10", icon:"🌋",
+               test: s => (s.lavaMelts || 0) >= 10,
+               progress: s => (s.lavaMelts || 0) + "/10" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -5138,7 +5142,49 @@ const MISSIONS = [
     objectives: ["complete","rescueAll","twin20"],
   },
   {
-    id:39, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    /*
+     * THE FORGE WORLD - where the Foundry's fire comes from, one stop before
+     * the Foundry itself: cut the supply, then the production line. The
+     * fourth surface (Emberfall), and the level whose hazard is the LEVEL:
+     * vents roar a long readable warning, then throw molten bombs to ship
+     * altitude. The bombs hurt the squadron like any shot - and MELT the
+     * enemy's metal, no pay, no combo (the flare's path), so the tactic the
+     * level teaches is lure-and-dodge and its own star pays for it.
+     * volcano.js owns the theatrics; the costs live in game.js by the flare.
+     */
+    id:39, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
+    goal:"The ground erupts — USE it!",
+    volcano:true,
+    face:"boulder",                       // molten rock: the level's actual author
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(9,   "kamikaze", 5, "scatter"),          // embers with engines
+      w(16,  "striker",  6, "vee"),
+      w(23,  "bomber",   3, "sides"),
+      w(29,  "asteroid", 6, "scatter"),          // cinders shaken loose
+      w(35,  "carrier",  1, "column"),
+      w(41,  "weaver",   8, "arc"),
+      w(48,  "shard",    5, "scatter"),
+      w(54,  "turret",   4, "sides"),
+      w(60,  "kamikaze", 6, "pincer"),
+      w(66,  "boulder",  1, "column"),
+      w(70,  "grunt",   10, "wall"),
+      w(76,  "bomber",   4, "twinColumns", { elite: 1 }),
+      w(83,  "mender",   2, "column"),
+      w(87,  "striker",  7, "sides", { elite: 2 }),
+      w(93,  "carrier",  1, "column"),
+      w(97,  "splitter", 5, "scatter"),
+      w(103, "sniper",   4, "sides"),
+      w(109, "brute",    5, "pincer", { elite: 1 }),
+      w(115, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(122, "kamikaze", 8, "wall"),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","melt","rescueAll"],
+  },
+  {
+    id:40, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5170,7 +5216,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:40, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:41, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5209,7 +5255,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:41, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:42, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5237,7 +5283,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:42, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:43, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -5954,6 +6000,19 @@ const COMMS = {
     "Mind the water, {you} - every shot swims slower. Theirs too.",
     "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.",
   ]},
+  volcanoStart: { speaker:"control", cooldown:999, lines:[
+    "This world feeds their furnaces, {you} - and it is DONE being quiet. Watch the ground.",
+    "When the floor roars, don't be over it, {you}. When THEY are - enjoy the show.",
+    "The planet is on our side today, {you}. Their armour melts. Yours dodges.",
+  ]},
+  volcanoRoar: { speaker:"control", cooldown:40, lines:[
+    "The ground is ROARING, {you} — get out from over the glow!",
+    "That glow means UP, {you} — an eruption's coming!",
+  ]},
+  volcanoMelt: { speaker:"control", cooldown:50, lines:[
+    "It MELTED them! Bring them over the vents, {you} — let the world fight!",
+    "Their metal can't take the planet, {you}. Keep feeding it!",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",
@@ -6147,6 +6206,17 @@ const STORY = {
       { art:"lamps",   text:"One more thing, {you}. There's an old wreck on the floor - it went down full of the light they stole, and three of its lamps are somehow still burning. Nobody knows who's keeping them lit." },
     ],
     button:"DIVE",
+  },
+
+  /* The pre-flight page for The Forge World - replays every visit, like
+     every pre-flight page (ui.js PREFLIGHT_STORY). */
+  forgeWorld: {
+    title: "THE ANGRY WORLD",
+    panels: [
+      { art:"drills",   text:"The Foundry's furnaces never go out, {you} - because this world feeds them. Their rigs drill straight into its veins, and the planet has been growling about it for years." },
+      { art:"eruption", text:"Today it stops growling. When the ground glows and ROARS, get out from over it - then bring their ships back across the vent and watch. What burns you, MELTS them." },
+    ],
+    button:"BRAVE THE FIRE",
   },
 
   workshop: {
@@ -6808,6 +6878,36 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Attention à l'eau, {you} — chaque tir nage plus lentement. Les leurs aussi.",
 "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.":
   "Tout le ciel est couché au fond de cette mer, {you}. Ramène-le à la maison, pièce par pièce.",
+
+/* ----- The Forge World (mission 39) ----- */
+"The Forge World": "Le Monde-Forge",
+"The ground fights back": "le sol contre-attaque",
+"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.":
+  "La Fonderie ne fabrique pas son feu, {you} — elle le FORE dans ce monde, et ce monde en a ASSEZ. Quand le sol gronde, écarte-toi de la lueur. Et souviens-toi que leurs vaisseaux ne sont que du métal : ce qui te brûle les fait FONDRE. Laisse la planète se battre à tes côtés.",
+"The ground erupts — USE it!": "Le sol entre en éruption — SERS-T'EN !",
+"Emberfall": "Pluie de Braises",
+"THE ANGRY WORLD": "LE MONDE EN COLÈRE",
+"The Foundry's furnaces never go out, {you} - because this world feeds them. Their rigs drill straight into its veins, and the planet has been growling about it for years.":
+  "Les fourneaux de la Fonderie ne s'éteignent jamais, {you} — parce que ce monde les nourrit. Leurs foreuses plongent droit dans ses veines, et la planète gronde depuis des années.",
+"Today it stops growling. When the ground glows and ROARS, get out from over it - then bring their ships back across the vent and watch. What burns you, MELTS them.":
+  "Aujourd'hui, elle ne se contente plus de gronder. Quand le sol s'illumine et RUGIT, écarte-toi — puis ramène leurs vaisseaux au-dessus du cratère et regarde. Ce qui te brûle les fait FONDRE.",
+"BRAVE THE FIRE": "AFFRONTE LE FEU",
+"Let the volcano melt 10": "Laisse le volcan en faire fondre 10",
+"This world feeds their furnaces, {you} - and it is DONE being quiet. Watch the ground.":
+  "Ce monde nourrit leurs fourneaux, {you} — et il a FINI de se taire. Surveille le sol.",
+"When the floor roars, don't be over it, {you}. When THEY are - enjoy the show.":
+  "Quand le sol rugit, ne reste pas au-dessus, {you}. Quand ce sont EUX qui y sont… profite du spectacle.",
+"The planet is on our side today, {you}. Their armour melts. Yours dodges.":
+  "La planète est de notre côté aujourd'hui, {you}. Leur blindage fond. Le tien esquive.",
+"The ground is ROARING, {you} — get out from over the glow!":
+  "Le sol RUGIT, {you} — écarte-toi de la lueur !",
+"That glow means UP, {you} — an eruption's coming!":
+  "Cette lueur veut dire ÇA MONTE, {you} — une éruption arrive !",
+"It MELTED them! Bring them over the vents, {you} — let the world fight!":
+  "Ça les a FAIT FONDRE ! Amène-les au-dessus des cratères, {you} — laisse le monde se battre !",
+"Their metal can't take the planet, {you}. Keep feeding it!":
+  "Leur métal ne supporte pas la planète, {you}. Continue de la nourrir !",
+"MELTED!": "FONDU !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
@@ -7917,6 +8017,20 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 34) p.lastMission += 1;
     if((p.reached || 0) >= 34) p.reached += 1;
     p.missionsVer = 10;
+  }
+  /*
+   * v11: The Forge World landed as mission 39 - the volcano world, the
+   * fourth surface - pushing the old 39-42 up one. Same single-offset shape
+   * as v10, and like v10 every hand-written mission id (tunes 23/28/32,
+   * devourerDown 32) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 11){
+    for(let id = 42; id >= 39; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 39) p.lastMission += 1;
+    if((p.reached || 0) >= 39) p.reached += 1;
+    p.missionsVer = 11;
   }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
@@ -16174,6 +16288,243 @@ function drawOver(ctx, timeMs){
 }
 
 SF.dive = { _state: () => S, reset, begin, active, update, drawSky, drawOver };
+})();
+
+
+;/* ===== src/volcano.js ===== */
+/*
+ * THE FORGE WORLD - the eruptions.
+ *
+ * Emberfall's backdrop (skygen.js) is the cooled floor; this module is the
+ * part that is still molten. Vents open under the fight, roar for a readable
+ * two-and-a-half seconds, then throw a fan of molten bombs up to ship
+ * altitude - and the bombs are the level's whole idea: they hurt the
+ * squadron AND they melt the enemy's metal, so the smart flying is to get
+ * out from over the roar and drag the waves back across it. The star for it
+ * (objectives: "melt") pays the tactic; the kills themselves route through
+ * the flare's no-pay path so the coin ledger stays honest.
+ *
+ * Same shape as dive.js: a mission flag (`volcano`) plus hooks game.js
+ * already calls - begin/update, a draw pass under the world (vents, scars)
+ * and one over it (bombs, ash). The COLLISIONS do not live here: they sit
+ * in game.js beside the solar flare's, because that is where onPlayerHit
+ * and onEnemyKilled exist and every other world-hurts-you rule already
+ * lives. This file owns what the eruption looks like; game.js owns what it
+ * costs.
+ *
+ * Everything is drawn as small local fills on purpose. The Dive taught the
+ * frame budget lesson: one full-screen wash halves a software rasterizer,
+ * so this level has none - the heat lives in the floor and the bombs.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+
+let S = null;
+
+/* A bomb's life in three acts: rising out of the throat (harmless, growing),
+ * flying at ship altitude (the hazard), falling back (harmless, shrinking). */
+const RISE = 0.62, FALL = 0.55, LIFE = 3.1;
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, vents: [], bombs: [], stains: [], ash: [],
+        nextVent: 4.5,                 // the first roar comes early, as a lesson
+        roared: false };
+  for(let i = 0; i < 34; i++)
+    S.ash.push({ x: Math.random()*W, y: Math.random()*H,
+                 vx: -(6 + Math.random()*10), vy: 10 + Math.random()*16,
+                 s: 1 + Math.random()*1.4, a: 0.10 + Math.random()*0.14 });
+}
+
+function active(){ return !!S; }
+
+/** The bombs currently at ship altitude - the only ones game.js may charge
+ *  for. A bomb marked spent has already splashed on a hull. */
+function liveBombs(){
+  if(!S) return [];
+  return S.bombs.filter(b => !b.spent && b.t > RISE && b.t < LIFE - FALL);
+}
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const fx = SF.fx, audio = SF.audio;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+
+  // The floor scrolls at the surface rate (render.js); everything parked on
+  // it drifts with it, or the scars would slide against their own ground.
+  const drift = 7.5*dt;
+
+  const fighting = run.phase !== "intro" && run.phase !== "lap" && run.phase !== "outro";
+  if(fighting){
+    S.nextVent -= dt;
+    if(S.nextVent <= 0){
+      S.nextVent = 9 + Math.random()*5;
+      S.vents.push({ x: 60 + Math.random()*(W - 120),
+                     y: H*(0.20 + Math.random()*0.42),
+                     phase: "warm", timer: 2.6, r: 26 });
+      audio.play("telegraph");
+      SF.comms.say("volcanoRoar");
+    }
+  }
+
+  for(let i = S.vents.length - 1; i >= 0; i--){
+    const v = S.vents[i];
+    v.y += drift;
+    v.timer -= dt;
+    if(v.phase === "warm" && v.timer <= 0){
+      v.phase = "erupt"; v.timer = 0.5;
+      fx.shake(8);
+      fx.flash(0.3, "255,150,60");
+      audio.play("gust");
+      const n = 6 + Math.floor(Math.random()*3);
+      for(let k = 0; k < n; k++){
+        const a = Math.random()*TAU, sp = 60 + Math.random()*95;
+        S.bombs.push({ x: v.x, y: v.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+                       t: 0, r: 9 + Math.random()*4, ph: Math.random()*TAU });
+      }
+    } else if(v.phase === "erupt" && v.timer <= 0){
+      v.phase = "cool"; v.timer = 1.4;
+    } else if(v.phase === "cool" && v.timer <= 0){
+      S.stains.push({ x: v.x, y: v.y, r: v.r*0.9, a: 0.5 });
+      S.vents.splice(i, 1);
+    }
+  }
+
+  for(let i = S.bombs.length - 1; i >= 0; i--){
+    const b = S.bombs[i];
+    b.t += dt;
+    b.x += b.vx*dt; b.y += b.vy*dt + drift;
+    b.vx *= 1 - 0.22*dt; b.vy *= 1 - 0.22*dt;
+    // molten things shed sparks; cheap ones, and not every frame
+    if(!b.spent && Math.random() < dt*7)
+      fx.spark(b.x, b.y, (Math.random() - 0.5)*40, (Math.random() - 0.5)*40,
+               "#ff8a3c", 0.25, 2.2);
+    if(b.spent || b.t >= LIFE){
+      if(!b.spent){                                  // it landed, nobody paid
+        fx.ring(b.x, b.y, 22, "#ff8a3c", 3, 0.3);
+        S.stains.push({ x: b.x, y: b.y, r: 10, a: 0.45 });
+      }
+      S.bombs.splice(i, 1);
+    }
+  }
+
+  for(let i = S.stains.length - 1; i >= 0; i--){
+    const st = S.stains[i];
+    st.y += drift; st.a -= dt*0.22;
+    if(st.a <= 0 || st.y > H + 40) S.stains.splice(i, 1);
+  }
+
+  for(const a of S.ash){
+    a.x += a.vx*dt; a.y += a.vy*dt;
+    if(a.x < -4) a.x = W + 4;
+    if(a.y > H + 4){ a.y = -4; a.x = Math.random()*W; }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world: the ground's side of the story             */
+/* ------------------------------------------------------------------ */
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+
+  // Cooling scars where lava landed - proof the eruptions are real.
+  for(const st of S.stains){
+    const g = ctx.createRadialGradient(st.x, st.y, 0, st.x, st.y, st.r*1.6);
+    g.addColorStop(0, "rgba(255,138,60," + (st.a*0.7).toFixed(3) + ")");
+    g.addColorStop(0.6, "rgba(184,58,16," + (st.a*0.4).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(94,22,6,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(st.x, st.y, st.r*1.6, 0, TAU); ctx.fill();
+  }
+
+  for(const v of S.vents){
+    if(v.phase === "warm"){
+      /*
+       * The telegraph, and it must be unmissable: the throat brightens, and
+       * a ring closes on it like a countdown - the same "this spot, soon"
+       * language every telegraph in the game speaks.
+       */
+      const k = 1 - Math.max(0, v.timer)/2.6;          // 0 -> 1 over the roar
+      const pulse = 0.75 + Math.sin(S.t*10)*0.25;
+      const g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, v.r*(0.6 + k));
+      g.addColorStop(0, "rgba(255,233,160," + (0.5*k*pulse).toFixed(3) + ")");
+      g.addColorStop(0.5, "rgba(255,138,60," + (0.32*k*pulse).toFixed(3) + ")");
+      g.addColorStop(1, "rgba(184,58,16,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(v.x, v.y, v.r*(0.6 + k), 0, TAU); ctx.fill();
+      ctx.strokeStyle = "rgba(255,138,60," + (0.25 + 0.45*k).toFixed(3) + ")";
+      ctx.lineWidth = 2;
+      const ringR = v.r*(3.0 - 2.0*k);
+      ctx.beginPath(); ctx.arc(v.x, v.y, ringR, 0, TAU); ctx.stroke();
+    } else if(v.phase === "erupt"){
+      const g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, v.r*2.2);
+      g.addColorStop(0, "rgba(255,246,200,0.9)");
+      g.addColorStop(0.4, "rgba(255,138,60,0.5)");
+      g.addColorStop(1, "rgba(184,58,16,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(v.x, v.y, v.r*2.2, 0, TAU); ctx.fill();
+    } else {                                           // cool: the glow lets go
+      const k = Math.max(0, v.timer)/1.4;
+      const g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, v.r*1.4);
+      g.addColorStop(0, "rgba(255,138,60," + (0.4*k).toFixed(3) + ")");
+      g.addColorStop(1, "rgba(94,22,6,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(v.x, v.y, v.r*1.4, 0, TAU); ctx.fill();
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world: what's flying                               */
+/* ------------------------------------------------------------------ */
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+
+  for(const b of S.bombs){
+    if(b.spent) continue;
+    // three acts: swell out of the throat, fly, sink back
+    const k = b.t < RISE ? 0.25 + 0.75*(b.t/RISE)
+            : b.t > LIFE - FALL ? Math.max(0.2, (LIFE - b.t)/FALL)
+            : 1;
+    const r = b.r*k;
+    const live = b.t > RISE && b.t < LIFE - FALL;
+    const g = ctx.createRadialGradient(b.x - r*0.25, b.y - r*0.25, 0, b.x, b.y, r);
+    g.addColorStop(0, "#ffe9a0");
+    g.addColorStop(0.55, "#ff8a3c");
+    g.addColorStop(1, live ? "#b83a10" : "#5e1606");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill();
+    // dark crust flecks, so it reads as rock that is molten - not a bullet
+    ctx.fillStyle = "rgba(30,10,4,0.7)";
+    ctx.beginPath(); ctx.arc(b.x + r*0.4, b.y + r*0.2, r*0.3, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x - r*0.3, b.y + r*0.45, r*0.2, 0, TAU); ctx.fill();
+    if(live){
+      const halo = ctx.createRadialGradient(b.x, b.y, r, b.x, b.y, r*2);
+      halo.addColorStop(0, "rgba(255,138,60,0.28)");
+      halo.addColorStop(1, "rgba(255,138,60,0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(b.x, b.y, r*2, 0, TAU); ctx.fill();
+    }
+  }
+
+  // Ash on the wind - the quiet reminder of where you are.
+  ctx.fillStyle = "rgba(160,150,145,0.5)";
+  for(const a of S.ash){
+    ctx.globalAlpha = a.a;
+    ctx.fillRect(a.x, a.y, a.s, a.s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+SF.volcano = { _state: () => S,
+               reset, begin, active, liveBombs, update, drawSky, drawOver };
 })();
 
 
@@ -24479,6 +24830,24 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"seabed",  x:0.50, y:0.50},
             {k:"drowned", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * EMBERFALL (The Forge World) - the world the Foundry drills its fire out
+   * of, and the fourth surface. Appended at the end, same Drawing Board
+   * index rule as every ground before it.
+   *
+   * The darkest floor in the game carrying its brightest lines: black basalt
+   * veined with lava rivers (full-height and wrap-exact, like the sea's
+   * trench), cinder cones, their drill rigs tapping the veins - and the
+   * fortified forge-city in its caldera passes once. The eruptions are not
+   * painted here: volcano.js owns everything that moves and everything that
+   * hurts.
+   */
+  { name:"Emberfall", surface:true,
+    clouds:["#8a2f0e","#ff8a3c","#2a0d06"], dust:"#0c0503", star:"#ffe4c8",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"emberfloor", x:0.50, y:0.50},
+            {k:"forgecity",  x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -26752,6 +27121,331 @@ function drawDrowned(ctx, W, H, p, rand){
   ctx.restore();
 }
 
+/* ---------------------------------------------------------
+   EMBERFALL - a volcano world from above.
+   ---------------------------------------------------------
+   The rule the sea set holds here too: one thing crosses the whole floor
+   and everything else answers to it. Under water it was the current; here
+   it is the LAVA - two rivers run the full height, every rock is rim-lit
+   from whichever river is nearer, and the only bright paint on the tile is
+   molten. The enemy is present even in the geology: their drill rigs stand
+   over the veins, which is the whole reason the planet is angry. */
+
+const EMBER = {
+  basalt:"#120a08", basaltLit:"#241410", crust:"#050302",
+  ash:"#4a4341", ashLit:"#6b615c",
+  lavaCore:"#ffe9a0", lava:"#ff8a3c", lavaDeep:"#b83a10", lavaDark:"#5e1606",
+  rig:"#1c1a20", rigLit:"#33303a", warn:"#ff5d73",
+};
+
+/** A molten line with a hot core - shared by rivers, cracks and the city's
+ *  feed pipes, so all the fire on this world is the same fire. */
+function lavaStroke(ctx, pathFn, w){
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = EMBER.lavaDark; ctx.lineWidth = w + 4;
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lavaDeep; ctx.lineWidth = w + 1.5;
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lava; ctx.lineWidth = Math.max(1.2, w*0.6);
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lavaCore; ctx.lineWidth = Math.max(0.8, w*0.25);
+  ctx.beginPath(); pathFn(); ctx.stroke();
+}
+
+/** A cinder cone: dark slopes, radiating ridges, a hot throat. */
+function cinderCone(ctx, x, y, r, rand, hot){
+  const g = ctx.createRadialGradient(x, y, r*0.15, x, y, r);
+  g.addColorStop(0, "#33201a");
+  g.addColorStop(0.55, EMBER.basaltLit);
+  g.addColorStop(1, rgba(EMBER.crust, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(EMBER.crust, 0.8); ctx.lineWidth = 1;
+  for(let i = 0; i < 9; i++){
+    const a = rand()*TAU;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a)*r*0.25, y + Math.sin(a)*r*0.25);
+    ctx.lineTo(x + Math.cos(a)*r*(0.8 + rand()*0.15), y + Math.sin(a)*r*(0.8 + rand()*0.15));
+    ctx.stroke();
+  }
+  const t = ctx.createRadialGradient(x, y, 0, x, y, r*0.24);
+  t.addColorStop(0, rgba(hot ? EMBER.lavaCore : EMBER.lava, hot ? 0.9 : 0.5));
+  t.addColorStop(1, rgba(EMBER.lavaDeep, 0));
+  ctx.fillStyle = t;
+  ctx.beginPath(); ctx.arc(x, y, r*0.24, 0, TAU); ctx.fill();
+}
+
+/** One of their drill rigs, feeding on a vein: a dark frame, a warning
+ *  light, and a feed line running to the lava it taps. */
+function drillRig(ctx, x, y, toX, toY, rand){
+  lavaStroke(ctx, () => { ctx.moveTo(x, y); ctx.lineTo(toX, toY); }, 1.6);
+  ctx.fillStyle = EMBER.rig;
+  ctx.fillRect(x - 7, y - 7, 14, 14);
+  ctx.fillStyle = EMBER.rigLit;
+  ctx.fillRect(x - 7, y - 7, 14, 4);
+  ctx.strokeStyle = EMBER.rig; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 9, y + 9); ctx.lineTo(x, y - 12); ctx.lineTo(x + 9, y + 9);
+  ctx.stroke();
+  ctx.fillStyle = EMBER.warn;
+  ctx.beginPath(); ctx.arc(x, y - 12, 1.6, 0, TAU); ctx.fill();
+}
+
+function drawEmberfloor(ctx, W, H, p, rand){
+  ctx.fillStyle = EMBER.basalt;
+  ctx.fillRect(0, 0, W, H);
+
+  // The floor's own relief: cooled-flow mottling, no colour yet.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.26)*W;
+    const col = i % 3 ? EMBER.crust : EMBER.basaltLit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.5 : 0.3));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE LAVA RIVERS - two, full height, wrap-exact: whole sine periods of t
+   * so position and slope agree at the seam (the sea's trench learned this
+   * the visible way). Their light is what the rest of the tile answers to.
+   */
+  const rivers = [];
+  for(let rv = 0; rv < 2; rv++){
+    const rx0 = W*(rv ? 0.70 : 0.22) + (rand() - 0.5)*W*0.08;
+    const s1 = (rand() - 0.5)*W*0.14, s2 = (rand() - 0.5)*W*0.10;
+    const path = t => rx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+    rivers.push(path);
+    const wdt = 5 + rand()*3;
+    // the glow first, wide and soft, so the river lights its banks
+    for(let i = 0; i <= 24; i++){
+      const t = i/24, x = path(t);
+      const g = ctx.createRadialGradient(x, t*H, 0, x, t*H, wdt*7);
+      g.addColorStop(0, rgba(EMBER.lavaDeep, 0.22));
+      g.addColorStop(1, rgba(EMBER.lavaDeep, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, t*H, wdt*7, 0, TAU); ctx.fill();
+    }
+    lavaStroke(ctx, () => {
+      for(let i = 0; i <= 48; i++){ const t = i/48; const x = path(t);
+        i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+    }, wdt);
+  }
+  const nearRiver = (x, y) => {
+    const t = y/H;
+    const a = rivers[0](Math.min(1, Math.max(0, t))), b = rivers[1](Math.min(1, Math.max(0, t)));
+    return Math.abs(x - a) < Math.abs(x - b) ? a : b;
+  };
+
+  // Side-cracks: short glowing fissures reaching off the rivers.
+  for(let i = 0; i < 14; i++){
+    const t = rand(), rv = rivers[Math.floor(rand()*2)];
+    const x0 = rv(t), y0 = t*H;
+    const a = rand()*TAU, l = 14 + rand()*30;
+    tiled(ctx, H, y0, yy =>
+      lavaStroke(ctx, () => {
+        ctx.moveTo(x0, yy);
+        ctx.quadraticCurveTo(x0 + Math.cos(a)*l*0.6, yy + Math.sin(a)*l*0.6 + 6,
+                             x0 + Math.cos(a)*l, yy + Math.sin(a)*l);
+      }, 1.6));
+  }
+
+  // Cinder cones, a few of them still warm in the throat.
+  for(let i = 0; i < 7; i++){
+    const x = rand()*W, y = rand()*H, r = 14 + rand()*26;
+    tiled(ctx, H, y, yy => cinderCone(ctx, x, yy, r, rngFor(4200 + i), i % 3 === 0));
+  }
+
+  // Boulder fields, every stone rim-lit from its nearest river.
+  for(let c = 0; c < 8; c++){
+    const cx = rand()*W, cy = rand()*H, n = 4 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3.5 + rand()*7;
+      tiled(ctx, H, y, yy => {
+        const lx = nearRiver(x, yy);
+        const d = lx > x ? 1 : -1;                 // which side the fire is on
+        ctx.fillStyle = EMBER.crust;
+        ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.82, rand()*TAU, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(EMBER.lava, 0.30);
+        ctx.beginPath(); ctx.ellipse(x + d*r*0.45, yy, r*0.4, r*0.6, 0, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  // Their rigs, drilled into the veins - the reason the world is angry.
+  for(let i = 0; i < 3; i++){
+    const t = 0.15 + rand()*0.7, rv = rivers[i % 2];
+    const vx = rv(t), vy = t*H;
+    const x = vx + (rand() < 0.5 ? -1 : 1)*(26 + rand()*20), y = vy + (rand() - 0.5)*24;
+    tiled(ctx, H, y, yy => drillRig(ctx, x, yy, vx, yy + (vy - y), rngFor(6300 + i)));
+  }
+
+  // Ash streaks, combed one way like the sea's ripples were.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 34; i++){
+    const x = rand()*W, y = rand()*H, l = 10 + rand()*24;
+    ctx.strokeStyle = rgba(i % 2 ? EMBER.ash : EMBER.ashLit, 0.08 + rand()*0.07);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath();
+      ctx.moveTo(x, yy); ctx.lineTo(x - l*0.9, yy + l*0.45);
+      ctx.stroke();
+    });
+  }
+
+  // Embers: the only loose sparks of colour, thin on the ground.
+  for(let i = 0; i < 26; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 3 ? EMBER.lava : EMBER.lavaCore, 0.25 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.5, 1.5));
+  }
+}
+
+/*
+ * THE FORGE-CITY - the once-layer. Their works: a vast caldera with a lava
+ * lake for a heart, the fortified city ringed around it, feed pipes drinking
+ * straight from the melt. Its ash apron settles it onto the tile wherever
+ * the scroll has carried the floor, the same trick the sunken flagship used.
+ */
+function drawForgecity(ctx, W, H, p, rand){
+  const cx = W*0.52, cy = H*0.48, R = W*0.30;
+
+  // The ash it has settled over everything downwind.
+  const apron = ctx.createRadialGradient(cx, cy, R*0.4, cx, cy, R*2.1);
+  apron.addColorStop(0, rgba(EMBER.ash, 0.30));
+  apron.addColorStop(0.6, rgba(EMBER.ash, 0.14));
+  apron.addColorStop(1, rgba(EMBER.ash, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.arc(cx, cy, R*2.1, 0, TAU); ctx.fill();
+
+  // The caldera ring: a mountain wall with ridges radiating down its flanks.
+  const ring = ctx.createRadialGradient(cx, cy, R*0.55, cx, cy, R*1.15);
+  ring.addColorStop(0, rgba(EMBER.basaltLit, 0));
+  ring.addColorStop(0.45, EMBER.basaltLit);
+  ring.addColorStop(0.75, EMBER.basalt);
+  ring.addColorStop(1, rgba(EMBER.crust, 0));
+  ctx.fillStyle = ring;
+  ctx.beginPath(); ctx.arc(cx, cy, R*1.15, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(EMBER.crust, 0.7); ctx.lineWidth = 1.2;
+  for(let i = 0; i < 26; i++){
+    const a = (i/26)*TAU + rand()*0.1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a)*R*0.66, cy + Math.sin(a)*R*0.66);
+    ctx.lineTo(cx + Math.cos(a)*R*(1.0 + rand()*0.12), cy + Math.sin(a)*R*(1.0 + rand()*0.12));
+    ctx.stroke();
+  }
+
+  // The lake: the brightest thing on the whole world.
+  const lake = ctx.createRadialGradient(cx, cy, 0, cx, cy, R*0.55);
+  lake.addColorStop(0, EMBER.lavaCore);
+  lake.addColorStop(0.45, EMBER.lava);
+  lake.addColorStop(0.85, EMBER.lavaDeep);
+  lake.addColorStop(1, EMBER.lavaDark);
+  ctx.fillStyle = lake;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.55, 0, TAU); ctx.fill();
+  // crust plates drifting on it
+  ctx.fillStyle = rgba(EMBER.crust, 0.55);
+  for(let i = 0; i < 9; i++){
+    const a = rand()*TAU, d = rand()*R*0.4;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rand()*TAU);
+    ctx.beginPath();
+    ctx.moveTo(-8 - rand()*6, 0); ctx.lineTo(0, -5 - rand()*4);
+    ctx.lineTo(8 + rand()*6, 0); ctx.lineTo(0, 5 + rand()*4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  /*
+   * The city, on the rim: block after block of their architecture riding
+   * the ring, feed pipes drinking from the lake, warning lights, one wall.
+   * Angular and red-lit - the same brand their fortress flies.
+   */
+  // The wall first, so the city stands inside something.
+  ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  for(let i = 0; i <= 12; i++){
+    const a = (i/12)*TAU;
+    const x = cx + Math.cos(a)*R*1.06, y = cy + Math.sin(a)*R*1.06;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = EMBER.warn;
+  for(let i = 0; i < 12; i += 2){
+    const a = (i/12)*TAU;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a)*R*1.06, cy + Math.sin(a)*R*1.06, 1.7, 0, TAU); ctx.fill();
+  }
+
+  for(let i = 0; i < 14; i++){
+    const a = (i/14)*TAU + 0.1;
+    const d = R*(0.76 + (i % 3)*0.10);
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    const bw = 18 + (i % 4)*7, bh = 13 + ((i + 1) % 3)*6;
+    ctx.fillStyle = rgba("#01060a", 0.5);
+    ctx.fillRect(x - bw/2 + 3, y - bh/2 + 3, bw, bh);      // its shadow, sunward
+    ctx.fillStyle = "#26222c";
+    ctx.fillRect(x - bw/2, y - bh/2, bw, bh);
+    ctx.fillStyle = "#413a4a";
+    ctx.fillRect(x - bw/2, y - bh/2, bw, 4);
+    // lit windows, forge-orange - the shift never ends
+    ctx.fillStyle = EMBER.lava;
+    const wn = 2 + (i % 3);
+    for(let q = 0; q < wn; q++)
+      ctx.fillRect(x - bw/2 + 3 + q*(bw - 6)/wn, y, 2.5, 2.5);
+    // every third block is a stack, venting
+    if(i % 3 === 0){
+      ctx.fillStyle = "#26222c";
+      ctx.beginPath(); ctx.arc(x, y - bh/2 - 3, 3.5, 0, TAU); ctx.fill();
+      const sm = ctx.createRadialGradient(x - 5, y - bh/2 - 12, 0, x - 5, y - bh/2 - 12, 14);
+      sm.addColorStop(0, rgba(EMBER.ashLit, 0.35));
+      sm.addColorStop(1, rgba(EMBER.ashLit, 0));
+      ctx.fillStyle = sm;
+      ctx.beginPath(); ctx.arc(x - 5, y - bh/2 - 12, 14, 0, TAU); ctx.fill();
+    }
+    // and every fourth, a red warning eye
+    if(i % 4 === 0){
+      ctx.fillStyle = EMBER.warn;
+      ctx.beginPath(); ctx.arc(x + bw/2 - 1, y - bh/2 - 1, 1.6, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The feed pipes: dark casings drinking at the lake's edge, a glowing
+  // joint at each end - machinery over the melt, not more melt.
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.55;
+    const x0 = cx + Math.cos(a)*R*0.48, y0 = cy + Math.sin(a)*R*0.48;
+    const x1 = cx + Math.cos(a)*R*0.80, y1 = cy + Math.sin(a)*R*0.80;
+    ctx.strokeStyle = "#26222c"; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    for(const [jx, jy] of [[x0, y0], [x1, y1]]){
+      const jg = ctx.createRadialGradient(jx, jy, 0, jx, jy, 7);
+      jg.addColorStop(0, rgba(EMBER.lava, 0.9));
+      jg.addColorStop(1, rgba(EMBER.lava, 0));
+      ctx.fillStyle = jg;
+      ctx.beginPath(); ctx.arc(jx, jy, 7, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#413a4a";
+      ctx.beginPath(); ctx.arc(jx, jy, 2.6, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The landing aprons outside the wall - where the Foundry's haulers load.
+  for(let i = 0; i < 2; i++){
+    const a = i ? 0.9 : 3.6;
+    const x = cx + Math.cos(a)*R*1.34, y = cy + Math.sin(a)*R*1.34;
+    ctx.fillStyle = rgba(EMBER.ash, 0.35);
+    ctx.fillRect(x - 14, y - 10, 28, 20);
+    ctx.strokeStyle = rgba(EMBER.ashLit, 0.55); ctx.lineWidth = 1;
+    ctx.strokeRect(x - 14, y - 10, 28, 20);
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.stroke();
+    ctx.fillStyle = EMBER.warn;
+    ctx.beginPath(); ctx.arc(x - 11, y - 7, 1.3, 0, TAU); ctx.fill();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -27148,6 +27842,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
     else if(pr.k === "seabed") drawSeabed(px, W, H, pr, rand);
     else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
+    else if(pr.k === "emberfloor") drawEmberfloor(px, W, H, pr, rand);
+    else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
   });
 }
 
@@ -30160,6 +30856,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.sky29) SF.sky29.begin();
   SF.dive.reset();                        // the sea drains until the dive
   if(mission.dive) SF.dive.begin();
+  SF.volcano.reset();                     // the ground sleeps until the forge world
+  if(mission.volcano) SF.volcano.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -30546,6 +31244,7 @@ function startMission(missionIndex, difficultyId){
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
              : mission.dive ? "diveStart"
+             : mission.volcano ? "volcanoStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -32449,6 +33148,56 @@ function update(dt, timeMs){
   }
 
   /*
+   * THE FORGE WORLD. The eruption's costs live here, beside the flare's,
+   * because this is where onPlayerHit and onEnemyKilled exist - volcano.js
+   * owns what a bomb looks like, this block owns what it does.
+   *
+   * Both sides pay the same molten price. A bomb that reaches a ship spends
+   * itself on the hull (one hit, shields and invuln respected, exactly as an
+   * enemy shot would be); an enemy it touches MELTS, routed through the
+   * flare's no-pay path so a melted carrier still frees its pilot and no
+   * coin falls out of a kill nobody made. The melt is still worth flying
+   * for: it clears the sky, and the level's own star (objectives: "melt")
+   * counts every one.
+   */
+  if(run.mission.volcano && SF.volcano.active() && !run.ended){
+    const bombs = SF.volcano.liveBombs();
+    for(let bi = 0; bi < bombs.length; bi++){
+      const b = bombs[bi];
+      const seats = game.world.livePlayers();
+      for(let si = 0; si < seats.length && !b.spent; si++){
+        const q = seats[si];
+        if(!q.alive || q.invuln > 0) continue;
+        const dx = q.x - b.x, dy = q.y - b.y, rr = b.r + 13;
+        if(dx*dx + dy*dy < rr*rr){
+          b.spent = true;                       // it splashed on the hull
+          callbacks.onPlayerHit("lava", null, q);
+        }
+      }
+      if(b.spent) continue;
+      // Molten rock does not spend itself on metal - one bomb can melt a
+      // whole knot of them, which is the whole reason luring works.
+      const items = game.world.enemies.items;
+      const caught = [];
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(!e.alive || e.entering || e.hazard || e.attached || e.fromBoss) continue;
+        const dx = e.x - b.x, dy = e.y - b.y, rr = b.r + (e.r || 14);
+        if(dx*dx + dy*dy < rr*rr) caught.push(e);
+      }
+      for(let i = 0; i < caught.length; i++){
+        const e = caught[i];
+        if(e.counted && !e.fromBoss)
+          run.stats.lavaMelts = (run.stats.lavaMelts || 0) + 1;
+        fx.sparks(e.x, e.y, 10, "#ff8a3c", 160);
+        fx.text(e.x, e.y - 22, T("MELTED!"), "#ff8a3c", 15, true);
+        callbacks.onEnemyKilled(e, null, false, true);
+        SF.comms.say("volcanoMelt");
+      }
+    }
+  }
+
+  /*
    * THE STAMPEDE. The biggest thing on screen is a tool rather than a target.
    *
    * `hazard:true` on the archetype is doing nearly all the work and needs no
@@ -33157,6 +33906,7 @@ function update(dt, timeMs){
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
+  if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -33559,6 +34309,7 @@ function draw(timeMs){
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
   SF.dive.drawSky(ctx, timeMs, VW, VH);              // the water column: rays, fish
+  SF.volcano.drawSky(ctx, timeMs, VW, VH);           // the vents: roar, burst, scar
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -33688,7 +34439,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -36199,9 +36950,9 @@ const SECTORS = [
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
     sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
   { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 39-41
-  { at:41, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 41
+    sub:"their last works, the last fight — and the farm" }, // 39-41 (the forge world opens it)
+  { at:42, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 42
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -39204,6 +39955,88 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.beginPath(); ctx.ellipse(W*0.8, H*0.36, 5, 2, 0, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(W*0.8 - 4, H*0.36); ctx.lineTo(W*0.8 - 7, H*0.36 - 2);
     ctx.lineTo(W*0.8 - 7, H*0.36 + 2); ctx.closePath(); ctx.fill();
+  } else if(art === "drills"){
+    /*
+     * The Forge World's establishing shot: black ground, one bright vein,
+     * and their rig drinking from it. The story is machinery-on-a-wound.
+     */
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#1a0c06"); grd.addColorStop(1, "#0a0403");
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+    // drifting embers where stars would be
+    for(let i = 0; i < 16; i++){
+      const ex = ((Math.sin(i*87.3)*43758.5453) % 1 + 1) % 1 * W;
+      const ey = ((Math.sin(i*39.1)*43758.5453) % 1 + 1) % 1 * H*0.5;
+      ctx.fillStyle = i % 3 ? "rgba(255,138,60,0.5)" : "rgba(255,233,160,0.6)";
+      ctx.fillRect(ex, ey, 1.6, 1.6);
+    }
+    // the vein, crossing the whole frame
+    const vein = y => H*0.72 + Math.sin(y)*0;   // straight, glowing
+    ctx.strokeStyle = "#5e1606"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    ctx.strokeStyle = "#ff8a3c"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    ctx.strokeStyle = "#ffe9a0"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.5, H*0.66, W, H*0.75); ctx.stroke();
+    // its glow on the ground
+    const vg = ctx.createRadialGradient(W*0.5, H*0.69, 2, W*0.5, H*0.69, H*0.4);
+    vg.addColorStop(0, "rgba(255,138,60,0.30)"); vg.addColorStop(1, "rgba(255,138,60,0)");
+    ctx.fillStyle = vg; ctx.fillRect(0, H*0.3, W, H*0.7);
+    // the rig: dark derrick, feed pipe into the vein, warning eye
+    const rx = W*0.62, ry = H*0.50;
+    ctx.strokeStyle = "#26222c"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + 6, H*0.685); ctx.stroke();
+    ctx.strokeStyle = "#1c1a20"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(rx - 16, ry + 26); ctx.lineTo(rx, ry - 18); ctx.lineTo(rx + 16, ry + 26);
+    ctx.moveTo(rx - 10, ry + 12); ctx.lineTo(rx + 10, ry + 12);
+    ctx.stroke();
+    ctx.fillStyle = "#26222c"; ctx.fillRect(rx - 13, ry + 24, 26, 8);
+    ctx.fillStyle = "#ff5d73";
+    ctx.beginPath(); ctx.arc(rx, ry - 18, 2, 0, Math.PI*2); ctx.fill();
+  } else if(art === "eruption"){
+    /*
+     * The lesson, in one picture: the vent roaring below, bombs arcing up,
+     * and one of THEIR ships already glowing at the edges. Nothing needs
+     * a caption - melting is a shape a seven-year-old reads instantly.
+     */
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, "#140806"); grd.addColorStop(1, "#0a0403");
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+    const vx = W*0.42, vy = H*0.82;
+    // the roar: rings closing on the vent
+    ctx.strokeStyle = "rgba(255,138,60,0.65)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(vx, vy, 26, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,138,60,0.3)";
+    ctx.beginPath(); ctx.arc(vx, vy, 40, 0, Math.PI*2); ctx.stroke();
+    const vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, 34);
+    vg.addColorStop(0, "rgba(255,233,160,0.9)"); vg.addColorStop(1, "rgba(184,58,16,0)");
+    ctx.fillStyle = vg;
+    ctx.beginPath(); ctx.arc(vx, vy, 34, 0, Math.PI*2); ctx.fill();
+    // bombs on their arcs
+    [[0.34,0.55,4],[0.48,0.42,5],[0.6,0.3,4.4],[0.28,0.34,3.6]].forEach(([px, py, r]) => {
+      const bx = W*px, by = H*py;
+      const g2 = ctx.createRadialGradient(bx - 1, by - 1, 0, bx, by, r);
+      g2.addColorStop(0, "#ffe9a0"); g2.addColorStop(0.6, "#ff8a3c"); g2.addColorStop(1, "#b83a10");
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(255,138,60,0.25)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(vx, vy); ctx.quadraticCurveTo((vx + bx)/2 - 10, (vy + by)/2, bx, by); ctx.stroke();
+    });
+    // one of theirs, caught: a dark hull already glowing at its seams
+    const ex = W*0.72, ey = H*0.24;
+    ctx.fillStyle = "#1e1524";
+    ctx.beginPath();
+    ctx.moveTo(ex, ey - 10); ctx.lineTo(ex + 14, ey + 8); ctx.lineTo(ex, ey + 4);
+    ctx.lineTo(ex - 14, ey + 8); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#ff8a3c"; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey - 10); ctx.lineTo(ex + 14, ey + 8); ctx.lineTo(ex, ey + 4);
+    ctx.lineTo(ex - 14, ey + 8); ctx.closePath(); ctx.stroke();
+    // droplets already coming off it
+    ctx.fillStyle = "#ff8a3c";
+    ctx.beginPath(); ctx.arc(ex + 4, ey + 14, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex - 6, ey + 17, 1.4, 0, Math.PI*2); ctx.fill();
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -39262,7 +40095,8 @@ function renderCoopLine(){
 const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
                          ["garden",   "secondHarvest"],
-                         ["dive",     "theDive"]];
+                         ["dive",     "theDive"],
+                         ["volcano",  "forgeWorld"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

@@ -596,12 +596,12 @@ async function run(){
    */
   check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Behind the Sky" && gift.id === 42 &&
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 43 &&
            gift.backstage === true && gift.sky29 === true &&
            !gift.boss;                       // the Brush is backstage's, not a slot
   })());
-  check("43 campaign missions defined, ids sequential from Earth",
-    SF.missions.MISSIONS.length === 43 &&
+  check("44 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 44 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i));
   /*
    * The sky contract, after Mission 0: every mission points at its own sky
@@ -613,23 +613,28 @@ async function run(){
     // Second Harvest pushed 22-40 up one and The Dive pushed 34-41 up again,
     // so every shifted stop carries its HISTORICAL sky stamped explicitly -
     // the id-based default would have handed The Narrows the Fortress Wall.
-    // Untouched stops (1-21) still ride the default; the three grounds (two
-    // farms and the sea) name theirs, appended so no Drawing Board sky
-    // re-bases: ids 23-33 sit one insertion deep, 35-42 two.
+    // Untouched stops (1-21) still ride the default; the four grounds (two
+    // farms, the sea, the volcano world) name theirs, appended so no Drawing
+    // Board sky re-bases: 23-33 sit one insertion deep, 35-38 two, 40-43 three.
     return M.every(m => m.prologue ? m.sky === 40
                       : m.garden   ? m.sky === 41
                       : m.dive     ? m.sky === 42
+                      : m.volcano  ? m.sky === 43
                       : m.id <= 21 ? m.sky === m.id - 1
                       : m.id <= 34 ? m.sky === m.id - 2
-                      : m.sky === m.id - 3) &&
-           SF.skygen.SKIES.length === 43 &&
+                      : m.id <= 38 ? m.sky === m.id - 3
+                      : m.sky === m.id - 4) &&
+           SF.skygen.SKIES.length === 44 &&
            SF.skygen.SKIES[40].surface === true &&
            SF.skygen.SKIES[40].props.some(pr => pr.k === "fields") &&
            SF.skygen.SKIES[41].surface === true &&
            SF.skygen.SKIES[41].props.some(pr => pr.k === "wild") &&
            SF.skygen.SKIES[42].surface === true &&
            SF.skygen.SKIES[42].props.some(pr => pr.k === "seabed") &&
-           SF.skygen.SKIES[42].props.some(pr => pr.k === "drowned" && pr.once);
+           SF.skygen.SKIES[42].props.some(pr => pr.k === "drowned" && pr.once) &&
+           SF.skygen.SKIES[43].surface === true &&
+           SF.skygen.SKIES[43].props.some(pr => pr.k === "emberfloor") &&
+           SF.skygen.SKIES[43].props.some(pr => pr.k === "forgecity" && pr.once);
   })());
   /*
    * ...and by NAME, which is what the stamp exists to protect: the missions
@@ -707,7 +712,7 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 123 && (() => {
+    SF.profile.maxStars() === 126 && (() => {
       const p = SF.profile.load("LEDGER");
       p.missions[SF.missions.MISSIONS.find(m => m.gift).id] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
@@ -2758,7 +2763,7 @@ async function run(){
       // A SURFACE is its own carve-out: the ground is the thing you fly
       // through, so it tiles by definition - only the landmarks on it (the
       // farm) must pass once. In space the rule stays absolute.
-      const GROUND = ["fields", "ground", "wild", "seabed"];
+      const GROUND = ["fields", "ground", "wild", "seabed", "emberfloor"];
       return SF.skygen.SKIES.every(sky => {
         const props = sky.props || [];
         if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
@@ -3168,7 +3173,7 @@ async function run(){
    * the Sky 29 gate for a pilot already at 116/117.
    */
   check("Earth's stars stay off the campaign ledger",
-    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 123);
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 126);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
@@ -4236,7 +4241,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,41");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,42");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -4525,10 +4530,11 @@ async function run(){
              (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
              // ...and the only other grounds are the two farms and the sea:
              // Earth, the taken world, and the drowned sky the dive swims.
-             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 4 &&
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 5 &&
              SF.skygen.isSurface(SF.missions.skyOf(0)) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden))) &&
-             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.dive)));
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.dive))) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.volcano)));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -9714,12 +9720,15 @@ async function run(){
                     "34": { cleared:true, stars:{pilot:3}, best:{pilot:700} },
                     "41": { cleared:true, stars:{pilot:1}, best:{} } },
         lastMission: 34, reached: 35 });
+      // The record that started at 41 rides BOTH inserts now: v10 lifts it
+      // to 42, v11 to 43. A migration pin follows the save all the way to
+      // the present, or it starts failing the day the next level lands.
       check("a v9 save shifts 34-41 up one and nothing below",
         v9.missions["33"] && v9.missions["33"].stars.pilot === 2 &&
         !v9.missions["34"] &&
         v9.missions["35"] && v9.missions["35"].stars.pilot === 3 &&
-        v9.missions["42"] && v9.missions["42"].stars.pilot === 1 &&
-        v9.lastMission === 35 && v9.missionsVer >= 10);
+        v9.missions["43"] && v9.missions["43"].stars.pilot === 1 &&
+        v9.lastMission === 35 && v9.missionsVer >= 11);
       check("being carried survives this insert too", v9.reached === 36);
       // Every hand-written mission id sits BELOW this insert - the NOVA tune
       // named 32 before and must name 32 after, or a child's trophy un-earns.
@@ -9769,6 +9778,104 @@ async function run(){
       !!eb && Math.abs(eb.vy - 160) < 0.001 && eb.vx === 0);
 
     check("the water column draws without errors", errors.length === 0);
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+  }
+
+  /*
+   * THE FORGE WORLD - the level whose hazard is the level. Tested end to
+   * end: the stop is where the story says, an old save rides the insert,
+   * a vent roars BEFORE it throws anything, and the bombs charge both
+   * sides fairly - a hull pays a hit, their metal melts with no pay, and
+   * the melt is counted for the star that teaches the tactic.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const vi = SF.missions.MISSIONS.findIndex(m => m.volcano);
+    check("the forge world is a real stop, the road home's first",
+      vi === 39 && SF.missions.MISSIONS[vi].name === "The Forge World" &&
+      SF.missions.skyOf(vi) === 43 && SF.skygen.isSurface(43) &&
+      SF.missions.MISSIONS[vi].objectives.indexOf("melt") >= 0 &&
+      !!SF.missions.OBJECTIVES.melt);
+    check("the forge-city passes once; the ember floor tiles",
+      !!SF.skygen.buildOnce(43, 300, 400, 1) &&
+      !!SF.skygen.build(43, 300, 400, 1));
+
+    /* --- v11: an old family save rides the insert --- */
+    {
+      const v10 = P.migrate({ name:"V10", missionsVer: 10, tune:"nova",
+        missions: { "32": { cleared:true, stars:{pilot:1}, best:{} },
+                    "38": { cleared:true, stars:{pilot:2}, best:{} },
+                    "39": { cleared:true, stars:{pilot:3}, best:{pilot:800} },
+                    "42": { cleared:true, stars:{pilot:1}, best:{} } },
+        lastMission: 39, reached: 40 });
+      check("a v10 save shifts 39-42 up one and nothing below",
+        v10.missions["38"] && v10.missions["38"].stars.pilot === 2 &&
+        !v10.missions["39"] &&
+        v10.missions["40"] && v10.missions["40"].stars.pilot === 3 &&
+        v10.missions["43"] && v10.missions["43"].stars.pilot === 1 &&
+        v10.lastMission === 40 && v10.missionsVer >= 11);
+      check("being carried survives the volcano insert too", v10.reached === 41);
+      check("every hand-written mission id still sits below the insert",
+        SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
+        SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
+        SF.config.TUNE_BY_ID.ghost.unlockMission === 23 &&
+        v10.tune === "nova");
+    }
+
+    /* --- the eruption itself --- */
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("Vulcan");
+    G.coopWith = null;
+    G.profile = P.load("Vulcan");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(vi, "pilot");
+    await runFrames(80, true);                  // past the 2.2s intro: vents wait for the fight
+    const w = G.world, run = G.run;
+    check("the level opens with the ground armed",
+      run.mission.volcano === true && SF.volcano.active() && run.phase !== "intro");
+
+    const S = SF.volcano._state();
+    // Force the first roar NOW, at a spot we control, far from the player.
+    w.player.x = 300; w.player.y = 700; w.player.targetX = 300; w.player.targetY = 700;
+    S.vents.length = 0; S.bombs.length = 0;
+    S.nextVent = 0.01;
+    await runFrames(6, true);
+    check("a vent roars before it throws anything",
+      S.vents.length === 1 && S.vents[0].phase === "warm" && S.bombs.length === 0);
+
+    // Fast-forward the roar and catch the burst.
+    S.vents[0].x = 300; S.vents[0].y = 200; S.vents[0].timer = 0.01;
+    await runFrames(4, true);
+    check("the eruption throws a fan of molten bombs",
+      S.bombs.length >= 6 && S.bombs.every(b => b.t < 0.4));
+
+    /* A bomb is harmless while rising, deadly at altitude: park one on a
+       fresh enemy and see it melt - counted, unpaid. */
+    const preCoins = w.pickups.items.filter(pk => pk.alive && pk.kind === "coin").length;
+    const e = w.spawnEnemy("grunt", 150, 300);
+    e.entering = false; e.hp = 1; e.counted = true;
+    const kills0 = run.stats.kills;
+    const b = S.bombs[0];
+    b.x = 150; b.y = 300; b.vx = 0; b.vy = 0; b.t = 1.2;     // at altitude
+    await runFrames(3, true);
+    check("their metal melts on a live bomb",
+      !e.alive && (run.stats.lavaMelts || 0) >= 1);
+    check("a melt is counted for the mission and paid to nobody",
+      run.stats.kills === kills0 + 1 &&
+      w.pickups.items.filter(pk => pk.alive && pk.kind === "coin").length === preCoins);
+
+    /* ...and the same molten thing costs a hull a hit, shields honoured. */
+    const hits0 = run.stats.hitsTaken || 0;
+    w.player.invuln = 0;
+    const b2 = S.bombs[1] || b;
+    b2.spent = false; b2.x = w.player.x; b2.y = w.player.y; b2.vx = 0; b2.vy = 0; b2.t = 1.2;
+    await runFrames(3, true);
+    check("a bomb splashes on a hull like any shot",
+      (run.stats.hitsTaken || 0) === hits0 + 1 && b2.spent === true);
+
+    check("the eruption draws without errors", errors.length === 0);
     G.run.ended = true; G.state = "idle";
     G.world.reset();
   }

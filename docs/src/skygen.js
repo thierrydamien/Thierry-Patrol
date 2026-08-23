@@ -650,6 +650,24 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"seabed",  x:0.50, y:0.50},
             {k:"drowned", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * EMBERFALL (The Forge World) - the world the Foundry drills its fire out
+   * of, and the fourth surface. Appended at the end, same Drawing Board
+   * index rule as every ground before it.
+   *
+   * The darkest floor in the game carrying its brightest lines: black basalt
+   * veined with lava rivers (full-height and wrap-exact, like the sea's
+   * trench), cinder cones, their drill rigs tapping the veins - and the
+   * fortified forge-city in its caldera passes once. The eruptions are not
+   * painted here: volcano.js owns everything that moves and everything that
+   * hurts.
+   */
+  { name:"Emberfall", surface:true,
+    clouds:["#8a2f0e","#ff8a3c","#2a0d06"], dust:"#0c0503", star:"#ffe4c8",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"emberfloor", x:0.50, y:0.50},
+            {k:"forgecity",  x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -2923,6 +2941,331 @@ function drawDrowned(ctx, W, H, p, rand){
   ctx.restore();
 }
 
+/* ---------------------------------------------------------
+   EMBERFALL - a volcano world from above.
+   ---------------------------------------------------------
+   The rule the sea set holds here too: one thing crosses the whole floor
+   and everything else answers to it. Under water it was the current; here
+   it is the LAVA - two rivers run the full height, every rock is rim-lit
+   from whichever river is nearer, and the only bright paint on the tile is
+   molten. The enemy is present even in the geology: their drill rigs stand
+   over the veins, which is the whole reason the planet is angry. */
+
+const EMBER = {
+  basalt:"#120a08", basaltLit:"#241410", crust:"#050302",
+  ash:"#4a4341", ashLit:"#6b615c",
+  lavaCore:"#ffe9a0", lava:"#ff8a3c", lavaDeep:"#b83a10", lavaDark:"#5e1606",
+  rig:"#1c1a20", rigLit:"#33303a", warn:"#ff5d73",
+};
+
+/** A molten line with a hot core - shared by rivers, cracks and the city's
+ *  feed pipes, so all the fire on this world is the same fire. */
+function lavaStroke(ctx, pathFn, w){
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = EMBER.lavaDark; ctx.lineWidth = w + 4;
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lavaDeep; ctx.lineWidth = w + 1.5;
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lava; ctx.lineWidth = Math.max(1.2, w*0.6);
+  ctx.beginPath(); pathFn(); ctx.stroke();
+  ctx.strokeStyle = EMBER.lavaCore; ctx.lineWidth = Math.max(0.8, w*0.25);
+  ctx.beginPath(); pathFn(); ctx.stroke();
+}
+
+/** A cinder cone: dark slopes, radiating ridges, a hot throat. */
+function cinderCone(ctx, x, y, r, rand, hot){
+  const g = ctx.createRadialGradient(x, y, r*0.15, x, y, r);
+  g.addColorStop(0, "#33201a");
+  g.addColorStop(0.55, EMBER.basaltLit);
+  g.addColorStop(1, rgba(EMBER.crust, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(EMBER.crust, 0.8); ctx.lineWidth = 1;
+  for(let i = 0; i < 9; i++){
+    const a = rand()*TAU;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a)*r*0.25, y + Math.sin(a)*r*0.25);
+    ctx.lineTo(x + Math.cos(a)*r*(0.8 + rand()*0.15), y + Math.sin(a)*r*(0.8 + rand()*0.15));
+    ctx.stroke();
+  }
+  const t = ctx.createRadialGradient(x, y, 0, x, y, r*0.24);
+  t.addColorStop(0, rgba(hot ? EMBER.lavaCore : EMBER.lava, hot ? 0.9 : 0.5));
+  t.addColorStop(1, rgba(EMBER.lavaDeep, 0));
+  ctx.fillStyle = t;
+  ctx.beginPath(); ctx.arc(x, y, r*0.24, 0, TAU); ctx.fill();
+}
+
+/** One of their drill rigs, feeding on a vein: a dark frame, a warning
+ *  light, and a feed line running to the lava it taps. */
+function drillRig(ctx, x, y, toX, toY, rand){
+  lavaStroke(ctx, () => { ctx.moveTo(x, y); ctx.lineTo(toX, toY); }, 1.6);
+  ctx.fillStyle = EMBER.rig;
+  ctx.fillRect(x - 7, y - 7, 14, 14);
+  ctx.fillStyle = EMBER.rigLit;
+  ctx.fillRect(x - 7, y - 7, 14, 4);
+  ctx.strokeStyle = EMBER.rig; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 9, y + 9); ctx.lineTo(x, y - 12); ctx.lineTo(x + 9, y + 9);
+  ctx.stroke();
+  ctx.fillStyle = EMBER.warn;
+  ctx.beginPath(); ctx.arc(x, y - 12, 1.6, 0, TAU); ctx.fill();
+}
+
+function drawEmberfloor(ctx, W, H, p, rand){
+  ctx.fillStyle = EMBER.basalt;
+  ctx.fillRect(0, 0, W, H);
+
+  // The floor's own relief: cooled-flow mottling, no colour yet.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.26)*W;
+    const col = i % 3 ? EMBER.crust : EMBER.basaltLit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.5 : 0.3));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE LAVA RIVERS - two, full height, wrap-exact: whole sine periods of t
+   * so position and slope agree at the seam (the sea's trench learned this
+   * the visible way). Their light is what the rest of the tile answers to.
+   */
+  const rivers = [];
+  for(let rv = 0; rv < 2; rv++){
+    const rx0 = W*(rv ? 0.70 : 0.22) + (rand() - 0.5)*W*0.08;
+    const s1 = (rand() - 0.5)*W*0.14, s2 = (rand() - 0.5)*W*0.10;
+    const path = t => rx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+    rivers.push(path);
+    const wdt = 5 + rand()*3;
+    // the glow first, wide and soft, so the river lights its banks
+    for(let i = 0; i <= 24; i++){
+      const t = i/24, x = path(t);
+      const g = ctx.createRadialGradient(x, t*H, 0, x, t*H, wdt*7);
+      g.addColorStop(0, rgba(EMBER.lavaDeep, 0.22));
+      g.addColorStop(1, rgba(EMBER.lavaDeep, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, t*H, wdt*7, 0, TAU); ctx.fill();
+    }
+    lavaStroke(ctx, () => {
+      for(let i = 0; i <= 48; i++){ const t = i/48; const x = path(t);
+        i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+    }, wdt);
+  }
+  const nearRiver = (x, y) => {
+    const t = y/H;
+    const a = rivers[0](Math.min(1, Math.max(0, t))), b = rivers[1](Math.min(1, Math.max(0, t)));
+    return Math.abs(x - a) < Math.abs(x - b) ? a : b;
+  };
+
+  // Side-cracks: short glowing fissures reaching off the rivers.
+  for(let i = 0; i < 14; i++){
+    const t = rand(), rv = rivers[Math.floor(rand()*2)];
+    const x0 = rv(t), y0 = t*H;
+    const a = rand()*TAU, l = 14 + rand()*30;
+    tiled(ctx, H, y0, yy =>
+      lavaStroke(ctx, () => {
+        ctx.moveTo(x0, yy);
+        ctx.quadraticCurveTo(x0 + Math.cos(a)*l*0.6, yy + Math.sin(a)*l*0.6 + 6,
+                             x0 + Math.cos(a)*l, yy + Math.sin(a)*l);
+      }, 1.6));
+  }
+
+  // Cinder cones, a few of them still warm in the throat.
+  for(let i = 0; i < 7; i++){
+    const x = rand()*W, y = rand()*H, r = 14 + rand()*26;
+    tiled(ctx, H, y, yy => cinderCone(ctx, x, yy, r, rngFor(4200 + i), i % 3 === 0));
+  }
+
+  // Boulder fields, every stone rim-lit from its nearest river.
+  for(let c = 0; c < 8; c++){
+    const cx = rand()*W, cy = rand()*H, n = 4 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3.5 + rand()*7;
+      tiled(ctx, H, y, yy => {
+        const lx = nearRiver(x, yy);
+        const d = lx > x ? 1 : -1;                 // which side the fire is on
+        ctx.fillStyle = EMBER.crust;
+        ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.82, rand()*TAU, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba(EMBER.lava, 0.30);
+        ctx.beginPath(); ctx.ellipse(x + d*r*0.45, yy, r*0.4, r*0.6, 0, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  // Their rigs, drilled into the veins - the reason the world is angry.
+  for(let i = 0; i < 3; i++){
+    const t = 0.15 + rand()*0.7, rv = rivers[i % 2];
+    const vx = rv(t), vy = t*H;
+    const x = vx + (rand() < 0.5 ? -1 : 1)*(26 + rand()*20), y = vy + (rand() - 0.5)*24;
+    tiled(ctx, H, y, yy => drillRig(ctx, x, yy, vx, yy + (vy - y), rngFor(6300 + i)));
+  }
+
+  // Ash streaks, combed one way like the sea's ripples were.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 34; i++){
+    const x = rand()*W, y = rand()*H, l = 10 + rand()*24;
+    ctx.strokeStyle = rgba(i % 2 ? EMBER.ash : EMBER.ashLit, 0.08 + rand()*0.07);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath();
+      ctx.moveTo(x, yy); ctx.lineTo(x - l*0.9, yy + l*0.45);
+      ctx.stroke();
+    });
+  }
+
+  // Embers: the only loose sparks of colour, thin on the ground.
+  for(let i = 0; i < 26; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 3 ? EMBER.lava : EMBER.lavaCore, 0.25 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.5, 1.5));
+  }
+}
+
+/*
+ * THE FORGE-CITY - the once-layer. Their works: a vast caldera with a lava
+ * lake for a heart, the fortified city ringed around it, feed pipes drinking
+ * straight from the melt. Its ash apron settles it onto the tile wherever
+ * the scroll has carried the floor, the same trick the sunken flagship used.
+ */
+function drawForgecity(ctx, W, H, p, rand){
+  const cx = W*0.52, cy = H*0.48, R = W*0.30;
+
+  // The ash it has settled over everything downwind.
+  const apron = ctx.createRadialGradient(cx, cy, R*0.4, cx, cy, R*2.1);
+  apron.addColorStop(0, rgba(EMBER.ash, 0.30));
+  apron.addColorStop(0.6, rgba(EMBER.ash, 0.14));
+  apron.addColorStop(1, rgba(EMBER.ash, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.arc(cx, cy, R*2.1, 0, TAU); ctx.fill();
+
+  // The caldera ring: a mountain wall with ridges radiating down its flanks.
+  const ring = ctx.createRadialGradient(cx, cy, R*0.55, cx, cy, R*1.15);
+  ring.addColorStop(0, rgba(EMBER.basaltLit, 0));
+  ring.addColorStop(0.45, EMBER.basaltLit);
+  ring.addColorStop(0.75, EMBER.basalt);
+  ring.addColorStop(1, rgba(EMBER.crust, 0));
+  ctx.fillStyle = ring;
+  ctx.beginPath(); ctx.arc(cx, cy, R*1.15, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(EMBER.crust, 0.7); ctx.lineWidth = 1.2;
+  for(let i = 0; i < 26; i++){
+    const a = (i/26)*TAU + rand()*0.1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a)*R*0.66, cy + Math.sin(a)*R*0.66);
+    ctx.lineTo(cx + Math.cos(a)*R*(1.0 + rand()*0.12), cy + Math.sin(a)*R*(1.0 + rand()*0.12));
+    ctx.stroke();
+  }
+
+  // The lake: the brightest thing on the whole world.
+  const lake = ctx.createRadialGradient(cx, cy, 0, cx, cy, R*0.55);
+  lake.addColorStop(0, EMBER.lavaCore);
+  lake.addColorStop(0.45, EMBER.lava);
+  lake.addColorStop(0.85, EMBER.lavaDeep);
+  lake.addColorStop(1, EMBER.lavaDark);
+  ctx.fillStyle = lake;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.55, 0, TAU); ctx.fill();
+  // crust plates drifting on it
+  ctx.fillStyle = rgba(EMBER.crust, 0.55);
+  for(let i = 0; i < 9; i++){
+    const a = rand()*TAU, d = rand()*R*0.4;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rand()*TAU);
+    ctx.beginPath();
+    ctx.moveTo(-8 - rand()*6, 0); ctx.lineTo(0, -5 - rand()*4);
+    ctx.lineTo(8 + rand()*6, 0); ctx.lineTo(0, 5 + rand()*4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  /*
+   * The city, on the rim: block after block of their architecture riding
+   * the ring, feed pipes drinking from the lake, warning lights, one wall.
+   * Angular and red-lit - the same brand their fortress flies.
+   */
+  // The wall first, so the city stands inside something.
+  ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  for(let i = 0; i <= 12; i++){
+    const a = (i/12)*TAU;
+    const x = cx + Math.cos(a)*R*1.06, y = cy + Math.sin(a)*R*1.06;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = EMBER.warn;
+  for(let i = 0; i < 12; i += 2){
+    const a = (i/12)*TAU;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a)*R*1.06, cy + Math.sin(a)*R*1.06, 1.7, 0, TAU); ctx.fill();
+  }
+
+  for(let i = 0; i < 14; i++){
+    const a = (i/14)*TAU + 0.1;
+    const d = R*(0.76 + (i % 3)*0.10);
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    const bw = 18 + (i % 4)*7, bh = 13 + ((i + 1) % 3)*6;
+    ctx.fillStyle = rgba("#01060a", 0.5);
+    ctx.fillRect(x - bw/2 + 3, y - bh/2 + 3, bw, bh);      // its shadow, sunward
+    ctx.fillStyle = "#26222c";
+    ctx.fillRect(x - bw/2, y - bh/2, bw, bh);
+    ctx.fillStyle = "#413a4a";
+    ctx.fillRect(x - bw/2, y - bh/2, bw, 4);
+    // lit windows, forge-orange - the shift never ends
+    ctx.fillStyle = EMBER.lava;
+    const wn = 2 + (i % 3);
+    for(let q = 0; q < wn; q++)
+      ctx.fillRect(x - bw/2 + 3 + q*(bw - 6)/wn, y, 2.5, 2.5);
+    // every third block is a stack, venting
+    if(i % 3 === 0){
+      ctx.fillStyle = "#26222c";
+      ctx.beginPath(); ctx.arc(x, y - bh/2 - 3, 3.5, 0, TAU); ctx.fill();
+      const sm = ctx.createRadialGradient(x - 5, y - bh/2 - 12, 0, x - 5, y - bh/2 - 12, 14);
+      sm.addColorStop(0, rgba(EMBER.ashLit, 0.35));
+      sm.addColorStop(1, rgba(EMBER.ashLit, 0));
+      ctx.fillStyle = sm;
+      ctx.beginPath(); ctx.arc(x - 5, y - bh/2 - 12, 14, 0, TAU); ctx.fill();
+    }
+    // and every fourth, a red warning eye
+    if(i % 4 === 0){
+      ctx.fillStyle = EMBER.warn;
+      ctx.beginPath(); ctx.arc(x + bw/2 - 1, y - bh/2 - 1, 1.6, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The feed pipes: dark casings drinking at the lake's edge, a glowing
+  // joint at each end - machinery over the melt, not more melt.
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.55;
+    const x0 = cx + Math.cos(a)*R*0.48, y0 = cy + Math.sin(a)*R*0.48;
+    const x1 = cx + Math.cos(a)*R*0.80, y1 = cy + Math.sin(a)*R*0.80;
+    ctx.strokeStyle = "#26222c"; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    for(const [jx, jy] of [[x0, y0], [x1, y1]]){
+      const jg = ctx.createRadialGradient(jx, jy, 0, jx, jy, 7);
+      jg.addColorStop(0, rgba(EMBER.lava, 0.9));
+      jg.addColorStop(1, rgba(EMBER.lava, 0));
+      ctx.fillStyle = jg;
+      ctx.beginPath(); ctx.arc(jx, jy, 7, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#413a4a";
+      ctx.beginPath(); ctx.arc(jx, jy, 2.6, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The landing aprons outside the wall - where the Foundry's haulers load.
+  for(let i = 0; i < 2; i++){
+    const a = i ? 0.9 : 3.6;
+    const x = cx + Math.cos(a)*R*1.34, y = cy + Math.sin(a)*R*1.34;
+    ctx.fillStyle = rgba(EMBER.ash, 0.35);
+    ctx.fillRect(x - 14, y - 10, 28, 20);
+    ctx.strokeStyle = rgba(EMBER.ashLit, 0.55); ctx.lineWidth = 1;
+    ctx.strokeRect(x - 14, y - 10, 28, 20);
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.stroke();
+    ctx.fillStyle = EMBER.warn;
+    ctx.beginPath(); ctx.arc(x - 11, y - 7, 1.3, 0, TAU); ctx.fill();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -3319,6 +3662,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "ruin") drawRuin(px, W, H, pr, rand);
     else if(pr.k === "seabed") drawSeabed(px, W, H, pr, rand);
     else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
+    else if(pr.k === "emberfloor") drawEmberfloor(px, W, H, pr, rand);
+    else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
   });
 }
 

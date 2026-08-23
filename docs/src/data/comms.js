@@ -383,6 +383,19 @@ const COMMS = {
     "Mind the water, {you} - every shot swims slower. Theirs too.",
     "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.",
   ]},
+  volcanoStart: { speaker:"control", cooldown:999, lines:[
+    "This world feeds their furnaces, {you} - and it is DONE being quiet. Watch the ground.",
+    "When the floor roars, don't be over it, {you}. When THEY are - enjoy the show.",
+    "The planet is on our side today, {you}. Their armour melts. Yours dodges.",
+  ]},
+  volcanoRoar: { speaker:"control", cooldown:40, lines:[
+    "The ground is ROARING, {you} — get out from over the glow!",
+    "That glow means UP, {you} — an eruption's coming!",
+  ]},
+  volcanoMelt: { speaker:"control", cooldown:50, lines:[
+    "It MELTED them! Bring them over the vents, {you} — let the world fight!",
+    "Their metal can't take the planet, {you}. Keep feeding it!",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",

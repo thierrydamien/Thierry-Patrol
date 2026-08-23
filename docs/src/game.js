@@ -412,6 +412,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.sky29) SF.sky29.begin();
   SF.dive.reset();                        // the sea drains until the dive
   if(mission.dive) SF.dive.begin();
+  SF.volcano.reset();                     // the ground sleeps until the forge world
+  if(mission.volcano) SF.volcano.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -798,6 +800,7 @@ function startMission(missionIndex, difficultyId){
              : mission.ferry ? "ferryStart"
              : mission.wrap ? "wrapStart"
              : mission.dive ? "diveStart"
+             : mission.volcano ? "volcanoStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -2701,6 +2704,56 @@ function update(dt, timeMs){
   }
 
   /*
+   * THE FORGE WORLD. The eruption's costs live here, beside the flare's,
+   * because this is where onPlayerHit and onEnemyKilled exist - volcano.js
+   * owns what a bomb looks like, this block owns what it does.
+   *
+   * Both sides pay the same molten price. A bomb that reaches a ship spends
+   * itself on the hull (one hit, shields and invuln respected, exactly as an
+   * enemy shot would be); an enemy it touches MELTS, routed through the
+   * flare's no-pay path so a melted carrier still frees its pilot and no
+   * coin falls out of a kill nobody made. The melt is still worth flying
+   * for: it clears the sky, and the level's own star (objectives: "melt")
+   * counts every one.
+   */
+  if(run.mission.volcano && SF.volcano.active() && !run.ended){
+    const bombs = SF.volcano.liveBombs();
+    for(let bi = 0; bi < bombs.length; bi++){
+      const b = bombs[bi];
+      const seats = game.world.livePlayers();
+      for(let si = 0; si < seats.length && !b.spent; si++){
+        const q = seats[si];
+        if(!q.alive || q.invuln > 0) continue;
+        const dx = q.x - b.x, dy = q.y - b.y, rr = b.r + 13;
+        if(dx*dx + dy*dy < rr*rr){
+          b.spent = true;                       // it splashed on the hull
+          callbacks.onPlayerHit("lava", null, q);
+        }
+      }
+      if(b.spent) continue;
+      // Molten rock does not spend itself on metal - one bomb can melt a
+      // whole knot of them, which is the whole reason luring works.
+      const items = game.world.enemies.items;
+      const caught = [];
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(!e.alive || e.entering || e.hazard || e.attached || e.fromBoss) continue;
+        const dx = e.x - b.x, dy = e.y - b.y, rr = b.r + (e.r || 14);
+        if(dx*dx + dy*dy < rr*rr) caught.push(e);
+      }
+      for(let i = 0; i < caught.length; i++){
+        const e = caught[i];
+        if(e.counted && !e.fromBoss)
+          run.stats.lavaMelts = (run.stats.lavaMelts || 0) + 1;
+        fx.sparks(e.x, e.y, 10, "#ff8a3c", 160);
+        fx.text(e.x, e.y - 22, T("MELTED!"), "#ff8a3c", 15, true);
+        callbacks.onEnemyKilled(e, null, false, true);
+        SF.comms.say("volcanoMelt");
+      }
+    }
+  }
+
+  /*
    * THE STAMPEDE. The biggest thing on screen is a tool rather than a target.
    *
    * `hazard:true` on the archetype is doing nearly all the work and needs no
@@ -3409,6 +3462,7 @@ function update(dt, timeMs){
   // Sky 29: the painting, the last stroke and the photo live in sky29.js.
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
+  if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -3811,6 +3865,7 @@ function draw(timeMs){
   SF.prologue.drawSky(ctx, timeMs, VW, VH);          // Earth: eclipse, rings, the thief
   SF.homecoming.drawSky(ctx, timeMs, VW, VH);        // the road home: clouds, then the farm
   SF.dive.drawSky(ctx, timeMs, VW, VH);              // the water column: rays, fish
+  SF.volcano.drawSky(ctx, timeMs, VW, VH);           // the vents: roar, burst, scar
   /*
    * The rewind owns the whole frame while it runs: the live world is over,
    * and drawing it under the replay would show two contradictory skies.
@@ -3940,7 +3995,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

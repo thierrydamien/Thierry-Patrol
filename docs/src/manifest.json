@@ -27,6 +27,7 @@
     "src/backstage.js",
     "src/sky29.js",
     "src/dive.js",
+    "src/volcano.js",
     "src/mirrorduel.js",
     "src/homecoming.js",
     "src/prologue.js",

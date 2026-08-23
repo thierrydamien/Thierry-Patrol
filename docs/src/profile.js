@@ -367,6 +367,20 @@ function migrate(p){
     if((p.reached || 0) >= 34) p.reached += 1;
     p.missionsVer = 10;
   }
+  /*
+   * v11: The Forge World landed as mission 39 - the volcano world, the
+   * fourth surface - pushing the old 39-42 up one. Same single-offset shape
+   * as v10, and like v10 every hand-written mission id (tunes 23/28/32,
+   * devourerDown 32) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 11){
+    for(let id = 42; id >= 39; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 39) p.lastMission += 1;
+    if((p.reached || 0) >= 39) p.reached += 1;
+    p.missionsVer = 11;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

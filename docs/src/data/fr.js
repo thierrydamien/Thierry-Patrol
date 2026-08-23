@@ -640,6 +640,36 @@ SF.i18n.register("fr", { name: "Français", s: {
   "Attention à l'eau, {you} — chaque tir nage plus lentement. Les leurs aussi.",
 "The whole sky is lying on the floor of this sea, {you}. Bring it home coin by coin.":
   "Tout le ciel est couché au fond de cette mer, {you}. Ramène-le à la maison, pièce par pièce.",
+
+/* ----- The Forge World (mission 39) ----- */
+"The Forge World": "Le Monde-Forge",
+"The ground fights back": "le sol contre-attaque",
+"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.":
+  "La Fonderie ne fabrique pas son feu, {you} — elle le FORE dans ce monde, et ce monde en a ASSEZ. Quand le sol gronde, écarte-toi de la lueur. Et souviens-toi que leurs vaisseaux ne sont que du métal : ce qui te brûle les fait FONDRE. Laisse la planète se battre à tes côtés.",
+"The ground erupts — USE it!": "Le sol entre en éruption — SERS-T'EN !",
+"Emberfall": "Pluie de Braises",
+"THE ANGRY WORLD": "LE MONDE EN COLÈRE",
+"The Foundry's furnaces never go out, {you} - because this world feeds them. Their rigs drill straight into its veins, and the planet has been growling about it for years.":
+  "Les fourneaux de la Fonderie ne s'éteignent jamais, {you} — parce que ce monde les nourrit. Leurs foreuses plongent droit dans ses veines, et la planète gronde depuis des années.",
+"Today it stops growling. When the ground glows and ROARS, get out from over it - then bring their ships back across the vent and watch. What burns you, MELTS them.":
+  "Aujourd'hui, elle ne se contente plus de gronder. Quand le sol s'illumine et RUGIT, écarte-toi — puis ramène leurs vaisseaux au-dessus du cratère et regarde. Ce qui te brûle les fait FONDRE.",
+"BRAVE THE FIRE": "AFFRONTE LE FEU",
+"Let the volcano melt 10": "Laisse le volcan en faire fondre 10",
+"This world feeds their furnaces, {you} - and it is DONE being quiet. Watch the ground.":
+  "Ce monde nourrit leurs fourneaux, {you} — et il a FINI de se taire. Surveille le sol.",
+"When the floor roars, don't be over it, {you}. When THEY are - enjoy the show.":
+  "Quand le sol rugit, ne reste pas au-dessus, {you}. Quand ce sont EUX qui y sont… profite du spectacle.",
+"The planet is on our side today, {you}. Their armour melts. Yours dodges.":
+  "La planète est de notre côté aujourd'hui, {you}. Leur blindage fond. Le tien esquive.",
+"The ground is ROARING, {you} — get out from over the glow!":
+  "Le sol RUGIT, {you} — écarte-toi de la lueur !",
+"That glow means UP, {you} — an eruption's coming!":
+  "Cette lueur veut dire ÇA MONTE, {you} — une éruption arrive !",
+"It MELTED them! Bring them over the vents, {you} — let the world fight!":
+  "Ça les a FAIT FONDRE ! Amène-les au-dessus des cratères, {you} — laisse le monde se battre !",
+"Their metal can't take the planet, {you}. Keep feeding it!":
+  "Leur métal ne supporte pas la planète, {you}. Continue de la nourrir !",
+"MELTED!": "FONDU !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",

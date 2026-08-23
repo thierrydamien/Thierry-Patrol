@@ -143,6 +143,17 @@ const STORY = {
     button:"DIVE",
   },
 
+  /* The pre-flight page for The Forge World - replays every visit, like
+     every pre-flight page (ui.js PREFLIGHT_STORY). */
+  forgeWorld: {
+    title: "THE ANGRY WORLD",
+    panels: [
+      { art:"drills",   text:"The Foundry's furnaces never go out, {you} - because this world feeds them. Their rigs drill straight into its veins, and the planet has been growling about it for years." },
+      { art:"eruption", text:"Today it stops growling. When the ground glows and ROARS, get out from over it - then bring their ships back across the vent and watch. What burns you, MELTS them." },
+    ],
+    button:"BRAVE THE FIRE",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [
