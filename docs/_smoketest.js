@@ -10031,6 +10031,64 @@ async function run(){
   }
 
   /*
+   * THE COIN CEILING. The family's verdict on the hard tiers was "the number
+   * of coins on screen is insane", and it measured out: a maxed ship on
+   * NIGHTMARE held 156 live coins and filled all 160 slots of a pickup pool
+   * that also has to hold the stranded pilots. Two causes - a fat payout burst
+   * into four coins, and nothing ever bounded the total - and one thing that
+   * must not change: the money. Pinned here in both directions.
+   */
+  {
+    const W = SF.game.world, P = SF.profile, C = SF.config;
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(openGates(P.blank("Purse")), C.DIFFICULTY_BY_ID.pilot));
+    const coins = () => W.pickups.items.filter(i => i.alive && i.kind === "coin");
+    const total = () => coins().reduce((n, c) => n + c.value, 0);
+
+    W.pickups.killAll();
+    W.dropCoins(300, 300, 7087);
+    check("a fountain pays out every penny it was given",
+      total() === 7087 && coins().length > 1 && coins().length <= 6);
+
+    W.pickups.killAll();
+    W.dropCoins(300, 300, 74, 1);
+    check("an ordinary kill is one coin, whatever it is worth",
+      coins().length === 1 && total() === 74);
+
+    /* The ceiling: past it a coin merges instead of multiplying, and the
+       money is identical either way. */
+    W.pickups.killAll();
+    let paid = 0;
+    for(let i = 0; i < 400; i++){ W.dropCoins(40 + (i*37) % 520, 60 + (i*53) % 700, 9, 1); paid += 9; }
+    check("the sky can never hold more coins than the ceiling",
+      coins().length <= 26 && coins().length >= 20);
+    check("merging carries the money rather than losing it", total() === paid);
+    check("...and the pickup pool is nowhere near its cap",
+      W.pickups.items.filter(i => i.alive).length < 60);
+
+    /* A stranded pilot is never quietly overwritten by the money. */
+    W.pickups.killAll();
+    const pod = W.spawnPickup("rescue", 300, 200);
+    for(let i = 0; i < 600; i++) W.dropCoins(40 + (i*37) % 520, 60 + (i*53) % 700, 9, 1);
+    check("a stranded pilot survives any amount of money", pod.alive && pod.kind === "rescue");
+    check("the pickup pool has the same guard the enemy pool has", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+      return /this\.pickups\.onSteal = /.test(src) && /this\.onPickupStolen = null;/.test(src) &&
+             /game\.world\.onPickupStolen = /.test(fs.readFileSync(path.join(__dirname, "src/game.js"), "utf8"));
+    })());
+    check("a pod stolen at the cap leaves by the same door as one that fell", (() => {
+      let told = null;
+      const prev = W.onPickupStolen;
+      W.onPickupStolen = (it) => { told = it.kind; if(prev) prev(it); };
+      W.onPickupStolen(W.spawnPickup("rescue", 10, 10));
+      W.onPickupStolen = prev;
+      return told === "rescue";
+    })());
+    W.pickups.killAll();
+    W.reset();
+  }
+
+  /*
    * THE MIRAGE - the level whose enemy is half not there. Tested end to
    * end: the stop is where the story says, an old save rides the insert,
    * a fighter brings a twin that is uncounted and unarmed, a round spent on

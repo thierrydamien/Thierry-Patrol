@@ -308,6 +308,15 @@ const BULLET_TIERS = [
 ];
 /** The fastest the guns can cycle, whatever is stacked on them: seconds per volley. */
 const FIRE_FLOOR = 0.125;
+/*
+ * How many coins may be loose in the sky at once (see World.spawnCoin). Above
+ * this, a new coin merges into the nearest one instead of adding an object.
+ * Set from measurement, not taste: ordinary PILOT play averages 14 live coins
+ * and never notices this, while the tiers that drew the complaint - 94 live
+ * coins on VETERAN, 156 on NIGHTMARE - are pulled back to a screen a child
+ * can still read the enemies through.
+ */
+const COIN_BUDGET = 26;
 
 const REFERENCE_DPS = 45;
 /*
@@ -369,6 +378,18 @@ class World {
     this.enemies.onSteal = (e) => { e.escaped = true; if(this.onEnemyStolen) this.onEnemyStolen(e); };
     this.onEnemyStolen = null;
     this.pickups      = new Pool(() => ({ alive:false, x:0,y:0,vx:0,vy:0,kind:"coin",value:0,life:0,angle:0,data:null }), 160);
+    /*
+     * The same guard the enemy pool has, and for the same reason. At the cap
+     * Pool.spawn overwrites the oldest LIVE slot with no word to anyone, and
+     * this pool holds rescue pods and supply crates as well as coins - so a
+     * screenful of coins could silently delete a stranded pilot, and
+     * `rescuesTotal` is fixed at mission start, which makes "rescue every
+     * stranded pilot" quietly unwinnable. Measured: a maxed ship on NIGHTMARE
+     * filled all 160 slots. The coin budget below is what stops it happening;
+     * this is the door out if it ever does anyway.
+     */
+    this.pickups.onSteal = (it) => { if(this.onPickupStolen) this.onPickupStolen(it); };
+    this.onPickupStolen = null;
     this.grid         = new SpatialGrid(VW, VH, 60);
     this.gridWidth    = VW;   // so a field change can be noticed in reset()
     this.player       = null;
@@ -1268,18 +1289,68 @@ class World {
     p.vy = kind === "rescue" ? 42 : kind === "supply" ? 44 : rand(40, 80);
     p.value = (data && data.value) || 0;
     p.data = data || null;
+    p.merged = 1;    // how many coins this one is: see spawnCoin
     p.bounces = 3;   // BOUNCY COINS' budget; inert unless that mod is rolled
     p.floatFor = 0;  // a dropped crate hovers; the pool must not carry that over
     return p;
   }
 
-  /** Coins burst out of a kill and are worth flying for - the reason Tractor Beam exists. */
-  dropCoins(x, y, amount){
-    let left = amount;
-    let guard = 0;
-    while(left > 0 && guard++ < 6){
-      const chunk = left > 12 ? Math.ceil(left/2) : left;
-      const c = this.spawnPickup("coin", x + rand(-11,11), y + rand(-11,11), { value: chunk });
+  /**
+   * One coin, subject to the budget.
+   *
+   * THE SKY HAS A COIN CEILING. Coins are the only pickup a player earns by
+   * the dozen, and their number is the product of three things that all grow
+   * at once: a hard tier flies 3.6x the ships, the payout per head rises with
+   * the tier and the wallet, and a fat payout used to burst into four
+   * separate coins. Measured on The Gauntlet with a maxed ship: 56 live coins
+   * on PILOT, 94 on VETERAN and 156 on NIGHTMARE - against a pickup pool of
+   * 160 that also has to hold the stranded pilots.
+   *
+   * So past the budget a coin does not become a new object: its value is
+   * added to the nearest coin already on screen. Not one penny is lost - the
+   * money is the same, it is just carried by fewer things - and the count
+   * cannot climb past the ceiling however hard the sky is. Coins have never
+   * been drawn by value (a 3 and a 3,000 are the same sprite), so a merged
+   * coin looks exactly like what it is: a coin worth picking up.
+   */
+  spawnCoin(x, y, value){
+    let live = 0, near = null, nearD = Infinity;
+    const items = this.pickups.items;
+    for(let i = 0; i < items.length; i++){
+      const it = items[i];
+      if(!it.alive || it.kind !== "coin") continue;
+      live++;
+      const d = (it.x - x)*(it.x - x) + (it.y - y)*(it.y - y);
+      if(d < nearD){ nearD = d; near = it; }
+    }
+    if(live >= COIN_BUDGET && near){
+      near.value += value;
+      near.merged++;
+      return near;
+    }
+    return this.spawnPickup("coin", x, y, { value });
+  }
+
+  /**
+   * Coins burst out of a kill and are worth flying for - the reason Tractor
+   * Beam exists.
+   *
+   * `spread` is how many coins this drop may become, and it says what KIND of
+   * moment this is rather than how much money it is worth. A boss going down
+   * is a fountain; an ordinary kill is one coin. It used to be neither: the
+   * split keyed off the number alone (`> 12`, halving), and since the same
+   * grunt pays 6 on PILOT and 74 to a maxed ship on NIGHTMARE, inflation had
+   * quietly turned every kill on the hard tiers into a four-coin burst.
+   */
+  dropCoins(x, y, amount, spread){
+    let left = Math.round(amount);
+    const most = Math.max(1, spread == null ? 6 : spread);
+    for(let n = 0; left > 0 && n < most; n++){
+      // The last coin takes everything that is left. It used to stop after
+      // six chunks and drop the remainder on the floor - a boss worth 7,087
+      // paid 6,978 and the missing 109 went nowhere.
+      const chunk = (n === most - 1 || left <= 12) ? left : Math.ceil(left/2);
+      const c = this.spawnCoin(x + rand(-11,11), y + rand(-11,11), chunk);
       c.vx = rand(-95, 95); c.vy = rand(-75, 25);
       left -= chunk;
     }

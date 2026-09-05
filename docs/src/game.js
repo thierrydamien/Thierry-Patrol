@@ -1341,7 +1341,10 @@ const callbacks = {
       fx.text(e.x, e.y - 30, "WANTED! +" + SF.ui.money(coin), "#ffd23f", 19, true);
       audio.play("coin", true, e.x);
     }
-    game.world.dropCoins(e.x, e.y, coin);
+    // One coin per kill. A fountain is for a boss going down, not for a grunt
+    // (entities.js dropCoins) - four coins a head is what made the hard tiers
+    // unreadable, and the money is identical either way.
+    game.world.dropCoins(e.x, e.y, coin, 1);
     }
 
     if(run.mods.confetti){
@@ -1446,7 +1449,7 @@ const callbacks = {
     if(!run || run.ended) return;
     run.stats.grazes = (run.stats.grazes || 0) + 1;
     const coin = Math.max(1, Math.round(4 * run.payScale * game.world.player.moneyMult));
-    game.world.dropCoins(e.x, e.y, coin);
+    game.world.dropCoins(e.x, e.y, coin, 1);       // a graze is a moment, not a fountain
     fx.ring(e.x, e.y, 26, "#7cc4ff", 2.5, 0.22);
     fx.text(e.x, e.y - 22, "CLOSE!", "#7cc4ff", 16, true);
     audio.play("coin", false, e.x);
@@ -2045,6 +2048,18 @@ function update(dt, timeMs){
   behaviourCtx.onEscape = callbacks.onEnemyEscaped;
   // A pool-cap eviction is an escape as far as the books are concerned.
   game.world.onEnemyStolen = callbacks.onEnemyEscaped;
+  /*
+   * ...and the same for the pickup pool, which holds the stranded pilots. A
+   * pod overwritten at the cap used to vanish with no word, against a
+   * `rescuesTotal` fixed at mission start - an unwinnable star and no way for
+   * a child to know why. The coin budget should mean this never fires; if it
+   * ever does, the pod leaves by the same door as one that fell off the
+   * bottom, and the radio says so.
+   */
+  game.world.onPickupStolen = (it) => {
+    if(it.kind === "rescue" || it.kind === "supply" || it.kind === "crate")
+      onPickupCollected(it, true);
+  };
   behaviourCtx.onEnemyKilled = callbacks.onEnemyKilled;
   behaviourCtx.onBossHit = callbacks.onBossHit;
   behaviourCtx.onBossDead = finalBossBlast;
