@@ -315,7 +315,10 @@ function packEnemies(pool){
     const e = items[i];
     if(!e.alive) continue;
     out.push([e.netId || (e.netId = ++netSeq), e.typeId, R(e.x), R(e.y),
-              R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100)]);
+              R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100),
+              // The Mirage: the guest paints from this list, so a double has
+              // to arrive as a double - no shadow, and drawn as heat.
+              e.mirage ? 1 : 0]);
   }
   return out;
 }
@@ -460,6 +463,7 @@ function applySnapshot(world){
     } catch(err){ continue; }
     if(!e) continue;
     e.netId = +id; e.hp = row[4]; e.angle = row[6]/100; e.entering = false;
+    if(row[8]){ e.mirage = true; e.fireTimer = Infinity; e.diver = false; }
   }
 
   const fillBullets = (pool, rows) => {

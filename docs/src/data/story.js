@@ -154,6 +154,17 @@ const STORY = {
     button:"BRAVE THE FIRE",
   },
 
+  /* The pre-flight page for The Mirage - replays every visit, like every
+     pre-flight page (ui.js PREFLIGHT_STORY). */
+  theMirage: {
+    title: "THE LYING SKY",
+    panels: [
+      { art:"dunes", text:"Past the drowned sky the water runs out, {you}, and the sand begins. They planted mirror towers out here - hundreds of them, all tipped at the sun - and the air over the dunes has been lying ever since." },
+      { art:"twins", text:"Most ships out there fly with a twin that isn't real. Shoot a mirage and your shot vanishes into hot air. But a lie can't cast a shadow: look at the sand, find the dark shape under a ship, and shoot THAT one." },
+    ],
+    button:"TRUST THE SHADOW",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [

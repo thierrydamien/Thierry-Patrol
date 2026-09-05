@@ -82,6 +82,10 @@ class WaveDirector {
           else this.waiting[s.pair] = spawned;
         }
         if(spawned.counted) this.spawnedCount++;
+        // The Mirage: most fighters bring their double with them - a
+        // second pooled ship that is nothing (mirage.js decides who).
+        if(this.mission.mirage && SF.mirage && SF.mirage.active())
+          SF.mirage.twin(this.world, spawned, this.difficulty);
         this.pending.splice(i, 1);
       }
     }
@@ -267,6 +271,17 @@ function resolve(world, ctxObj, dt){
       if(!at) return false;
       const hx = at.x, hy = at.y;
 
+      /*
+       * THE MIRAGE: hot air. The round is spent on nothing, and the nothing
+       * says so (mirage.js). Tested before the shield: a lie inside a
+       * Guardian's bubble is still a lie, and the shot still finds nothing.
+       */
+      if(e.mirage){
+        b.x = hx; b.y = hy; b.alive = false;
+        if(ctxObj.onMirageHit) ctxObj.onMirageHit(e, b, hx, hy);
+        return true;
+      }
+
       // Inside a Guardian's bubble nothing gets through - the shot splashes
       // off and the player is told, loudly, to shoot the Guardian instead.
       if(e.shielded){
@@ -316,6 +331,14 @@ function resolve(world, ctxObj, dt){
 
       e.hp -= b.dmg;
       e.flash = 1;
+      /*
+       * THE MIRAGE's star is decided by the FIRST round to land on a pair:
+       * was the real one hit while its twin was still untouched, in the
+       * field? Judged here, on the first hit, rather than at the kill, so a
+       * wing-round from a spread shot clipping the fake a moment later
+       * cannot take back a choice a child already made with their eyes.
+       */
+      if(e.mirageTwin && !e.firstHit){ e.firstHit = true; e.aimedFirst = SF.mirage.seenThrough(e); }
       /*
        * Landing a hit has to be unmissable from the sofa. Sparks spray back
        * along the shot, a hard white ring pops at the contact point, and the
@@ -519,6 +542,9 @@ function resolve(world, ctxObj, dt){
          * which is exactly right: the ride is not a dodge either.
          */
         if(e.attached) continue;
+        // A mirage is air. Flying through one is the cheapest lesson on its
+        // level, and mirage.js draws the ripple that teaches it.
+        if(e.mirage) continue;
         const rr = e.r + p.r;
         const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
         /*

@@ -670,6 +670,37 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Their metal can't take the planet, {you}. Keep feeding it!":
   "Leur métal ne supporte pas la planète, {you}. Continue de la nourrir !",
 "MELTED!": "FONDU !",
+
+/* ----- The Mirage (mission 35) ----- */
+"The Mirage": "Le Mirage",
+"trust the shadow": "fie-toi à l'ombre",
+"Past the sea the sky dried out, {you} - and they've planted MIRROR TOWERS in the sand to bake the air until it lies. Every ship you see may have a twin that isn't there. Shots go straight through a mirage. But a lie casts no shadow: look at the sand, and shoot what's real.":
+  "Passé la mer, le ciel s'est asséché, {you} — et ils ont planté des TOURS-MIROIRS dans le sable pour cuire l'air jusqu'à ce qu'il mente. Chaque vaisseau que tu vois peut avoir un jumeau qui n'existe pas. Les tirs traversent un mirage. Mais un mensonge n'a pas d'ombre : regarde le sable, et tire sur ce qui est vrai.",
+"Shoot the ones with SHADOWS!": "Tire sur ceux qui ont une OMBRE !",
+"Sunstruck": "Plein Soleil",
+"THE LYING SKY": "LE CIEL QUI MENT",
+"Past the drowned sky the water runs out, {you}, and the sand begins. They planted mirror towers out here - hundreds of them, all tipped at the sun - and the air over the dunes has been lying ever since.":
+  "Passé le ciel noyé, l'eau s'arrête, {you}, et le sable commence. Ils ont planté des tours-miroirs par ici — des centaines, toutes tournées vers le soleil — et depuis, l'air au-dessus des dunes ment.",
+"Most ships out there fly with a twin that isn't real. Shoot a mirage and your shot vanishes into hot air. But a lie can't cast a shadow: look at the sand, find the dark shape under a ship, and shoot THAT one.":
+  "La plupart des vaisseaux là-bas volent avec un jumeau qui n'est pas réel. Tire sur un mirage et ton tir disparaît dans l'air chaud. Mais un mensonge ne peut pas faire d'ombre : regarde le sable, trouve la forme sombre sous un vaisseau, et tire sur CELUI-LÀ.",
+"TRUST THE SHADOW": "FIE-TOI À L'OMBRE",
+"See through 30 mirages": "Démasque 30 mirages",
+"The air out here LIES, {you}. Every real thing casts a shadow - look at the sand before you shoot.":
+  "Ici, l'air MENT, {you}. Tout ce qui est vrai a une ombre — regarde le sable avant de tirer.",
+"Their mirror towers are cooking the sky, {you}. Half of what you see isn't there. The shadows are.":
+  "Leurs tours-miroirs font cuire le ciel, {you}. La moitié de ce que tu vois n'existe pas. Les ombres, si.",
+"Shadow first, shoot second, {you}. A mirage can't make one.":
+  "L'ombre d'abord, le tir ensuite, {you}. Un mirage n'en a pas.",
+"That one wasn't real, {you} — no shadow on the sand!":
+  "Celui-là n'était pas vrai, {you} — pas d'ombre sur le sable !",
+"Hot air, {you}. Look down: the real one has a shadow.":
+  "De l'air chaud, {you}. Regarde en bas : le vrai a une ombre.",
+"You saw right through it, {you}! Shadow first, every time.":
+  "Tu l'as démasqué, {you} ! L'ombre d'abord, à chaque fois.",
+"That's it, {you} — you shot the one with the shadow!":
+  "C'est ça, {you} — tu as tiré sur celui qui a une ombre !",
+"MIRAGE!": "MIRAGE !",
+"SEEN THROUGH!": "DÉMASQUÉ !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",

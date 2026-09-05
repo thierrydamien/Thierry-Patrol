@@ -414,6 +414,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.dive) SF.dive.begin();
   SF.volcano.reset();                     // the ground sleeps until the forge world
   if(mission.volcano) SF.volcano.begin();
+  SF.mirage.reset();                      // the heat waits for the desert
+  if(mission.mirage) SF.mirage.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -521,6 +523,8 @@ function startMission(missionIndex, difficultyId){
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
     ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
+    // The Mirage: real ships destroyed while their untouched twin still shimmered.
+    seenThrough: 0,
     stars: 0,
   };
 
@@ -801,6 +805,7 @@ function startMission(missionIndex, difficultyId){
              : mission.wrap ? "wrapStart"
              : mission.dive ? "diveStart"
              : mission.volcano ? "volcanoStart"
+             : mission.mirage ? "mirageStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -1127,6 +1132,13 @@ const callbacks = {
    */
   onEnemyKilled(e, bullet, byRamming, noPay, who){
     const run = game.run;
+    /*
+     * THE MIRAGE. A double that "dies" - to a bomb, a chain, a Wacky Sky
+     * cascade, anything that reaches this door - was never there: no coin,
+     * no score, no tally, no pilot. It dissolves and the ledger never hears
+     * of it. One guard at the one door, so no kill path can ever pay for air.
+     */
+    if(e.mirage){ SF.mirage.dissolve(e); return; }
     e.alive = false;
     /*
      * WHOSE KILL. In co-op two children are shooting into the same sky and
@@ -1175,6 +1187,21 @@ const callbacks = {
       if(run.spot && !run.spot.lit) run.stats.darkKills++;
       if(run.narrows && run.narrows.w > VW*0.115) run.stats.tightKills++;
       if(run.nightfall && run.nightfall.k > 0.5) run.stats.lateKills++;
+      /*
+       * The Mirage's star: the first round to land on the pair found the
+       * real one while its twin was still untouched (systems.js judges that
+       * on the hit; this is where it pays) - you looked at the sand first.
+       * Either way the lie comes apart with the ship that cast it, here
+       * rather than a frame later, so the cause reads on screen.
+       */
+      if(run.mission.mirage && e.mirageTwin){
+        if(e.aimedFirst){
+          run.stats.seenThrough++;
+          fx.text(e.x, e.y - e.r - 24, T("SEEN THROUGH!"), "#fff1c4", 15, true);
+          SF.comms.say("mirageSeen");
+        }
+        SF.mirage.onRealGone(e);
+      }
     }
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
@@ -1983,6 +2010,7 @@ const behaviourCtx = {
   world: null,            // minelayers, hives and menders reach into the field
   onEscape: null,
   onEnemyKilled: null, onBossHit: null, onPlayerHit: null, godMode: false,
+  onMirageHit: null,      // the Mirage: a round spent on hot air
 };
 
 function update(dt, timeMs){
@@ -2020,6 +2048,7 @@ function update(dt, timeMs){
   behaviourCtx.onBossDead = finalBossBlast;
   behaviourCtx.onBossPhase = onBossPhase;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
+  behaviourCtx.onMirageHit = run.mission.mirage ? (e, b, hx, hy) => SF.mirage.hit(e, hx, hy) : null;
   behaviourCtx.onGraze = run.mission.nearMiss ? callbacks.onGraze : null;
   behaviourCtx.godMode = game.godMode;
   // The Chorus: guns may only release inside the beat's window, and never
@@ -3463,6 +3492,7 @@ function update(dt, timeMs){
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
+  if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -3872,6 +3902,9 @@ function draw(timeMs){
    * No HUD and no radio either - this is a replay, not a moment of play.
    */
   if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
+  // The desert's shadows belong to the LIVE ships, so they go after the
+  // rewind's claim on the frame: the replay paints its own from the tape.
+  SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -3995,7 +4028,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

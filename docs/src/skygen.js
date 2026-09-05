@@ -668,6 +668,28 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"emberfloor", x:0.50, y:0.50},
             {k:"forgecity",  x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * SUNSTRUCK (The Mirage) - the desert on the far shore of the drowned sky,
+   * and the fifth surface. Appended at the end, same Drawing Board index rule
+   * as every ground before it.
+   *
+   * The brightest floor in the game, and the only one whose LIGHT is the
+   * mechanic: the sun stands high and to the upper left, every dune crest,
+   * rock and tower is lit from there and shadowed down-right, and that is
+   * exactly the light mirage.js throws the ships' shadows by - so a shadow
+   * on the sand reads as sitting ON the sand. A dry riverbed runs the full
+   * height (the trench rule: position and slope agree at the wrap), and
+   * their mirror towers stand over the dunes, all tipped at the sun. The
+   * once-layer is the Sun-Catcher: the mirror field that bakes the air, on
+   * its salt pan. The mirages are not painted here - mirage.js owns
+   * everything that shimmers.
+   */
+  { name:"Sunstruck", surface:true,
+    clouds:["#f2cf8a","#d9a85f","#b8813f"], dust:"#f6dfae", star:"#fff3d6",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"dunes",      x:0.50, y:0.50},
+            {k:"suncatcher", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -3432,6 +3454,383 @@ function drawForgecity(ctx, W, H, p, rand){
   });
 }
 
+/* ---------------------------------------------------------
+   SUNSTRUCK - a desert from above.
+   ---------------------------------------------------------
+   The sea's rule again: one thing crosses the whole floor and everything
+   else answers to it. Here the thing is the SUN. It sits high and to the
+   upper left, so every crest is pale on that side and dark on the other,
+   every rock and shrub and tower throws a shadow down and to the right, and
+   the ships (mirage.js) throw theirs the same way - which is what makes a
+   shadow on this floor read as a fact about the ground rather than a
+   decoration on the sprite. A dry riverbed runs the full height, and their
+   mirror towers stand in the sand: the enemy is in the geography here as
+   well, and it is the reason the air lies. */
+
+const DUNE = {
+  sand:"#d9a85f", sandLit:"#f2cf8a", sandPale:"#f6dfae", sandDark:"#b8813f",
+  shade:"#8a5a2b", shadow:"#2b1a0c",
+  bed:"#c49257", bedDark:"#a3733a", salt:"#fbf1d6",
+  rock:"#7a5a3c", rockLit:"#a8845c", scrub:"#6b6a3a", scrubLit:"#8f8d4e",
+  tower:"#2b2530", towerLit:"#4a4353", mirror:"#e8fbff", glint:"#ffffff", warn:"#ff5d73",
+};
+
+/* How far a thing of height h throws its shadow, and which way: the one
+ * light rule for the whole world, shared with the crest painter below. */
+const SUN_DX = 0.55, SUN_DY = 1.0;
+
+/** A stone with the sun on one side and its shadow on the sand beside it. */
+function duneRock(ctx, x, y, r, rand){
+  const rot = rand()*TAU;
+  ctx.fillStyle = rgba(DUNE.shadow, 0.28);
+  ctx.beginPath(); ctx.ellipse(x + r*0.7*SUN_DX + r*0.3, y + r*0.7*SUN_DY, r*1.05, r*0.7, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.rock;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r*0.8, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.rockLit;
+  ctx.beginPath(); ctx.ellipse(x - r*0.3, y - r*0.32, r*0.5, r*0.36, rot, 0, TAU); ctx.fill();
+}
+
+/** A dry shrub: a few olive strokes, and the small shadow that says it
+ *  stands up off the sand. */
+function duneScrub(ctx, x, y, r, rand){
+  ctx.fillStyle = rgba(DUNE.shadow, 0.2);
+  ctx.beginPath(); ctx.ellipse(x + r*0.5, y + r*0.8, r*0.9, r*0.45, 0, 0, TAU); ctx.fill();
+  ctx.lineCap = "round";
+  for(let i = 0; i < 7; i++){
+    const a = rand()*TAU, l = r*(0.5 + rand()*0.6);
+    ctx.strokeStyle = i % 2 ? DUNE.scrub : DUNE.scrubLit; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*l, y + Math.sin(a)*l); ctx.stroke();
+  }
+}
+
+/** One of their mirror towers, from above: a dark base with a warning eye,
+ *  a bright plate tipped at the sun, and the long shadow of something tall. */
+function mirrorTower(ctx, x, y, h, rand){
+  // the shadow first - the tallest thing on the tile throws the longest one
+  ctx.strokeStyle = rgba(DUNE.shadow, 0.34); ctx.lineWidth = 3; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + h*SUN_DX, y + h*SUN_DY); ctx.stroke();
+  ctx.fillStyle = rgba(DUNE.shadow, 0.34);
+  ctx.beginPath(); ctx.arc(x + h*SUN_DX, y + h*SUN_DY, 4.5, 0, TAU); ctx.fill();
+  // the base: their angular dark, with the red eye every one of their works wears
+  ctx.fillStyle = DUNE.tower; ctx.fillRect(x - 6, y - 6, 12, 12);
+  ctx.fillStyle = DUNE.towerLit; ctx.fillRect(x - 6, y - 6, 12, 3.5);
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 8, y + 8); ctx.lineTo(x, y - 9); ctx.lineTo(x + 8, y + 8); ctx.stroke();
+  // the mirror, tipped up-left at the sun, and the glint that says it is glass
+  ctx.save(); ctx.translate(x - 3, y - 4); ctx.rotate(-0.6 + (rand() - 0.5)*0.2);
+  ctx.fillStyle = DUNE.mirror; ctx.fillRect(-7, -4.5, 14, 9);
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1; ctx.strokeRect(-7, -4.5, 14, 9);
+  ctx.restore();
+  const g = ctx.createRadialGradient(x - 5, y - 6, 0, x - 5, y - 6, 9);
+  g.addColorStop(0, rgba(DUNE.glint, 0.95)); g.addColorStop(0.35, rgba(DUNE.glint, 0.4)); g.addColorStop(1, rgba(DUNE.glint, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x - 5, y - 6, 9, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.warn;
+  ctx.beginPath(); ctx.arc(x + 5, y + 5, 1.4, 0, TAU); ctx.fill();
+}
+
+function drawDunes(ctx, W, H, p, rand){
+  ctx.fillStyle = DUNE.sand;
+  ctx.fillRect(0, 0, W, H);
+
+  // The floor's own relief: broad soft mottling, no crests yet.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.28)*W;
+    const col = i % 3 ? DUNE.sandLit : DUNE.sandDark;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.35 : 0.28));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE DRY RIVERBED - full height, wrap-exact: whole sine periods of t so
+   * position and slope agree at the seam. Water ran here once; the sky
+   * river that poured into the sea never reached this far. Its floor is
+   * darker and cracked, with salt where the last of it dried.
+   */
+  const bx0 = W*(0.28 + rand()*0.12);
+  const s1 = (rand() - 0.5)*W*0.16, s2 = (rand() - 0.5)*W*0.10;
+  const bed = t => bx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+  const bedW = 22 + rand()*8;
+  const bedPath = () => {
+    for(let i = 0; i <= 48; i++){ const t = i/48; const x = bed(t);
+      i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  // the bank's shadow on the sun-away side, then the bed, then its lit bank
+  ctx.strokeStyle = rgba(DUNE.shade, 0.35); ctx.lineWidth = bedW + 6;
+  ctx.save(); ctx.translate(3, 4); ctx.beginPath(); bedPath(); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = DUNE.bed; ctx.lineWidth = bedW;
+  ctx.beginPath(); bedPath(); ctx.stroke();
+  ctx.strokeStyle = DUNE.bedDark; ctx.lineWidth = bedW*0.55;
+  ctx.beginPath(); bedPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(DUNE.sandPale, 0.7); ctx.lineWidth = 1.5;
+  ctx.save(); ctx.translate(-bedW*0.5 - 1, -1); ctx.beginPath(); bedPath(); ctx.stroke(); ctx.restore();
+  // mud cracks and salt on the bed
+  ctx.strokeStyle = rgba(DUNE.shade, 0.5); ctx.lineWidth = 1;
+  for(let i = 0; i < 40; i++){
+    const t = rand(), x = bed(t) + (rand() - 0.5)*bedW*0.8, y = t*H;
+    const a = rand()*TAU, l = 4 + rand()*7;
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.lineTo(x + Math.cos(a)*l, yy + Math.sin(a)*l);
+      ctx.lineTo(x + Math.cos(a + 1.2)*l*0.6, yy + Math.sin(a + 1.2)*l*0.6);
+      ctx.stroke();
+    });
+  }
+  for(let i = 0; i < 9; i++){
+    const t = rand(), x = bed(t) + (rand() - 0.5)*bedW*0.5, y = t*H, r = 3 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = rgba(DUNE.salt, 0.55);
+      ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.6, rand()*TAU, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE CRESTS. Long S-curves crossing the tile, each with a pale face on
+   * the sun side and a dark face on the other - the same light rule as
+   * every shadow on this world. Three strokes each: the shade, offset
+   * down-right; the lit face, offset up-left; the knife-edge itself.
+   */
+  const crestAt = (x0, y0, len, a, amp) => {
+    const cx = t => x0 + Math.cos(a)*t*len + Math.cos(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    const cy = t => y0 + Math.sin(a)*t*len + Math.sin(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    return { cx, cy };
+  };
+  for(let i = 0; i < 9; i++){
+    const x0 = rand()*W, y0 = rand()*H;
+    const a = -0.25 + rand()*0.5 + (i % 2 ? Math.PI : 0);
+    const len = W*(0.35 + rand()*0.5), amp = 8 + rand()*22;
+    const c = crestAt(x0, y0, len, a, amp);
+    const path = (dx, dy) => {
+      ctx.beginPath();
+      for(let k = 0; k <= 32; k++){ const t = k/32;
+        k ? ctx.lineTo(c.cx(t) + dx, c.cy(t) + dy) : ctx.moveTo(c.cx(t) + dx, c.cy(t) + dy); }
+    };
+    tiled(ctx, H, y0, yy => {
+      const dy0 = yy - y0;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = rgba(DUNE.sandDark, 0.55); ctx.lineWidth = 14;
+      path(5, 7 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.shade, 0.22); ctx.lineWidth = 7;
+      path(4, 6 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.sandLit, 0.8); ctx.lineWidth = 12;
+      path(-4, -6 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.sandPale, 0.9); ctx.lineWidth = 1.6;
+      path(0, dy0); ctx.stroke();
+    });
+  }
+
+  // Ripples: short curved strokes combed one way, the wind that built the dunes.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 70; i++){
+    const x = rand()*W, y = rand()*H, l = 8 + rand()*16;
+    ctx.strokeStyle = rgba(i % 2 ? DUNE.sandDark : DUNE.sandPale, 0.10 + rand()*0.12);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.quadraticCurveTo(x + l*0.5, yy - 3, x + l, yy + 1);
+      ctx.stroke();
+    });
+  }
+
+  // Rock fields, each stone shadowed the one way.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3 + rand()*6;
+      tiled(ctx, H, y, yy => duneRock(ctx, x, yy, r, rngFor(5100 + c*16 + i)));
+    }
+  }
+
+  // What still grows: a few dry shrubs along the old river, where the last water was.
+  for(let i = 0; i < 9; i++){
+    const t = rand(), side = rand() < 0.5 ? -1 : 1;
+    const x = bed(t) + side*(bedW*0.7 + rand()*30), y = t*H, r = 4 + rand()*5;
+    tiled(ctx, H, y, yy => duneScrub(ctx, x, yy, r, rngFor(5300 + i)));
+  }
+
+  // Something huge died here once: bleached ribs in the sand, and their shadows.
+  {
+    const x = W*(0.6 + rand()*0.25), y = rand()*H, n = 5, sp = 9;
+    tiled(ctx, H, y, yy => {
+      for(let i = 0; i < n; i++){
+        const rx = x + i*sp, r = 10 + Math.sin(i/(n - 1)*Math.PI)*8;
+        ctx.strokeStyle = rgba(DUNE.shadow, 0.22); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(rx + 3, yy + 4, r, Math.PI*0.9, Math.PI*1.9); ctx.stroke();
+        ctx.strokeStyle = DUNE.salt; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(rx, yy, r, Math.PI*0.9, Math.PI*1.9); ctx.stroke();
+      }
+      ctx.strokeStyle = DUNE.salt; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x - 6, yy); ctx.lineTo(x + n*sp, yy); ctx.stroke();
+    });
+  }
+
+  // Their towers, standing in the dunes - the reason the air lies.
+  for(let i = 0; i < 4; i++){
+    const x = 30 + rand()*(W - 60), y = rand()*H, h = 26 + rand()*14;
+    // never in the riverbed: the tower is on the dune, over the water it drank
+    const t = y/H;
+    const tx = Math.abs(x - bed(t)) < bedW ? x + bedW*1.4 : x;
+    tiled(ctx, H, y, yy => mirrorTower(ctx, tx, yy, h, rngFor(5500 + i)));
+  }
+
+  // Glare: the sun catching loose grains, a sparse scatter of white.
+  for(let i = 0; i < 30; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(DUNE.glint, 0.25 + rand()*0.4);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE SUN-CATCHER - the once-layer. Their great mirror field: rings of
+ * heliostats on a salt pan, every plate turned to one tower, and the tower's
+ * receiver white-hot with the light they all throw at it. This is the machine
+ * that cooks the sky. Its salt apron settles it onto the sand wherever the
+ * scroll has carried the floor, the same trick the forge-city's ash used.
+ */
+function drawSuncatcher(ctx, W, H, p, rand){
+  const cx = W*0.52, cy = H*0.48, R = W*0.30;
+
+  // The salt pan it was built on: pale, flat, and cracked into plates.
+  const pan = ctx.createRadialGradient(cx, cy, R*0.2, cx, cy, R*1.9);
+  pan.addColorStop(0, rgba(DUNE.salt, 0.85));
+  pan.addColorStop(0.55, rgba(DUNE.salt, 0.55));
+  pan.addColorStop(1, rgba(DUNE.salt, 0));
+  ctx.fillStyle = pan;
+  ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(DUNE.sandDark, 0.35); ctx.lineWidth = 1;
+  for(let i = 0; i < 60; i++){
+    const a = rand()*TAU, d = rand()*R*1.6;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    const b = rand()*TAU, l = 10 + rand()*22;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(b)*l, y + Math.sin(b)*l);
+    ctx.lineTo(x + Math.cos(b + 1.1)*l*0.7, y + Math.sin(b + 1.1)*l*0.7);
+    ctx.stroke();
+  }
+
+  // The scorch: sand baked dark in a ring around the focus.
+  const burn = ctx.createRadialGradient(cx, cy, R*0.08, cx, cy, R*0.42);
+  burn.addColorStop(0, rgba(DUNE.shade, 0.55));
+  burn.addColorStop(0.5, rgba(DUNE.shade, 0.25));
+  burn.addColorStop(1, rgba(DUNE.shade, 0));
+  ctx.fillStyle = burn;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.42, 0, TAU); ctx.fill();
+
+  // The service roads: dark tracks from the wall to the tower and out to the aprons.
+  ctx.strokeStyle = rgba(DUNE.sandDark, 0.55); ctx.lineWidth = 4; ctx.lineCap = "round";
+  for(let i = 0; i < 3; i++){
+    const a = (i/3)*TAU + 0.4;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*R*0.12, cy + Math.sin(a)*R*0.12);
+    ctx.lineTo(cx + Math.cos(a)*R*1.3, cy + Math.sin(a)*R*1.3); ctx.stroke();
+  }
+
+  /*
+   * The heliostats: three rings of plates, every one rotated to face the
+   * tower, every one with its own small shadow and its own glint. Rows are
+   * staggered so the field reads as a machine that was planned, not sprinkled.
+   */
+  for(let ring = 0; ring < 3; ring++){
+    const d = R*(0.42 + ring*0.24), n = 12 + ring*8;
+    for(let i = 0; i < n; i++){
+      const a = (i/n)*TAU + ring*0.13;
+      const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI/2);
+      ctx.fillStyle = rgba(DUNE.shadow, 0.3);
+      ctx.fillRect(-7 + 3, -4 + 4, 14, 8);
+      ctx.fillStyle = DUNE.tower; ctx.fillRect(-1.5, -1.5, 3, 3);
+      ctx.fillStyle = DUNE.mirror; ctx.fillRect(-7, -4, 14, 8);
+      ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1; ctx.strokeRect(-7, -4, 14, 8);
+      ctx.restore();
+      if(i % 3 === 0){
+        const g = ctx.createRadialGradient(x - 2, y - 2, 0, x - 2, y - 2, 7);
+        g.addColorStop(0, rgba(DUNE.glint, 0.9)); g.addColorStop(1, rgba(DUNE.glint, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x - 2, y - 2, 7, 0, TAU); ctx.fill();
+      }
+    }
+  }
+
+  // Their cables, drinking the heat away to the compound.
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 2.5;
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.9;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*R*0.1, cy + Math.sin(a)*R*0.1);
+    ctx.lineTo(cx + Math.cos(a)*R*0.95, cy + Math.sin(a)*R*0.95); ctx.stroke();
+  }
+
+  // THE TOWER. The tallest thing on the world throws the longest shadow, and
+  // its receiver is the brightest thing on it - the point every plate aims at.
+  const th = R*0.55;
+  ctx.strokeStyle = rgba(DUNE.shadow, 0.4); ctx.lineWidth = 9; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + th*SUN_DX, cy + th*SUN_DY); ctx.stroke();
+  ctx.fillStyle = rgba(DUNE.shadow, 0.4);
+  ctx.beginPath(); ctx.arc(cx + th*SUN_DX, cy + th*SUN_DY, 13, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.tower;
+  ctx.beginPath(); ctx.arc(cx, cy, 15, 0, TAU); ctx.fill();
+  ctx.strokeStyle = DUNE.towerLit; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 15, 0, TAU); ctx.stroke();
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.4;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a)*22, cy + Math.sin(a)*22); ctx.stroke();
+  }
+  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 34);
+  core.addColorStop(0, rgba(DUNE.glint, 1));
+  core.addColorStop(0.2, rgba("#fff3d6", 0.95));
+  core.addColorStop(0.5, rgba("#ffd77a", 0.45));
+  core.addColorStop(1, rgba("#ffd77a", 0));
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(cx, cy, 34, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.warn;
+  ctx.beginPath(); ctx.arc(cx, cy - 15, 2, 0, TAU); ctx.fill();
+
+  /*
+   * The compound, off the field on the sun-away side: their angular blocks
+   * inside one wall, red eyes, stacks - the same brand the forge-city wears,
+   * bleached by a hotter sun.
+   */
+  const kx = cx + R*1.22, ky = cy + R*0.55;
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 3;
+  ctx.strokeRect(kx - 46, ky - 30, 92, 60);
+  ctx.fillStyle = DUNE.warn;
+  [[-46, -30], [46, -30], [-46, 30], [46, 30]].forEach(([ox, oy]) => {
+    ctx.beginPath(); ctx.arc(kx + ox, ky + oy, 1.7, 0, TAU); ctx.fill();
+  });
+  for(let i = 0; i < 6; i++){
+    const bx = kx - 32 + (i % 3)*30, by = ky - 14 + Math.floor(i/3)*28;
+    const bw = 18 + (i % 2)*6, bh = 12 + ((i + 1) % 3)*4;
+    ctx.fillStyle = rgba(DUNE.shadow, 0.4);
+    ctx.fillRect(bx - bw/2 + 4, by - bh/2 + 6, bw, bh);       // shadow, down-right
+    ctx.fillStyle = DUNE.tower; ctx.fillRect(bx - bw/2, by - bh/2, bw, bh);
+    ctx.fillStyle = DUNE.towerLit; ctx.fillRect(bx - bw/2, by - bh/2, bw, 3.5);
+    ctx.fillStyle = DUNE.mirror;
+    for(let q = 0; q < 2 + (i % 2); q++) ctx.fillRect(bx - bw/2 + 3 + q*6, by + 1, 2.5, 2.5);
+    if(i % 3 === 0){
+      ctx.fillStyle = DUNE.warn;
+      ctx.beginPath(); ctx.arc(bx + bw/2 - 1, by - bh/2 - 1, 1.5, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The landing aprons outside the wall, where the haulers wait for the heat.
+  for(let i = 0; i < 2; i++){
+    const x = kx + (i ? 70 : -80), y = ky + (i ? 8 : -40);
+    ctx.fillStyle = rgba(DUNE.sandDark, 0.45);
+    ctx.fillRect(x - 14, y - 10, 28, 20);
+    ctx.strokeStyle = rgba(DUNE.tower, 0.7); ctx.lineWidth = 1;
+    ctx.strokeRect(x - 14, y - 10, 28, 20);
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.stroke();
+    ctx.fillStyle = DUNE.warn;
+    ctx.beginPath(); ctx.arc(x - 11, y - 7, 1.3, 0, TAU); ctx.fill();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -3830,6 +4229,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
     else if(pr.k === "emberfloor") drawEmberfloor(px, W, H, pr, rand);
     else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
+    else if(pr.k === "dunes") drawDunes(px, W, H, pr, rand);
+    else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
   });
 }
 

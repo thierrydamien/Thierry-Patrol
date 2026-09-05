@@ -396,6 +396,19 @@ const COMMS = {
     "It MELTED them! Bring them over the vents, {you} — let the world fight!",
     "Their metal can't take the planet, {you}. Keep feeding it!",
   ]},
+  mirageStart: { speaker:"control", cooldown:999, lines:[
+    "The air out here LIES, {you}. Every real thing casts a shadow - look at the sand before you shoot.",
+    "Their mirror towers are cooking the sky, {you}. Half of what you see isn't there. The shadows are.",
+    "Shadow first, shoot second, {you}. A mirage can't make one.",
+  ]},
+  mirageShot: { speaker:"control", cooldown:45, lines:[
+    "That one wasn't real, {you} — no shadow on the sand!",
+    "Hot air, {you}. Look down: the real one has a shadow.",
+  ]},
+  mirageSeen: { speaker:"control", cooldown:60, lines:[
+    "You saw right through it, {you}! Shadow first, every time.",
+    "That's it, {you} — you shot the one with the shadow!",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",

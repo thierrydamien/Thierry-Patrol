@@ -89,6 +89,18 @@ const OBJECTIVES = {
   melt:      { label:"Let the volcano melt 10", icon:"🌋",
                test: s => (s.lavaMelts || 0) >= 10,
                progress: s => (s.lavaMelts || 0) + "/10" },
+  /*
+   * The Mirage's own star, and it pays for looking rather than shooting: a
+   * real ship whose FIRST hit landed while its twin was still shimmering,
+   * untouched, in the field - and which then went down. A child who shoots
+   * whatever moves picks the fake first about half the time; one who looks
+   * at the sand almost never does. Thirty is about a third of the doubles
+   * the level casts at its thinnest tier (86 measured on ROOKIE in the
+   * smoke test), so it asks for the habit without demanding a clean sheet.
+   */
+  seeThrough:{ label:"See through 30 mirages", icon:"🏜️",
+               test: s => (s.seenThrough || 0) >= 30,
+               progress: s => (s.seenThrough || 0) + "/30" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -1717,7 +1729,51 @@ const MISSIONS = [
     objectives: ["complete","coinRush","rescueAll"],
   },
   {
-    id:35, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE MIRAGE - the desert on the far shore of the drowned sky, and the
+     * fifth surface (Sunstruck). Their mirror towers bake the air until it
+     * lies: most fighters fly in with a mirage twin - same art, same
+     * behaviour, no guns, no hull - and a shot at it is a shot into hot air.
+     * The tell is on the ground: everything real casts a shadow on the sand
+     * and a mirage casts none. mirage.js owns the twins and the shadows; the
+     * costs sit in systems.js (a spent round) and game.js (the kill door,
+     * where a "dead" mirage pays nobody). Its star pays for the lesson
+     * itself: the real one destroyed while its untouched twin still
+     * shimmered beside it.
+     */
+    id:35, sky:44, name:"The Mirage", subtitle:"trust the shadow",
+    brief:"Past the sea the sky dried out, {you} - and they've planted MIRROR TOWERS in the sand to bake the air until it lies. Every ship you see may have a twin that isn't there. Shots go straight through a mirage. But a lie casts no shadow: look at the sand, and shoot what's real.",
+    goal:"Shoot the ones with SHADOWS!",
+    mirage:true,
+    face:"swooper",                       // the pale one: the level's ghost
+    waves: [
+      w(1,   "grunt",    8, "line"),             // the first doubles: look down
+      w(8,   "weaver",   7, "arc"),
+      w(15,  "swooper",  6, "pincer"),
+      w(22,  "striker",  5, "vee"),
+      w(29,  "carrier",  1, "column"),
+      w(34,  "kamikaze", 5, "scatter"),          // a fake diver is a bluff you learn to call
+      w(41,  "grunt",   10, "wall"),
+      w(47,  "turret",   4, "sides"),
+      w(53,  "weaver",   8, "twinColumns"),
+      w(60,  "brute",    4, "pincer"),
+      w(66,  "splitter", 5, "scatter"),
+      w(72,  "carrier",  1, "column"),
+      w(77,  "swooper",  7, "arc", { elite: 2 }),
+      w(84,  "interceptor", 4, "sides"),
+      w(90,  "sniper",   3, "sides"),            // no twin: a charged line is a tell for free
+      w(96,  "kamikaze", 7, "pincer"),
+      w(102, "striker",  7, "vee", { elite: 2 }),
+      w(108, "mender",   2, "column"),
+      w(112, "bomber",   4, "twinColumns", { elite: 1 }),
+      w(118, "carrier",  1, "column"),
+      w(122, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","seeThrough","rescueAll"],
+  },
+  {
+    id:36, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1760,7 +1816,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:36, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:37, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1792,7 +1848,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:37, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:38, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1834,7 +1890,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:38, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:39, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1879,7 +1935,7 @@ const MISSIONS = [
      * level teaches is lure-and-dodge and its own star pays for it.
      * volcano.js owns the theatrics; the costs live in game.js by the flare.
      */
-    id:39, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    id:40, sky:43, name:"The Forge World", subtitle:"The ground fights back",
     brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
     goal:"The ground erupts — USE it!",
     volcano:true,
@@ -1911,7 +1967,7 @@ const MISSIONS = [
     objectives: ["complete","melt","rescueAll"],
   },
   {
-    id:40, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:41, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -1943,7 +1999,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:41, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:42, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -1982,7 +2038,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:42, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:43, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -2010,7 +2066,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:43, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:44, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,

@@ -803,6 +803,10 @@ function drawEnemies(ctx, world, timeMs){
     const e = items[i];
     if(!e.alive) continue;
     const size = e.size * (0.4 + 0.6*easeOutCubic(e.spawnAnim));
+    // The Mirage's doubles: the same art, sliced by heat. mirage.js owns
+    // the look, and a ghost gets none of the furniture below - no hit
+    // flash, no SOS, no health pip - because none of it is true of it.
+    if(e.mirage){ SF.mirage.drawGhost(ctx, e, size, t); continue; }
     if(e.type.behaviour === "tumble"){ drawAsteroid(ctx, e, size); continue; }
     if(e.type.behaviour === "mine"){ drawMine(ctx, e, size, t); continue; }
     ctx.save();

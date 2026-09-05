@@ -1381,6 +1381,7 @@ const FACE_KINDS = {
   dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
+  mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1509,6 +1510,7 @@ function missionFace(m){
              : m.nightfall ? "dusk"
              : m.current ? "flow"
              : m.garden ? "garden"
+             : m.mirage ? "mirage"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -1642,11 +1644,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
-  { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 39-41 (the forge world opens it)
-  { at:42, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 42
+    sub:"where space stops behaving itself" },              // 33-39 (the sea and the desert join the crack)
+  { at:40, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 40-42 (the forge world opens it)
+  { at:43, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 43
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -4731,6 +4733,120 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "#ff8a3c";
     ctx.beginPath(); ctx.arc(ex + 4, ey + 14, 1.8, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(ex - 6, ey + 17, 1.4, 0, Math.PI*2); ctx.fill();
+  } else if(art === "dunes"){
+    /*
+     * The Mirage's establishing shot: a white sun, dunes lit from it, and
+     * their mirror towers standing in the sand all tipped the same way. The
+     * story is a machine aimed at the sky.
+     */
+    const sky = ctx.createLinearGradient(0, 0, 0, H*0.6);
+    sky.addColorStop(0, "#f7e9c6"); sky.addColorStop(1, "#f2cf8a");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const sun = ctx.createRadialGradient(W*0.2, H*0.16, 2, W*0.2, H*0.16, W*0.28);
+    sun.addColorStop(0, "rgba(255,255,240,1)"); sun.addColorStop(0.1, "rgba(255,250,220,0.9)");
+    sun.addColorStop(0.4, "rgba(255,236,170,0.35)"); sun.addColorStop(1, "rgba(255,236,170,0)");
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+    // heat over the far dunes: pale lines that never quite lie flat
+    ctx.strokeStyle = "rgba(255,245,215,0.45)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 5; i++){
+      const y = H*(0.40 + i*0.02);
+      ctx.beginPath();
+      for(let x = 0; x <= W; x += 6) ctx.lineTo(x, y + Math.sin(x*0.08 + i)*1.6);
+      ctx.stroke();
+    }
+    // three dune ranges, far to near; the faces that look at the sun are pale
+    const ranges = [[0.50, "#c9955a"], [0.64, "#b8813f"], [0.80, "#a8712f"]];
+    const crests = [];
+    ranges.forEach(([yy, dark], ri) => {
+      const base = H*yy;
+      const crest = x => base + Math.sin(x/W*Math.PI*1.6 + ri*1.9)*H*0.06 +
+                         Math.sin(x/W*Math.PI*4.3 + ri)*H*0.02;
+      crests.push(crest);
+      ctx.fillStyle = dark;
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for(let x = 0; x <= W; x += 4) ctx.lineTo(x, crest(x));
+      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+      for(let x = 0; x < W; x += 3){
+        const s = crest(x + 3) - crest(x);        // rising to the right faces the sun
+        const a = s < 0 ? Math.min(0.6, -s*0.4) : 0;
+        if(a < 0.03) continue;
+        ctx.fillStyle = "rgba(255,240,200," + a.toFixed(2) + ")";
+        ctx.fillRect(x, crest(x), 3, H*0.15);
+      }
+    });
+    // their mirror towers on the middle range, every mirror tipped at the sun
+    const mid = crests[1];
+    [0.30, 0.44, 0.57, 0.71, 0.86].forEach((fx, i) => {
+      const x = W*fx, y = mid(x), h = 18 + (i % 3)*7;
+      ctx.strokeStyle = "rgba(60,35,15,0.45)"; ctx.lineWidth = 1.5;      // its shadow, down-right
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + h*0.9, y + h*0.35); ctx.stroke();
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.stroke();
+      ctx.save(); ctx.translate(x, y - h); ctx.rotate(-0.55);
+      ctx.fillStyle = "#e8fbff"; ctx.fillRect(-6, -3, 12, 5);
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 1; ctx.strokeRect(-6, -3, 12, 5);
+      ctx.restore();
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath(); ctx.arc(x - 2, y - h - 2, 1.6, 0, Math.PI*2); ctx.fill();
+    });
+    // the squadron, small and far, coming in over the last of the sea
+    A.drawShip(ctx, W*0.82, H*0.30, 26, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "twins"){
+    /*
+     * The lesson, in one picture: two identical ships over the sand, and
+     * only one of them has a shadow. Nothing needs a caption - a dark shape
+     * on the ground under one and not the other is a difference a
+     * seven-year-old spots before the words are read.
+     */
+    ctx.fillStyle = "#d9a85f"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(184,129,63,0.35)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 26; i++){
+      const y = (i*53) % H, x = (i*97) % W;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 18, y - 4, x + 40, y + 2); ctx.stroke();
+    }
+    // a dune crest crossing the frame: pale on the sun side, dark below
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(120,70,20,0.35)"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72 + 7); ctx.quadraticCurveTo(W*0.4, H*0.60 + 7, W, H*0.70 + 7); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,240,200,0.6)"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.4, H*0.60, W, H*0.70); ctx.stroke();
+    const sprite = SF.enemyArt.spriteFor("swooper", "#eaf2ff", false);
+    const box = 74, lx = W*0.32, rx = W*0.68, y = H*0.40;
+    if(sprite){
+      // the real one: its shadow first, on the sand, down and to the right
+      const sil = document.createElement("canvas");
+      sil.width = sprite.width; sil.height = sprite.height;
+      const sc = sil.getContext("2d");
+      if(sc){
+        sc.drawImage(sprite, 0, 0);
+        sc.globalCompositeOperation = "source-in";
+        sc.fillStyle = "#2b1a0c"; sc.fillRect(0, 0, sil.width, sil.height);
+        ctx.globalAlpha = 0.38;
+        ctx.drawImage(sil, lx + 14 - box*0.46, y + 26 - box*0.46, box*0.92, box*0.92);
+        ctx.globalAlpha = 1;
+      }
+      ctx.drawImage(sprite, lx - box/2, y - box/2, box, box);
+      // the mirage: the same ship, sliced by heat, and nothing under it
+      const bands = 6, bh = sprite.height/bands, dh = box/bands;
+      ctx.globalAlpha = 0.66;
+      for(let i = 0; i < bands; i++){
+        const off = Math.sin(i*1.7 + 0.8)*3;
+        ctx.drawImage(sprite, 0, i*bh, sprite.width, bh, rx - box/2 + off, y - box/2 + i*dh, box, dh + 0.6);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // the family ship below, with its own honest shadow
+    const px = W*0.5, py = H*0.80;
+    ctx.fillStyle = "rgba(43,26,12,0.36)";
+    ctx.beginPath();
+    ctx.moveTo(px + 14, py + 26 - 22); ctx.lineTo(px + 30, py + 26 + 14);
+    ctx.lineTo(px + 14, py + 26 + 7); ctx.lineTo(px - 2, py + 26 + 14); ctx.closePath(); ctx.fill();
+    A.drawShip(ctx, px, py, 56, { color: profile.shipColor, levels, t, idle:false });
+    // the sun in the corner every shadow points away from
+    const gl = ctx.createRadialGradient(W*0.08, H*0.06, 0, W*0.08, H*0.06, W*0.3);
+    gl.addColorStop(0, "rgba(255,250,225,0.85)"); gl.addColorStop(0.3, "rgba(255,236,170,0.25)");
+    gl.addColorStop(1, "rgba(255,236,170,0)");
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4790,7 +4906,8 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
                          ["garden",   "secondHarvest"],
                          ["dive",     "theDive"],
-                         ["volcano",  "forgeWorld"]];
+                         ["volcano",  "forgeWorld"],
+                         ["mirage",   "theMirage"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

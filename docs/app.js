@@ -4,50 +4,51 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       53  src/core.js
- *      223  src/i18n.js
- *      452  src/icons.js
- *     1056  src/haptics.js
- *     1235  src/audio.js
- *     1933  src/data/config.js
- *     2403  src/data/enemies.js
- *     3274  src/data/missions.js
- *     5402  src/wacky.js
- *     5618  src/data/comms.js
- *     6066  src/data/story.js
- *     6239  src/data/fr.js
- *     7652  src/profile.js
- *     8339  src/cloud.js
- *     8944  src/fx.js
- *    10057  src/input.js
- *    10551  src/entities.js
- *    11934  src/bossart.js
- *    12800  src/bosses.js
- *    13550  src/bossintro.js
- *    13673  src/rewind.js
- *    14204  src/finale.js
- *    14526  src/papadeath.js
- *    14848  src/backstage.js
- *    15799  src/sky29.js
- *    16045  src/dive.js
- *    16295  src/volcano.js
- *    16532  src/mirrorduel.js
- *    16879  src/homecoming.js
- *    17079  src/prologue.js
- *    17558  src/systems.js
- *    18213  src/render.js
- *    22984  src/enemyart.js
- *    23936  src/insignia.js
- *    24181  src/skygen.js
- *    28484  src/shipart.js
- *    29684  src/paintjob.js
- *    29846  src/pilotart.js
- *    29941  src/comms.js
- *    30080  src/netcode.js
- *    30611  src/game.js
- *    34705  src/workshop.js
- *    35402  src/data/i18nbind.js
- *    35473  src/ui.js
+ *       54  src/core.js
+ *      224  src/i18n.js
+ *      453  src/icons.js
+ *     1057  src/haptics.js
+ *     1236  src/audio.js
+ *     1937  src/data/config.js
+ *     2407  src/data/enemies.js
+ *     3278  src/data/missions.js
+ *     5462  src/wacky.js
+ *     5678  src/data/comms.js
+ *     6139  src/data/story.js
+ *     6323  src/data/fr.js
+ *     7767  src/profile.js
+ *     8468  src/cloud.js
+ *     9073  src/fx.js
+ *    10186  src/input.js
+ *    10680  src/entities.js
+ *    12067  src/bossart.js
+ *    12933  src/bosses.js
+ *    13683  src/bossintro.js
+ *    13806  src/rewind.js
+ *    14344  src/finale.js
+ *    14666  src/papadeath.js
+ *    14988  src/backstage.js
+ *    15939  src/sky29.js
+ *    16185  src/dive.js
+ *    16435  src/volcano.js
+ *    16672  src/mirage.js
+ *    17059  src/mirrorduel.js
+ *    17406  src/homecoming.js
+ *    17606  src/prologue.js
+ *    18085  src/systems.js
+ *    18766  src/render.js
+ *    23541  src/enemyart.js
+ *    24493  src/insignia.js
+ *    24738  src/skygen.js
+ *    29442  src/shipart.js
+ *    30642  src/paintjob.js
+ *    30804  src/pilotart.js
+ *    30899  src/comms.js
+ *    31038  src/netcode.js
+ *    31573  src/game.js
+ *    35700  src/workshop.js
+ *    36397  src/data/i18nbind.js
+ *    36468  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1402,6 +1403,9 @@ const SOUNDS = {
   missionFail:{ minGap: 800, fn: () => { [392,330,262,196].forEach((f,i)=>tone(f,0.3,"sawtooth",0.075,null,i*0.16)); }},
   alarm:      { minGap: 400, fn: () => { [220,180,220,180].forEach((f,i)=>tone(f,0.17,"sawtooth",0.075,null,i*0.2)); }},
   telegraph:  { minGap: 120, fn: () => { tone(1200, 0.08, "sine", 0.03, 1500); }},
+  // The Mirage: a shot into hot air. A breath of sine sliding down and a
+  // hiss - no click, no metal - the one sound in the game for hitting nothing.
+  mirage:     { minGap: 90, fn: () => { tone(1040, 0.14, "sine", 0.028, 360); noise(0.07, 0.04, 3200, 900); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},
@@ -3362,6 +3366,18 @@ const OBJECTIVES = {
   melt:      { label:"Let the volcano melt 10", icon:"🌋",
                test: s => (s.lavaMelts || 0) >= 10,
                progress: s => (s.lavaMelts || 0) + "/10" },
+  /*
+   * The Mirage's own star, and it pays for looking rather than shooting: a
+   * real ship whose FIRST hit landed while its twin was still shimmering,
+   * untouched, in the field - and which then went down. A child who shoots
+   * whatever moves picks the fake first about half the time; one who looks
+   * at the sand almost never does. Thirty is about a third of the doubles
+   * the level casts at its thinnest tier (86 measured on ROOKIE in the
+   * smoke test), so it asks for the habit without demanding a clean sheet.
+   */
+  seeThrough:{ label:"See through 30 mirages", icon:"🏜️",
+               test: s => (s.seenThrough || 0) >= 30,
+               progress: s => (s.seenThrough || 0) + "/30" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -4990,7 +5006,51 @@ const MISSIONS = [
     objectives: ["complete","coinRush","rescueAll"],
   },
   {
-    id:35, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE MIRAGE - the desert on the far shore of the drowned sky, and the
+     * fifth surface (Sunstruck). Their mirror towers bake the air until it
+     * lies: most fighters fly in with a mirage twin - same art, same
+     * behaviour, no guns, no hull - and a shot at it is a shot into hot air.
+     * The tell is on the ground: everything real casts a shadow on the sand
+     * and a mirage casts none. mirage.js owns the twins and the shadows; the
+     * costs sit in systems.js (a spent round) and game.js (the kill door,
+     * where a "dead" mirage pays nobody). Its star pays for the lesson
+     * itself: the real one destroyed while its untouched twin still
+     * shimmered beside it.
+     */
+    id:35, sky:44, name:"The Mirage", subtitle:"trust the shadow",
+    brief:"Past the sea the sky dried out, {you} - and they've planted MIRROR TOWERS in the sand to bake the air until it lies. Every ship you see may have a twin that isn't there. Shots go straight through a mirage. But a lie casts no shadow: look at the sand, and shoot what's real.",
+    goal:"Shoot the ones with SHADOWS!",
+    mirage:true,
+    face:"swooper",                       // the pale one: the level's ghost
+    waves: [
+      w(1,   "grunt",    8, "line"),             // the first doubles: look down
+      w(8,   "weaver",   7, "arc"),
+      w(15,  "swooper",  6, "pincer"),
+      w(22,  "striker",  5, "vee"),
+      w(29,  "carrier",  1, "column"),
+      w(34,  "kamikaze", 5, "scatter"),          // a fake diver is a bluff you learn to call
+      w(41,  "grunt",   10, "wall"),
+      w(47,  "turret",   4, "sides"),
+      w(53,  "weaver",   8, "twinColumns"),
+      w(60,  "brute",    4, "pincer"),
+      w(66,  "splitter", 5, "scatter"),
+      w(72,  "carrier",  1, "column"),
+      w(77,  "swooper",  7, "arc", { elite: 2 }),
+      w(84,  "interceptor", 4, "sides"),
+      w(90,  "sniper",   3, "sides"),            // no twin: a charged line is a tell for free
+      w(96,  "kamikaze", 7, "pincer"),
+      w(102, "striker",  7, "vee", { elite: 2 }),
+      w(108, "mender",   2, "column"),
+      w(112, "bomber",   4, "twinColumns", { elite: 1 }),
+      w(118, "carrier",  1, "column"),
+      w(122, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","seeThrough","rescueAll"],
+  },
+  {
+    id:36, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -5033,7 +5093,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:36, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:37, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -5065,7 +5125,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:37, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:38, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -5107,7 +5167,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:38, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:39, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -5152,7 +5212,7 @@ const MISSIONS = [
      * level teaches is lure-and-dodge and its own star pays for it.
      * volcano.js owns the theatrics; the costs live in game.js by the flare.
      */
-    id:39, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    id:40, sky:43, name:"The Forge World", subtitle:"The ground fights back",
     brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
     goal:"The ground erupts — USE it!",
     volcano:true,
@@ -5184,7 +5244,7 @@ const MISSIONS = [
     objectives: ["complete","melt","rescueAll"],
   },
   {
-    id:40, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:41, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5216,7 +5276,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:41, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:42, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5255,7 +5315,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:42, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:43, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5283,7 +5343,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:43, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:44, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -6013,6 +6073,19 @@ const COMMS = {
     "It MELTED them! Bring them over the vents, {you} — let the world fight!",
     "Their metal can't take the planet, {you}. Keep feeding it!",
   ]},
+  mirageStart: { speaker:"control", cooldown:999, lines:[
+    "The air out here LIES, {you}. Every real thing casts a shadow - look at the sand before you shoot.",
+    "Their mirror towers are cooking the sky, {you}. Half of what you see isn't there. The shadows are.",
+    "Shadow first, shoot second, {you}. A mirage can't make one.",
+  ]},
+  mirageShot: { speaker:"control", cooldown:45, lines:[
+    "That one wasn't real, {you} — no shadow on the sand!",
+    "Hot air, {you}. Look down: the real one has a shadow.",
+  ]},
+  mirageSeen: { speaker:"control", cooldown:60, lines:[
+    "You saw right through it, {you}! Shadow first, every time.",
+    "That's it, {you} — you shot the one with the shadow!",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",
@@ -6217,6 +6290,17 @@ const STORY = {
       { art:"eruption", text:"Today it stops growling. When the ground glows and ROARS, get out from over it - then bring their ships back across the vent and watch. What burns you, MELTS them." },
     ],
     button:"BRAVE THE FIRE",
+  },
+
+  /* The pre-flight page for The Mirage - replays every visit, like every
+     pre-flight page (ui.js PREFLIGHT_STORY). */
+  theMirage: {
+    title: "THE LYING SKY",
+    panels: [
+      { art:"dunes", text:"Past the drowned sky the water runs out, {you}, and the sand begins. They planted mirror towers out here - hundreds of them, all tipped at the sun - and the air over the dunes has been lying ever since." },
+      { art:"twins", text:"Most ships out there fly with a twin that isn't real. Shoot a mirage and your shot vanishes into hot air. But a lie can't cast a shadow: look at the sand, find the dark shape under a ship, and shoot THAT one." },
+    ],
+    button:"TRUST THE SHADOW",
   },
 
   workshop: {
@@ -6908,6 +6992,37 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Their metal can't take the planet, {you}. Keep feeding it!":
   "Leur métal ne supporte pas la planète, {you}. Continue de la nourrir !",
 "MELTED!": "FONDU !",
+
+/* ----- The Mirage (mission 35) ----- */
+"The Mirage": "Le Mirage",
+"trust the shadow": "fie-toi à l'ombre",
+"Past the sea the sky dried out, {you} - and they've planted MIRROR TOWERS in the sand to bake the air until it lies. Every ship you see may have a twin that isn't there. Shots go straight through a mirage. But a lie casts no shadow: look at the sand, and shoot what's real.":
+  "Passé la mer, le ciel s'est asséché, {you} — et ils ont planté des TOURS-MIROIRS dans le sable pour cuire l'air jusqu'à ce qu'il mente. Chaque vaisseau que tu vois peut avoir un jumeau qui n'existe pas. Les tirs traversent un mirage. Mais un mensonge n'a pas d'ombre : regarde le sable, et tire sur ce qui est vrai.",
+"Shoot the ones with SHADOWS!": "Tire sur ceux qui ont une OMBRE !",
+"Sunstruck": "Plein Soleil",
+"THE LYING SKY": "LE CIEL QUI MENT",
+"Past the drowned sky the water runs out, {you}, and the sand begins. They planted mirror towers out here - hundreds of them, all tipped at the sun - and the air over the dunes has been lying ever since.":
+  "Passé le ciel noyé, l'eau s'arrête, {you}, et le sable commence. Ils ont planté des tours-miroirs par ici — des centaines, toutes tournées vers le soleil — et depuis, l'air au-dessus des dunes ment.",
+"Most ships out there fly with a twin that isn't real. Shoot a mirage and your shot vanishes into hot air. But a lie can't cast a shadow: look at the sand, find the dark shape under a ship, and shoot THAT one.":
+  "La plupart des vaisseaux là-bas volent avec un jumeau qui n'est pas réel. Tire sur un mirage et ton tir disparaît dans l'air chaud. Mais un mensonge ne peut pas faire d'ombre : regarde le sable, trouve la forme sombre sous un vaisseau, et tire sur CELUI-LÀ.",
+"TRUST THE SHADOW": "FIE-TOI À L'OMBRE",
+"See through 30 mirages": "Démasque 30 mirages",
+"The air out here LIES, {you}. Every real thing casts a shadow - look at the sand before you shoot.":
+  "Ici, l'air MENT, {you}. Tout ce qui est vrai a une ombre — regarde le sable avant de tirer.",
+"Their mirror towers are cooking the sky, {you}. Half of what you see isn't there. The shadows are.":
+  "Leurs tours-miroirs font cuire le ciel, {you}. La moitié de ce que tu vois n'existe pas. Les ombres, si.",
+"Shadow first, shoot second, {you}. A mirage can't make one.":
+  "L'ombre d'abord, le tir ensuite, {you}. Un mirage n'en a pas.",
+"That one wasn't real, {you} — no shadow on the sand!":
+  "Celui-là n'était pas vrai, {you} — pas d'ombre sur le sable !",
+"Hot air, {you}. Look down: the real one has a shadow.":
+  "De l'air chaud, {you}. Regarde en bas : le vrai a une ombre.",
+"You saw right through it, {you}! Shadow first, every time.":
+  "Tu l'as démasqué, {you} ! L'ombre d'abord, à chaque fois.",
+"That's it, {you} — you shot the one with the shadow!":
+  "C'est ça, {you} — tu as tiré sur celui qui a une ombre !",
+"MIRAGE!": "MIRAGE !",
+"SEEN THROUGH!": "DÉMASQUÉ !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
@@ -8031,6 +8146,20 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 39) p.lastMission += 1;
     if((p.reached || 0) >= 39) p.reached += 1;
     p.missionsVer = 11;
+  }
+  /*
+   * v12: The Mirage landed as mission 35 - the desert, the fifth surface -
+   * pushing the old 35-43 up one. Same single-offset shape as v10 and v11,
+   * and as before every hand-written mission id (tunes 23/28/32,
+   * devourerDown 32) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 12){
+    for(let id = 43; id >= 35; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 35) p.lastMission += 1;
+    if((p.reached || 0) >= 35) p.reached += 1;
+    p.missionsVer = 12;
   }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
@@ -11596,6 +11725,10 @@ class World {
     e.lockX = 0; e.lockY = 0;
     e.dodgeCool = 0; e.dodgeDir = 0; e.dodgeTimer = 0; e.tell = 0;
     e.arming = false; e.noSplit = false;
+    // The Mirage's pair: which ship is the lie, which ship cast it, and the
+    // stamp that keeps a recycled slot from answering for a dead one.
+    e.mirage = false; e.mirageTwin = null; e.mirageStamp = 0; e.firstHit = false; e.aimedFirst = false;
+    e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship
@@ -13754,7 +13887,8 @@ function build(){
     for(let n = 0; n < MAX_E; n++)
       f.enemies[n] = { alive:false, x:0, y:0, size:0, r:0, spawnAnim:1, typeId:"grunt", type:null,
                        elite:false, flash:0, hp:1, maxHp:1, spin:0, fuse:0, state:0, charge:0,
-                       shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null };
+                       shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null,
+                       mirage:false, phase:0, mirageHits:0 };
     // vx/vy ride along because the bolt renderer trails a tail down them, and
     // "which way was it going" is the whole point of watching the replay.
     for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, vx:0, vy:1, r:4, kind:"bolt" };
@@ -13809,6 +13943,9 @@ function record(dt, world){
     d.state = e.state || 0; d.charge = e.charge || 0;
     d.shielded = !!e.shielded; d.loot = e.loot || 0;
     d.carriesRescue = !!e.carriesRescue; d.hazard = !!e.hazard;
+    // The Mirage: a replay that painted the fake as solid would teach the
+    // opposite of the level. The ghost keeps its shimmer and its count.
+    d.mirage = !!e.mirage; d.phase = e.phase || 0; d.mirageHits = e.mirageHits || 0;
   }
   for(let i = n; i < f.en; i++) f.enemies[i].alive = false;
   f.en = n;
@@ -14048,6 +14185,9 @@ function draw(ctx, timeMs, VW, VH){
 
   const R = SF.render;
   R.drawHaulers(ctx, SF.game.world, timeMs);   // they hold station: frozen is honest
+  // The desert's shadows, from the tape: which of these was real is the
+  // whole answer to "what got me" on that level.
+  if(SF.mirage && SF.mirage.active()) SF.mirage.drawShadows(ctx, f.enemies, [stand], VH);
   R.drawEnemies(ctx, fake, timeMs);
   drawBossFrame(ctx, f, timeMs);
   R.drawBullets(ctx, fake);
@@ -16528,6 +16668,393 @@ SF.volcano = { _state: () => S,
 })();
 
 
+;/* ===== src/mirage.js ===== */
+/*
+ * THE MIRAGE - the lying sky.
+ *
+ * Sunstruck (skygen.js) is the desert itself: dunes, a dry riverbed and their
+ * mirror towers baking the air. This module is the lie the heat tells. Most
+ * ships that fly in bring a TWIN with them - a mirage, drawn from the same
+ * art, flying the same behaviour a few lengths off - and the twin is nothing:
+ * it never fires, it costs nothing to fly through, and a shot at it vanishes
+ * into hot air. The tell is on the ground. Everything real on this world casts
+ * a shadow on the sand; a mirage casts none. The level's whole lesson is
+ * "look down before you shoot", and its own star (objectives: "seeThrough")
+ * pays for exactly that: a real ship destroyed while its untouched twin was
+ * still shimmering beside it.
+ *
+ * Same shape as volcano.js: a mission flag (`mirage`) plus the hooks game.js
+ * already calls - begin/update, a draw pass under the world (the shadows) and
+ * one over it (dissolving ghosts, blown sand, the sun). The twin is a real
+ * pooled enemy so every behaviour, formation and leash works on it unchanged;
+ * what makes it a mirage is `e.mirage`, which the collision pass (systems.js)
+ * and the kill path (game.js) both read, and the fact that it is `uncounted`,
+ * so no kill objective ever knows it flew.
+ *
+ * Drawn cheaply on purpose: a shadow is one drawImage of a cached silhouette,
+ * a ghost is six band-sliced drawImages, and there is no full-screen haze -
+ * the Dive's frame-budget lesson holds in the desert too.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
+
+/* The sun stands high and to the upper left, so every shadow on this world
+ * falls down and to the right - the same light the dune crests are painted
+ * by, which is what makes the shadow read as sitting ON the sand. */
+const SHADOW_DX = 14, SHADOW_DY = 26;
+/* How many wasted shots a mirage soaks before the heat lets go of it. One
+ * would make spraying free; forever would make it a wall. Three is a cost a
+ * child feels without a fight ever being lost to it. */
+const HITS_TO_BURST = 3;
+const DISSOLVE = 0.42;
+
+/*
+ * Who gets a twin. Ships whose whole job is a mechanic of their own - a
+ * carrier with a pilot inside, a Guardian's bubble, a Mender's beam, a Hive
+ * spawning, a Marksman's charged line, a thief with your money - would either
+ * hand the mirage a real effect or hand the player a tell for free (an SOS
+ * label with no shadow is not a lesson). The doubles are the fighters.
+ */
+const TWINS = { grunt:1, weaver:1, striker:1, swooper:1, kamikaze:1, turret:1,
+                brute:1, splitter:1, interceptor:1, bomber:1 };
+
+let S = null;
+const silCache = {};
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, stamp: 0, twinned: 0, burst: 0, ghosts: [], sand: [], lastText: -9 };
+  for(let i = 0; i < 28; i++)
+    S.sand.push({ x: Math.random()*W, y: Math.random()*H,
+                  vx: 16 + Math.random()*22, vy: 5 + Math.random()*10,
+                  s: 1 + Math.random()*1.2, a: 0.12 + Math.random()*0.16 });
+}
+
+function active(){ return !!S; }
+
+/* ------------------------------------------------------------------ */
+/*  THE TWIN                                                           */
+/* ------------------------------------------------------------------ */
+
+/** Whether this freshly spawned ship brings a mirage with it. */
+function eligible(e){
+  return !!(S && e && e.alive && e.counted && !e.hazard && !e.fromBoss &&
+            !e.mirage && TWINS[e.typeId]);
+}
+
+/**
+ * Spawn the mirage of a real ship: same art, same behaviour, a few lengths
+ * off and a little ahead or behind - sometimes the fake is the one that
+ * reaches you first, or a child would learn "shoot the front one" instead
+ * of "look at the sand".
+ *
+ * Fewer twins on the dense tiers, where a wall of thirteen already fills the
+ * width: the lesson needs room to be read, and the pool has a ceiling.
+ */
+function twin(world, real, difficulty, force){
+  if(!eligible(real)) return null;
+  const density = (difficulty && difficulty.density) || 1;
+  const p = Math.min(0.85, Math.max(0.4, 0.85/Math.sqrt(density)));
+  if(!force && Math.random() > p) return null;   // `force`: the suite's dice
+  const W = SF.game.VW || 600;
+  const side = Math.random() < 0.5 ? -1 : 1;
+  let x = real.x + side*(46 + Math.random()*24);
+  if(x < 24 || x > W - 24) x = real.x - side*(46 + Math.random()*24);
+  const y = real.y + (Math.random() < 0.5 ? -1 : 1)*(38 + Math.random()*18);
+  const m = world.spawnEnemy(real.typeId, x, y, {
+    difficulty, elite: real.elite, hoverY: real.hoverY, uncounted: true,
+  });
+  m.mirage = true;
+  m.fireTimer = Infinity;            // hot air has no guns
+  m.diver = false;                   // ...and cutting past it is not a dodge
+  m.carriesRescue = false; m.bounty = false; m.huntsEscort = false;
+  m.anchorX = x; m.weaveWidth = real.weaveWidth; m.weaveSpeed = real.weaveSpeed;
+  m.phase = real.phase; m.hoverTime = real.hoverTime;
+  m.speed = real.speed; m.vy = real.vy;
+  m.mirageHits = 0; m.brushed = false;
+  /*
+   * The pair is tied by a stamp, not by the reference alone: the pool
+   * recycles slots, so `twinOf.alive` could one day be answering for a
+   * brand-new grunt in the dead ship's chair. spawnEnemy zeroes the stamp on
+   * reuse, and a zero never matches.
+   */
+  const stamp = ++S.stamp;
+  real.mirageStamp = stamp; real.mirageTwin = m;
+  m.twinOf = real; m.twinStamp = stamp;
+  S.twinned++;
+  return m;
+}
+
+/** Is the ship this mirage was cast by still in the sky? */
+function realAlive(m){
+  const r = m.twinOf;
+  return !!(r && r.alive && !r.mirage && r.mirageStamp === m.twinStamp);
+}
+
+/**
+ * Is this real ship's twin still shimmering IN THE FIELD, untouched? Asked
+ * by systems.js on the first round that lands on the real one, and that
+ * answer is the star: you picked the real one first.
+ *
+ * "In the field" matters: a ship destroyed the instant it crosses the top
+ * edge, while its double is still staged above the screen, fooled nobody
+ * because it had nobody to fool.
+ */
+function seenThrough(real){
+  const m = real && real.mirageTwin;
+  return !!(m && m.alive && m.mirage && m.twinStamp === real.mirageStamp &&
+            m.twinOf === real && m.mirageHits === 0 && m.y > 10);
+}
+
+/** The heat lets go: the ghost comes apart in bands and is gone. */
+function dissolve(m, quiet){
+  if(!m || !m.alive) return;
+  m.alive = false;
+  if(!S) return;
+  S.ghosts.push({ x: m.x, y: m.y, typeId: m.typeId, tint: m.type.tint || "#c0392b",
+                  elite: m.elite, size: m.size, ph: m.phase || 0, t: 0 });
+  if(!quiet){
+    SF.fx.ring(m.x, m.y, m.r + 10, "#fff1c4", 2, 0.28);
+    SF.audio.play("mirage", null, m.x);
+  }
+}
+
+/** The real one is gone - dead or fled - so its lie has nothing to stand on. */
+function onRealGone(real){
+  const m = real && real.mirageTwin;
+  if(m && m.alive && m.mirage && m.twinStamp === real.mirageStamp) dissolve(m, true);
+}
+
+/**
+ * A shot arrived. It is spent - the round is already dead in systems.js -
+ * and the mirage flinches, says what it is, and after enough of them bursts.
+ */
+function hit(m, hx, hy){
+  if(!S || !m.alive) return;
+  m.mirageHits = (m.mirageHits || 0) + 1;
+  m.flash = 0;                       // no white hit-flash: nothing was hit
+  const fx = SF.fx;
+  fx.ring(hx, hy, 12, "#fff1c4", 1.6, 0.18);
+  fx.spark(hx, hy, (Math.random() - 0.5)*30, -20 - Math.random()*30, "#fff1c4", 0.3, 1.8);
+  SF.audio.play("mirage", null, m.x);
+  if(m.mirageHits === 1){
+    if(S.t - S.lastText > 0.6){
+      fx.text(m.x, m.y - m.r - 10, T("MIRAGE!"), "#fff1c4", 15, true);
+      S.lastText = S.t;
+    }
+    SF.comms.say("mirageShot");
+  }
+  if(m.mirageHits >= HITS_TO_BURST){ S.burst++; dissolve(m); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  UPDATE                                                             */
+/* ------------------------------------------------------------------ */
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+
+  const items = world.enemies.items;
+  const seats = world.livePlayers();
+  for(let i = 0; i < items.length; i++){
+    const m = items[i];
+    if(!m.alive || !m.mirage) continue;
+    // No liar, no lie: a mirage outlives its ship by exactly one frame.
+    if(!realAlive(m)){ dissolve(m, true); continue; }
+    // Flying through one costs nothing, and says so once, with a ripple.
+    if(!m.brushed){
+      for(let s = 0; s < seats.length; s++){
+        const p = seats[s];
+        if(!p.alive) continue;
+        const dx = p.x - m.x, dy = p.y - m.y, rr = m.r + p.r;
+        if(dx*dx + dy*dy < rr*rr){
+          m.brushed = true;
+          SF.fx.ring(m.x, m.y, m.r + 8, "#fff1c4", 2, 0.3);
+          SF.audio.play("mirage", null, m.x);
+          break;
+        }
+      }
+    }
+  }
+
+  for(let i = S.ghosts.length - 1; i >= 0; i--){
+    const g = S.ghosts[i];
+    g.t += dt;
+    if(g.t >= DISSOLVE) S.ghosts.splice(i, 1);
+  }
+
+  for(const g of S.sand){
+    g.x += g.vx*dt; g.y += g.vy*dt;
+    if(g.x > W + 4){ g.x = -4; g.y = Math.random()*H; }
+    if(g.y > H + 4){ g.y = -4; g.x = Math.random()*W; }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world: the shadows on the sand                    */
+/* ------------------------------------------------------------------ */
+
+/** The dark shape a ship throws on the ground: its own sprite, flooded to
+ *  one warm dark, cached once per archetype. Rocks have no drawn art and
+ *  get a plain dark blot, which is what a rock's shadow is anyway. */
+function silhouetteFor(e){
+  const key = e.typeId + "|" + (e.elite ? 1 : 0);
+  if(silCache[key] !== undefined) return silCache[key];
+  let sil = null;
+  const sprite = SF.enemyArt && SF.enemyArt.spriteFor(e.typeId, e.type.tint || "#c0392b", e.elite);
+  if(sprite){
+    const cv = document.createElement("canvas");
+    cv.width = sprite.width; cv.height = sprite.height;
+    const c = cv.getContext("2d");
+    if(c){
+      c.drawImage(sprite, 0, 0);
+      c.globalCompositeOperation = "source-in";
+      c.fillStyle = "#2b1a0c";
+      c.fillRect(0, 0, cv.width, cv.height);
+      sil = cv;
+    }
+  }
+  silCache[key] = sil;
+  return sil;
+}
+
+/**
+ * Every real thing's shadow on the sand. Takes plain lists rather than the
+ * World, because the death rewind (rewind.js) replays a stand-in world from
+ * its tape and the shadows have to be there too - "oh, THAT one was real"
+ * is half of what the replay exists to show on this level.
+ */
+function drawShadows(ctx, enemies, players, VH){
+  const RES = (SF.enemyArt && SF.enemyArt.RES) || 128;
+  ctx.save();
+  ctx.globalAlpha = 0.34;
+  for(let i = 0; i < enemies.length; i++){
+    const e = enemies[i];
+    if(!e.alive || e.mirage || e.attached || !e.type) continue;
+    if(e.y < -20 || e.y > VH + 20) continue;
+    const size = e.size * (0.4 + 0.6*Math.min(1, e.spawnAnim == null ? 1 : e.spawnAnim));
+    const sil = silhouetteFor(e);
+    const sx = e.x + SHADOW_DX, sy = e.y + SHADOW_DY;
+    if(sil){
+      const box = size * sil.width / RES * 0.92;
+      ctx.drawImage(sil, sx - box/2, sy - box/2, box, box);
+    } else {
+      ctx.fillStyle = "#2b1a0c";
+      ctx.beginPath(); ctx.ellipse(sx, sy, size*0.36, size*0.3, 0, 0, TAU); ctx.fill();
+    }
+  }
+  // The squadron is real too - and its shadow is the first one a child sees,
+  // right under their own ship, before any enemy has flown in.
+  ctx.fillStyle = "#2b1a0c";
+  for(let s = 0; s < players.length; s++){
+    const p = players[s];
+    if(!p || p.alive === false) continue;
+    const k = (p.r || 13)/13;
+    const sx = p.x + SHADOW_DX, sy = p.y + SHADOW_DY;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - 19*k);
+    ctx.lineTo(sx + 14*k, sy + 12*k);
+    ctx.lineTo(sx, sy + 6*k);
+    ctx.lineTo(sx - 14*k, sy + 12*k);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+  const world = SF.game.world;
+  if(!world) return;
+  drawShadows(ctx, world.enemies.items, world.livePlayers(), VH);
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - the ghost itself (called from render.drawEnemies)           */
+/* ------------------------------------------------------------------ */
+
+/** A mirage: the real sprite, sliced into bands that slide against each
+ *  other like heat over a road. Touched, it shivers harder and thins - the
+ *  shot that found nothing is written on the thing it found. */
+function drawGhost(ctx, e, size, t){
+  const RES = (SF.enemyArt && SF.enemyArt.RES) || 128;
+  const sprite = SF.enemyArt && SF.enemyArt.spriteFor(e.typeId, e.type.tint || "#c0392b", e.elite);
+  const k = 1 + (e.mirageHits || 0)*0.6;
+  const breathe = 0.5 + Math.sin(t*6 + (e.phase || 0)*3)*0.5;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0.3, 0.62 + 0.12*breathe - (e.mirageHits || 0)*0.1);
+  if(sprite){
+    const box = size * sprite.width / RES;
+    const sw = sprite.width, sh = sprite.height;
+    const bands = 6, bh = sh/bands, dh = box/bands;
+    for(let i = 0; i < bands; i++){
+      const off = Math.sin(t*9*k + i*1.7 + (e.phase || 0))*2.2*k;
+      ctx.drawImage(sprite, 0, i*bh, sw, bh, e.x - box/2 + off, e.y - box/2 + i*dh, box, dh + 0.6);
+    }
+  } else {
+    ctx.fillStyle = e.type.tint || "#c0392b";
+    ctx.beginPath(); ctx.arc(e.x, e.y, size/2, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world: what the heat is doing                      */
+/* ------------------------------------------------------------------ */
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+  const RES = (SF.enemyArt && SF.enemyArt.RES) || 128;
+  const VW = SF.game.VW || 600;
+
+  // Ghosts coming apart: the bands fly sideways and fade, nothing bursts.
+  for(const g of S.ghosts){
+    const k = g.t/DISSOLVE;
+    const sprite = SF.enemyArt && SF.enemyArt.spriteFor(g.typeId, g.tint, g.elite);
+    if(!sprite) continue;
+    const box = g.size * sprite.width / RES;
+    const sw = sprite.width, sh = sprite.height;
+    const bands = 6, bh = sh/bands, dh = box/bands;
+    ctx.save();
+    ctx.globalAlpha = 0.6*(1 - k);
+    for(let i = 0; i < bands; i++){
+      const dir = i % 2 ? 1 : -1;
+      const off = dir*(Math.sin(i*1.7 + g.ph)*2 + k*k*46);
+      ctx.drawImage(sprite, 0, i*bh, sw, bh, g.x - box/2 + off, g.y - box/2 + i*dh - k*8, box, dh + 0.6);
+    }
+    ctx.restore();
+  }
+
+  // Sand on the wind - the only thing on this world that moves without lying.
+  ctx.fillStyle = "#fff1c4";
+  for(const g of S.sand){
+    ctx.globalAlpha = g.a;
+    ctx.fillRect(g.x, g.y, g.s*1.6, g.s*0.7);
+  }
+  ctx.globalAlpha = 1;
+
+  // The sun, hammering down from the corner every shadow points away from.
+  const sx = VW*0.10, sy = 26;
+  const glare = ctx.createRadialGradient(sx, sy, 0, sx, sy, 120);
+  glare.addColorStop(0, "rgba(255,250,225,0.55)");
+  glare.addColorStop(0.25, "rgba(255,236,170,0.22)");
+  glare.addColorStop(1, "rgba(255,220,140,0)");
+  ctx.fillStyle = glare;
+  ctx.beginPath(); ctx.arc(sx, sy, 120, 0, TAU); ctx.fill();
+}
+
+SF.mirage = { _state: () => S,
+              reset, begin, active, twin, eligible, seenThrough, onRealGone,
+              hit, dissolve, update, drawSky, drawShadows, drawGhost, drawOver };
+})();
+
+
 ;/* ===== src/mirrorduel.js ===== */
 /*
  * THE GLASS SEA'S DUEL - the reflection turns.
@@ -17639,6 +18166,10 @@ class WaveDirector {
           else this.waiting[s.pair] = spawned;
         }
         if(spawned.counted) this.spawnedCount++;
+        // The Mirage: most fighters bring their double with them - a
+        // second pooled ship that is nothing (mirage.js decides who).
+        if(this.mission.mirage && SF.mirage && SF.mirage.active())
+          SF.mirage.twin(this.world, spawned, this.difficulty);
         this.pending.splice(i, 1);
       }
     }
@@ -17824,6 +18355,17 @@ function resolve(world, ctxObj, dt){
       if(!at) return false;
       const hx = at.x, hy = at.y;
 
+      /*
+       * THE MIRAGE: hot air. The round is spent on nothing, and the nothing
+       * says so (mirage.js). Tested before the shield: a lie inside a
+       * Guardian's bubble is still a lie, and the shot still finds nothing.
+       */
+      if(e.mirage){
+        b.x = hx; b.y = hy; b.alive = false;
+        if(ctxObj.onMirageHit) ctxObj.onMirageHit(e, b, hx, hy);
+        return true;
+      }
+
       // Inside a Guardian's bubble nothing gets through - the shot splashes
       // off and the player is told, loudly, to shoot the Guardian instead.
       if(e.shielded){
@@ -17873,6 +18415,14 @@ function resolve(world, ctxObj, dt){
 
       e.hp -= b.dmg;
       e.flash = 1;
+      /*
+       * THE MIRAGE's star is decided by the FIRST round to land on a pair:
+       * was the real one hit while its twin was still untouched, in the
+       * field? Judged here, on the first hit, rather than at the kill, so a
+       * wing-round from a spread shot clipping the fake a moment later
+       * cannot take back a choice a child already made with their eyes.
+       */
+      if(e.mirageTwin && !e.firstHit){ e.firstHit = true; e.aimedFirst = SF.mirage.seenThrough(e); }
       /*
        * Landing a hit has to be unmissable from the sofa. Sparks spray back
        * along the shot, a hard white ring pops at the contact point, and the
@@ -18076,6 +18626,9 @@ function resolve(world, ctxObj, dt){
          * which is exactly right: the ride is not a dodge either.
          */
         if(e.attached) continue;
+        // A mirage is air. Flying through one is the cheapest lesson on its
+        // level, and mirage.js draws the ripple that teaches it.
+        if(e.mirage) continue;
         const rr = e.r + p.r;
         const d2 = (e.x-p.x)*(e.x-p.x) + (e.y-p.y)*(e.y-p.y);
         /*
@@ -19015,6 +19568,10 @@ function drawEnemies(ctx, world, timeMs){
     const e = items[i];
     if(!e.alive) continue;
     const size = e.size * (0.4 + 0.6*easeOutCubic(e.spawnAnim));
+    // The Mirage's doubles: the same art, sliced by heat. mirage.js owns
+    // the look, and a ghost gets none of the furniture below - no hit
+    // flash, no SOS, no health pip - because none of it is true of it.
+    if(e.mirage){ SF.mirage.drawGhost(ctx, e, size, t); continue; }
     if(e.type.behaviour === "tumble"){ drawAsteroid(ctx, e, size); continue; }
     if(e.type.behaviour === "mine"){ drawMine(ctx, e, size, t); continue; }
     ctx.save();
@@ -24848,6 +25405,28 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"emberfloor", x:0.50, y:0.50},
             {k:"forgecity",  x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * SUNSTRUCK (The Mirage) - the desert on the far shore of the drowned sky,
+   * and the fifth surface. Appended at the end, same Drawing Board index rule
+   * as every ground before it.
+   *
+   * The brightest floor in the game, and the only one whose LIGHT is the
+   * mechanic: the sun stands high and to the upper left, every dune crest,
+   * rock and tower is lit from there and shadowed down-right, and that is
+   * exactly the light mirage.js throws the ships' shadows by - so a shadow
+   * on the sand reads as sitting ON the sand. A dry riverbed runs the full
+   * height (the trench rule: position and slope agree at the wrap), and
+   * their mirror towers stand over the dunes, all tipped at the sun. The
+   * once-layer is the Sun-Catcher: the mirror field that bakes the air, on
+   * its salt pan. The mirages are not painted here - mirage.js owns
+   * everything that shimmers.
+   */
+  { name:"Sunstruck", surface:true,
+    clouds:["#f2cf8a","#d9a85f","#b8813f"], dust:"#f6dfae", star:"#fff3d6",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"dunes",      x:0.50, y:0.50},
+            {k:"suncatcher", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -27612,6 +28191,383 @@ function drawForgecity(ctx, W, H, p, rand){
   });
 }
 
+/* ---------------------------------------------------------
+   SUNSTRUCK - a desert from above.
+   ---------------------------------------------------------
+   The sea's rule again: one thing crosses the whole floor and everything
+   else answers to it. Here the thing is the SUN. It sits high and to the
+   upper left, so every crest is pale on that side and dark on the other,
+   every rock and shrub and tower throws a shadow down and to the right, and
+   the ships (mirage.js) throw theirs the same way - which is what makes a
+   shadow on this floor read as a fact about the ground rather than a
+   decoration on the sprite. A dry riverbed runs the full height, and their
+   mirror towers stand in the sand: the enemy is in the geography here as
+   well, and it is the reason the air lies. */
+
+const DUNE = {
+  sand:"#d9a85f", sandLit:"#f2cf8a", sandPale:"#f6dfae", sandDark:"#b8813f",
+  shade:"#8a5a2b", shadow:"#2b1a0c",
+  bed:"#c49257", bedDark:"#a3733a", salt:"#fbf1d6",
+  rock:"#7a5a3c", rockLit:"#a8845c", scrub:"#6b6a3a", scrubLit:"#8f8d4e",
+  tower:"#2b2530", towerLit:"#4a4353", mirror:"#e8fbff", glint:"#ffffff", warn:"#ff5d73",
+};
+
+/* How far a thing of height h throws its shadow, and which way: the one
+ * light rule for the whole world, shared with the crest painter below. */
+const SUN_DX = 0.55, SUN_DY = 1.0;
+
+/** A stone with the sun on one side and its shadow on the sand beside it. */
+function duneRock(ctx, x, y, r, rand){
+  const rot = rand()*TAU;
+  ctx.fillStyle = rgba(DUNE.shadow, 0.28);
+  ctx.beginPath(); ctx.ellipse(x + r*0.7*SUN_DX + r*0.3, y + r*0.7*SUN_DY, r*1.05, r*0.7, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.rock;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r*0.8, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.rockLit;
+  ctx.beginPath(); ctx.ellipse(x - r*0.3, y - r*0.32, r*0.5, r*0.36, rot, 0, TAU); ctx.fill();
+}
+
+/** A dry shrub: a few olive strokes, and the small shadow that says it
+ *  stands up off the sand. */
+function duneScrub(ctx, x, y, r, rand){
+  ctx.fillStyle = rgba(DUNE.shadow, 0.2);
+  ctx.beginPath(); ctx.ellipse(x + r*0.5, y + r*0.8, r*0.9, r*0.45, 0, 0, TAU); ctx.fill();
+  ctx.lineCap = "round";
+  for(let i = 0; i < 7; i++){
+    const a = rand()*TAU, l = r*(0.5 + rand()*0.6);
+    ctx.strokeStyle = i % 2 ? DUNE.scrub : DUNE.scrubLit; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a)*l, y + Math.sin(a)*l); ctx.stroke();
+  }
+}
+
+/** One of their mirror towers, from above: a dark base with a warning eye,
+ *  a bright plate tipped at the sun, and the long shadow of something tall. */
+function mirrorTower(ctx, x, y, h, rand){
+  // the shadow first - the tallest thing on the tile throws the longest one
+  ctx.strokeStyle = rgba(DUNE.shadow, 0.34); ctx.lineWidth = 3; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + h*SUN_DX, y + h*SUN_DY); ctx.stroke();
+  ctx.fillStyle = rgba(DUNE.shadow, 0.34);
+  ctx.beginPath(); ctx.arc(x + h*SUN_DX, y + h*SUN_DY, 4.5, 0, TAU); ctx.fill();
+  // the base: their angular dark, with the red eye every one of their works wears
+  ctx.fillStyle = DUNE.tower; ctx.fillRect(x - 6, y - 6, 12, 12);
+  ctx.fillStyle = DUNE.towerLit; ctx.fillRect(x - 6, y - 6, 12, 3.5);
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 8, y + 8); ctx.lineTo(x, y - 9); ctx.lineTo(x + 8, y + 8); ctx.stroke();
+  // the mirror, tipped up-left at the sun, and the glint that says it is glass
+  ctx.save(); ctx.translate(x - 3, y - 4); ctx.rotate(-0.6 + (rand() - 0.5)*0.2);
+  ctx.fillStyle = DUNE.mirror; ctx.fillRect(-7, -4.5, 14, 9);
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1; ctx.strokeRect(-7, -4.5, 14, 9);
+  ctx.restore();
+  const g = ctx.createRadialGradient(x - 5, y - 6, 0, x - 5, y - 6, 9);
+  g.addColorStop(0, rgba(DUNE.glint, 0.95)); g.addColorStop(0.35, rgba(DUNE.glint, 0.4)); g.addColorStop(1, rgba(DUNE.glint, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x - 5, y - 6, 9, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.warn;
+  ctx.beginPath(); ctx.arc(x + 5, y + 5, 1.4, 0, TAU); ctx.fill();
+}
+
+function drawDunes(ctx, W, H, p, rand){
+  ctx.fillStyle = DUNE.sand;
+  ctx.fillRect(0, 0, W, H);
+
+  // The floor's own relief: broad soft mottling, no crests yet.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.28)*W;
+    const col = i % 3 ? DUNE.sandLit : DUNE.sandDark;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.35 : 0.28));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE DRY RIVERBED - full height, wrap-exact: whole sine periods of t so
+   * position and slope agree at the seam. Water ran here once; the sky
+   * river that poured into the sea never reached this far. Its floor is
+   * darker and cracked, with salt where the last of it dried.
+   */
+  const bx0 = W*(0.28 + rand()*0.12);
+  const s1 = (rand() - 0.5)*W*0.16, s2 = (rand() - 0.5)*W*0.10;
+  const bed = t => bx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+  const bedW = 22 + rand()*8;
+  const bedPath = () => {
+    for(let i = 0; i <= 48; i++){ const t = i/48; const x = bed(t);
+      i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  // the bank's shadow on the sun-away side, then the bed, then its lit bank
+  ctx.strokeStyle = rgba(DUNE.shade, 0.35); ctx.lineWidth = bedW + 6;
+  ctx.save(); ctx.translate(3, 4); ctx.beginPath(); bedPath(); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = DUNE.bed; ctx.lineWidth = bedW;
+  ctx.beginPath(); bedPath(); ctx.stroke();
+  ctx.strokeStyle = DUNE.bedDark; ctx.lineWidth = bedW*0.55;
+  ctx.beginPath(); bedPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(DUNE.sandPale, 0.7); ctx.lineWidth = 1.5;
+  ctx.save(); ctx.translate(-bedW*0.5 - 1, -1); ctx.beginPath(); bedPath(); ctx.stroke(); ctx.restore();
+  // mud cracks and salt on the bed
+  ctx.strokeStyle = rgba(DUNE.shade, 0.5); ctx.lineWidth = 1;
+  for(let i = 0; i < 40; i++){
+    const t = rand(), x = bed(t) + (rand() - 0.5)*bedW*0.8, y = t*H;
+    const a = rand()*TAU, l = 4 + rand()*7;
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.lineTo(x + Math.cos(a)*l, yy + Math.sin(a)*l);
+      ctx.lineTo(x + Math.cos(a + 1.2)*l*0.6, yy + Math.sin(a + 1.2)*l*0.6);
+      ctx.stroke();
+    });
+  }
+  for(let i = 0; i < 9; i++){
+    const t = rand(), x = bed(t) + (rand() - 0.5)*bedW*0.5, y = t*H, r = 3 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = rgba(DUNE.salt, 0.55);
+      ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.6, rand()*TAU, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE CRESTS. Long S-curves crossing the tile, each with a pale face on
+   * the sun side and a dark face on the other - the same light rule as
+   * every shadow on this world. Three strokes each: the shade, offset
+   * down-right; the lit face, offset up-left; the knife-edge itself.
+   */
+  const crestAt = (x0, y0, len, a, amp) => {
+    const cx = t => x0 + Math.cos(a)*t*len + Math.cos(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    const cy = t => y0 + Math.sin(a)*t*len + Math.sin(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    return { cx, cy };
+  };
+  for(let i = 0; i < 9; i++){
+    const x0 = rand()*W, y0 = rand()*H;
+    const a = -0.25 + rand()*0.5 + (i % 2 ? Math.PI : 0);
+    const len = W*(0.35 + rand()*0.5), amp = 8 + rand()*22;
+    const c = crestAt(x0, y0, len, a, amp);
+    const path = (dx, dy) => {
+      ctx.beginPath();
+      for(let k = 0; k <= 32; k++){ const t = k/32;
+        k ? ctx.lineTo(c.cx(t) + dx, c.cy(t) + dy) : ctx.moveTo(c.cx(t) + dx, c.cy(t) + dy); }
+    };
+    tiled(ctx, H, y0, yy => {
+      const dy0 = yy - y0;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = rgba(DUNE.sandDark, 0.55); ctx.lineWidth = 14;
+      path(5, 7 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.shade, 0.22); ctx.lineWidth = 7;
+      path(4, 6 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.sandLit, 0.8); ctx.lineWidth = 12;
+      path(-4, -6 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(DUNE.sandPale, 0.9); ctx.lineWidth = 1.6;
+      path(0, dy0); ctx.stroke();
+    });
+  }
+
+  // Ripples: short curved strokes combed one way, the wind that built the dunes.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 70; i++){
+    const x = rand()*W, y = rand()*H, l = 8 + rand()*16;
+    ctx.strokeStyle = rgba(i % 2 ? DUNE.sandDark : DUNE.sandPale, 0.10 + rand()*0.12);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.quadraticCurveTo(x + l*0.5, yy - 3, x + l, yy + 1);
+      ctx.stroke();
+    });
+  }
+
+  // Rock fields, each stone shadowed the one way.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*5);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3 + rand()*6;
+      tiled(ctx, H, y, yy => duneRock(ctx, x, yy, r, rngFor(5100 + c*16 + i)));
+    }
+  }
+
+  // What still grows: a few dry shrubs along the old river, where the last water was.
+  for(let i = 0; i < 9; i++){
+    const t = rand(), side = rand() < 0.5 ? -1 : 1;
+    const x = bed(t) + side*(bedW*0.7 + rand()*30), y = t*H, r = 4 + rand()*5;
+    tiled(ctx, H, y, yy => duneScrub(ctx, x, yy, r, rngFor(5300 + i)));
+  }
+
+  // Something huge died here once: bleached ribs in the sand, and their shadows.
+  {
+    const x = W*(0.6 + rand()*0.25), y = rand()*H, n = 5, sp = 9;
+    tiled(ctx, H, y, yy => {
+      for(let i = 0; i < n; i++){
+        const rx = x + i*sp, r = 10 + Math.sin(i/(n - 1)*Math.PI)*8;
+        ctx.strokeStyle = rgba(DUNE.shadow, 0.22); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(rx + 3, yy + 4, r, Math.PI*0.9, Math.PI*1.9); ctx.stroke();
+        ctx.strokeStyle = DUNE.salt; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(rx, yy, r, Math.PI*0.9, Math.PI*1.9); ctx.stroke();
+      }
+      ctx.strokeStyle = DUNE.salt; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x - 6, yy); ctx.lineTo(x + n*sp, yy); ctx.stroke();
+    });
+  }
+
+  // Their towers, standing in the dunes - the reason the air lies.
+  for(let i = 0; i < 4; i++){
+    const x = 30 + rand()*(W - 60), y = rand()*H, h = 26 + rand()*14;
+    // never in the riverbed: the tower is on the dune, over the water it drank
+    const t = y/H;
+    const tx = Math.abs(x - bed(t)) < bedW ? x + bedW*1.4 : x;
+    tiled(ctx, H, y, yy => mirrorTower(ctx, tx, yy, h, rngFor(5500 + i)));
+  }
+
+  // Glare: the sun catching loose grains, a sparse scatter of white.
+  for(let i = 0; i < 30; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(DUNE.glint, 0.25 + rand()*0.4);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE SUN-CATCHER - the once-layer. Their great mirror field: rings of
+ * heliostats on a salt pan, every plate turned to one tower, and the tower's
+ * receiver white-hot with the light they all throw at it. This is the machine
+ * that cooks the sky. Its salt apron settles it onto the sand wherever the
+ * scroll has carried the floor, the same trick the forge-city's ash used.
+ */
+function drawSuncatcher(ctx, W, H, p, rand){
+  const cx = W*0.52, cy = H*0.48, R = W*0.30;
+
+  // The salt pan it was built on: pale, flat, and cracked into plates.
+  const pan = ctx.createRadialGradient(cx, cy, R*0.2, cx, cy, R*1.9);
+  pan.addColorStop(0, rgba(DUNE.salt, 0.85));
+  pan.addColorStop(0.55, rgba(DUNE.salt, 0.55));
+  pan.addColorStop(1, rgba(DUNE.salt, 0));
+  ctx.fillStyle = pan;
+  ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(DUNE.sandDark, 0.35); ctx.lineWidth = 1;
+  for(let i = 0; i < 60; i++){
+    const a = rand()*TAU, d = rand()*R*1.6;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+    const b = rand()*TAU, l = 10 + rand()*22;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(b)*l, y + Math.sin(b)*l);
+    ctx.lineTo(x + Math.cos(b + 1.1)*l*0.7, y + Math.sin(b + 1.1)*l*0.7);
+    ctx.stroke();
+  }
+
+  // The scorch: sand baked dark in a ring around the focus.
+  const burn = ctx.createRadialGradient(cx, cy, R*0.08, cx, cy, R*0.42);
+  burn.addColorStop(0, rgba(DUNE.shade, 0.55));
+  burn.addColorStop(0.5, rgba(DUNE.shade, 0.25));
+  burn.addColorStop(1, rgba(DUNE.shade, 0));
+  ctx.fillStyle = burn;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.42, 0, TAU); ctx.fill();
+
+  // The service roads: dark tracks from the wall to the tower and out to the aprons.
+  ctx.strokeStyle = rgba(DUNE.sandDark, 0.55); ctx.lineWidth = 4; ctx.lineCap = "round";
+  for(let i = 0; i < 3; i++){
+    const a = (i/3)*TAU + 0.4;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*R*0.12, cy + Math.sin(a)*R*0.12);
+    ctx.lineTo(cx + Math.cos(a)*R*1.3, cy + Math.sin(a)*R*1.3); ctx.stroke();
+  }
+
+  /*
+   * The heliostats: three rings of plates, every one rotated to face the
+   * tower, every one with its own small shadow and its own glint. Rows are
+   * staggered so the field reads as a machine that was planned, not sprinkled.
+   */
+  for(let ring = 0; ring < 3; ring++){
+    const d = R*(0.42 + ring*0.24), n = 12 + ring*8;
+    for(let i = 0; i < n; i++){
+      const a = (i/n)*TAU + ring*0.13;
+      const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI/2);
+      ctx.fillStyle = rgba(DUNE.shadow, 0.3);
+      ctx.fillRect(-7 + 3, -4 + 4, 14, 8);
+      ctx.fillStyle = DUNE.tower; ctx.fillRect(-1.5, -1.5, 3, 3);
+      ctx.fillStyle = DUNE.mirror; ctx.fillRect(-7, -4, 14, 8);
+      ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 1; ctx.strokeRect(-7, -4, 14, 8);
+      ctx.restore();
+      if(i % 3 === 0){
+        const g = ctx.createRadialGradient(x - 2, y - 2, 0, x - 2, y - 2, 7);
+        g.addColorStop(0, rgba(DUNE.glint, 0.9)); g.addColorStop(1, rgba(DUNE.glint, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x - 2, y - 2, 7, 0, TAU); ctx.fill();
+      }
+    }
+  }
+
+  // Their cables, drinking the heat away to the compound.
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 2.5;
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.9;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*R*0.1, cy + Math.sin(a)*R*0.1);
+    ctx.lineTo(cx + Math.cos(a)*R*0.95, cy + Math.sin(a)*R*0.95); ctx.stroke();
+  }
+
+  // THE TOWER. The tallest thing on the world throws the longest shadow, and
+  // its receiver is the brightest thing on it - the point every plate aims at.
+  const th = R*0.55;
+  ctx.strokeStyle = rgba(DUNE.shadow, 0.4); ctx.lineWidth = 9; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + th*SUN_DX, cy + th*SUN_DY); ctx.stroke();
+  ctx.fillStyle = rgba(DUNE.shadow, 0.4);
+  ctx.beginPath(); ctx.arc(cx + th*SUN_DX, cy + th*SUN_DY, 13, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.tower;
+  ctx.beginPath(); ctx.arc(cx, cy, 15, 0, TAU); ctx.fill();
+  ctx.strokeStyle = DUNE.towerLit; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 15, 0, TAU); ctx.stroke();
+  for(let i = 0; i < 4; i++){
+    const a = (i/4)*TAU + 0.4;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a)*22, cy + Math.sin(a)*22); ctx.stroke();
+  }
+  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 34);
+  core.addColorStop(0, rgba(DUNE.glint, 1));
+  core.addColorStop(0.2, rgba("#fff3d6", 0.95));
+  core.addColorStop(0.5, rgba("#ffd77a", 0.45));
+  core.addColorStop(1, rgba("#ffd77a", 0));
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(cx, cy, 34, 0, TAU); ctx.fill();
+  ctx.fillStyle = DUNE.warn;
+  ctx.beginPath(); ctx.arc(cx, cy - 15, 2, 0, TAU); ctx.fill();
+
+  /*
+   * The compound, off the field on the sun-away side: their angular blocks
+   * inside one wall, red eyes, stacks - the same brand the forge-city wears,
+   * bleached by a hotter sun.
+   */
+  const kx = cx + R*1.22, ky = cy + R*0.55;
+  ctx.strokeStyle = DUNE.tower; ctx.lineWidth = 3;
+  ctx.strokeRect(kx - 46, ky - 30, 92, 60);
+  ctx.fillStyle = DUNE.warn;
+  [[-46, -30], [46, -30], [-46, 30], [46, 30]].forEach(([ox, oy]) => {
+    ctx.beginPath(); ctx.arc(kx + ox, ky + oy, 1.7, 0, TAU); ctx.fill();
+  });
+  for(let i = 0; i < 6; i++){
+    const bx = kx - 32 + (i % 3)*30, by = ky - 14 + Math.floor(i/3)*28;
+    const bw = 18 + (i % 2)*6, bh = 12 + ((i + 1) % 3)*4;
+    ctx.fillStyle = rgba(DUNE.shadow, 0.4);
+    ctx.fillRect(bx - bw/2 + 4, by - bh/2 + 6, bw, bh);       // shadow, down-right
+    ctx.fillStyle = DUNE.tower; ctx.fillRect(bx - bw/2, by - bh/2, bw, bh);
+    ctx.fillStyle = DUNE.towerLit; ctx.fillRect(bx - bw/2, by - bh/2, bw, 3.5);
+    ctx.fillStyle = DUNE.mirror;
+    for(let q = 0; q < 2 + (i % 2); q++) ctx.fillRect(bx - bw/2 + 3 + q*6, by + 1, 2.5, 2.5);
+    if(i % 3 === 0){
+      ctx.fillStyle = DUNE.warn;
+      ctx.beginPath(); ctx.arc(bx + bw/2 - 1, by - bh/2 - 1, 1.5, 0, TAU); ctx.fill();
+    }
+  }
+
+  // The landing aprons outside the wall, where the haulers wait for the heat.
+  for(let i = 0; i < 2; i++){
+    const x = kx + (i ? 70 : -80), y = ky + (i ? 8 : -40);
+    ctx.fillStyle = rgba(DUNE.sandDark, 0.45);
+    ctx.fillRect(x - 14, y - 10, 28, 20);
+    ctx.strokeStyle = rgba(DUNE.tower, 0.7); ctx.lineWidth = 1;
+    ctx.strokeRect(x - 14, y - 10, 28, 20);
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.stroke();
+    ctx.fillStyle = DUNE.warn;
+    ctx.beginPath(); ctx.arc(x - 11, y - 7, 1.3, 0, TAU); ctx.fill();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -28010,6 +28966,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "drowned") drawDrowned(px, W, H, pr, rand);
     else if(pr.k === "emberfloor") drawEmberfloor(px, W, H, pr, rand);
     else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
+    else if(pr.k === "dunes") drawDunes(px, W, H, pr, rand);
+    else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
   });
 }
 
@@ -30394,7 +31352,10 @@ function packEnemies(pool){
     const e = items[i];
     if(!e.alive) continue;
     out.push([e.netId || (e.netId = ++netSeq), e.typeId, R(e.x), R(e.y),
-              R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100)]);
+              R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100),
+              // The Mirage: the guest paints from this list, so a double has
+              // to arrive as a double - no shadow, and drawn as heat.
+              e.mirage ? 1 : 0]);
   }
   return out;
 }
@@ -30539,6 +31500,7 @@ function applySnapshot(world){
     } catch(err){ continue; }
     if(!e) continue;
     e.netId = +id; e.hp = row[4]; e.angle = row[6]/100; e.entering = false;
+    if(row[8]){ e.mirage = true; e.fireTimer = Infinity; e.diver = false; }
   }
 
   const fillBullets = (pool, rows) => {
@@ -31024,6 +31986,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.dive) SF.dive.begin();
   SF.volcano.reset();                     // the ground sleeps until the forge world
   if(mission.volcano) SF.volcano.begin();
+  SF.mirage.reset();                      // the heat waits for the desert
+  if(mission.mirage) SF.mirage.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -31131,6 +32095,8 @@ function startMission(missionIndex, difficultyId){
     // fifteen missions in a row for the same 80%.
     bounties: 0, grazes: 0, elitesKilled: 0, partsOff: 0, partsTotal: 0,
     ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
+    // The Mirage: real ships destroyed while their untouched twin still shimmered.
+    seenThrough: 0,
     stars: 0,
   };
 
@@ -31411,6 +32377,7 @@ function startMission(missionIndex, difficultyId){
              : mission.wrap ? "wrapStart"
              : mission.dive ? "diveStart"
              : mission.volcano ? "volcanoStart"
+             : mission.mirage ? "mirageStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -31737,6 +32704,13 @@ const callbacks = {
    */
   onEnemyKilled(e, bullet, byRamming, noPay, who){
     const run = game.run;
+    /*
+     * THE MIRAGE. A double that "dies" - to a bomb, a chain, a Wacky Sky
+     * cascade, anything that reaches this door - was never there: no coin,
+     * no score, no tally, no pilot. It dissolves and the ledger never hears
+     * of it. One guard at the one door, so no kill path can ever pay for air.
+     */
+    if(e.mirage){ SF.mirage.dissolve(e); return; }
     e.alive = false;
     /*
      * WHOSE KILL. In co-op two children are shooting into the same sky and
@@ -31785,6 +32759,21 @@ const callbacks = {
       if(run.spot && !run.spot.lit) run.stats.darkKills++;
       if(run.narrows && run.narrows.w > VW*0.115) run.stats.tightKills++;
       if(run.nightfall && run.nightfall.k > 0.5) run.stats.lateKills++;
+      /*
+       * The Mirage's star: the first round to land on the pair found the
+       * real one while its twin was still untouched (systems.js judges that
+       * on the hit; this is where it pays) - you looked at the sand first.
+       * Either way the lie comes apart with the ship that cast it, here
+       * rather than a frame later, so the cause reads on screen.
+       */
+      if(run.mission.mirage && e.mirageTwin){
+        if(e.aimedFirst){
+          run.stats.seenThrough++;
+          fx.text(e.x, e.y - e.r - 24, T("SEEN THROUGH!"), "#fff1c4", 15, true);
+          SF.comms.say("mirageSeen");
+        }
+        SF.mirage.onRealGone(e);
+      }
     }
     // The Gauntlet's whole brief is the gold glowing ones, so they get counted.
     if(e.elite && !e.fromBoss) run.stats.elitesKilled++;
@@ -32593,6 +33582,7 @@ const behaviourCtx = {
   world: null,            // minelayers, hives and menders reach into the field
   onEscape: null,
   onEnemyKilled: null, onBossHit: null, onPlayerHit: null, godMode: false,
+  onMirageHit: null,      // the Mirage: a round spent on hot air
 };
 
 function update(dt, timeMs){
@@ -32630,6 +33620,7 @@ function update(dt, timeMs){
   behaviourCtx.onBossDead = finalBossBlast;
   behaviourCtx.onBossPhase = onBossPhase;
   behaviourCtx.onPlayerHit = callbacks.onPlayerHit;
+  behaviourCtx.onMirageHit = run.mission.mirage ? (e, b, hx, hy) => SF.mirage.hit(e, hx, hy) : null;
   behaviourCtx.onGraze = run.mission.nearMiss ? callbacks.onGraze : null;
   behaviourCtx.godMode = game.godMode;
   // The Chorus: guns may only release inside the beat's window, and never
@@ -34073,6 +35064,7 @@ function update(dt, timeMs){
   if(run.mission.sky29) SF.sky29.update(dt, run, game.world, simMs);
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
+  if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -34482,6 +35474,9 @@ function draw(timeMs){
    * No HUD and no radio either - this is a replay, not a moment of play.
    */
   if(SF.rewind.active() && SF.rewind.draw(ctx, timeMs, VW, VH)){ ctx.restore(); return; }
+  // The desert's shadows belong to the LIVE ships, so they go after the
+  // rewind's claim on the frame: the replay paints its own from the tape.
+  SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -34605,7 +35600,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -36853,6 +37848,7 @@ const FACE_KINDS = {
   dusk:    { c0:"#8b7fd8", c1:"#221a4a" },   // Nightfall: the light going out
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
+  mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -36981,6 +37977,7 @@ function missionFace(m){
              : m.nightfall ? "dusk"
              : m.current ? "flow"
              : m.garden ? "garden"
+             : m.mirage ? "mirage"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -37114,11 +38111,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-38 (the sea joins the crack)
-  { at:39, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 39-41 (the forge world opens it)
-  { at:42, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 42
+    sub:"where space stops behaving itself" },              // 33-39 (the sea and the desert join the crack)
+  { at:40, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 40-42 (the forge world opens it)
+  { at:43, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 43
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -40203,6 +41200,120 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "#ff8a3c";
     ctx.beginPath(); ctx.arc(ex + 4, ey + 14, 1.8, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(ex - 6, ey + 17, 1.4, 0, Math.PI*2); ctx.fill();
+  } else if(art === "dunes"){
+    /*
+     * The Mirage's establishing shot: a white sun, dunes lit from it, and
+     * their mirror towers standing in the sand all tipped the same way. The
+     * story is a machine aimed at the sky.
+     */
+    const sky = ctx.createLinearGradient(0, 0, 0, H*0.6);
+    sky.addColorStop(0, "#f7e9c6"); sky.addColorStop(1, "#f2cf8a");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const sun = ctx.createRadialGradient(W*0.2, H*0.16, 2, W*0.2, H*0.16, W*0.28);
+    sun.addColorStop(0, "rgba(255,255,240,1)"); sun.addColorStop(0.1, "rgba(255,250,220,0.9)");
+    sun.addColorStop(0.4, "rgba(255,236,170,0.35)"); sun.addColorStop(1, "rgba(255,236,170,0)");
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+    // heat over the far dunes: pale lines that never quite lie flat
+    ctx.strokeStyle = "rgba(255,245,215,0.45)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 5; i++){
+      const y = H*(0.40 + i*0.02);
+      ctx.beginPath();
+      for(let x = 0; x <= W; x += 6) ctx.lineTo(x, y + Math.sin(x*0.08 + i)*1.6);
+      ctx.stroke();
+    }
+    // three dune ranges, far to near; the faces that look at the sun are pale
+    const ranges = [[0.50, "#c9955a"], [0.64, "#b8813f"], [0.80, "#a8712f"]];
+    const crests = [];
+    ranges.forEach(([yy, dark], ri) => {
+      const base = H*yy;
+      const crest = x => base + Math.sin(x/W*Math.PI*1.6 + ri*1.9)*H*0.06 +
+                         Math.sin(x/W*Math.PI*4.3 + ri)*H*0.02;
+      crests.push(crest);
+      ctx.fillStyle = dark;
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for(let x = 0; x <= W; x += 4) ctx.lineTo(x, crest(x));
+      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+      for(let x = 0; x < W; x += 3){
+        const s = crest(x + 3) - crest(x);        // rising to the right faces the sun
+        const a = s < 0 ? Math.min(0.6, -s*0.4) : 0;
+        if(a < 0.03) continue;
+        ctx.fillStyle = "rgba(255,240,200," + a.toFixed(2) + ")";
+        ctx.fillRect(x, crest(x), 3, H*0.15);
+      }
+    });
+    // their mirror towers on the middle range, every mirror tipped at the sun
+    const mid = crests[1];
+    [0.30, 0.44, 0.57, 0.71, 0.86].forEach((fx, i) => {
+      const x = W*fx, y = mid(x), h = 18 + (i % 3)*7;
+      ctx.strokeStyle = "rgba(60,35,15,0.45)"; ctx.lineWidth = 1.5;      // its shadow, down-right
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + h*0.9, y + h*0.35); ctx.stroke();
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.stroke();
+      ctx.save(); ctx.translate(x, y - h); ctx.rotate(-0.55);
+      ctx.fillStyle = "#e8fbff"; ctx.fillRect(-6, -3, 12, 5);
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 1; ctx.strokeRect(-6, -3, 12, 5);
+      ctx.restore();
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath(); ctx.arc(x - 2, y - h - 2, 1.6, 0, Math.PI*2); ctx.fill();
+    });
+    // the squadron, small and far, coming in over the last of the sea
+    A.drawShip(ctx, W*0.82, H*0.30, 26, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "twins"){
+    /*
+     * The lesson, in one picture: two identical ships over the sand, and
+     * only one of them has a shadow. Nothing needs a caption - a dark shape
+     * on the ground under one and not the other is a difference a
+     * seven-year-old spots before the words are read.
+     */
+    ctx.fillStyle = "#d9a85f"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(184,129,63,0.35)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 26; i++){
+      const y = (i*53) % H, x = (i*97) % W;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 18, y - 4, x + 40, y + 2); ctx.stroke();
+    }
+    // a dune crest crossing the frame: pale on the sun side, dark below
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(120,70,20,0.35)"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72 + 7); ctx.quadraticCurveTo(W*0.4, H*0.60 + 7, W, H*0.70 + 7); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,240,200,0.6)"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, H*0.72); ctx.quadraticCurveTo(W*0.4, H*0.60, W, H*0.70); ctx.stroke();
+    const sprite = SF.enemyArt.spriteFor("swooper", "#eaf2ff", false);
+    const box = 74, lx = W*0.32, rx = W*0.68, y = H*0.40;
+    if(sprite){
+      // the real one: its shadow first, on the sand, down and to the right
+      const sil = document.createElement("canvas");
+      sil.width = sprite.width; sil.height = sprite.height;
+      const sc = sil.getContext("2d");
+      if(sc){
+        sc.drawImage(sprite, 0, 0);
+        sc.globalCompositeOperation = "source-in";
+        sc.fillStyle = "#2b1a0c"; sc.fillRect(0, 0, sil.width, sil.height);
+        ctx.globalAlpha = 0.38;
+        ctx.drawImage(sil, lx + 14 - box*0.46, y + 26 - box*0.46, box*0.92, box*0.92);
+        ctx.globalAlpha = 1;
+      }
+      ctx.drawImage(sprite, lx - box/2, y - box/2, box, box);
+      // the mirage: the same ship, sliced by heat, and nothing under it
+      const bands = 6, bh = sprite.height/bands, dh = box/bands;
+      ctx.globalAlpha = 0.66;
+      for(let i = 0; i < bands; i++){
+        const off = Math.sin(i*1.7 + 0.8)*3;
+        ctx.drawImage(sprite, 0, i*bh, sprite.width, bh, rx - box/2 + off, y - box/2 + i*dh, box, dh + 0.6);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // the family ship below, with its own honest shadow
+    const px = W*0.5, py = H*0.80;
+    ctx.fillStyle = "rgba(43,26,12,0.36)";
+    ctx.beginPath();
+    ctx.moveTo(px + 14, py + 26 - 22); ctx.lineTo(px + 30, py + 26 + 14);
+    ctx.lineTo(px + 14, py + 26 + 7); ctx.lineTo(px - 2, py + 26 + 14); ctx.closePath(); ctx.fill();
+    A.drawShip(ctx, px, py, 56, { color: profile.shipColor, levels, t, idle:false });
+    // the sun in the corner every shadow points away from
+    const gl = ctx.createRadialGradient(W*0.08, H*0.06, 0, W*0.08, H*0.06, W*0.3);
+    gl.addColorStop(0, "rgba(255,250,225,0.85)"); gl.addColorStop(0.3, "rgba(255,236,170,0.25)");
+    gl.addColorStop(1, "rgba(255,236,170,0)");
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -40262,7 +41373,8 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["noGuns",   "silent"],
                          ["garden",   "secondHarvest"],
                          ["dive",     "theDive"],
-                         ["volcano",  "forgeWorld"]];
+                         ["volcano",  "forgeWorld"],
+                         ["mirage",   "theMirage"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

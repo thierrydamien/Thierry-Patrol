@@ -168,6 +168,9 @@ const SOUNDS = {
   missionFail:{ minGap: 800, fn: () => { [392,330,262,196].forEach((f,i)=>tone(f,0.3,"sawtooth",0.075,null,i*0.16)); }},
   alarm:      { minGap: 400, fn: () => { [220,180,220,180].forEach((f,i)=>tone(f,0.17,"sawtooth",0.075,null,i*0.2)); }},
   telegraph:  { minGap: 120, fn: () => { tone(1200, 0.08, "sine", 0.03, 1500); }},
+  // The Mirage: a shot into hot air. A breath of sine sliding down and a
+  // hiss - no click, no metal - the one sound in the game for hitting nothing.
+  mirage:     { minGap: 90, fn: () => { tone(1040, 0.14, "sine", 0.028, 360); noise(0.07, 0.04, 3200, 900); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},

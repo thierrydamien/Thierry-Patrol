@@ -381,6 +381,20 @@ function migrate(p){
     if((p.reached || 0) >= 39) p.reached += 1;
     p.missionsVer = 11;
   }
+  /*
+   * v12: The Mirage landed as mission 35 - the desert, the fifth surface -
+   * pushing the old 35-43 up one. Same single-offset shape as v10 and v11,
+   * and as before every hand-written mission id (tunes 23/28/32,
+   * devourerDown 32) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 12){
+    for(let id = 43; id >= 35; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 35) p.lastMission += 1;
+    if((p.reached || 0) >= 35) p.reached += 1;
+    p.missionsVer = 12;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

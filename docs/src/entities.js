@@ -1046,6 +1046,10 @@ class World {
     e.lockX = 0; e.lockY = 0;
     e.dodgeCool = 0; e.dodgeDir = 0; e.dodgeTimer = 0; e.tell = 0;
     e.arming = false; e.noSplit = false;
+    // The Mirage's pair: which ship is the lie, which ship cast it, and the
+    // stamp that keeps a recycled slot from answering for a dead one.
+    e.mirage = false; e.mirageTwin = null; e.mirageStamp = 0; e.firstHit = false; e.aimedFirst = false;
+    e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship
