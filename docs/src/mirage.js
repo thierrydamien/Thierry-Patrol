@@ -30,10 +30,20 @@ const SF = window.SF;
 const TAU = Math.PI*2;
 const T = s => (SF.i18n ? SF.i18n.t(s) : s);
 
-/* The sun stands high and to the upper left, so every shadow on this world
+/*
+ * The sun stands high and to the upper left, so every shadow on this world
  * falls down and to the right - the same light the dune crests are painted
- * by, which is what makes the shadow read as sitting ON the sand. */
-const SHADOW_DX = 14, SHADOW_DY = 26;
+ * by, which is what makes the shadow read as sitting ON the sand.
+ *
+ * Pushed out and darkened after the family played it: "the mirages aren't
+ * that obvious". At (14,26) and a third opaque the shadow sat half under the
+ * hull that cast it, so on a bright dune the tell the whole level rests on
+ * was something you had to hunt for. Further out, darker, and with a soft
+ * pool under it, it reads as a shape ON the ground from across the room -
+ * which is the only way "shoot the one with the shadow" can be a rule a
+ * seven-year-old plays by rather than a sentence they were told once.
+ */
+const SHADOW_DX = 20, SHADOW_DY = 34;
 /* How many wasted shots a mirage soaks before the heat lets go of it. One
  * would make spraying free; forever would make it a wall. Three is a cost a
  * child feels without a fight ever being lost to it. */
@@ -263,7 +273,6 @@ function silhouetteFor(e){
 function drawShadows(ctx, enemies, players, VH){
   const RES = (SF.enemyArt && SF.enemyArt.RES) || 128;
   ctx.save();
-  ctx.globalAlpha = 0.34;
   for(let i = 0; i < enemies.length; i++){
     const e = enemies[i];
     if(!e.alive || e.mirage || e.attached || !e.type) continue;
@@ -271,14 +280,20 @@ function drawShadows(ctx, enemies, players, VH){
     const size = e.size * (0.4 + 0.6*Math.min(1, e.spawnAnim == null ? 1 : e.spawnAnim));
     const sil = silhouetteFor(e);
     const sx = e.x + SHADOW_DX, sy = e.y + SHADOW_DY;
+    // A soft pool first: real shadows have a penumbra, and it is what makes
+    // the hard silhouette on top read as ground rather than as a sticker.
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#2b1a0c";
+    ctx.beginPath(); ctx.ellipse(sx, sy, size*0.52, size*0.42, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.55;
     if(sil){
       const box = size * sil.width / RES * 0.92;
       ctx.drawImage(sil, sx - box/2, sy - box/2, box, box);
     } else {
-      ctx.fillStyle = "#2b1a0c";
       ctx.beginPath(); ctx.ellipse(sx, sy, size*0.36, size*0.3, 0, 0, TAU); ctx.fill();
     }
   }
+  ctx.globalAlpha = 0.55;
   // The squadron is real too - and its shadow is the first one a child sees,
   // right under their own ship, before any enemy has flown in.
   ctx.fillStyle = "#2b1a0c";
@@ -317,13 +332,16 @@ function drawGhost(ctx, e, size, t){
   const k = 1 + (e.mirageHits || 0)*0.6;
   const breathe = 0.5 + Math.sin(t*6 + (e.phase || 0)*3)*0.5;
   ctx.save();
-  ctx.globalAlpha = Math.max(0.3, 0.62 + 0.12*breathe - (e.mirageHits || 0)*0.1);
+  ctx.globalAlpha = Math.max(0.28, 0.52 + 0.10*breathe - (e.mirageHits || 0)*0.1);
   if(sprite){
     const box = size * sprite.width / RES;
     const sw = sprite.width, sh = sprite.height;
-    const bands = 6, bh = sh/bands, dh = box/bands;
+    // Ten bands sliding twice as far as they used to. At six bands and two
+    // pixels the lie was a clean sprite with a wobble nobody saw across a
+    // busy sky; the ship has to look like it is coming apart in the heat.
+    const bands = 10, bh = sh/bands, dh = box/bands;
     for(let i = 0; i < bands; i++){
-      const off = Math.sin(t*9*k + i*1.7 + (e.phase || 0))*2.2*k;
+      const off = Math.sin(t*9*k + i*1.7 + (e.phase || 0))*4.6*k;
       ctx.drawImage(sprite, 0, i*bh, sw, bh, e.x - box/2 + off, e.y - box/2 + i*dh, box, dh + 0.6);
     }
   } else {

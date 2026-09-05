@@ -309,6 +309,29 @@ const BULLET_TIERS = [
 /** The fastest the guns can cycle, whatever is stacked on them: seconds per volley. */
 const FIRE_FLOOR = 0.125;
 /*
+ * THE MOST SHIPS THE SKY MAY HOLD.
+ *
+ * 8j raised `density` because the hard tiers played on an empty screen -
+ * "pressure is population" - and measured NIGHTMARE at 9.6 on screen with a
+ * peak of 34. Everything since has leaned on that number without re-reading
+ * it: the field grew from 600 to 720 wide (waveSize tops the count up for the
+ * room), the late levels are written denser, and the newest one flies a
+ * mirage beside half the fleet. Measured again, NIGHTMARE peaked at 59.
+ *
+ * So the ceiling is 8j's own figure, enforced rather than assumed - and it
+ * lives here, not in the wave director, because the director is not the only
+ * thing that puts ships in the sky. A Minelayer lays every 2.4 seconds and a
+ * mine lives 9, so seventeen of them at NIGHTMARE density held two dozen live
+ * mines that no wave ceiling could ever see: measured at the peak, the screen
+ * the family photographed was 24 mines, 12 Minelayers and 7 Menders.
+ *
+ * Nothing is cancelled by it. A wave that arrives to a full sky waits its
+ * turn, and a Minelayer with nowhere to drop tries again in half a second -
+ * every ship the script promised still flies, so the kill ratio and every
+ * star mean exactly what they meant before.
+ */
+const FIELD_POPULATION = 34;
+/*
  * How many coins may be loose in the sky at once (see World.spawnCoin). Above
  * this, a new coin merges into the nearest one instead of adding an object.
  * Set from measurement, not taste: ordinary PILOT play averages 14 live coins
@@ -1464,6 +1487,10 @@ class World {
   }
 
   countEnemies(){ return this.enemies.countAlive(); }
+  /** Is the sky at its ceiling? Asked by the wave director before it releases
+   *  a staged ship, and by everything that spawns outside it - see
+   *  FIELD_POPULATION. */
+  skyIsFull(){ return this.enemies.countAlive() >= FIELD_POPULATION; }
 }
 
 SF.World = World;
@@ -1472,6 +1499,6 @@ SF.World = World;
 // place that knows what a stale link looks like.
 SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
 SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable,
-                   WING_MIN, FIELD_MAX };
+                   WING_MIN, FIELD_MAX, FIELD_POPULATION };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();

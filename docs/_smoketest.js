@@ -6111,7 +6111,13 @@ async function run(){
         const bu = W.bullets.spawn();
         bu.x = boss.x + wp.ox; bu.y = boss.y + wp.oy + 220;
         bu.vx = 0; bu.vy = -700; bu.r = 5; bu.dmg = 40; bu.pierce = 0;
-        bu.homing = 0; bu.tier = 2; bu.age = 0; bu.fromDrone = false; bu.hitBoss = false;
+        // `hitWeak` as well as `hitBoss`: a hand-spawned round comes out of the
+        // pool carrying whatever the last occupant left on it, and resolve()
+        // skips EVERY weak point on a round already flagged as having struck
+        // one - so a recycled slot made this test quietly measure nothing and
+        // pass or fail on pool order. The muzzle clears both; so must this.
+        bu.homing = 0; bu.tier = 2; bu.age = 0; bu.fromDrone = false;
+        bu.hitBoss = false; bu.hitWeak = false;
         for(let f = 0; f < 40 && bu.alive; f++){
           W.updateBullets(1/60);
           SF.systems.resolve(W, ctxc, 1/60);
@@ -9938,8 +9944,8 @@ async function run(){
     check("the first level of a gun is open from the start",
       P.nextGate(fresh, spreadU) === 0 && P.activeLevel(fresh, "spread") === 0);
     fresh.upgrades = { spread: 1 };
-    check("the second level waits for mission 4", P.nextGate(fresh, spreadU) === 4);
-    fresh.missions = { 4: { cleared:true, stars:{}, best:{} } };
+    check("the second level waits for mission 3", P.nextGate(fresh, spreadU) === 3);
+    fresh.missions = { 3: { cleared:true, stars:{}, best:{} } };
     check("...and opens the moment it is beaten", P.nextGate(fresh, spreadU) === 0);
 
     /* An older save that bought ahead of the road. */
@@ -9948,11 +9954,11 @@ async function run(){
     check("a level bought ahead of its mission is owned, dormant, and never deleted",
       P.upgradeLevel(ahead, "spread") === 4 && P.activeLevel(ahead, "spread") === 1 &&
       P.activeLevel(ahead, "life") === 3 &&
-      P.dormantLevels(ahead).map(d => d.u.id + ":" + d.active + "/" + d.owned + "@" + d.until).join(",") === "spread:1/4@4,rapid:1/2@5");
+      P.dormantLevels(ahead).map(d => d.u.id + ":" + d.active + "/" + d.owned + "@" + d.until).join(",") === "spread:1/4@3,rapid:1/2@4");
     check("the loadout flies the ACTIVE level, the hull keeps its parts",
       G.buildLoadout(ahead, C.DIFFICULTY_BY_ID.pilot).spreadLvl === 1 &&
       SF.shipart.levelsOf(ahead).spread === 4);
-    ahead.missions = { 4: { cleared:true }, 9: { cleared:true } };
+    ahead.missions = { 3: { cleared:true }, 7: { cleared:true } };
     check("beating the missions wakes the levels one by one",
       P.activeLevel(ahead, "spread") === 3 && P.dormantLevels(ahead).length === 2 &&
       G.buildLoadout(ahead, C.DIFFICULTY_BY_ID.pilot).spreadLvl === 3);
@@ -9982,7 +9988,7 @@ async function run(){
     const rows = qa("#armoryPanel .shop-item");
     const spreadRow = rows.find(r => /Spread Shot/.test(r.textContent));
     check("a dormant level says when it comes back",
-      !!spreadRow && /Lv 2 is yours/.test(spreadRow.textContent) && /Mission 4/.test(spreadRow.textContent));
+      !!spreadRow && /Lv 2 is yours/.test(spreadRow.textContent) && /Mission 3/.test(spreadRow.textContent));
     // Owned to level 4: the NEXT buy is level 5, which waits for mission 26.
     check("a locked level's button names the mission, not a price",
       !!spreadRow && spreadRow.querySelector("button").classList.contains("gated") &&
@@ -10028,6 +10034,67 @@ async function run(){
       check("the wingmen fire on alternate volleys", d1 === 2 && d2 === 2 && d3 === 4);
       W.reset();
     }
+  }
+
+  /*
+   * THE SKY'S CEILING. 8j raised `density` because the hard tiers played on an
+   * empty screen and measured NIGHTMARE at 9.6 on screen, peaking at 34.
+   * Everything since leaned on that number without re-reading it, and the
+   * family photographed the result: 59 ships at the peak, two dozen of them
+   * mines no wave ceiling could see. Pinned here in the two places that
+   * matter - the sky is bounded, and nothing is taken away to bound it.
+   */
+  {
+    const W = SF.game.world, C = SF.config, P = SF.profile;
+    const CAP = SF.entityConst.FIELD_POPULATION;
+    check("the ceiling is 8j's measured peak, and the sky knows it",
+      CAP === 34 && typeof W.skyIsFull === "function");
+
+    W.reset();
+    W.createPlayer(SF.game.buildLoadout(openGates(P.blank("Cap")), C.DIFFICULTY_BY_ID.pilot));
+    for(let i = 0; i < CAP; i++){
+      const e = W.spawnEnemy("grunt", 40 + (i*13) % 500, 100 + (i*7) % 300, { difficulty: C.DIFFICULTY_BY_ID.pilot });
+      e.entering = false;
+    }
+    check("a full sky says so", W.skyIsFull() && W.countEnemies() === CAP);
+
+    /* A Minelayer with nowhere to drop keeps its mine and tries again. */
+    const layer = W.spawnEnemy("bomber", 300, 200, { difficulty: C.DIFFICULTY_BY_ID.pilot });
+    layer.entering = false; layer.y = 200; layer.dropTimer = 0.01;   // 0 falls through to the default
+    const before = W.countEnemies();
+    SF.enemyData.BEHAVIOURS.bomber(layer, 0.05, { world: W, VH: 800, difficulty: C.DIFFICULTY_BY_ID.pilot });
+    check("a full sky gets no more mines",
+      W.countEnemies() === before && layer.dropTimer > 0 && layer.dropTimer <= 0.5);
+    const hive = W.spawnEnemy("hive", 300, 200, { difficulty: C.DIFFICULTY_BY_ID.pilot });
+    hive.entering = false; hive.state = 1; hive.dropTimer = 0.01;
+    const before2 = W.countEnemies();
+    SF.enemyData.BEHAVIOURS.hive(hive, 0.05, { world: W, VH: 800, difficulty: C.DIFFICULTY_BY_ID.pilot });
+    check("...and no more brood", W.countEnemies() === before2);
+
+    /* Room again, and both do exactly what they are for. */
+    W.enemies.items.forEach(e => { if(e.alive && e.typeId === "grunt") e.alive = false; });
+    layer.dropTimer = 0.01; hive.dropTimer = 0.01;
+    SF.enemyData.BEHAVIOURS.bomber(layer, 0.05, { world: W, VH: 800, difficulty: C.DIFFICULTY_BY_ID.pilot });
+    SF.enemyData.BEHAVIOURS.hive(hive, 0.05, { world: W, VH: 800, difficulty: C.DIFFICULTY_BY_ID.pilot });
+    check("a sky with room gets its mine and its brood",
+      W.enemies.items.some(e => e.alive && e.typeId === "mine") &&
+      W.enemies.items.some(e => e.alive && e.typeId === "shard"));
+    W.reset();
+
+    /* The director holds a wave rather than thinning it: nothing the script
+       promised is ever cancelled, so the kill ratio still means what it says. */
+    check("a held wave is postponed, never cancelled", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+      return /this\.world\.countEnemies\(\) \+ this\.pending\.length < FIELD_POPULATION/.test(src) &&
+             /let room = FIELD_POPULATION - this\.world\.countEnemies\(\);/.test(src) &&
+             /s\.delay <= 0 && room > 0/.test(src) &&
+             // totalPlanned is still read straight off the script
+             /this\.totalPlanned = mission\.waves\.reduce/.test(src);
+    })());
+    check("a mirage twin costs a place in the sky like any other ship", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/systems.js"), "utf8");
+      return /SF\.mirage\.twin\(this\.world, spawned, this\.difficulty\)\) room--;/.test(src);
+    })());
   }
 
   /*

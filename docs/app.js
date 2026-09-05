@@ -10,45 +10,45 @@
  *     1057  src/haptics.js
  *     1236  src/audio.js
  *     1937  src/data/config.js
- *     2456  src/data/enemies.js
- *     3327  src/data/missions.js
- *     5511  src/wacky.js
- *     5727  src/data/comms.js
- *     6188  src/data/story.js
- *     6385  src/data/fr.js
- *     7840  src/profile.js
- *     8583  src/cloud.js
- *     9188  src/fx.js
- *    10301  src/input.js
- *    10795  src/entities.js
- *    12275  src/bossart.js
- *    13141  src/bosses.js
- *    13891  src/bossintro.js
- *    14014  src/rewind.js
- *    14552  src/finale.js
- *    14874  src/papadeath.js
- *    15196  src/backstage.js
- *    16147  src/sky29.js
- *    16393  src/dive.js
- *    16643  src/volcano.js
- *    16880  src/mirage.js
- *    17267  src/mirrorduel.js
- *    17614  src/homecoming.js
- *    17814  src/prologue.js
- *    18293  src/systems.js
- *    18974  src/render.js
- *    23749  src/enemyart.js
- *    24701  src/insignia.js
- *    24946  src/skygen.js
- *    29650  src/shipart.js
- *    30850  src/paintjob.js
- *    31012  src/pilotart.js
- *    31107  src/comms.js
- *    31246  src/netcode.js
- *    31781  src/game.js
- *    35925  src/workshop.js
- *    36622  src/data/i18nbind.js
- *    36693  src/ui.js
+ *     2465  src/data/enemies.js
+ *     3352  src/data/missions.js
+ *     5536  src/wacky.js
+ *     5752  src/data/comms.js
+ *     6213  src/data/story.js
+ *     6410  src/data/fr.js
+ *     7865  src/profile.js
+ *     8608  src/cloud.js
+ *     9213  src/fx.js
+ *    10326  src/input.js
+ *    10820  src/entities.js
+ *    12327  src/bossart.js
+ *    13193  src/bosses.js
+ *    13943  src/bossintro.js
+ *    14066  src/rewind.js
+ *    14604  src/finale.js
+ *    14926  src/papadeath.js
+ *    15248  src/backstage.js
+ *    16199  src/sky29.js
+ *    16445  src/dive.js
+ *    16695  src/volcano.js
+ *    16932  src/mirage.js
+ *    17337  src/mirrorduel.js
+ *    17684  src/homecoming.js
+ *    17884  src/prologue.js
+ *    18363  src/systems.js
+ *    19088  src/render.js
+ *    23863  src/enemyart.js
+ *    24815  src/insignia.js
+ *    25060  src/skygen.js
+ *    29764  src/shipart.js
+ *    30964  src/paintjob.js
+ *    31126  src/pilotart.js
+ *    31221  src/comms.js
+ *    31360  src/netcode.js
+ *    31895  src/game.js
+ *    36039  src/workshop.js
+ *    36736  src/data/i18nbind.js
+ *    36807  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2101,13 +2101,22 @@ function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.55][lvl] || 1; 
  * Hand-written mission ids, like the tunes': any future level inserted below
  * 28 must shift these too (see profile.js migrate).
  */
+/*
+ * Softened at the front after measuring what the gates actually cost a pilot
+ * mid-campaign. On mission 9 the gated kit flew 42 dps against 65 for the
+ * same money ungated, and 30% of the fleet got past instead of 25% - the
+ * early game had been made meaningfully harder, which was never the ask. The
+ * first three levels of each gun now land about two stops sooner, which
+ * closes that gap at 9; the LAST levels are untouched, because "everything
+ * maxed by mission 28" is the thing this table exists to prevent.
+ */
 const GUN_GATES = {
-  spread:  [0, 4, 9, 16, 26],
-  rapid:   [0, 5, 10, 17, 27],
-  damage:  [0, 6, 11, 18, 28],
-  pierce:  [8, 15, 24],
-  homing:  [10, 18, 26],
-  wingman: [12, 22],
+  spread:  [0, 3, 7, 15, 26],
+  rapid:   [0, 4, 8, 16, 27],
+  damage:  [0, 5, 9, 17, 28],
+  pierce:  [7, 14, 24],
+  homing:  [9, 17, 26],
+  wingman: [11, 21],
 };
 
 /*
@@ -2695,9 +2704,20 @@ const BEHAVIOURS = {
     e.x += Math.sin(e.phase += dt*0.8) * 60 * dt;
     e.dropTimer = (e.dropTimer || 1.2) - dt;
     if(e.dropTimer <= 0 && c.world && e.y > 40 && e.y < c.VH*0.7){
-      e.dropTimer = 2.4;
-      const m = c.world.spawnEnemy("mine", e.x, e.y + 18, { difficulty: c.difficulty, uncounted: true });
-      m.vy = 34;
+      /*
+       * A FULL SKY GETS NO MORE MINES. A mine lives nine seconds and this
+       * drops one every 2.4, so a hard tier's worth of Minelayers quietly
+       * held two dozen of them on screen - more than the entire fleet the
+       * wave script had planned, and none of it visible to the director's
+       * ceiling. It tries again shortly rather than losing its turn, so a
+       * Minelayer left alone still does exactly what it is for.
+       */
+      if(c.world.skyIsFull()){ e.dropTimer = 0.5; }
+      else {
+        e.dropTimer = 2.4;
+        const m = c.world.spawnEnemy("mine", e.x, e.y + 18, { difficulty: c.difficulty, uncounted: true });
+        m.vy = 34;
+      }
     }
   },
 
@@ -2747,9 +2767,14 @@ const BEHAVIOURS = {
     e.x += Math.sin(e.phase += dt*0.6) * 40 * dt;
     e.dropTimer = (e.dropTimer || 2.2) - dt;
     if(e.dropTimer <= 0 && c.world){
-      e.dropTimer = 2.8;
-      const d = c.world.spawnEnemy("shard", e.x, e.y + 14, { difficulty: c.difficulty, uncounted: true });
-      d.vy = 150;
+      // The Hive answers to the same ceiling as the Minelayer: "left alone the
+      // screen fills up" is the point of it, but the screen has a limit.
+      if(c.world.skyIsFull()){ e.dropTimer = 0.5; }
+      else {
+        e.dropTimer = 2.8;
+        const d = c.world.spawnEnemy("shard", e.x, e.y + 14, { difficulty: c.difficulty, uncounted: true });
+        d.vy = 150;
+      }
     }
   },
 
@@ -11103,6 +11128,29 @@ const BULLET_TIERS = [
 /** The fastest the guns can cycle, whatever is stacked on them: seconds per volley. */
 const FIRE_FLOOR = 0.125;
 /*
+ * THE MOST SHIPS THE SKY MAY HOLD.
+ *
+ * 8j raised `density` because the hard tiers played on an empty screen -
+ * "pressure is population" - and measured NIGHTMARE at 9.6 on screen with a
+ * peak of 34. Everything since has leaned on that number without re-reading
+ * it: the field grew from 600 to 720 wide (waveSize tops the count up for the
+ * room), the late levels are written denser, and the newest one flies a
+ * mirage beside half the fleet. Measured again, NIGHTMARE peaked at 59.
+ *
+ * So the ceiling is 8j's own figure, enforced rather than assumed - and it
+ * lives here, not in the wave director, because the director is not the only
+ * thing that puts ships in the sky. A Minelayer lays every 2.4 seconds and a
+ * mine lives 9, so seventeen of them at NIGHTMARE density held two dozen live
+ * mines that no wave ceiling could ever see: measured at the peak, the screen
+ * the family photographed was 24 mines, 12 Minelayers and 7 Menders.
+ *
+ * Nothing is cancelled by it. A wave that arrives to a full sky waits its
+ * turn, and a Minelayer with nowhere to drop tries again in half a second -
+ * every ship the script promised still flies, so the kill ratio and every
+ * star mean exactly what they meant before.
+ */
+const FIELD_POPULATION = 34;
+/*
  * How many coins may be loose in the sky at once (see World.spawnCoin). Above
  * this, a new coin merges into the nearest one instead of adding an object.
  * Set from measurement, not taste: ordinary PILOT play averages 14 live coins
@@ -12258,6 +12306,10 @@ class World {
   }
 
   countEnemies(){ return this.enemies.countAlive(); }
+  /** Is the sky at its ceiling? Asked by the wave director before it releases
+   *  a staged ship, and by everything that spawns outside it - see
+   *  FIELD_POPULATION. */
+  skyIsFull(){ return this.enemies.countAlive() >= FIELD_POPULATION; }
 }
 
 SF.World = World;
@@ -12266,7 +12318,7 @@ SF.World = World;
 // place that knows what a stale link looks like.
 SF.tether = { live: tetherLive, curve: tetherCurve, at: tetherAt, R: TETHER_R };
 SF.entityConst = { VW, VH, PLAY_TOP, PLAY_BOTTOM, BULLET_TIERS, protectable,
-                   WING_MIN, FIELD_MAX };
+                   WING_MIN, FIELD_MAX, FIELD_POPULATION };
 SF.field = { refresh: refreshField, onChange: onFieldChange, measure: pickFieldWidth };
 })();
 
@@ -16909,10 +16961,20 @@ const SF = window.SF;
 const TAU = Math.PI*2;
 const T = s => (SF.i18n ? SF.i18n.t(s) : s);
 
-/* The sun stands high and to the upper left, so every shadow on this world
+/*
+ * The sun stands high and to the upper left, so every shadow on this world
  * falls down and to the right - the same light the dune crests are painted
- * by, which is what makes the shadow read as sitting ON the sand. */
-const SHADOW_DX = 14, SHADOW_DY = 26;
+ * by, which is what makes the shadow read as sitting ON the sand.
+ *
+ * Pushed out and darkened after the family played it: "the mirages aren't
+ * that obvious". At (14,26) and a third opaque the shadow sat half under the
+ * hull that cast it, so on a bright dune the tell the whole level rests on
+ * was something you had to hunt for. Further out, darker, and with a soft
+ * pool under it, it reads as a shape ON the ground from across the room -
+ * which is the only way "shoot the one with the shadow" can be a rule a
+ * seven-year-old plays by rather than a sentence they were told once.
+ */
+const SHADOW_DX = 20, SHADOW_DY = 34;
 /* How many wasted shots a mirage soaks before the heat lets go of it. One
  * would make spraying free; forever would make it a wall. Three is a cost a
  * child feels without a fight ever being lost to it. */
@@ -17142,7 +17204,6 @@ function silhouetteFor(e){
 function drawShadows(ctx, enemies, players, VH){
   const RES = (SF.enemyArt && SF.enemyArt.RES) || 128;
   ctx.save();
-  ctx.globalAlpha = 0.34;
   for(let i = 0; i < enemies.length; i++){
     const e = enemies[i];
     if(!e.alive || e.mirage || e.attached || !e.type) continue;
@@ -17150,14 +17211,20 @@ function drawShadows(ctx, enemies, players, VH){
     const size = e.size * (0.4 + 0.6*Math.min(1, e.spawnAnim == null ? 1 : e.spawnAnim));
     const sil = silhouetteFor(e);
     const sx = e.x + SHADOW_DX, sy = e.y + SHADOW_DY;
+    // A soft pool first: real shadows have a penumbra, and it is what makes
+    // the hard silhouette on top read as ground rather than as a sticker.
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#2b1a0c";
+    ctx.beginPath(); ctx.ellipse(sx, sy, size*0.52, size*0.42, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.55;
     if(sil){
       const box = size * sil.width / RES * 0.92;
       ctx.drawImage(sil, sx - box/2, sy - box/2, box, box);
     } else {
-      ctx.fillStyle = "#2b1a0c";
       ctx.beginPath(); ctx.ellipse(sx, sy, size*0.36, size*0.3, 0, 0, TAU); ctx.fill();
     }
   }
+  ctx.globalAlpha = 0.55;
   // The squadron is real too - and its shadow is the first one a child sees,
   // right under their own ship, before any enemy has flown in.
   ctx.fillStyle = "#2b1a0c";
@@ -17196,13 +17263,16 @@ function drawGhost(ctx, e, size, t){
   const k = 1 + (e.mirageHits || 0)*0.6;
   const breathe = 0.5 + Math.sin(t*6 + (e.phase || 0)*3)*0.5;
   ctx.save();
-  ctx.globalAlpha = Math.max(0.3, 0.62 + 0.12*breathe - (e.mirageHits || 0)*0.1);
+  ctx.globalAlpha = Math.max(0.28, 0.52 + 0.10*breathe - (e.mirageHits || 0)*0.1);
   if(sprite){
     const box = size * sprite.width / RES;
     const sw = sprite.width, sh = sprite.height;
-    const bands = 6, bh = sh/bands, dh = box/bands;
+    // Ten bands sliding twice as far as they used to. At six bands and two
+    // pixels the lie was a clean sprite with a wobble nobody saw across a
+    // busy sky; the ship has to look like it is coming apart in the heat.
+    const bands = 10, bh = sh/bands, dh = box/bands;
     for(let i = 0; i < bands; i++){
-      const off = Math.sin(t*9*k + i*1.7 + (e.phase || 0))*2.2*k;
+      const off = Math.sin(t*9*k + i*1.7 + (e.phase || 0))*4.6*k;
       ctx.drawImage(sprite, 0, i*bh, sw, bh, e.x - box/2 + off, e.y - box/2 + i*dh, box, dh + 0.6);
     }
   } else {
@@ -18306,6 +18376,10 @@ SF.field.onChange(w => { VW = w; });
 const fx = SF.fx;
 const audio = SF.audio;
 
+// The most ships the sky may hold before the next wave waits its turn. Owned
+// by entities.js, because the director is not the only thing that spawns.
+const FIELD_POPULATION = SF.entityConst.FIELD_POPULATION;
+
 /* =========================================================
    WAVE DIRECTOR
    Reads a mission's wave script and spawns formations on
@@ -18343,18 +18417,53 @@ class WaveDirector {
   update(dt){
     this.time += dt;
 
-    // Start any wave whose time has come.
+    /*
+     * THE SKY HOLDS SO MANY SHIPS, AND NO MORE.
+     *
+     * 8j raised `density` because the hard tiers played on an empty screen -
+     * "pressure is population" - and measured NIGHTMARE at 9.6 enemies on
+     * screen with a peak of 34. Everything since has pushed on the same
+     * number without anyone re-reading it: the field grew from 600 to 720
+     * wide (waveSize tops the count up for the extra room), the later levels
+     * are written denser, and the newest one flies a mirage beside half the
+     * fleet. Measured again now, NIGHTMARE sits at 15 on screen and peaks at
+     * 59 - three quarters past the population that was chosen on purpose.
+     *
+     * So the ceiling is the number 8j settled on, enforced rather than
+     * assumed. A wave whose time has come while the sky is already full
+     * WAITS - it is not cancelled, not thinned, and not made easier: every
+     * ship the script promised still flies, so `totalPlanned`, the kill
+     * ratio and every star mean exactly what they meant before. The tier
+     * keeps its pressure; it just stops stacking it past the point where a
+     * seven-year-old can see the ship they are steering.
+     *
+     * Only the hard tiers ever meet it: PILOT peaks at 16.
+     */
     while(this.nextWave < this.mission.waves.length &&
-          this.time >= this.mission.waves[this.nextWave].t){
+          this.time >= this.mission.waves[this.nextWave].t &&
+          this.world.countEnemies() + this.pending.length < FIELD_POPULATION){
       this.queueWave(this.mission.waves[this.nextWave]);
       this.nextWave++;
     }
 
-    // Release staged formation members.
+    /*
+     * Release staged formation members - while there is room for them.
+     *
+     * The ceiling has to be enforced HERE as well as at the wave above, and
+     * this is the half that does the work: one NIGHTMARE wave is a thirteen-
+     * ship wall times 3.6 density times the width top-up, so a single wave
+     * clears the sky's ceiling on its own and the check above never sees it.
+     * A slot whose delay has run out but whose sky is full simply waits for
+     * the next frame - it keeps its place in the queue and flies the moment
+     * something dies, which is what turns "everything at once" into
+     * "relentless".
+     */
+    let room = FIELD_POPULATION - this.world.countEnemies();
     for(let i = this.pending.length - 1; i >= 0; i--){
       const s = this.pending[i];
       s.delay -= dt;
-      if(s.delay <= 0){
+      if(s.delay <= 0 && room > 0){
+        room--;
         const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
           bounty: s.bounty,
@@ -18374,10 +18483,15 @@ class WaveDirector {
           else this.waiting[s.pair] = spawned;
         }
         if(spawned.counted) this.spawnedCount++;
-        // The Mirage: most fighters bring their double with them - a
-        // second pooled ship that is nothing (mirage.js decides who).
-        if(this.mission.mirage && SF.mirage && SF.mirage.active())
-          SF.mirage.twin(this.world, spawned, this.difficulty);
+        /*
+         * The Mirage: most fighters bring their double with them - a second
+         * pooled ship that is nothing (mirage.js decides who). It costs a
+         * place in the sky like any other ship, or the one level that puts
+         * two hulls in the air per spawn would sail straight through the
+         * ceiling - which is exactly what the family photographed.
+         */
+        if(this.mission.mirage && SF.mirage && SF.mirage.active() &&
+           SF.mirage.twin(this.world, spawned, this.difficulty)) room--;
         this.pending.splice(i, 1);
       }
     }

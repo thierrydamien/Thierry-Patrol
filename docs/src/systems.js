@@ -14,6 +14,10 @@ SF.field.onChange(w => { VW = w; });
 const fx = SF.fx;
 const audio = SF.audio;
 
+// The most ships the sky may hold before the next wave waits its turn. Owned
+// by entities.js, because the director is not the only thing that spawns.
+const FIELD_POPULATION = SF.entityConst.FIELD_POPULATION;
+
 /* =========================================================
    WAVE DIRECTOR
    Reads a mission's wave script and spawns formations on
@@ -51,18 +55,53 @@ class WaveDirector {
   update(dt){
     this.time += dt;
 
-    // Start any wave whose time has come.
+    /*
+     * THE SKY HOLDS SO MANY SHIPS, AND NO MORE.
+     *
+     * 8j raised `density` because the hard tiers played on an empty screen -
+     * "pressure is population" - and measured NIGHTMARE at 9.6 enemies on
+     * screen with a peak of 34. Everything since has pushed on the same
+     * number without anyone re-reading it: the field grew from 600 to 720
+     * wide (waveSize tops the count up for the extra room), the later levels
+     * are written denser, and the newest one flies a mirage beside half the
+     * fleet. Measured again now, NIGHTMARE sits at 15 on screen and peaks at
+     * 59 - three quarters past the population that was chosen on purpose.
+     *
+     * So the ceiling is the number 8j settled on, enforced rather than
+     * assumed. A wave whose time has come while the sky is already full
+     * WAITS - it is not cancelled, not thinned, and not made easier: every
+     * ship the script promised still flies, so `totalPlanned`, the kill
+     * ratio and every star mean exactly what they meant before. The tier
+     * keeps its pressure; it just stops stacking it past the point where a
+     * seven-year-old can see the ship they are steering.
+     *
+     * Only the hard tiers ever meet it: PILOT peaks at 16.
+     */
     while(this.nextWave < this.mission.waves.length &&
-          this.time >= this.mission.waves[this.nextWave].t){
+          this.time >= this.mission.waves[this.nextWave].t &&
+          this.world.countEnemies() + this.pending.length < FIELD_POPULATION){
       this.queueWave(this.mission.waves[this.nextWave]);
       this.nextWave++;
     }
 
-    // Release staged formation members.
+    /*
+     * Release staged formation members - while there is room for them.
+     *
+     * The ceiling has to be enforced HERE as well as at the wave above, and
+     * this is the half that does the work: one NIGHTMARE wave is a thirteen-
+     * ship wall times 3.6 density times the width top-up, so a single wave
+     * clears the sky's ceiling on its own and the check above never sees it.
+     * A slot whose delay has run out but whose sky is full simply waits for
+     * the next frame - it keeps its place in the queue and flies the moment
+     * something dies, which is what turns "everything at once" into
+     * "relentless".
+     */
+    let room = FIELD_POPULATION - this.world.countEnemies();
     for(let i = this.pending.length - 1; i >= 0; i--){
       const s = this.pending[i];
       s.delay -= dt;
-      if(s.delay <= 0){
+      if(s.delay <= 0 && room > 0){
+        room--;
         const spawned = this.world.spawnEnemy(s.type, s.x, s.y, {
           difficulty: this.difficulty, elite: s.elite, hoverY: s.hoverY,
           bounty: s.bounty,
@@ -82,10 +121,15 @@ class WaveDirector {
           else this.waiting[s.pair] = spawned;
         }
         if(spawned.counted) this.spawnedCount++;
-        // The Mirage: most fighters bring their double with them - a
-        // second pooled ship that is nothing (mirage.js decides who).
-        if(this.mission.mirage && SF.mirage && SF.mirage.active())
-          SF.mirage.twin(this.world, spawned, this.difficulty);
+        /*
+         * The Mirage: most fighters bring their double with them - a second
+         * pooled ship that is nothing (mirage.js decides who). It costs a
+         * place in the sky like any other ship, or the one level that puts
+         * two hulls in the air per spawn would sail straight through the
+         * ceiling - which is exactly what the family photographed.
+         */
+        if(this.mission.mirage && SF.mirage && SF.mirage.active() &&
+           SF.mirage.twin(this.world, spawned, this.difficulty)) room--;
         this.pending.splice(i, 1);
       }
     }

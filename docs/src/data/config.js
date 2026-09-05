@@ -165,13 +165,22 @@ function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.55][lvl] || 1; 
  * Hand-written mission ids, like the tunes': any future level inserted below
  * 28 must shift these too (see profile.js migrate).
  */
+/*
+ * Softened at the front after measuring what the gates actually cost a pilot
+ * mid-campaign. On mission 9 the gated kit flew 42 dps against 65 for the
+ * same money ungated, and 30% of the fleet got past instead of 25% - the
+ * early game had been made meaningfully harder, which was never the ask. The
+ * first three levels of each gun now land about two stops sooner, which
+ * closes that gap at 9; the LAST levels are untouched, because "everything
+ * maxed by mission 28" is the thing this table exists to prevent.
+ */
 const GUN_GATES = {
-  spread:  [0, 4, 9, 16, 26],
-  rapid:   [0, 5, 10, 17, 27],
-  damage:  [0, 6, 11, 18, 28],
-  pierce:  [8, 15, 24],
-  homing:  [10, 18, 26],
-  wingman: [12, 22],
+  spread:  [0, 3, 7, 15, 26],
+  rapid:   [0, 4, 8, 16, 27],
+  damage:  [0, 5, 9, 17, 28],
+  pierce:  [7, 14, 24],
+  homing:  [9, 17, 26],
+  wingman: [11, 21],
 };
 
 /*

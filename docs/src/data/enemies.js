@@ -240,9 +240,20 @@ const BEHAVIOURS = {
     e.x += Math.sin(e.phase += dt*0.8) * 60 * dt;
     e.dropTimer = (e.dropTimer || 1.2) - dt;
     if(e.dropTimer <= 0 && c.world && e.y > 40 && e.y < c.VH*0.7){
-      e.dropTimer = 2.4;
-      const m = c.world.spawnEnemy("mine", e.x, e.y + 18, { difficulty: c.difficulty, uncounted: true });
-      m.vy = 34;
+      /*
+       * A FULL SKY GETS NO MORE MINES. A mine lives nine seconds and this
+       * drops one every 2.4, so a hard tier's worth of Minelayers quietly
+       * held two dozen of them on screen - more than the entire fleet the
+       * wave script had planned, and none of it visible to the director's
+       * ceiling. It tries again shortly rather than losing its turn, so a
+       * Minelayer left alone still does exactly what it is for.
+       */
+      if(c.world.skyIsFull()){ e.dropTimer = 0.5; }
+      else {
+        e.dropTimer = 2.4;
+        const m = c.world.spawnEnemy("mine", e.x, e.y + 18, { difficulty: c.difficulty, uncounted: true });
+        m.vy = 34;
+      }
     }
   },
 
@@ -292,9 +303,14 @@ const BEHAVIOURS = {
     e.x += Math.sin(e.phase += dt*0.6) * 40 * dt;
     e.dropTimer = (e.dropTimer || 2.2) - dt;
     if(e.dropTimer <= 0 && c.world){
-      e.dropTimer = 2.8;
-      const d = c.world.spawnEnemy("shard", e.x, e.y + 14, { difficulty: c.difficulty, uncounted: true });
-      d.vy = 150;
+      // The Hive answers to the same ceiling as the Minelayer: "left alone the
+      // screen fills up" is the point of it, but the screen has a limit.
+      if(c.world.skyIsFull()){ e.dropTimer = 0.5; }
+      else {
+        e.dropTimer = 2.8;
+        const d = c.world.spawnEnemy("shard", e.x, e.y + 14, { difficulty: c.difficulty, uncounted: true });
+        d.vy = 150;
+      }
     }
   },
 
