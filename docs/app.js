@@ -10,45 +10,45 @@
  *     1057  src/haptics.js
  *     1236  src/audio.js
  *     1937  src/data/config.js
- *     2407  src/data/enemies.js
- *     3278  src/data/missions.js
- *     5462  src/wacky.js
- *     5678  src/data/comms.js
- *     6139  src/data/story.js
- *     6323  src/data/fr.js
- *     7767  src/profile.js
- *     8468  src/cloud.js
- *     9073  src/fx.js
- *    10186  src/input.js
- *    10680  src/entities.js
- *    12067  src/bossart.js
- *    12933  src/bosses.js
- *    13683  src/bossintro.js
- *    13806  src/rewind.js
- *    14344  src/finale.js
- *    14666  src/papadeath.js
- *    14988  src/backstage.js
- *    15939  src/sky29.js
- *    16185  src/dive.js
- *    16435  src/volcano.js
- *    16672  src/mirage.js
- *    17059  src/mirrorduel.js
- *    17406  src/homecoming.js
- *    17606  src/prologue.js
- *    18085  src/systems.js
- *    18766  src/render.js
- *    23541  src/enemyart.js
- *    24493  src/insignia.js
- *    24738  src/skygen.js
- *    29442  src/shipart.js
- *    30642  src/paintjob.js
- *    30804  src/pilotart.js
- *    30899  src/comms.js
- *    31038  src/netcode.js
- *    31573  src/game.js
- *    35700  src/workshop.js
- *    36397  src/data/i18nbind.js
- *    36468  src/ui.js
+ *     2456  src/data/enemies.js
+ *     3327  src/data/missions.js
+ *     5511  src/wacky.js
+ *     5727  src/data/comms.js
+ *     6188  src/data/story.js
+ *     6385  src/data/fr.js
+ *     7840  src/profile.js
+ *     8583  src/cloud.js
+ *     9188  src/fx.js
+ *    10301  src/input.js
+ *    10795  src/entities.js
+ *    12204  src/bossart.js
+ *    13070  src/bosses.js
+ *    13820  src/bossintro.js
+ *    13943  src/rewind.js
+ *    14481  src/finale.js
+ *    14803  src/papadeath.js
+ *    15125  src/backstage.js
+ *    16076  src/sky29.js
+ *    16322  src/dive.js
+ *    16572  src/volcano.js
+ *    16809  src/mirage.js
+ *    17196  src/mirrorduel.js
+ *    17543  src/homecoming.js
+ *    17743  src/prologue.js
+ *    18222  src/systems.js
+ *    18903  src/render.js
+ *    23678  src/enemyart.js
+ *    24630  src/insignia.js
+ *    24875  src/skygen.js
+ *    29579  src/shipart.js
+ *    30779  src/paintjob.js
+ *    30941  src/pilotart.js
+ *    31036  src/comms.js
+ *    31175  src/netcode.js
+ *    31710  src/game.js
+ *    35839  src/workshop.js
+ *    36536  src/data/i18nbind.js
+ *    36607  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -2059,13 +2059,56 @@ const CATEGORIES = [
   { id:"extras", name:"SPECIALS",      icon:"✨", color:"#ffd23f" },
 ];
 
-/** Horizontal bullet velocities fired at a given Spread Shot level. */
+/**
+ * Horizontal bullet velocities fired at a given Spread Shot level.
+ *
+ * The last level WIDENS the fan rather than adding a sixth bolt. The family's
+ * verdict on a maxed ship was "too messy": six rounds a volley at the top
+ * fire rate is forty-plus bolts a second from one hull before the drones and
+ * Overdrive join in, and at that density the sky is a wall of your own light.
+ * Five bolts across a wider arc covers the same width with a screen you can
+ * still read - the Armory sells it as "wider", which is what it is.
+ */
 function spreadPattern(lvl){
   return [[0], [-45,45], [-110,0,110], [-150,-50,50,150],
-          [-190,-95,0,95,190], [-230,-140,-50,50,140,230]][lvl] || [0];
+          [-190,-95,0,95,190], [-230,-115,0,115,230]][lvl] || [0];
 }
-/** Fire-interval multiplier at a given Rapid Fire level (lower = faster). */
-function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; }
+/** Fire-interval multiplier at a given Rapid Fire level (lower = faster).
+ *  The top level eased from 0.45 to 0.55 for the same reason the fan stopped
+ *  at five bolts; entities.js also floors the interval so Rapid, Overdrive
+ *  and the rapid-fire pickup can no longer multiply each other without limit. */
+function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.55][lvl] || 1; }
+
+/*
+ * THE GUNS WAKE UP WITH THE CAMPAIGN.
+ *
+ * "The weapon upgrades come too quickly" was measurable: a career model on
+ * PILOT (fly, bank, buy guns first) had 3-way fire, Rapid 3 and Plasma 3 by
+ * mission 5, 4-way and Rapid 4 by mission 9 - a fifth of the way in - and
+ * every gun maxed by 28. Steeper prices cannot fix that: the first levels of
+ * everything are pocket money on purpose, so the early ramp is set by three
+ * cheap prices, not by the curve.
+ *
+ * So each gun level has a mission it waits for, the way a tune waits for its
+ * boss (`unlockMission`). `unlock[i]` is the mission a pilot must have CLEARED
+ * before level i+1 is theirs; 0 means "from the start". A level bought before
+ * its mission (an older save) is not lost and never charged twice - it is
+ * DORMANT: owned, shown in the Armory as waiting, and back the moment the
+ * mission is beaten (profile.activeLevel). Modelled on the same career: 2-way
+ * at mission 4, 3-way at 12, 4-way at 16, the whole kit by 28, and something
+ * to buy every mission from the other shelves meanwhile.
+ *
+ * Hand-written mission ids, like the tunes': any future level inserted below
+ * 28 must shift these too (see profile.js migrate).
+ */
+const GUN_GATES = {
+  spread:  [0, 4, 9, 16, 26],
+  rapid:   [0, 5, 10, 17, 27],
+  damage:  [0, 6, 11, 18, 28],
+  pierce:  [8, 15, 24],
+  homing:  [10, 18, 26],
+  wingman: [12, 22],
+};
 
 /*
  * COST CURVE
@@ -2113,18 +2156,23 @@ function costCurve(first, levels){
 const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const UPGRADES = [
   { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:costCurve(150,5),
+    unlock: GUN_GATES.spread,
     desc:"Shoot more bullets at once, in a wider fan",
-    effect: lvl => T("{n}-way fire", { n: spreadPattern(lvl).length }) },
+    effect: lvl => lvl >= 5 ? T("5-way fire, wider") : T("{n}-way fire", { n: spreadPattern(lvl).length }) },
   { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:costCurve(120,5),
+    unlock: GUN_GATES.rapid,
     desc:"Your guns shoot way faster",
     effect: lvl => T("+{n}% fire rate", { n: Math.round((1/fireRateMult(lvl) - 1)*100) }) },
   { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:costCurve(200,5),
+    unlock: GUN_GATES.damage,
     desc:"Every bullet hits much harder",
     effect: lvl => T("{n} damage per hit", { n: 1+lvl }) },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
+    unlock: GUN_GATES.pierce,
     desc:"Bullets punch straight through anything they blow up",
     effect: lvl => T("blasts through {n} and keeps going", { n: lvl === 1 ? T("1 enemy") : T("{n} enemies", { n: lvl }) }) },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
+    unlock: GUN_GATES.homing,
     desc:"Your bullets bend through the air to chase enemies",
     effect: lvl => T("tracking {n}/3", { n: lvl }) },
 
@@ -2149,6 +2197,7 @@ const UPGRADES = [
     desc:"Everything you blow up drops more money. Get this early!",
     effect: lvl => T("+{n}% money", { n: lvl*15 }) },
   { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:costCurve(1200,2),
+    unlock: GUN_GATES.wingman,
     desc:"Little robot buddies fly next to you and shoot too",
     effect: lvl => T(lvl===1 ? "{n} drone" : "{n} drones", { n: lvl }) },
   { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:costCurve(400,3),
@@ -2396,7 +2445,7 @@ SF.config = {
   SHIP_COLORS, PAINTS, PAINT_BY_ID, TRAILS, TRAIL_BY_ID,
   DECALS, DECAL_BY_ID, FIREWORKS, FIREWORK_BY_ID,
   BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
-  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
+  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES, GUN_GATES,
   KIT_SLOTS, kitCost, MIX_COST,
   spreadPattern, fireRateMult,
 };
@@ -6303,6 +6352,19 @@ const STORY = {
     button:"TRUST THE SHADOW",
   },
 
+  /* The Armory's guns started waking up with the campaign. Fires once, on
+     the first pick of a pilot whose save owns a gun level the campaign has
+     not reached yet (profile.dormantLevels) - nothing is lost, nothing is
+     charged twice, and the Armory names the mission each level waits for. */
+  armoryGates: {
+    title: "THE ARMORY GROWS WITH YOU",
+    panels: [
+      { art:"now", text:"Your ship is exactly as you built it, {you} - every part you paid for is still yours and still bolted on. But the biggest guns now wake up with the campaign: each level of fire comes back the moment you beat the mission that earns it." },
+      { art:"sky", text:"Nothing is lost and nothing costs twice. The Armory shows which mission each level is waiting for. Fly - your guns will catch up with you." },
+    ],
+    button:"BACK TO THE SKY",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [
@@ -7197,6 +7259,17 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Super mode: double speed guns and double damage. Tap 🔥 or press V":
   "Mode super : cadence doublée et dégâts doublés. Touche 🔥 ou appuie sur V",
 "{n}-way fire": "tir en {n} directions",
+"5-way fire, wider": "tir en 5 directions, plus large",
+"Mission {n}": "Mission {n}",
+"NOT YET": "PAS ENCORE",
+"Beat Mission {n} to open {name} Lv {lvl}": "Termine la Mission {n} pour ouvrir {name} niv. {lvl}",
+"Lv {n} is yours — back after Mission {m}": "Le niv. {n} est à toi — de retour après la Mission {m}",
+"THE ARMORY GROWS WITH YOU": "L'ARSENAL GRANDIT AVEC TOI",
+"Your ship is exactly as you built it, {you} - every part you paid for is still yours and still bolted on. But the biggest guns now wake up with the campaign: each level of fire comes back the moment you beat the mission that earns it.":
+  "Ton vaisseau est exactement tel que tu l'as construit, {you} — chaque pièce que tu as payée est toujours à toi, toujours boulonnée. Mais les plus grosses armes se réveillent maintenant avec la campagne : chaque niveau de tir revient dès que tu termines la mission qui le mérite.",
+"Nothing is lost and nothing costs twice. The Armory shows which mission each level is waiting for. Fly - your guns will catch up with you.":
+  "Rien n'est perdu et rien ne se paie deux fois. L'Arsenal indique quelle mission chaque niveau attend. Vole — tes armes te rattraperont.",
+"BACK TO THE SKY": "RETOUR AU CIEL",
 "+{n}% fire rate": "+{n} % de cadence",
 "{n} damage per hit": "{n} dégâts par tir",
 "blasts through {n} and keeps going": "traverse {n} et continue",
@@ -8226,6 +8299,48 @@ function upgradeLevel(p, id){ return (p.upgrades && p.upgrades[id]) || 0; }
 function gearLevel(p){ return UPGRADES.reduce((n,u) => n + upgradeLevel(p,u.id), 0); }
 function nextCost(p, u){ const lvl = upgradeLevel(p,u.id); return lvl >= u.max ? null : u.costs[lvl]; }
 
+/*
+ * OWNED versus ACTIVE. `upgradeLevel` is what the pilot has paid for and is
+ * never reduced by anything here. A gun track carries `unlock` (config.js
+ * GUN_GATES): level i+1 needs mission unlock[i] cleared. `unlockedLevel` is
+ * how far the campaign has opened the track, `activeLevel` is the smaller of
+ * the two - the number the loadout actually flies with - and `dormantLevels`
+ * lists what a pilot owns but cannot fly yet, for the Armory and the
+ * one-time notice. Nothing is deleted and nothing is charged twice: an old
+ * save that bought 4-way fire at mission 9 keeps it, dormant, and gets it
+ * back the moment mission 16 falls.
+ */
+function gateFor(u, lvl){ return (u.unlock && u.unlock[lvl - 1]) || 0; }
+function unlockedLevel(p, u){
+  if(!u.unlock) return u.max;
+  let n = 0;
+  for(let i = 0; i < u.max; i++){
+    const g = u.unlock[i];
+    if(g && !((p.missions && p.missions[g]) || {}).cleared) break;
+    n++;
+  }
+  return n;
+}
+function activeLevel(p, id){
+  const u = UPGRADES.find(x => x.id === id);
+  const owned = upgradeLevel(p, id);
+  return u ? Math.min(owned, unlockedLevel(p, u)) : owned;
+}
+/** The mission the NEXT level of `u` is waiting on, or 0 if it can be bought now. */
+function nextGate(p, u){
+  const lvl = upgradeLevel(p, u.id);
+  if(lvl >= u.max) return 0;
+  return unlockedLevel(p, u) > lvl ? 0 : gateFor(u, lvl + 1);
+}
+function dormantLevels(p){
+  const out = [];
+  UPGRADES.forEach(u => {
+    const owned = upgradeLevel(p, u.id), active = Math.min(owned, unlockedLevel(p, u));
+    if(active < owned) out.push({ u, owned, active, until: gateFor(u, active + 1) });
+  });
+  return out;
+}
+
 function rankFor(p){
   const gear = gearLevel(p);
   let rank = RANKS[0];
@@ -8456,7 +8571,7 @@ function missingObjectives(p, mission){
 
 SF.profile = {
   listNames, addName, load, save, saveRaw, snapshot, blank, migrate, adoptOldSaves,
-  upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
+  upgradeLevel, activeLevel, unlockedLevel, nextGate, gateFor, dormantLevels, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, maxStars, missingObjectives, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,
   checkAchievements, recordMission, achievementStats, unclaimedMedals, claimMedal,
@@ -10969,14 +11084,24 @@ const PLAY_BOTTOM = VH - 34;
  * colour of the enemy orb - so a fully upgraded kid was dodging their own
  * bullets. Whatever a future tier looks like, it does not look like theirs.
  */
+/*
+ * A tier is a COLOUR, not a size. The bolts used to grow with Plasma Rounds
+ * (6x17 to 12x31, glow to 14) so that a maxed ship's five-way fan was five
+ * fat purple bars with halos - most of the "too messy" on a full screen was
+ * the player's own rounds. The colour ladder still says what you are flying
+ * from across the room; the footprint barely moves. Hit radius is separate
+ * (b.r in fireWeapons) and unchanged.
+ */
 const BULLET_TIERS = [
   { color:"#ffd23f", w:6,  h:17, glow:0 },
-  { color:"#ffe27a", w:7,  h:19, glow:4 },
-  { color:"#ffa94d", w:8,  h:22, glow:6 },
-  { color:"#4dd2ff", w:9,  h:24, glow:8 },
-  { color:"#7c9bff", w:11, h:27, glow:10 },
-  { color:"#b78cff", w:12, h:31, glow:14 },
+  { color:"#ffe27a", w:6,  h:18, glow:3 },
+  { color:"#ffa94d", w:7,  h:19, glow:4 },
+  { color:"#4dd2ff", w:7,  h:20, glow:5 },
+  { color:"#7c9bff", w:8,  h:21, glow:6 },
+  { color:"#b78cff", w:8,  h:22, glow:7 },
 ];
+/** The fastest the guns can cycle, whatever is stacked on them: seconds per volley. */
+const FIRE_FLOOR = 0.125;
 
 const REFERENCE_DPS = 45;
 /*
@@ -11380,7 +11505,15 @@ class World {
       let interval = p.fireInterval;
       if(timeMs < p.tempRapidUntil) interval *= 0.55;
       if(timeMs < p.overdriveUntil) interval *= 0.5;
-      p.cooldown = interval;
+      /*
+       * A floor under the volley clock. Rapid Fire, the rapid-fire pickup
+       * and Overdrive used to multiply freely - 0.30 x 0.45 x 0.55 x 0.5 is
+       * a volley every 37ms, twenty-seven fans a second - and that is the
+       * "too messy" the family saw. Overdrive keeps its damage; the guns
+       * simply cannot cycle faster than this. Eight volleys a second is
+       * still a wall of fire, just one with gaps you can see enemies through.
+       */
+      p.cooldown = Math.max(FIRE_FLOOR, interval);
     }
   }
 
@@ -11413,7 +11546,11 @@ class World {
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
 
-    for(let i=0;i<p.drones;i++){
+    // The wingmen fire every OTHER volley. Two extra streams at the ship's
+    // own rate doubled the traffic on screen for a third more damage; half
+    // the rounds keep most of the help and give the eye somewhere to rest.
+    p.droneTick = !p.droneTick;
+    for(let i=0;i<p.drones && p.droneTick;i++){
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;
@@ -31710,7 +31847,9 @@ const REVIVE_MS = 5000;
    LOADOUT - profile upgrades become concrete ship stats.
    --------------------------------------------------------- */
 function buildLoadout(profile, difficulty, alsoFlying){
-  const lv = id => P.upgradeLevel(profile, id);
+  // ACTIVE, not owned: a gun level the campaign has not opened yet is still
+  // the pilot's, still bolted on, and does not fire (profile.activeLevel).
+  const lv = id => P.activeLevel(profile, id);
   // Flight tuning: a whole-ship stat trade chosen in MY SHIP. `fire` scales
   // the fire interval (above 1 = slower guns), and dps is scaled to match so
   // boss HP sizing stays honest about what the ship actually puts out.
@@ -37200,6 +37339,12 @@ function selectProfile(name, mateName){
   sessionMate = (mateName && mateName !== name) ? mateName : null;
   renderMenu();
   show("screen-menu");
+  /*
+   * An older save that bought its guns ahead of the campaign finds some of
+   * them dormant today. Said once, on the first pick of that pilot, before
+   * a single flight can feel lighter for no reason.
+   */
+  if(P.dormantLevels(profile).length) maybeStory("armoryGates");
 }
 
 function renderMenu(){
@@ -39247,7 +39392,9 @@ function coachPick(){
   const afford = id => {
     const u = UPGRADE_BY_ID[id];
     const c = u ? P.nextCost(profile, u) : null;
-    return c !== null && profile.money >= c ? u : null;
+    // Never point at a level the campaign has not opened: "try Spread Shot"
+    // over a locked button is advice a child cannot take.
+    return c !== null && profile.money >= c && !P.nextGate(profile, u) ? u : null;
   };
   const first = ids => { for(let i=0;i<ids.length;i++){ const u = afford(ids[i]); if(u) return u; } return null; };
   if(co && co.runs >= 1){
@@ -39269,7 +39416,7 @@ function coachPick(){
   }
   // Nothing to diagnose: point at the cheapest thing they can actually have.
   const buyable = UPGRADES.map(u => ({ u, cost: P.nextCost(profile, u) }))
-    .filter(x => x.cost !== null && profile.money >= x.cost);
+    .filter(x => x.cost !== null && profile.money >= x.cost && !P.nextGate(profile, x.u));
   if(!buyable.length) return null;
   const cheap = buyable.reduce((a, b) => b.cost < a.cost ? b : a).u;
   return { u: cheap, why: "Good next step" };
@@ -39308,13 +39455,22 @@ function renderShelf(panel, catId){
   // the cheapest thing you can buy right now.
   const shelf = UPGRADES.filter(u => u.cat === cat.id);
   const buyable = shelf.map(u => ({ u, cost: P.nextCost(profile, u) }))
-    .filter(x => x.cost !== null && profile.money >= x.cost);
+    .filter(x => x.cost !== null && profile.money >= x.cost && !P.nextGate(profile, x.u));
   const beacon = buyable.length ? buyable.reduce((a,b) => b.cost < a.cost ? b : a).u.id : null;
   shelf.forEach(u => {
     const lvl = P.upgradeLevel(profile, u.id);
     const cost = P.nextCost(profile, u);
     const maxed = cost === null;
-    const affordable = !maxed && profile.money >= cost;
+    /*
+     * A gun level waits for its mission (config.js GUN_GATES). `gate` is the
+     * mission the NEXT level needs; `active` is how much of what is owned the
+     * campaign has opened. Both are said in plain words on the card - the
+     * button names the mission instead of a price, and a dormant level says
+     * when it comes back - so a lock never reads as a broken shop.
+     */
+    const gate = P.nextGate(profile, u);
+    const active = P.activeLevel(profile, u.id);
+    const affordable = !maxed && !gate && profile.money >= cost;
     // The part this level bolts on, so the shop says what you'll *see*.
     const part = SF.shipart.PARTS.find(pt => pt.up === u.id && pt.at === lvl+1);
     const row = document.createElement("div");
@@ -39327,17 +39483,23 @@ function renderShelf(panel, catId){
         <div class="si-name">${esc(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
         <div class="si-pips">${pips}</div>
         <div class="si-desc">${esc(u.desc)}</div>
-        <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(lvl)) : "Not owned yet"}${
+        <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(active || lvl)) : "Not owned yet"}${
           maxed ? "" : ' <span class="si-next">→ ' + esc(u.effect(lvl+1)) + "</span>"}</div>
+        ${active < lvl ? `<div class="si-wait">${esc(T("Lv {n} is yours — back after Mission {m}",
+                            { n: active + 1, m: P.gateFor(u, active + 1) }))}</div>` : ""}
         ${part ? `<div class="si-part">fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
       </div>`;
     const btn = document.createElement("button");
-    btn.innerHTML = maxed ? "★<br>MAX" : money(cost);
+    btn.innerHTML = maxed ? "★<br>MAX"
+                  : gate ? `<i class="lock-slot"></i>${esc(T("Mission {n}", { n: gate }))}`
+                  : money(cost);
     // Only MAXED is truly inert. An unaffordable button stays tappable so the
     // tap can ANSWER (shake + deny blip) - disabled buttons swallow the click
     // and read as broken to a kid.
     btn.disabled = maxed;
     btn.classList.toggle("cant", !maxed && !affordable);
+    btn.classList.toggle("gated", !!gate);
+    if(gate) fillGlyphs(btn, null, "rgba(255,255,255,0.75)", 13);
     click(btn, () => {
       if(!buyUpgrade(u.id)){
         // A tap that silently did nothing reads as a broken button. The row
@@ -41722,6 +41884,13 @@ function buyUpgrade(id){
   const u = UPGRADE_BY_ID[id];
   const cost = P.nextCost(profile, u);
   if(cost === null || profile.money < cost) return false;
+  const gate = P.nextGate(profile, u);
+  if(gate){
+    queueToast({ glyph:"lock", label: T("NOT YET"),
+      name: T("Beat Mission {n} to open {name} Lv {lvl}",
+              { n: gate, name: u.name, lvl: P.upgradeLevel(profile, id) + 1 }) });
+    return false;
+  }
   const rankBefore = P.rankFor(profile).name;
   const levelsBefore = SF.shipart.levelsOf(profile);
   const partsBefore = SF.shipart.ownedCount(levelsBefore);

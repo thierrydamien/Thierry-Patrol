@@ -875,6 +875,17 @@ SF.i18n.register("fr", { name: "Français", s: {
 "Super mode: double speed guns and double damage. Tap 🔥 or press V":
   "Mode super : cadence doublée et dégâts doublés. Touche 🔥 ou appuie sur V",
 "{n}-way fire": "tir en {n} directions",
+"5-way fire, wider": "tir en 5 directions, plus large",
+"Mission {n}": "Mission {n}",
+"NOT YET": "PAS ENCORE",
+"Beat Mission {n} to open {name} Lv {lvl}": "Termine la Mission {n} pour ouvrir {name} niv. {lvl}",
+"Lv {n} is yours — back after Mission {m}": "Le niv. {n} est à toi — de retour après la Mission {m}",
+"THE ARMORY GROWS WITH YOU": "L'ARSENAL GRANDIT AVEC TOI",
+"Your ship is exactly as you built it, {you} - every part you paid for is still yours and still bolted on. But the biggest guns now wake up with the campaign: each level of fire comes back the moment you beat the mission that earns it.":
+  "Ton vaisseau est exactement tel que tu l'as construit, {you} — chaque pièce que tu as payée est toujours à toi, toujours boulonnée. Mais les plus grosses armes se réveillent maintenant avec la campagne : chaque niveau de tir revient dès que tu termines la mission qui le mérite.",
+"Nothing is lost and nothing costs twice. The Armory shows which mission each level is waiting for. Fly - your guns will catch up with you.":
+  "Rien n'est perdu et rien ne se paie deux fois. L'Arsenal indique quelle mission chaque niveau attend. Vole — tes armes te rattraperont.",
+"BACK TO THE SKY": "RETOUR AU CIEL",
 "+{n}% fire rate": "+{n} % de cadence",
 "{n} damage per hit": "{n} dégâts par tir",
 "blasts through {n} and keeps going": "traverse {n} et continue",

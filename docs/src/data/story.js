@@ -165,6 +165,19 @@ const STORY = {
     button:"TRUST THE SHADOW",
   },
 
+  /* The Armory's guns started waking up with the campaign. Fires once, on
+     the first pick of a pilot whose save owns a gun level the campaign has
+     not reached yet (profile.dormantLevels) - nothing is lost, nothing is
+     charged twice, and the Armory names the mission each level waits for. */
+  armoryGates: {
+    title: "THE ARMORY GROWS WITH YOU",
+    panels: [
+      { art:"now", text:"Your ship is exactly as you built it, {you} - every part you paid for is still yours and still bolted on. But the biggest guns now wake up with the campaign: each level of fire comes back the moment you beat the mission that earns it." },
+      { art:"sky", text:"Nothing is lost and nothing costs twice. The Armory shows which mission each level is waiting for. Fly - your guns will catch up with you." },
+    ],
+    button:"BACK TO THE SKY",
+  },
+
   workshop: {
     title: "THE PAINTED SKY",
     panels: [

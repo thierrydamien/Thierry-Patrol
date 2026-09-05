@@ -123,13 +123,56 @@ const CATEGORIES = [
   { id:"extras", name:"SPECIALS",      icon:"✨", color:"#ffd23f" },
 ];
 
-/** Horizontal bullet velocities fired at a given Spread Shot level. */
+/**
+ * Horizontal bullet velocities fired at a given Spread Shot level.
+ *
+ * The last level WIDENS the fan rather than adding a sixth bolt. The family's
+ * verdict on a maxed ship was "too messy": six rounds a volley at the top
+ * fire rate is forty-plus bolts a second from one hull before the drones and
+ * Overdrive join in, and at that density the sky is a wall of your own light.
+ * Five bolts across a wider arc covers the same width with a screen you can
+ * still read - the Armory sells it as "wider", which is what it is.
+ */
 function spreadPattern(lvl){
   return [[0], [-45,45], [-110,0,110], [-150,-50,50,150],
-          [-190,-95,0,95,190], [-230,-140,-50,50,140,230]][lvl] || [0];
+          [-190,-95,0,95,190], [-230,-115,0,115,230]][lvl] || [0];
 }
-/** Fire-interval multiplier at a given Rapid Fire level (lower = faster). */
-function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.45][lvl] || 1; }
+/** Fire-interval multiplier at a given Rapid Fire level (lower = faster).
+ *  The top level eased from 0.45 to 0.55 for the same reason the fan stopped
+ *  at five bolts; entities.js also floors the interval so Rapid, Overdrive
+ *  and the rapid-fire pickup can no longer multiply each other without limit. */
+function fireRateMult(lvl){ return [1, 0.85, 0.72, 0.62, 0.53, 0.55][lvl] || 1; }
+
+/*
+ * THE GUNS WAKE UP WITH THE CAMPAIGN.
+ *
+ * "The weapon upgrades come too quickly" was measurable: a career model on
+ * PILOT (fly, bank, buy guns first) had 3-way fire, Rapid 3 and Plasma 3 by
+ * mission 5, 4-way and Rapid 4 by mission 9 - a fifth of the way in - and
+ * every gun maxed by 28. Steeper prices cannot fix that: the first levels of
+ * everything are pocket money on purpose, so the early ramp is set by three
+ * cheap prices, not by the curve.
+ *
+ * So each gun level has a mission it waits for, the way a tune waits for its
+ * boss (`unlockMission`). `unlock[i]` is the mission a pilot must have CLEARED
+ * before level i+1 is theirs; 0 means "from the start". A level bought before
+ * its mission (an older save) is not lost and never charged twice - it is
+ * DORMANT: owned, shown in the Armory as waiting, and back the moment the
+ * mission is beaten (profile.activeLevel). Modelled on the same career: 2-way
+ * at mission 4, 3-way at 12, 4-way at 16, the whole kit by 28, and something
+ * to buy every mission from the other shelves meanwhile.
+ *
+ * Hand-written mission ids, like the tunes': any future level inserted below
+ * 28 must shift these too (see profile.js migrate).
+ */
+const GUN_GATES = {
+  spread:  [0, 4, 9, 16, 26],
+  rapid:   [0, 5, 10, 17, 27],
+  damage:  [0, 6, 11, 18, 28],
+  pierce:  [8, 15, 24],
+  homing:  [10, 18, 26],
+  wingman: [12, 22],
+};
 
 /*
  * COST CURVE
@@ -177,18 +220,23 @@ function costCurve(first, levels){
 const T = (en, vars) => (SF.i18n ? SF.i18n.t(en, vars) : en);
 const UPGRADES = [
   { id:"spread", cat:"guns", name:"Spread Shot", icon:"🔱", max:5, costs:costCurve(150,5),
+    unlock: GUN_GATES.spread,
     desc:"Shoot more bullets at once, in a wider fan",
-    effect: lvl => T("{n}-way fire", { n: spreadPattern(lvl).length }) },
+    effect: lvl => lvl >= 5 ? T("5-way fire, wider") : T("{n}-way fire", { n: spreadPattern(lvl).length }) },
   { id:"rapid", cat:"guns", name:"Rapid Fire", icon:"⚡", max:5, costs:costCurve(120,5),
+    unlock: GUN_GATES.rapid,
     desc:"Your guns shoot way faster",
     effect: lvl => T("+{n}% fire rate", { n: Math.round((1/fireRateMult(lvl) - 1)*100) }) },
   { id:"damage", cat:"guns", name:"Plasma Rounds", icon:"💥", max:5, costs:costCurve(200,5),
+    unlock: GUN_GATES.damage,
     desc:"Every bullet hits much harder",
     effect: lvl => T("{n} damage per hit", { n: 1+lvl }) },
   { id:"pierce", cat:"guns", name:"Piercing Rounds", icon:"🗡️", max:3, costs:costCurve(600,3),
+    unlock: GUN_GATES.pierce,
     desc:"Bullets punch straight through anything they blow up",
     effect: lvl => T("blasts through {n} and keeps going", { n: lvl === 1 ? T("1 enemy") : T("{n} enemies", { n: lvl }) }) },
   { id:"homing", cat:"guns", name:"Seeker Rounds", icon:"🎯", max:3, costs:costCurve(500,3),
+    unlock: GUN_GATES.homing,
     desc:"Your bullets bend through the air to chase enemies",
     effect: lvl => T("tracking {n}/3", { n: lvl }) },
 
@@ -213,6 +261,7 @@ const UPGRADES = [
     desc:"Everything you blow up drops more money. Get this early!",
     effect: lvl => T("+{n}% money", { n: lvl*15 }) },
   { id:"wingman", cat:"extras", name:"Wingman Drone", icon:"🛩️", max:2, costs:costCurve(1200,2),
+    unlock: GUN_GATES.wingman,
     desc:"Little robot buddies fly next to you and shoot too",
     effect: lvl => T(lvl===1 ? "{n} drone" : "{n} drones", { n: lvl }) },
   { id:"bomb", cat:"extras", name:"Smart Bombs", icon:"💣", max:3, costs:costCurve(400,3),
@@ -460,7 +509,7 @@ SF.config = {
   SHIP_COLORS, PAINTS, PAINT_BY_ID, TRAILS, TRAIL_BY_ID,
   DECALS, DECAL_BY_ID, FIREWORKS, FIREWORK_BY_ID,
   BADGES, CATEGORIES, UPGRADES, UPGRADE_BY_ID, MAX_UPGRADE_LEVELS, TOTAL_UPGRADE_COST,
-  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES,
+  RANKS, DIFFICULTIES, DIFFICULTY_BY_ID, POWERUPS, ACHIEVEMENTS, TUNES, TUNE_BY_ID, SUPPLIES, GUN_GATES,
   KIT_SLOTS, kitCost, MIX_COST,
   spreadPattern, fireRateMult,
 };

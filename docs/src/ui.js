@@ -733,6 +733,12 @@ function selectProfile(name, mateName){
   sessionMate = (mateName && mateName !== name) ? mateName : null;
   renderMenu();
   show("screen-menu");
+  /*
+   * An older save that bought its guns ahead of the campaign finds some of
+   * them dormant today. Said once, on the first pick of that pilot, before
+   * a single flight can feel lighter for no reason.
+   */
+  if(P.dormantLevels(profile).length) maybeStory("armoryGates");
 }
 
 function renderMenu(){
@@ -2780,7 +2786,9 @@ function coachPick(){
   const afford = id => {
     const u = UPGRADE_BY_ID[id];
     const c = u ? P.nextCost(profile, u) : null;
-    return c !== null && profile.money >= c ? u : null;
+    // Never point at a level the campaign has not opened: "try Spread Shot"
+    // over a locked button is advice a child cannot take.
+    return c !== null && profile.money >= c && !P.nextGate(profile, u) ? u : null;
   };
   const first = ids => { for(let i=0;i<ids.length;i++){ const u = afford(ids[i]); if(u) return u; } return null; };
   if(co && co.runs >= 1){
@@ -2802,7 +2810,7 @@ function coachPick(){
   }
   // Nothing to diagnose: point at the cheapest thing they can actually have.
   const buyable = UPGRADES.map(u => ({ u, cost: P.nextCost(profile, u) }))
-    .filter(x => x.cost !== null && profile.money >= x.cost);
+    .filter(x => x.cost !== null && profile.money >= x.cost && !P.nextGate(profile, x.u));
   if(!buyable.length) return null;
   const cheap = buyable.reduce((a, b) => b.cost < a.cost ? b : a).u;
   return { u: cheap, why: "Good next step" };
@@ -2841,13 +2849,22 @@ function renderShelf(panel, catId){
   // the cheapest thing you can buy right now.
   const shelf = UPGRADES.filter(u => u.cat === cat.id);
   const buyable = shelf.map(u => ({ u, cost: P.nextCost(profile, u) }))
-    .filter(x => x.cost !== null && profile.money >= x.cost);
+    .filter(x => x.cost !== null && profile.money >= x.cost && !P.nextGate(profile, x.u));
   const beacon = buyable.length ? buyable.reduce((a,b) => b.cost < a.cost ? b : a).u.id : null;
   shelf.forEach(u => {
     const lvl = P.upgradeLevel(profile, u.id);
     const cost = P.nextCost(profile, u);
     const maxed = cost === null;
-    const affordable = !maxed && profile.money >= cost;
+    /*
+     * A gun level waits for its mission (config.js GUN_GATES). `gate` is the
+     * mission the NEXT level needs; `active` is how much of what is owned the
+     * campaign has opened. Both are said in plain words on the card - the
+     * button names the mission instead of a price, and a dormant level says
+     * when it comes back - so a lock never reads as a broken shop.
+     */
+    const gate = P.nextGate(profile, u);
+    const active = P.activeLevel(profile, u.id);
+    const affordable = !maxed && !gate && profile.money >= cost;
     // The part this level bolts on, so the shop says what you'll *see*.
     const part = SF.shipart.PARTS.find(pt => pt.up === u.id && pt.at === lvl+1);
     const row = document.createElement("div");
@@ -2860,17 +2877,23 @@ function renderShelf(panel, catId){
         <div class="si-name">${esc(u.name)} <span class="si-lvl">${maxed ? "MAXED" : "Lv " + lvl + "/" + u.max}</span></div>
         <div class="si-pips">${pips}</div>
         <div class="si-desc">${esc(u.desc)}</div>
-        <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(lvl)) : "Not owned yet"}${
+        <div class="si-effect">${lvl > 0 ? "Now: " + esc(u.effect(active || lvl)) : "Not owned yet"}${
           maxed ? "" : ' <span class="si-next">→ ' + esc(u.effect(lvl+1)) + "</span>"}</div>
+        ${active < lvl ? `<div class="si-wait">${esc(T("Lv {n} is yours — back after Mission {m}",
+                            { n: active + 1, m: P.gateFor(u, active + 1) }))}</div>` : ""}
         ${part ? `<div class="si-part">fits <b>${esc(part.name)}</b> to your ship</div>` : ""}
       </div>`;
     const btn = document.createElement("button");
-    btn.innerHTML = maxed ? "★<br>MAX" : money(cost);
+    btn.innerHTML = maxed ? "★<br>MAX"
+                  : gate ? `<i class="lock-slot"></i>${esc(T("Mission {n}", { n: gate }))}`
+                  : money(cost);
     // Only MAXED is truly inert. An unaffordable button stays tappable so the
     // tap can ANSWER (shake + deny blip) - disabled buttons swallow the click
     // and read as broken to a kid.
     btn.disabled = maxed;
     btn.classList.toggle("cant", !maxed && !affordable);
+    btn.classList.toggle("gated", !!gate);
+    if(gate) fillGlyphs(btn, null, "rgba(255,255,255,0.75)", 13);
     click(btn, () => {
       if(!buyUpgrade(u.id)){
         // A tap that silently did nothing reads as a broken button. The row
@@ -5255,6 +5278,13 @@ function buyUpgrade(id){
   const u = UPGRADE_BY_ID[id];
   const cost = P.nextCost(profile, u);
   if(cost === null || profile.money < cost) return false;
+  const gate = P.nextGate(profile, u);
+  if(gate){
+    queueToast({ glyph:"lock", label: T("NOT YET"),
+      name: T("Beat Mission {n} to open {name} Lv {lvl}",
+              { n: gate, name: u.name, lvl: P.upgradeLevel(profile, id) + 1 }) });
+    return false;
+  }
   const rankBefore = P.rankFor(profile).name;
   const levelsBefore = SF.shipart.levelsOf(profile);
   const partsBefore = SF.shipart.ownedCount(levelsBefore);

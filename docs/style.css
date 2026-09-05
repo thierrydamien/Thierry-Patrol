@@ -1258,6 +1258,9 @@ body.assets-ready .loading-overlay { opacity:0; pointer-events:none; }
 .armory-panel { flex:1 1 auto; min-width:0; }
 .parts-head { font-size:11px; color: rgba(255,255,255,0.6); margin-bottom:8px; letter-spacing:0.5px; }
 .si-part { font-size:10px; color:#8fd3a7; margin-top:3px; }
+.si-wait { font-size:10px; color:#ffd23f; margin-top:3px; }
+.shop-item button.gated { font-size:11px; line-height:1.15; letter-spacing:0.02em; opacity:0.7; }
+.shop-item button.gated .lock-slot { display:block; margin:0 auto 2px; }
 
 .hangar-parts { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:7px; }
 .part-chip {

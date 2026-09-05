@@ -460,6 +460,48 @@ function upgradeLevel(p, id){ return (p.upgrades && p.upgrades[id]) || 0; }
 function gearLevel(p){ return UPGRADES.reduce((n,u) => n + upgradeLevel(p,u.id), 0); }
 function nextCost(p, u){ const lvl = upgradeLevel(p,u.id); return lvl >= u.max ? null : u.costs[lvl]; }
 
+/*
+ * OWNED versus ACTIVE. `upgradeLevel` is what the pilot has paid for and is
+ * never reduced by anything here. A gun track carries `unlock` (config.js
+ * GUN_GATES): level i+1 needs mission unlock[i] cleared. `unlockedLevel` is
+ * how far the campaign has opened the track, `activeLevel` is the smaller of
+ * the two - the number the loadout actually flies with - and `dormantLevels`
+ * lists what a pilot owns but cannot fly yet, for the Armory and the
+ * one-time notice. Nothing is deleted and nothing is charged twice: an old
+ * save that bought 4-way fire at mission 9 keeps it, dormant, and gets it
+ * back the moment mission 16 falls.
+ */
+function gateFor(u, lvl){ return (u.unlock && u.unlock[lvl - 1]) || 0; }
+function unlockedLevel(p, u){
+  if(!u.unlock) return u.max;
+  let n = 0;
+  for(let i = 0; i < u.max; i++){
+    const g = u.unlock[i];
+    if(g && !((p.missions && p.missions[g]) || {}).cleared) break;
+    n++;
+  }
+  return n;
+}
+function activeLevel(p, id){
+  const u = UPGRADES.find(x => x.id === id);
+  const owned = upgradeLevel(p, id);
+  return u ? Math.min(owned, unlockedLevel(p, u)) : owned;
+}
+/** The mission the NEXT level of `u` is waiting on, or 0 if it can be bought now. */
+function nextGate(p, u){
+  const lvl = upgradeLevel(p, u.id);
+  if(lvl >= u.max) return 0;
+  return unlockedLevel(p, u) > lvl ? 0 : gateFor(u, lvl + 1);
+}
+function dormantLevels(p){
+  const out = [];
+  UPGRADES.forEach(u => {
+    const owned = upgradeLevel(p, u.id), active = Math.min(owned, unlockedLevel(p, u));
+    if(active < owned) out.push({ u, owned, active, until: gateFor(u, active + 1) });
+  });
+  return out;
+}
+
 function rankFor(p){
   const gear = gearLevel(p);
   let rank = RANKS[0];
@@ -690,7 +732,7 @@ function missingObjectives(p, mission){
 
 SF.profile = {
   listNames, addName, load, save, saveRaw, snapshot, blank, migrate, adoptOldSaves,
-  upgradeLevel, gearLevel, nextCost, rankFor, nextRank, badgeFor,
+  upgradeLevel, activeLevel, unlockedLevel, nextGate, gateFor, dormantLevels, gearLevel, nextCost, rankFor, nextRank, badgeFor,
   starsForMission, totalStars, maxStars, missingObjectives, hardestCleared, difficultyUnlocked, campaignComplete,
   squadmates, familyBest,
   checkAchievements, recordMission, achievementStats, unclaimedMedals, claimMedal,

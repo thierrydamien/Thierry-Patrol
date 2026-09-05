@@ -138,7 +138,9 @@ const REVIVE_MS = 5000;
    LOADOUT - profile upgrades become concrete ship stats.
    --------------------------------------------------------- */
 function buildLoadout(profile, difficulty, alsoFlying){
-  const lv = id => P.upgradeLevel(profile, id);
+  // ACTIVE, not owned: a gun level the campaign has not opened yet is still
+  // the pilot's, still bolted on, and does not fire (profile.activeLevel).
+  const lv = id => P.activeLevel(profile, id);
   // Flight tuning: a whole-ship stat trade chosen in MY SHIP. `fire` scales
   // the fire interval (above 1 = slower guns), and dps is scaled to match so
   // boss HP sizing stays honest about what the ship actually puts out.

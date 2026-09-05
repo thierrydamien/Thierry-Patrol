@@ -290,14 +290,24 @@ const PLAY_BOTTOM = VH - 34;
  * colour of the enemy orb - so a fully upgraded kid was dodging their own
  * bullets. Whatever a future tier looks like, it does not look like theirs.
  */
+/*
+ * A tier is a COLOUR, not a size. The bolts used to grow with Plasma Rounds
+ * (6x17 to 12x31, glow to 14) so that a maxed ship's five-way fan was five
+ * fat purple bars with halos - most of the "too messy" on a full screen was
+ * the player's own rounds. The colour ladder still says what you are flying
+ * from across the room; the footprint barely moves. Hit radius is separate
+ * (b.r in fireWeapons) and unchanged.
+ */
 const BULLET_TIERS = [
   { color:"#ffd23f", w:6,  h:17, glow:0 },
-  { color:"#ffe27a", w:7,  h:19, glow:4 },
-  { color:"#ffa94d", w:8,  h:22, glow:6 },
-  { color:"#4dd2ff", w:9,  h:24, glow:8 },
-  { color:"#7c9bff", w:11, h:27, glow:10 },
-  { color:"#b78cff", w:12, h:31, glow:14 },
+  { color:"#ffe27a", w:6,  h:18, glow:3 },
+  { color:"#ffa94d", w:7,  h:19, glow:4 },
+  { color:"#4dd2ff", w:7,  h:20, glow:5 },
+  { color:"#7c9bff", w:8,  h:21, glow:6 },
+  { color:"#b78cff", w:8,  h:22, glow:7 },
 ];
+/** The fastest the guns can cycle, whatever is stacked on them: seconds per volley. */
+const FIRE_FLOOR = 0.125;
 
 const REFERENCE_DPS = 45;
 /*
@@ -701,7 +711,15 @@ class World {
       let interval = p.fireInterval;
       if(timeMs < p.tempRapidUntil) interval *= 0.55;
       if(timeMs < p.overdriveUntil) interval *= 0.5;
-      p.cooldown = interval;
+      /*
+       * A floor under the volley clock. Rapid Fire, the rapid-fire pickup
+       * and Overdrive used to multiply freely - 0.30 x 0.45 x 0.55 x 0.5 is
+       * a volley every 37ms, twenty-seven fans a second - and that is the
+       * "too messy" the family saw. Overdrive keeps its damage; the guns
+       * simply cannot cycle faster than this. Eight volleys a second is
+       * still a wall of fire, just one with gaps you can see enemies through.
+       */
+      p.cooldown = Math.max(FIRE_FLOOR, interval);
     }
   }
 
@@ -734,7 +752,11 @@ class World {
     fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
     p.recoil = 2.5 + tier*0.4;
 
-    for(let i=0;i<p.drones;i++){
+    // The wingmen fire every OTHER volley. Two extra streams at the ship's
+    // own rate doubled the traffic on screen for a third more damage; half
+    // the rounds keep most of the help and give the eye somewhere to rest.
+    p.droneTick = !p.droneTick;
+    for(let i=0;i<p.drones && p.droneTick;i++){
       const side = i === 0 ? -1 : 1;
       const b = this.bullets.spawn();
       b.x = p.x + side*52; b.y = p.y + 2; b.vx = 0; b.vy = -640;

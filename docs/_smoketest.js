@@ -154,6 +154,25 @@ const SRC = JSON.parse(fs.readFileSync(path.join(__dirname, "src/manifest.json")
 const results = [];
 function check(label, cond){ results.push([label, !!cond]); }
 function clickEl(el){ el.dispatchEvent(new window.MouseEvent("click", { bubbles:true })); }
+/*
+ * The guns wake up with the campaign (config.js GUN_GATES): a synthetic
+ * profile handed a maxed kit with no missions flown would fly it DORMANT.
+ * Tests about what a maxed ship does clear the road first, exactly as a
+ * pilot who earned that kit would have.
+ */
+function openGates(p, keepBosses){
+  p.missions = p.missions || {};
+  // Stamped current: a save that still has migrations to run would have
+  // these records shifted out from under the gates on load.
+  p.missionsVer = 99;
+  for(let i = 0; i <= 28; i++){
+    // A rush queues every beaten BOSS, so a rush test opens the road around
+    // the boss stops and clears exactly the bosses it means to.
+    if(keepBosses && window.SF.missions.MISSIONS[i] && window.SF.missions.MISSIONS[i].boss) continue;
+    p.missions[i] = Object.assign({ stars:{}, best:{} }, p.missions[i] || {}, { cleared:true });
+  }
+  return p;
+}
 function q(sel){ return window.document.querySelector(sel); }
 function qa(sel){ return Array.from(window.document.querySelectorAll(sel)); }
 function id(x){ return window.document.getElementById(x); }
@@ -2066,6 +2085,11 @@ async function run(){
 
   const rich = JSON.parse(window.localStorage.getItem("patrol_profile_Marc") || "{}");
   rich.name = "Marc"; rich.money = 2000000;   // enough to buy the whole (much pricier) Armory rich.upgrades = {};
+  // Buying every gun level needs the campaign open to 28; Marc's real
+  // progress is put back once the shelves are bought out, so nothing after
+  // this reads a pilot who has flown further than he has.
+  const marcRoad = JSON.parse(JSON.stringify(rich.missions || {}));
+  openGates(rich);
   window.localStorage.setItem("patrol_profile_Marc", JSON.stringify(rich));
   clickEl(id("armoryBackBtn"));
   clickEl(id("switchBtn"));
@@ -2205,6 +2229,7 @@ async function run(){
 
   check("no single upgrade level costs more than an eighth of the shop",
     SF.config.UPGRADES.every(u => u.costs.every(c => c < SF.config.TOTAL_UPGRADE_COST/8)));
+  { const pr = SF.ui.getProfile(); pr.missions = marcRoad; SF.profile.save(pr); }
   check("passing 20 gear levels plays the ace story",
     !id("storyOverlay").classList.contains("hidden") &&
     /SQUADRON ACE/.test(id("storyTitle").textContent));
@@ -3223,7 +3248,7 @@ async function run(){
 
     // Boulders: sized from your guns, split into asteroids, and can't be rammed away.
     W.reset();
-    const strong = SF.profile.blank("Strong"); strong.upgrades = { spread:5, rapid:5, damage:5 };
+    const strong = openGates(SF.profile.blank("Strong")); strong.upgrades = { spread:5, rapid:5, damage:5 };
     W.createPlayer(SF.game.buildLoadout(strong, diff));
     const bigA = W.spawnEnemy("boulder", 300, 100, { difficulty: diff });
     W.reset();
@@ -3292,7 +3317,7 @@ async function run(){
   /* ---------- the health curve across tiers ---------- */
   {
     const W = SF.game.world;
-    const maxed = SF.profile.blank("Maxed");
+    const maxed = openGates(SF.profile.blank("Maxed"));
     maxed.upgrades = { spread:5, rapid:5, damage:5, wingman:2 };
     const stock = SF.profile.blank("Stock");
     const hpFor = (prof, tierId) => {
@@ -3339,7 +3364,7 @@ async function run(){
       W.reset(); W.createPlayer(SF.game.buildLoadout(prof, tier));
       return W.spawnEnemy(typeId, 100, 100, { difficulty: tier }).hp / W.player.dps;
     };
-    const budget = SF.profile.blank("Budget");
+    const budget = openGates(SF.profile.blank("Budget"));
     budget.upgrades = { spread:2, rapid:1, damage:2 };
     ["turret","carrier","boulder","hive","mender"].forEach(t => {
       check("a maxed ship kills a " + t + " far faster than a budget one",
@@ -3545,7 +3570,7 @@ async function run(){
     const W = SF.game.world;
     const diff = SF.config.DIFFICULTY_BY_ID.pilot;
     W.reset();
-    const prof = SF.profile.blank("Pierce"); prof.upgrades = { pierce:3, damage:5, spread:5, rapid:5 };
+    const prof = openGates(SF.profile.blank("Pierce")); prof.upgrades = { pierce:3, damage:5, spread:5, rapid:5 };
     const loadout = SF.game.buildLoadout(prof, diff);
     W.createPlayer(loadout);
     W.boss = SF.bosses.create("sentinel", diff, loadout.dps);
@@ -5679,7 +5704,7 @@ async function run(){
 
   /* ---------- the armory test range ---------- */
   {
-    const prof = SF.profile.blank("Range"); prof.callsign = "Range";
+    const prof = SF.profile.blank("Range"); prof.callsign = "Range";   // flies its kit dormant: the range asks nothing of it
     prof.upgrades = { damage:3, spread:2 };
     SF.profile.save(prof);
     SF.game.profile = prof;
@@ -5744,7 +5769,7 @@ async function run(){
 
   /* ---------- boss rush ---------- */
   {
-    const prof = SF.profile.blank("Rush"); prof.callsign = "Rush";
+    const prof = openGates(SF.profile.blank("Rush"), true); prof.callsign = "Rush";
     prof.upgrades = { damage:5, rapid:4, spread:3, shield:2 };
     /*
      * Named by BOSS, not by mission id.
@@ -9888,6 +9913,121 @@ async function run(){
     check("the eruption draws without errors", errors.length === 0);
     G.run.ended = true; G.state = "idle";
     G.world.reset();
+  }
+
+  /*
+   * THE GUNS WAKE UP WITH THE CAMPAIGN. The family's verdict was "too quick
+   * and too messy": a gun-first career had 3-way fire by mission 5 and
+   * every gun by 28. Tested: every gun track carries its gates and nothing
+   * else does, a level waits for its mission, an older save keeps what it
+   * bought DORMANT and gets it back when the mission falls, the loadout
+   * flies the active level, the Armory says so in words and refuses the
+   * locked buy without touching the wallet, the notice fires exactly once -
+   * and the top end is trimmed: a five-bolt fan, a floor under the volley
+   * clock, wingmen on alternate volleys, bolts that stay bolt-sized.
+   */
+  {
+    const C = SF.config, P = SF.profile, G = SF.game;
+    check("the six gun tracks are gated and nothing else is",
+      C.UPGRADES.filter(u => u.unlock).map(u => u.id).join(",") === "spread,rapid,damage,pierce,homing,wingman" &&
+      C.UPGRADES.filter(u => u.unlock).every(u => u.unlock.length === u.max && u.unlock.every((g, i) => i === 0 || g > u.unlock[i - 1])));
+    check("every gate sits below the desert insert, like every hand-written id",
+      C.UPGRADES.filter(u => u.unlock).every(u => u.unlock.every(g => g < 35)));
+    const spreadU = C.UPGRADE_BY_ID ? C.UPGRADE_BY_ID.spread : C.UPGRADES.find(u => u.id === "spread");
+    const fresh = P.blank("Fresh"); fresh.missionsVer = 99;
+    check("the first level of a gun is open from the start",
+      P.nextGate(fresh, spreadU) === 0 && P.activeLevel(fresh, "spread") === 0);
+    fresh.upgrades = { spread: 1 };
+    check("the second level waits for mission 4", P.nextGate(fresh, spreadU) === 4);
+    fresh.missions = { 4: { cleared:true, stars:{}, best:{} } };
+    check("...and opens the moment it is beaten", P.nextGate(fresh, spreadU) === 0);
+
+    /* An older save that bought ahead of the road. */
+    const ahead = P.blank("Ahead"); ahead.missionsVer = 99; ahead.money = 50000;
+    ahead.upgrades = { spread: 4, rapid: 2, life: 3 };
+    check("a level bought ahead of its mission is owned, dormant, and never deleted",
+      P.upgradeLevel(ahead, "spread") === 4 && P.activeLevel(ahead, "spread") === 1 &&
+      P.activeLevel(ahead, "life") === 3 &&
+      P.dormantLevels(ahead).map(d => d.u.id + ":" + d.active + "/" + d.owned + "@" + d.until).join(",") === "spread:1/4@4,rapid:1/2@5");
+    check("the loadout flies the ACTIVE level, the hull keeps its parts",
+      G.buildLoadout(ahead, C.DIFFICULTY_BY_ID.pilot).spreadLvl === 1 &&
+      SF.shipart.levelsOf(ahead).spread === 4);
+    ahead.missions = { 4: { cleared:true }, 9: { cleared:true } };
+    check("beating the missions wakes the levels one by one",
+      P.activeLevel(ahead, "spread") === 3 && P.dormantLevels(ahead).length === 2 &&
+      G.buildLoadout(ahead, C.DIFFICULTY_BY_ID.pilot).spreadLvl === 3);
+    ahead.missions = {};
+    P.save(ahead);
+
+    /* The notice, once, on the first pick of that pilot. */
+    SF.ui.renderProfiles();
+    const card = qa("#profileGrid .profile-card").find(c => /Ahead/.test(c.textContent));
+    check("the pilot who bought ahead has a card", !!card);
+    if(card) clickEl(card);
+    await runFrames(4);
+    check("an older save is told once that its guns wake with the campaign",
+      !id("storyOverlay").classList.contains("hidden") &&
+      /ARMORY GROWS/.test(id("storyTitle").textContent));
+    clickEl(id("storyBtn"));
+    await runFrames(2);
+    clickEl(id("switchBtn"));
+    SF.ui.renderProfiles();
+    clickEl(qa("#profileGrid .profile-card").find(c => /Ahead/.test(c.textContent)));
+    await runFrames(4);
+    check("...and only once", id("storyOverlay").classList.contains("hidden"));
+
+    /* The Armory says it in words, and a locked buy leaves the wallet alone. */
+    SF.ui.renderArmory(); SF.ui.show("screen-armory");
+    clickEl(tabByName("GUNS"));
+    const rows = qa("#armoryPanel .shop-item");
+    const spreadRow = rows.find(r => /Spread Shot/.test(r.textContent));
+    check("a dormant level says when it comes back",
+      !!spreadRow && /Lv 2 is yours/.test(spreadRow.textContent) && /Mission 4/.test(spreadRow.textContent));
+    // Owned to level 4: the NEXT buy is level 5, which waits for mission 26.
+    check("a locked level's button names the mission, not a price",
+      !!spreadRow && spreadRow.querySelector("button").classList.contains("gated") &&
+      /Mission 26/.test(spreadRow.querySelector("button").textContent));
+    const money0 = SF.ui.getProfile().money;
+    clickEl(spreadRow.querySelector("button"));
+    await runFrames(2);
+    check("a locked buy is refused and costs nothing",
+      SF.ui.getProfile().money === money0 && SF.ui.getProfile().upgrades.spread === 4);
+    check("the coach never points at a locked level",
+      !qa("#armoryPanel .coach-tip").some(r => /Spread Shot|Rapid Fire/.test(r.textContent)));
+    check("the shelf's beacon is never a locked row",
+      !rows.some(r => r.classList.contains("beacon") && r.querySelector("button").classList.contains("gated")));
+    check("the lock still draws", errors.length === 0);
+    clickEl(id("armoryBackBtn"));
+
+    /* The trims. */
+    check("the last spread level widens the fan instead of adding a sixth bolt",
+      C.spreadPattern(5).length === 5 && C.spreadPattern(4).length === 5 &&
+      Math.max.apply(null, C.spreadPattern(5)) > Math.max.apply(null, C.spreadPattern(4)) &&
+      /5-way fire, wider/.test(spreadU.effect(5)));
+    check("the top fire rate eased", C.fireRateMult(5) === 0.55 && C.fireRateMult(5) > C.fireRateMult(4));
+    check("bolts stay bolt-sized whatever the tier",
+      SF.entityConst.BULLET_TIERS.every(t => t.w <= 8 && t.h <= 22 && t.glow <= 8));
+    check("there is a floor under the volley clock", (() => {
+      const src = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
+      return /const FIRE_FLOOR = 0\.125;/.test(src) && /p\.cooldown = Math\.max\(FIRE_FLOOR, interval\);/.test(src);
+    })());
+    {
+      const W = G.world, diff = C.DIFFICULTY_BY_ID.pilot;
+      W.reset();
+      const maxed = openGates(P.blank("Volley")); maxed.upgrades = { spread:5, rapid:5, damage:5, wingman:2 };
+      W.createPlayer(G.buildLoadout(maxed, diff));
+      const p = W.player;
+      const drone = () => W.bullets.items.filter(b => b.alive && b.fromDrone).length;
+      const own = () => W.bullets.items.filter(b => b.alive && !b.fromDrone).length;
+      W.fireWeapons(0, p); const d1 = drone(), o1 = own();
+      W.fireWeapons(0, p); const d2 = drone(), o2 = own();
+      W.fireWeapons(0, p); const d3 = drone(), o3 = own();
+      check("a maxed volley is five bolts", o1 === 5 && o2 === 10 && o3 === 15);
+      // Rounds stay alive between calls, so the count is cumulative: two
+      // drones, then nothing new, then two more.
+      check("the wingmen fire on alternate volleys", d1 === 2 && d2 === 2 && d3 === 4);
+      W.reset();
+    }
   }
 
   /*
