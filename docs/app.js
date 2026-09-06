@@ -40,18 +40,18 @@
  *    19218  src/prologue.js
  *    19697  src/systems.js
  *    20426  src/render.js
- *    25229  src/enemyart.js
- *    26181  src/insignia.js
- *    26426  src/skygen.js
- *    32405  src/shipart.js
- *    33605  src/paintjob.js
- *    33767  src/pilotart.js
- *    33862  src/comms.js
- *    34001  src/netcode.js
- *    34540  src/game.js
- *    38785  src/workshop.js
- *    39482  src/data/i18nbind.js
- *    39553  src/ui.js
+ *    25241  src/enemyart.js
+ *    26193  src/insignia.js
+ *    26438  src/skygen.js
+ *    32417  src/shipart.js
+ *    33617  src/paintjob.js
+ *    33779  src/pilotart.js
+ *    33874  src/comms.js
+ *    34013  src/netcode.js
+ *    34552  src/game.js
+ *    38797  src/workshop.js
+ *    39494  src/data/i18nbind.js
+ *    39565  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -20794,8 +20794,20 @@ function drawBackground(ctx){
     // Drawn twice, offset by a screen height, so the wrap is seamless. The
     // explicit VW x VH destination folds away whatever dpr build() baked at.
     const y = skyScroll;
-    ctx.drawImage(skyCanvas, 0, y, VW, VH);
-    ctx.drawImage(skyCanvas, 0, y - VH, VW, VH);
+    /*
+     * The seam. At a fractional scroll the top row of one copy and the
+     * bottom row of the other are each half-blended with NOTHING by the
+     * bilinear filter, and the base showed through as a grey hairline
+     * across the world once every screen height - invisible over black
+     * space, plain as a ruled line over a pale floor (the family saw it on
+     * the moon). So the copies OVERLAP: the lower one first, then the upper
+     * one drawn a pixel and a half taller over it. Its soft bottom edge
+     * now blends with the lower copy's own top rows, which are the same
+     * picture (the tiles wrap exactly), and the lower copy's soft top edge
+     * is underneath. The stretch is 1.5 in 800 - nothing the eye can find.
+     */
+    ctx.drawImage(skyCanvas, 0, y, VW, VH + 1);
+    ctx.drawImage(skyCanvas, 0, y - VH, VW, VH + 1.5);
     /*
      * ...and on top of it, the things you only pass once. Drawn at the drift
      * rather than the wrapped scroll, so this one sinks below the frame and

@@ -6987,7 +6987,12 @@ async function run(){
     SF.ui.show("screen-game");
     SF.game.startMission(0, "pilot");
     check("a fresh mission starts with a blank tape", !RW.canPlay());
-    await runFrames(90);                       // ~3s: more than the tape holds
+    await runFrames(50);                       // past the launch autopilot
+    // A deliberate sideways move, so the tape provably holds a DIFFERENT
+    // moment from the hit - left to chance, a ship that happened to sit
+    // still for the last two seconds failed the check below once in four.
+    { const pl = SF.game.world.player; pl.targetX = pl.x + 70; }
+    await runFrames(40);                       // ~3s in all: more than the tape holds
     check("the tape fills as the mission is flown", RW.canPlay());
 
     const before = SF.game.world.player.x;
