@@ -2047,8 +2047,14 @@ function useOverdrive(){
   p.overdrives--;
   p.overdriveUntil = simMs + p.overdriveTime*1000;
   audio.play("overdrive");
+  // The bomb gets a BOOM the size of the screen; this gets the same
+  // treatment, or a four-second power reads as a hiccup in the guns.
+  fx.flash(0.3, "255,170,80");
+  fx.shake(5);
   fx.ring(p.x, p.y, 120, "#ff8a3d", 4, 0.5);
-  fx.text(p.x, p.y - 38, "OVERDRIVE!", "#ff8a3d", 22, true);
+  fx.ring(p.x, p.y, 260, "#ffd6a0", 2, 0.7);
+  fx.text(VW/2, VH*0.42, "OVERDRIVE!", "#ff8a3d", 34, true);
+  fx.text(VW/2, VH*0.42 + 36, T("DOUBLE FIRE!"), "#ffd23f", 20, true);
   return true;
 }
 
@@ -2611,7 +2617,7 @@ function update(dt, timeMs){
         b.x = f.x; b.y = f.y - 10;
         b.vx = (best.x - f.x)/d * 470; b.vy = (best.y - f.y - 10)/d * 470;
         b.r = 5; b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
-        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false;
+        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false; b.hot = false;
         b.petal = true;                     // drawn as a petal, pays as a shot
         b.owner = f.owner;                  // the child who caught the seed
         fx.spark(f.x, f.y - 8, b.vx*0.08, b.vy*0.08, "#b8f4c6", 0.28, 2.4);

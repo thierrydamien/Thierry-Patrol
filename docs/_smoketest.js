@@ -10035,8 +10035,27 @@ async function run(){
       SF.entityConst.BULLET_TIERS.every(t => t.w <= 8 && t.h <= 22 && t.glow <= 8));
     check("there is a floor under the volley clock", (() => {
       const src = fs.readFileSync(path.join(__dirname, "src/entities.js"), "utf8");
-      return /const FIRE_FLOOR = 0\.125;/.test(src) && /p\.cooldown = Math\.max\(FIRE_FLOOR, interval\);/.test(src);
+      return /const FIRE_FLOOR = 0\.125;/.test(src) && /p\.cooldown = Math\.max\(floor, interval\);/.test(src) &&
+             /const floor = timeMs < p\.overdriveUntil \? FIRE_FLOOR\*0\.6 : FIRE_FLOOR;/.test(src);
     })());
+    /* Overdrive is the one power allowed under it, and its rounds look the part. */
+    {
+      const W = G.world, diff = C.DIFFICULTY_BY_ID.pilot;
+      W.reset();
+      const od = openGates(P.blank("Hot")); od.upgrades = { spread:2, rapid:2, damage:2, overdrive:1 };
+      W.createPlayer(G.buildLoadout(od, diff));
+      const pl = W.player;
+      pl.overdriveTime = 4; pl.overdriveUntil = 99999999;
+      W.fireWeapons(1000, pl);
+      const hot = W.bullets.items.filter(b => b.alive);
+      check("overdrive rounds are born hot", hot.length > 0 && hot.every(b => b.hot === true));
+      pl.overdriveUntil = 0;
+      W.bullets.killAll();
+      W.fireWeapons(1000, pl);
+      const cold = W.bullets.items.filter(b => b.alive);
+      check("...and plain rounds are not", cold.length > 0 && cold.every(b => b.hot === false));
+      W.reset();
+    }
     {
       const W = G.world, diff = C.DIFFICULTY_BY_ID.pilot;
       W.reset();

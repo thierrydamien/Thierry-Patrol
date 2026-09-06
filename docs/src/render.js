@@ -565,12 +565,12 @@ function drawPlayer(ctx, p, timeMs){
   if(overdrive){
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    for(let i=0;i<9;i++){
+    for(let i=0;i<14;i++){
       const sx = ((i*173 + 37) % VW);
       const sy = ((timeMs*(0.9 + (i%4)*0.28) + i*310) % (VH + 160)) - 80;
-      ctx.globalAlpha = 0.05 + (i%3)*0.02;
-      ctx.fillStyle = "#bfe0ff";
-      ctx.fillRect(sx, sy, 2, 90 + (i%3)*44);
+      ctx.globalAlpha = 0.12 + (i%3)*0.05;
+      ctx.fillStyle = i % 2 ? "#ffd6a0" : "#ffb35c";
+      ctx.fillRect(sx, sy, 3, 90 + (i%3)*44);
     }
     ctx.restore();
   }
@@ -626,6 +626,16 @@ function drawPlayer(ctx, p, timeMs){
     g.addColorStop(1, "rgba(255,100,40,0)");
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0, 6, size*0.85, 0, TAU); ctx.fill();
+    ctx.restore();
+    // ...and the clock, on the hull: an orange ring that drains as the
+    // seconds go, so the end of the power is never a surprise.
+    const left = clamp((p.overdriveUntil - timeMs)/(p.overdriveTime*1000), 0, 1);
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(255,138,61,0.4)"; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(0, 4, size*0.8, -Math.PI/2, -Math.PI/2 + TAU*left); ctx.stroke();
+    ctx.strokeStyle = "#ffd6a0"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 4, size*0.8, -Math.PI/2, -Math.PI/2 + TAU*left); ctx.stroke();
     ctx.restore();
   }
   // The ship they actually built: same drawing the hangar shows, every
@@ -1423,7 +1433,11 @@ function drawBullets(ctx, world){
       ctx.restore();
       continue;
     }
-    const spr = boltSprite(t.color, t.w*k, t.h*k);
+    // An overdrive round is a different object: orange, half again as big,
+    // with a long hot tail - so "double fire" is visible in the rounds
+    // themselves, not just in how often they leave.
+    const hot = !!b.hot;
+    const spr = hot ? boltSprite("#ffb35c", t.w*k*1.4, t.h*k*1.3) : boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
     ctx.save();
@@ -1431,8 +1445,8 @@ function drawBullets(ctx, world){
     ctx.rotate(ang);
     // Motion streak first, angled along the bullet's actual velocity - the
     // one part of the bolt that stays ADDITIVE, because a streak is light.
-    ctx.globalAlpha = 0.22;
-    ctx.drawImage(streakSprite, -2.5*k, -2, 5*k, (t.h + 18)*k);
+    ctx.globalAlpha = hot ? 0.6 : 0.22;
+    ctx.drawImage(streakSprite, (hot ? -4 : -2.5)*k, -2, (hot ? 8 : 5)*k, (t.h + (hot ? 44 : 18))*k);
     ctx.globalAlpha = 1;
     /*
      * The body is NOT additive. Additive capsules saturated to identical
@@ -4377,7 +4391,7 @@ function drawHud(ctx, game){
     const nowT = SF.game.now();   // the mission clock, so a pause doesn't drain the bars
     const boosts = [];
     if(nowT < p.overdriveUntil)
-      boosts.push({ label:"OVERDRIVE", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
+      boosts.push({ label:"OVERDRIVE \u00d72", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
     if(nowT < p.tempRapidUntil)
       boosts.push({ label:"RAPID", color:"#ffd23f", left:(p.tempRapidUntil-nowT)/9000 });
     if(nowT < p.tempSpreadUntil)
@@ -4664,6 +4678,17 @@ function drawHud(ctx, game){
     const g = ctx.createRadialGradient(VW/2, VH/2, VH*0.32, VW/2, VH/2, VH*0.72);
     g.addColorStop(0, "rgba(255,0,40,0)");
     g.addColorStop(1, "rgba(255,0,40," + pulse + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,VW,VH);
+  }
+  // Overdrive: the whole frame runs hot - an orange edge pulsing with the
+  // guns - so a few seconds of double fire cannot be mistaken for "my guns
+  // went weird for a bit".
+  if(p && p.alive && SF.game.now() < p.overdriveUntil){
+    const pulse = 0.16 + Math.sin(nowM/70)*0.05;
+    const g = ctx.createRadialGradient(VW/2, VH/2, VH*0.30, VW/2, VH/2, VH*0.74);
+    g.addColorStop(0, "rgba(255,138,61,0)");
+    g.addColorStop(1, "rgba(255,138,61," + pulse.toFixed(3) + ")");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,VW,VH);
   }

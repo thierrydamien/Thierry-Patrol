@@ -917,6 +917,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "MY SHIP": "MON VAISSEAU",
 "SMART BOMB +1": "BOMBE +1",
 "OVERDRIVE +1": "SURRÉGIME +1",
+"DOUBLE FIRE!": "TIR DOUBLÉ !",
 "SHIELDS FULL": "BOUCLIERS PLEINS",
 "EXTRA LIFE": "VIE EN PLUS",
 "a thinner crowd": "moins de monde",

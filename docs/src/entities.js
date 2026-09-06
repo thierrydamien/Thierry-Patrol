@@ -783,7 +783,12 @@ class World {
        * simply cannot cycle faster than this. Eight volleys a second is
        * still a wall of fire, just one with gaps you can see enemies through.
        */
-      p.cooldown = Math.max(FIRE_FLOOR, interval);
+      // Overdrive is the one thing allowed UNDER the floor. It is a power the
+      // player spends, it lasts a few seconds, and "twice the fire" has to
+      // be something the eye can see - at the floor it was a 12% change
+      // nobody noticed. Thirteen volleys a second, briefly, then back.
+      const floor = timeMs < p.overdriveUntil ? FIRE_FLOOR*0.6 : FIRE_FLOOR;
+      p.cooldown = Math.max(floor, interval);
     }
   }
 
@@ -811,10 +816,11 @@ class World {
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
       b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
+      b.hot = overdrive;                // an overdrive round wears its own look
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
-    fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
+    fx.muzzle(p.x, p.y - 22, overdrive ? "#ffb35c" : BULLET_TIERS[tier].color, (1.0 + tier*0.2)*(overdrive ? 1.7 : 1));
     p.recoil = 2.5 + tier*0.4;
 
     // The wingmen fire every OTHER volley. Two extra streams at the ship's
@@ -830,6 +836,7 @@ class World {
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
       b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
+      b.hot = overdrive;                // an overdrive round wears its own look
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -859,6 +866,7 @@ class World {
         b.homing = s.homing; b.tier = s.tier; b.age = 0;
         b.fromDrone = s.fromDrone; b.hitBoss = false; b.hitWeak = false;
         b.fromMirror = true; b.petal = false;
+        b.hot = s.hot; b.doored = false; b.bounced = 0; b.doorCool = 0;
       }
       fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }

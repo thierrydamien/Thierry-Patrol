@@ -16,42 +16,42 @@
  *     5937  src/data/comms.js
  *     6441  src/data/story.js
  *     6666  src/data/fr.js
- *     8222  src/profile.js
- *     8994  src/cloud.js
- *     9599  src/fx.js
- *    10712  src/input.js
- *    11206  src/entities.js
- *    12751  src/bossart.js
- *    13617  src/bosses.js
- *    14367  src/bossintro.js
- *    14490  src/rewind.js
- *    15029  src/finale.js
- *    15351  src/papadeath.js
- *    15673  src/backstage.js
- *    16624  src/sky29.js
- *    16870  src/dive.js
- *    17120  src/volcano.js
- *    17357  src/mirage.js
- *    17762  src/frost.js
- *    18100  src/doors.js
- *    18403  src/crystals.js
- *    18662  src/mirrorduel.js
- *    19009  src/homecoming.js
- *    19209  src/prologue.js
- *    19688  src/systems.js
- *    20417  src/render.js
- *    25195  src/enemyart.js
- *    26147  src/insignia.js
- *    26392  src/skygen.js
- *    32371  src/shipart.js
- *    33571  src/paintjob.js
- *    33733  src/pilotart.js
- *    33828  src/comms.js
- *    33967  src/netcode.js
- *    34506  src/game.js
- *    38745  src/workshop.js
- *    39442  src/data/i18nbind.js
- *    39513  src/ui.js
+ *     8223  src/profile.js
+ *     8995  src/cloud.js
+ *     9600  src/fx.js
+ *    10713  src/input.js
+ *    11207  src/entities.js
+ *    12760  src/bossart.js
+ *    13626  src/bosses.js
+ *    14376  src/bossintro.js
+ *    14499  src/rewind.js
+ *    15038  src/finale.js
+ *    15360  src/papadeath.js
+ *    15682  src/backstage.js
+ *    16633  src/sky29.js
+ *    16879  src/dive.js
+ *    17129  src/volcano.js
+ *    17366  src/mirage.js
+ *    17771  src/frost.js
+ *    18109  src/doors.js
+ *    18412  src/crystals.js
+ *    18671  src/mirrorduel.js
+ *    19018  src/homecoming.js
+ *    19218  src/prologue.js
+ *    19697  src/systems.js
+ *    20426  src/render.js
+ *    25229  src/enemyart.js
+ *    26181  src/insignia.js
+ *    26426  src/skygen.js
+ *    32405  src/shipart.js
+ *    33605  src/paintjob.js
+ *    33767  src/pilotart.js
+ *    33862  src/comms.js
+ *    34001  src/netcode.js
+ *    34540  src/game.js
+ *    38785  src/workshop.js
+ *    39482  src/data/i18nbind.js
+ *    39553  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -7582,6 +7582,7 @@ SF.i18n.register("fr", { name: "Français", s: {
 "MY SHIP": "MON VAISSEAU",
 "SMART BOMB +1": "BOMBE +1",
 "OVERDRIVE +1": "SURRÉGIME +1",
+"DOUBLE FIRE!": "TIR DOUBLÉ !",
 "SHIELDS FULL": "BOUCLIERS PLEINS",
 "EXTRA LIFE": "VIE EN PLUS",
 "a thinner crowd": "moins de monde",
@@ -11988,7 +11989,12 @@ class World {
        * simply cannot cycle faster than this. Eight volleys a second is
        * still a wall of fire, just one with gaps you can see enemies through.
        */
-      p.cooldown = Math.max(FIRE_FLOOR, interval);
+      // Overdrive is the one thing allowed UNDER the floor. It is a power the
+      // player spends, it lasts a few seconds, and "twice the fire" has to
+      // be something the eye can see - at the floor it was a 12% change
+      // nobody noticed. Thirteen volleys a second, briefly, then back.
+      const floor = timeMs < p.overdriveUntil ? FIRE_FLOOR*0.6 : FIRE_FLOOR;
+      p.cooldown = Math.max(floor, interval);
     }
   }
 
@@ -12016,10 +12022,11 @@ class World {
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
       b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
+      b.hot = overdrive;                // an overdrive round wears its own look
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
-    fx.muzzle(p.x, p.y - 22, BULLET_TIERS[tier].color, 1.0 + tier*0.2);
+    fx.muzzle(p.x, p.y - 22, overdrive ? "#ffb35c" : BULLET_TIERS[tier].color, (1.0 + tier*0.2)*(overdrive ? 1.7 : 1));
     p.recoil = 2.5 + tier*0.4;
 
     // The wingmen fire every OTHER volley. Two extra streams at the ship's
@@ -12035,6 +12042,7 @@ class World {
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
       b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
+      b.hot = overdrive;                // an overdrive round wears its own look
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -12064,6 +12072,7 @@ class World {
         b.homing = s.homing; b.tier = s.tier; b.age = 0;
         b.fromDrone = s.fromDrone; b.hitBoss = false; b.hitWeak = false;
         b.fromMirror = true; b.petal = false;
+        b.hot = s.hot; b.doored = false; b.bounced = 0; b.doorCool = 0;
       }
       fx.muzzle(VW - p.x, p.y - 22, "#dff3ff", 0.8);
     }
@@ -15211,7 +15220,7 @@ function updateFleet(dt, world, timeMs){
       const b = world.bullets.spawn();
       b.x = f.x; b.y = f.y - 16; b.vx = 0; b.vy = -700;
       b.r = 4.5; b.dmg = 3; b.pierce = 0; b.homing = 0;
-      b.tier = 2; b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
+      b.tier = 2; b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.hot = false;
       b.fromMirror = false; b.petal = false;   // recycled slot: state every flag
       fx.muzzle(f.x, f.y - 18, f.color, 0.7);
     }
@@ -20981,12 +20990,12 @@ function drawPlayer(ctx, p, timeMs){
   if(overdrive){
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    for(let i=0;i<9;i++){
+    for(let i=0;i<14;i++){
       const sx = ((i*173 + 37) % VW);
       const sy = ((timeMs*(0.9 + (i%4)*0.28) + i*310) % (VH + 160)) - 80;
-      ctx.globalAlpha = 0.05 + (i%3)*0.02;
-      ctx.fillStyle = "#bfe0ff";
-      ctx.fillRect(sx, sy, 2, 90 + (i%3)*44);
+      ctx.globalAlpha = 0.12 + (i%3)*0.05;
+      ctx.fillStyle = i % 2 ? "#ffd6a0" : "#ffb35c";
+      ctx.fillRect(sx, sy, 3, 90 + (i%3)*44);
     }
     ctx.restore();
   }
@@ -21042,6 +21051,16 @@ function drawPlayer(ctx, p, timeMs){
     g.addColorStop(1, "rgba(255,100,40,0)");
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0, 6, size*0.85, 0, TAU); ctx.fill();
+    ctx.restore();
+    // ...and the clock, on the hull: an orange ring that drains as the
+    // seconds go, so the end of the power is never a surprise.
+    const left = clamp((p.overdriveUntil - timeMs)/(p.overdriveTime*1000), 0, 1);
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(255,138,61,0.4)"; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(0, 4, size*0.8, -Math.PI/2, -Math.PI/2 + TAU*left); ctx.stroke();
+    ctx.strokeStyle = "#ffd6a0"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 4, size*0.8, -Math.PI/2, -Math.PI/2 + TAU*left); ctx.stroke();
     ctx.restore();
   }
   // The ship they actually built: same drawing the hangar shows, every
@@ -21839,7 +21858,11 @@ function drawBullets(ctx, world){
       ctx.restore();
       continue;
     }
-    const spr = boltSprite(t.color, t.w*k, t.h*k);
+    // An overdrive round is a different object: orange, half again as big,
+    // with a long hot tail - so "double fire" is visible in the rounds
+    // themselves, not just in how often they leave.
+    const hot = !!b.hot;
+    const spr = hot ? boltSprite("#ffb35c", t.w*k*1.4, t.h*k*1.3) : boltSprite(t.color, t.w*k, t.h*k);
     if(!spr) continue;
     const ang = Math.atan2(b.vy, b.vx) + Math.PI/2;
     ctx.save();
@@ -21847,8 +21870,8 @@ function drawBullets(ctx, world){
     ctx.rotate(ang);
     // Motion streak first, angled along the bullet's actual velocity - the
     // one part of the bolt that stays ADDITIVE, because a streak is light.
-    ctx.globalAlpha = 0.22;
-    ctx.drawImage(streakSprite, -2.5*k, -2, 5*k, (t.h + 18)*k);
+    ctx.globalAlpha = hot ? 0.6 : 0.22;
+    ctx.drawImage(streakSprite, (hot ? -4 : -2.5)*k, -2, (hot ? 8 : 5)*k, (t.h + (hot ? 44 : 18))*k);
     ctx.globalAlpha = 1;
     /*
      * The body is NOT additive. Additive capsules saturated to identical
@@ -24793,7 +24816,7 @@ function drawHud(ctx, game){
     const nowT = SF.game.now();   // the mission clock, so a pause doesn't drain the bars
     const boosts = [];
     if(nowT < p.overdriveUntil)
-      boosts.push({ label:"OVERDRIVE", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
+      boosts.push({ label:"OVERDRIVE \u00d72", color:"#ff8a3d", left:(p.overdriveUntil-nowT)/(p.overdriveTime*1000) });
     if(nowT < p.tempRapidUntil)
       boosts.push({ label:"RAPID", color:"#ffd23f", left:(p.tempRapidUntil-nowT)/9000 });
     if(nowT < p.tempSpreadUntil)
@@ -25080,6 +25103,17 @@ function drawHud(ctx, game){
     const g = ctx.createRadialGradient(VW/2, VH/2, VH*0.32, VW/2, VH/2, VH*0.72);
     g.addColorStop(0, "rgba(255,0,40,0)");
     g.addColorStop(1, "rgba(255,0,40," + pulse + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,VW,VH);
+  }
+  // Overdrive: the whole frame runs hot - an orange edge pulsing with the
+  // guns - so a few seconds of double fire cannot be mistaken for "my guns
+  // went weird for a bit".
+  if(p && p.alive && SF.game.now() < p.overdriveUntil){
+    const pulse = 0.16 + Math.sin(nowM/70)*0.05;
+    const g = ctx.createRadialGradient(VW/2, VH/2, VH*0.30, VW/2, VH/2, VH*0.74);
+    g.addColorStop(0, "rgba(255,138,61,0)");
+    g.addColorStop(1, "rgba(255,138,61," + pulse.toFixed(3) + ")");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,VW,VH);
   }
@@ -36552,8 +36586,14 @@ function useOverdrive(){
   p.overdrives--;
   p.overdriveUntil = simMs + p.overdriveTime*1000;
   audio.play("overdrive");
+  // The bomb gets a BOOM the size of the screen; this gets the same
+  // treatment, or a four-second power reads as a hiccup in the guns.
+  fx.flash(0.3, "255,170,80");
+  fx.shake(5);
   fx.ring(p.x, p.y, 120, "#ff8a3d", 4, 0.5);
-  fx.text(p.x, p.y - 38, "OVERDRIVE!", "#ff8a3d", 22, true);
+  fx.ring(p.x, p.y, 260, "#ffd6a0", 2, 0.7);
+  fx.text(VW/2, VH*0.42, "OVERDRIVE!", "#ff8a3d", 34, true);
+  fx.text(VW/2, VH*0.42 + 36, T("DOUBLE FIRE!"), "#ffd23f", 20, true);
   return true;
 }
 
@@ -37116,7 +37156,7 @@ function update(dt, timeMs){
         b.x = f.x; b.y = f.y - 10;
         b.vx = (best.x - f.x)/d * 470; b.vy = (best.y - f.y - 10)/d * 470;
         b.r = 5; b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
-        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false;
+        b.fromDrone = true; b.hitBoss = false; b.hitWeak = false; b.fromMirror = false; b.hot = false;
         b.petal = true;                     // drawn as a petal, pays as a shot
         b.owner = f.owner;                  // the child who caught the seed
         fx.spark(f.x, f.y - 8, b.vx*0.08, b.vy*0.08, "#b8f4c6", 0.28, 2.4);
