@@ -29,6 +29,7 @@
     "src/dive.js",
     "src/volcano.js",
     "src/mirage.js",
+    "src/frost.js",
     "src/mirrorduel.js",
     "src/homecoming.js",
     "src/prologue.js",

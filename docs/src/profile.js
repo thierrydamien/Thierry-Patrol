@@ -395,6 +395,20 @@ function migrate(p){
     if((p.reached || 0) >= 35) p.reached += 1;
     p.missionsVer = 12;
   }
+  /*
+   * v13: Whiteout landed as mission 36 - the frozen side of the desert
+   * world, the sixth surface - pushing the old 36-44 up one. Same shape as
+   * v10-v12; every hand-written mission id (tunes 23/28/32, devourerDown
+   * 32, the gun gates up to 28) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 13){
+    for(let id = 44; id >= 36; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 36) p.lastMission += 1;
+    if((p.reached || 0) >= 36) p.reached += 1;
+    p.missionsVer = 13;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

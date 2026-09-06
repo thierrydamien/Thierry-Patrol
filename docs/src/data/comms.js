@@ -409,6 +409,23 @@ const COMMS = {
     "You saw right through it, {you}! Shadow first, every time.",
     "That's it, {you} — you shot the one with the shadow!",
   ]},
+  frostStart: { speaker:"control", cooldown:999, lines:[
+    "This world froze when they took its light, {you}. The cold comes in FRONTS - see the blue lane, get out of it.",
+    "Anything the cold catches stops dead, {you}. Them too. A frozen ship shatters in one shot - go and collect.",
+    "Blue lane means GET OUT, {you}. Then come back for what it froze.",
+  ]},
+  frostWarn: { speaker:"control", cooldown:30, lines:[
+    "Cold front, {you} — out of the blue lane, NOW!",
+    "Here it comes, {you} — the lane's lit, move!",
+  ]},
+  frostCaught: { speaker:"control", cooldown:40, lines:[
+    "You're iced up, {you} — it'll pass. Next time, get out of the lane.",
+    "The cold got you, {you}. Hold on — and watch for the blue.",
+  ]},
+  frostShatter: { speaker:"control", cooldown:45, lines:[
+    "SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!",
+    "That's it, {you} — the cold froze it, YOU broke it.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",

@@ -4,51 +4,52 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       54  src/core.js
- *      224  src/i18n.js
- *      453  src/icons.js
- *     1057  src/haptics.js
- *     1236  src/audio.js
- *     1937  src/data/config.js
- *     2465  src/data/enemies.js
- *     3352  src/data/missions.js
- *     5536  src/wacky.js
- *     5752  src/data/comms.js
- *     6213  src/data/story.js
- *     6410  src/data/fr.js
- *     7865  src/profile.js
- *     8608  src/cloud.js
- *     9213  src/fx.js
- *    10326  src/input.js
- *    10820  src/entities.js
- *    12327  src/bossart.js
- *    13193  src/bosses.js
- *    13943  src/bossintro.js
- *    14066  src/rewind.js
- *    14604  src/finale.js
- *    14926  src/papadeath.js
- *    15248  src/backstage.js
- *    16199  src/sky29.js
- *    16445  src/dive.js
- *    16695  src/volcano.js
- *    16932  src/mirage.js
- *    17337  src/mirrorduel.js
- *    17684  src/homecoming.js
- *    17884  src/prologue.js
- *    18363  src/systems.js
- *    19088  src/render.js
- *    23863  src/enemyart.js
- *    24815  src/insignia.js
- *    25060  src/skygen.js
- *    29764  src/shipart.js
- *    30964  src/paintjob.js
- *    31126  src/pilotart.js
- *    31221  src/comms.js
- *    31360  src/netcode.js
- *    31895  src/game.js
- *    36039  src/workshop.js
- *    36736  src/data/i18nbind.js
- *    36807  src/ui.js
+ *       55  src/core.js
+ *      225  src/i18n.js
+ *      454  src/icons.js
+ *     1058  src/haptics.js
+ *     1237  src/audio.js
+ *     1942  src/data/config.js
+ *     2470  src/data/enemies.js
+ *     3357  src/data/missions.js
+ *     5603  src/wacky.js
+ *     5819  src/data/comms.js
+ *     6297  src/data/story.js
+ *     6504  src/data/fr.js
+ *     7997  src/profile.js
+ *     8754  src/cloud.js
+ *     9359  src/fx.js
+ *    10472  src/input.js
+ *    10966  src/entities.js
+ *    12505  src/bossart.js
+ *    13371  src/bosses.js
+ *    14121  src/bossintro.js
+ *    14244  src/rewind.js
+ *    14783  src/finale.js
+ *    15105  src/papadeath.js
+ *    15427  src/backstage.js
+ *    16378  src/sky29.js
+ *    16624  src/dive.js
+ *    16874  src/volcano.js
+ *    17111  src/mirage.js
+ *    17516  src/frost.js
+ *    17854  src/mirrorduel.js
+ *    18201  src/homecoming.js
+ *    18401  src/prologue.js
+ *    18880  src/systems.js
+ *    19609  src/render.js
+ *    24387  src/enemyart.js
+ *    25339  src/insignia.js
+ *    25584  src/skygen.js
+ *    30614  src/shipart.js
+ *    31814  src/paintjob.js
+ *    31976  src/pilotart.js
+ *    32071  src/comms.js
+ *    32210  src/netcode.js
+ *    32749  src/game.js
+ *    36953  src/workshop.js
+ *    37650  src/data/i18nbind.js
+ *    37721  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1406,6 +1407,10 @@ const SOUNDS = {
   // The Mirage: a shot into hot air. A breath of sine sliding down and a
   // hiss - no click, no metal - the one sound in the game for hitting nothing.
   mirage:     { minGap: 90, fn: () => { tone(1040, 0.14, "sine", 0.028, 360); noise(0.07, 0.04, 3200, 900); }},
+  // Whiteout: the ice taking hold - a crystalline chime stepping down into a
+  // hiss - and letting go: a glassy burst with no bass in it at all.
+  freeze:     { minGap: 120, fn: () => { [1320, 990, 740].forEach((f,i) => tone(f, 0.12, "sine", 0.035, f*0.7, i*0.05)); noise(0.18, 0.05, 5200, 1800); }},
+  shatter:    { minGap: 50, fn: () => { noise(0.14, 0.12, 6000, 2200); [1760, 2200].forEach((f,i) => tone(f, 0.06, "triangle", 0.03, null, i*0.02)); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},
@@ -3452,6 +3457,22 @@ const OBJECTIVES = {
   seeThrough:{ label:"See through 30 mirages", icon:"🏜️",
                test: s => (s.seenThrough || 0) >= 30,
                progress: s => (s.seenThrough || 0) + "/30" },
+  /*
+   * Whiteout's two stars, one for each half of its lesson. `shatter` pays for
+   * harvesting what the cold froze before it thawed - a frozen ship is a
+   * one-hit kill for five seconds, and ten is a quarter of what a run's
+   * fronts freeze at the thinnest tier (41 measured on ROOKIE in the smoke
+   * test, with the tier's own bot doing the shattering).
+   * `stayWarm` pays for the dodge itself: never once standing in the lane
+   * when it lit. The pair is deliberate - a child who only harvests learns
+   * half the level, and a child who only dodges learns the other half.
+   */
+  shatter:   { label:"Shatter 10 frozen ships", icon:"🧊",
+               test: s => (s.shattered || 0) >= 10,
+               progress: s => (s.shattered || 0) + "/10" },
+  stayWarm:  { label:"Never get frozen", icon:"🧣",
+               test: s => (s.frozenTimes || 0) === 0,
+               progress: s => (s.frozenTimes || 0) === 0 ? "warm" : "iced" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -5124,7 +5145,53 @@ const MISSIONS = [
     objectives: ["complete","seeThrough","rescueAll"],
   },
   {
-    id:36, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * WHITEOUT - the night side of the desert world, where the light they
+     * took never reached and the sea froze where it stood. The sixth surface
+     * (Frostfall), and the second level whose hazard is the LEVEL: cold
+     * fronts sweep a lit lane and freeze everything they pass. Theirs hang
+     * in the air, guns cold, and shatter in one hit for five seconds; yours
+     * loses the stick for a beat and never a life. frost.js owns the
+     * weather; the costs live in game.js beside the volcano's. Two stars for
+     * the two halves of the lesson: harvest what the cold froze, and never
+     * be standing in the lane when it lit.
+     */
+    id:36, sky:45, name:"Whiteout", subtitle:"outrun the cold",
+    brief:"Round the far side of the desert, {you}, the light they stole never reached - and the sea froze where it stood. The cold comes in FRONTS now: when a lane glows blue, get OUT of it. Anything it catches freezes solid. Them too - and a frozen ship shatters in ONE shot. Dodge the front, then go and collect.",
+    goal:"Blue lane? GET OUT — then shatter!",
+    frost:true,
+    face:"kamikaze",                      // the divers: the ones you outrun
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(8,   "weaver",   7, "arc"),
+      w(15,  "swooper",  6, "pincer"),
+      w(22,  "striker",  5, "vee"),
+      w(29,  "swooper",  5, "vee"),
+      w(34,  "kamikaze", 6, "scatter"),          // a frozen diver is a statue you fly round
+      w(41,  "grunt",   10, "wall"),
+      w(47,  "turret",   4, "sides"),
+      w(53,  "interceptor", 4, "sides"),
+      w(59,  "brute",    4, "pincer"),           // the big ones are the ones worth freezing
+      w(65,  "weaver",   8, "twinColumns"),
+      w(72,  "grunt",    9, "arc"),
+      w(77,  "swooper",  7, "arc", { elite: 2 }),
+      w(84,  "splitter", 5, "scatter"),
+      w(90,  "sniper",   3, "sides"),
+      w(96,  "kamikaze", 7, "pincer"),
+      w(102, "striker",  7, "vee", { elite: 2 }),
+      w(108, "mender",   2, "column"),
+      w(112, "brute",    5, "twinColumns", { elite: 1 }),
+      w(118, "kamikaze", 6, "scatter"),
+      w(122, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(128, "grunt",   13, "wall"),
+    ],
+    // No carriers on the ice on purpose: a mission with pilots to free must
+    // star their rescue (the suite holds every level to it), and the two star
+    // slots here belong to the two halves of the cold's own lesson.
+    objectives: ["complete","shatter","stayWarm"],
+  },
+  {
+    id:37, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -5167,7 +5234,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:37, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:38, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -5199,7 +5266,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:38, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:39, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -5241,7 +5308,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:39, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:40, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -5286,7 +5353,7 @@ const MISSIONS = [
      * level teaches is lure-and-dodge and its own star pays for it.
      * volcano.js owns the theatrics; the costs live in game.js by the flare.
      */
-    id:40, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    id:41, sky:43, name:"The Forge World", subtitle:"The ground fights back",
     brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
     goal:"The ground erupts — USE it!",
     volcano:true,
@@ -5318,7 +5385,7 @@ const MISSIONS = [
     objectives: ["complete","melt","rescueAll"],
   },
   {
-    id:41, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:42, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5350,7 +5417,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:42, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:43, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5389,7 +5456,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:43, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:44, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5417,7 +5484,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:44, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:45, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -6160,6 +6227,23 @@ const COMMS = {
     "You saw right through it, {you}! Shadow first, every time.",
     "That's it, {you} — you shot the one with the shadow!",
   ]},
+  frostStart: { speaker:"control", cooldown:999, lines:[
+    "This world froze when they took its light, {you}. The cold comes in FRONTS - see the blue lane, get out of it.",
+    "Anything the cold catches stops dead, {you}. Them too. A frozen ship shatters in one shot - go and collect.",
+    "Blue lane means GET OUT, {you}. Then come back for what it froze.",
+  ]},
+  frostWarn: { speaker:"control", cooldown:30, lines:[
+    "Cold front, {you} — out of the blue lane, NOW!",
+    "Here it comes, {you} — the lane's lit, move!",
+  ]},
+  frostCaught: { speaker:"control", cooldown:40, lines:[
+    "You're iced up, {you} — it'll pass. Next time, get out of the lane.",
+    "The cold got you, {you}. Hold on — and watch for the blue.",
+  ]},
+  frostShatter: { speaker:"control", cooldown:45, lines:[
+    "SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!",
+    "That's it, {you} — the cold froze it, YOU broke it.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",
@@ -6375,6 +6459,16 @@ const STORY = {
       { art:"twins", text:"Most ships out there fly with a twin that isn't real. Shoot a mirage and your shot vanishes into hot air. But a lie can't cast a shadow: look at the sand, find the dark shape under a ship, and shoot THAT one." },
     ],
     button:"TRUST THE SHADOW",
+  },
+
+  /* The pre-flight page for Whiteout - replays every visit. */
+  whiteout: {
+    title: "THE FROZEN SIDE",
+    panels: [
+      { art:"frostfront", text:"Round the far side of the desert the sun never comes up, {you}. When they took this world's light, the sea froze where it stood - and the cold has been rolling across it in fronts ever since." },
+      { art:"shatter",    text:"When a lane glows blue, get OUT of it. The front freezes everything it touches - their ships too, hanging in the air with their guns iced. A frozen ship shatters in ONE shot. Dodge the cold, then go and collect." },
+    ],
+    button:"INTO THE COLD",
   },
 
   /* The Armory's guns started waking up with the campaign. Fires once, on
@@ -7110,6 +7204,44 @@ SF.i18n.register("fr", { name: "Français", s: {
   "C'est ça, {you} — tu as tiré sur celui qui a une ombre !",
 "MIRAGE!": "MIRAGE !",
 "SEEN THROUGH!": "DÉMASQUÉ !",
+
+/* ----- Whiteout (mission 36) ----- */
+"Whiteout": "Le Blizzard",
+"outrun the cold": "devance le froid",
+"Round the far side of the desert, {you}, the light they stole never reached - and the sea froze where it stood. The cold comes in FRONTS now: when a lane glows blue, get OUT of it. Anything it catches freezes solid. Them too - and a frozen ship shatters in ONE shot. Dodge the front, then go and collect.":
+  "De l'autre côté du désert, {you}, la lumière qu'ils ont volée n'est jamais arrivée — et la mer a gelé sur place. Le froid arrive maintenant par FRONTS : quand une bande devient bleue, SORS-en. Tout ce qu'il attrape gèle sur place. Eux aussi — et un vaisseau gelé se brise d'UN seul tir. Esquive le front, puis va récolter.",
+"Blue lane? GET OUT — then shatter!": "Bande bleue ? SORS — puis brise !",
+"Frostfall": "Givre",
+"THE FROZEN SIDE": "LA FACE GELÉE",
+"Round the far side of the desert the sun never comes up, {you}. When they took this world's light, the sea froze where it stood - and the cold has been rolling across it in fronts ever since.":
+  "De l'autre côté du désert, le soleil ne se lève jamais, {you}. Quand ils ont pris la lumière de ce monde, la mer a gelé sur place — et depuis, le froid la traverse par fronts.",
+"When a lane glows blue, get OUT of it. The front freezes everything it touches - their ships too, hanging in the air with their guns iced. A frozen ship shatters in ONE shot. Dodge the cold, then go and collect.":
+  "Quand une bande devient bleue, SORS-en. Le front gèle tout ce qu'il touche — leurs vaisseaux aussi, suspendus dans l'air, les canons pris dans la glace. Un vaisseau gelé se brise d'UN seul tir. Esquive le froid, puis va récolter.",
+"INTO THE COLD": "DANS LE FROID",
+"Shatter 10 frozen ships": "Brise 10 vaisseaux gelés",
+"Never get frozen": "Ne gèle jamais",
+"This world froze when they took its light, {you}. The cold comes in FRONTS - see the blue lane, get out of it.":
+  "Ce monde a gelé quand ils ont pris sa lumière, {you}. Le froid arrive par FRONTS — tu vois la bande bleue, sors-en.",
+"Anything the cold catches stops dead, {you}. Them too. A frozen ship shatters in one shot - go and collect.":
+  "Tout ce que le froid attrape s'arrête net, {you}. Eux aussi. Un vaisseau gelé se brise d'un seul tir — va récolter.",
+"Blue lane means GET OUT, {you}. Then come back for what it froze.":
+  "Bande bleue veut dire SORS, {you}. Puis reviens chercher ce qu'elle a gelé.",
+"Cold front, {you} — out of the blue lane, NOW!":
+  "Front froid, {you} — sors de la bande bleue, VITE !",
+"Here it comes, {you} — the lane's lit, move!":
+  "Le voilà, {you} — la bande est allumée, bouge !",
+"You're iced up, {you} — it'll pass. Next time, get out of the lane.":
+  "Tu es pris dans la glace, {you} — ça va passer. La prochaine fois, sors de la bande.",
+"The cold got you, {you}. Hold on — and watch for the blue.":
+  "Le froid t'a eu, {you}. Tiens bon — et surveille le bleu.",
+"SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!":
+  "BRISÉ ! Les gelés tombent en un coup, {you} — attrape-les avant qu'ils dégèlent !",
+"That's it, {you} — the cold froze it, YOU broke it.":
+  "C'est ça, {you} — le froid l'a gelé, TOI tu l'as brisé.",
+"FROZEN!": "GELÉ !",
+"SHATTERED!": "BRISÉ !",
+"warm": "au chaud",
+"iced": "gelé",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
@@ -8258,6 +8390,20 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 35) p.lastMission += 1;
     if((p.reached || 0) >= 35) p.reached += 1;
     p.missionsVer = 12;
+  }
+  /*
+   * v13: Whiteout landed as mission 36 - the frozen side of the desert
+   * world, the sixth surface - pushing the old 36-44 up one. Same shape as
+   * v10-v12; every hand-written mission id (tunes 23/28/32, devourerDown
+   * 32, the gun gates up to 28) sits below the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 13){
+    for(let id = 44; id >= 36; id--){
+      if(p.missions[id]){ p.missions[id + 1] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 36) p.lastMission += 1;
+    if((p.reached || 0) >= 36) p.reached += 1;
+    p.missionsVer = 13;
   }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
@@ -11376,6 +11522,7 @@ class World {
       lives: loadout.lives, maxLives: loadout.lives,
       shield: loadout.shieldMax, shieldMax: loadout.shieldMax,
       invuln: 1.4, invulnTime: loadout.invulnTime,
+      frozen: 0,                        // Whiteout: seconds of ice left on the hull
       accel: 4300 * loadout.speedMult,
       maxSpeed: 430 * loadout.speedMult,
       fireInterval: loadout.fireInterval, cooldown: 0,
@@ -11470,6 +11617,25 @@ class World {
     }
 
     const input = inputState || SF.input.state;
+
+    /*
+     * WHITEOUT: iced over. No stick and no guns for a beat - the hull is
+     * invulnerable underneath (frost.js sets both), so a caught pilot loses
+     * seconds, never a life. The trail keeps decaying and the clocks keep
+     * running; nothing else does.
+     */
+    if(p.frozen > 0){
+      p.frozen = Math.max(0, p.frozen - dt);
+      p.vx = damp(p.vx, 0, 14, dt); p.vy = damp(p.vy, 0, 14, dt);
+      p.bank = damp(p.bank, 0, 10, dt);
+      p.recoil = damp(p.recoil, 0, 18, dt);
+      if(p.invuln > 0) p.invuln -= dt;
+      for(let i = p.trail.length-1; i >= 0; i--){
+        p.trail[i].life += dt;
+        if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
+      }
+      return;
+    }
 
     // Acceleration-based movement: the ship has weight and carries a little
     // momentum, which reads far better than teleporting to the finger.
@@ -11935,6 +12101,8 @@ class World {
     // stamp that keeps a recycled slot from answering for a dead one.
     e.mirage = false; e.mirageTwin = null; e.mirageStamp = 0; e.firstHit = false; e.aimedFirst = false;
     e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
+    // Whiteout's ice: how long it holds, and the way it was going when caught.
+    e.frozen = 0; e.frozenVx = 0; e.frozenVy = 0;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship
@@ -11992,6 +12160,16 @@ class World {
       }
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
+      /*
+       * WHITEOUT: frozen solid. No behaviour, no guns, no drift, no leash
+       * clock - the ice holds it exactly where the cold found it until it
+       * thaws, or until something shatters it (systems.js).
+       */
+      if(e.frozen > 0){
+        e.frozen -= dt;
+        if(e.frozen <= 0){ e.frozen = 0; e.vx = e.frozenVx; e.vy = e.frozenVy; }
+        continue;
+      }
       e.life += dt;
 
       /*
@@ -14148,7 +14326,7 @@ function build(){
       f.enemies[n] = { alive:false, x:0, y:0, size:0, r:0, spawnAnim:1, typeId:"grunt", type:null,
                        elite:false, flash:0, hp:1, maxHp:1, spin:0, fuse:0, state:0, charge:0,
                        shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null,
-                       mirage:false, phase:0, mirageHits:0 };
+                       mirage:false, phase:0, mirageHits:0, frozen:0 };
     // vx/vy ride along because the bolt renderer trails a tail down them, and
     // "which way was it going" is the whole point of watching the replay.
     for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, vx:0, vy:1, r:4, kind:"bolt" };
@@ -14206,6 +14384,7 @@ function record(dt, world){
     // The Mirage: a replay that painted the fake as solid would teach the
     // opposite of the level. The ghost keeps its shimmer and its count.
     d.mirage = !!e.mirage; d.phase = e.phase || 0; d.mirageHits = e.mirageHits || 0;
+    d.frozen = e.frozen || 0;              // Whiteout: the replay keeps the ice on
   }
   for(let i = n; i < f.en; i++) f.enemies[i].alive = false;
   f.en = n;
@@ -17333,6 +17512,344 @@ SF.mirage = { _state: () => S,
 })();
 
 
+;/* ===== src/frost.js ===== */
+/*
+ * WHITEOUT - the cold that comes in fronts.
+ *
+ * Frostfall (skygen.js) is the far side of the desert world: the night side,
+ * where the light the thieves took never reached and the sea froze where it
+ * stood. This module is the weather. Every ten seconds or so a COLD FRONT
+ * rolls across the sky: a lane lights up blue for two long seconds (the
+ * telegraph - the same "this place, soon" language every warning in the game
+ * speaks), then a wall of frost sweeps along it from one edge to the other.
+ * Anything it passes over freezes solid. THEIR ships stop dead and hang in
+ * the air, guns cold, and a frozen ship shatters in a single hit - but for
+ * only five seconds, so the harvest has to be quick. YOUR ship freezes too:
+ * no stick, no guns for a second and a half, while the wave keeps coming.
+ * Never a life - the hull is invulnerable under the ice - just time, which is
+ * the fairest thing a seven-year-old can lose.
+ *
+ * Two stars pay for the two halves of the lesson: "shatter" for harvesting
+ * what the cold left (objectives: shatter, a `shattered` counter), and
+ * "stayWarm" for never being in the lane when it lit (a `frozenTimes`
+ * counter that the star asks to stay at zero).
+ *
+ * Same shape as volcano.js and mirage.js: a mission flag (`frost`) plus the
+ * hooks game.js already calls - begin/update, a draw pass under the world
+ * (the ice the fronts leave on the ground) and one over it (the lane, the
+ * front, the snow, the ice on a frozen ship). The COSTS live in game.js
+ * beside the volcano's, where onPlayerHit and onEnemyKilled exist: this file
+ * owns what a front looks like and where it is; game.js owns what it does.
+ *
+ * Drawn cheaply on purpose: the lane is two gradients, the front is one
+ * gradient and a line, the ice on a ship is a rounded rect. No full-screen
+ * wash - the Dive's frame-budget lesson holds on the ice as well.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+const T = s => (SF.i18n ? SF.i18n.t(s) : s);
+
+/* How long the ice holds. Theirs is long enough to fly to and shatter,
+ * short enough that a child cannot wait for the whole sky to freeze and
+ * stroll through it; yours is a beat, not a punishment. */
+const FREEZE_SECS = 5.0;
+const PLAYER_FREEZE_SECS = 1.5;
+/* The telegraph, the sweep, and the gap between fronts. */
+const WARN_SECS = 2.2;
+const SPEED = 300;              // px/s along the lane
+const BAND = 120;               // how deep the wall of frost is
+const FIRST_AT = 6.0;           // the first front comes early, as a lesson
+
+let S = null;
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, fronts: [], rime: [], snow: [], nextFront: FIRST_AT,
+        frozenShips: 0, frontsRun: 0 };
+  for(let i = 0; i < 40; i++)
+    S.snow.push({ x: Math.random()*W, y: Math.random()*H,
+                  vx: -(4 + Math.random()*14), vy: 18 + Math.random()*26,
+                  s: 1 + Math.random()*1.6, a: 0.25 + Math.random()*0.35,
+                  ph: Math.random()*TAU });
+}
+
+function active(){ return !!S; }
+
+/**
+ * The fronts that are sweeping right now - the only ones game.js may charge
+ * for. Each carries the rect the frost occupies this frame.
+ */
+function liveFronts(){
+  if(!S) return [];
+  const out = [];
+  for(const f of S.fronts){
+    if(f.phase !== "sweep") continue;
+    const x0 = f.dir > 0 ? f.x - BAND : f.x, x1 = x0 + BAND;
+    out.push({ x0, x1, y0: f.y0, y1: f.y1, f });
+  }
+  return out;
+}
+
+function inFront(fr, x, y){
+  return x >= fr.x0 && x <= fr.x1 && y >= fr.y0 && y <= fr.y1;
+}
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+  const drift = 7.5*dt;      // the ground's own scroll rate (render.js)
+
+  const fighting = run.phase !== "intro" && run.phase !== "lap" && run.phase !== "outro";
+  if(fighting){
+    S.nextFront -= dt;
+    if(S.nextFront <= 0){
+      S.nextFront = 7 + Math.random()*3;
+      // A lane roughly half the height, anywhere the fight can be.
+      const span = H*(0.40 + Math.random()*0.14);
+      const top = SF.entityConst.PLAY_TOP || 60;
+      const y0 = top + Math.random()*(H - top - span - 40);
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      S.fronts.push({ phase: "warn", timer: WARN_SECS, y0, y1: y0 + span, dir,
+                      x: dir > 0 ? -BAND : W + BAND, id: ++S.frontsRun });
+      SF.audio.play("telegraph");
+      SF.comms.say("frostWarn");
+    }
+  }
+
+  for(let i = S.fronts.length - 1; i >= 0; i--){
+    const f = S.fronts[i];
+    f.y0 += drift; f.y1 += drift;
+    if(f.phase === "warn"){
+      f.timer -= dt;
+      if(f.timer <= 0){ f.phase = "sweep"; SF.audio.play("gust"); }
+    } else if(f.phase === "sweep"){
+      f.x += f.dir*SPEED*dt;
+      // Rime where the wall has just been: the ground remembers the cold.
+      if(Math.random() < dt*22)
+        S.rime.push({ x: f.dir > 0 ? f.x - BAND*Math.random() : f.x + BAND*Math.random(),
+                      y: f.y0 + Math.random()*(f.y1 - f.y0), r: 8 + Math.random()*16, a: 0.5 });
+      if(f.dir > 0 ? f.x - BAND > W + 10 : f.x + BAND < -10) S.fronts.splice(i, 1);
+    }
+  }
+
+  for(let i = S.rime.length - 1; i >= 0; i--){
+    const r = S.rime[i];
+    r.y += drift; r.a -= dt*0.16;
+    if(r.a <= 0 || r.y > H + 40) S.rime.splice(i, 1);
+  }
+
+  for(const s of S.snow){
+    s.ph += dt*1.4;
+    s.x += (s.vx + Math.sin(s.ph)*10)*dt; s.y += s.vy*dt;
+    if(s.x < -4) s.x = W + 4;
+    if(s.y > H + 4){ s.y = -4; s.x = Math.random()*W; }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  FREEZING - the state changes, called by game.js when a front hits   */
+/* ------------------------------------------------------------------ */
+
+/** Ice takes a ship: it stops where it is, guns cold, for FREEZE_SECS. */
+function freezeEnemy(e){
+  if(!S || !e.alive || e.frozen > 0) return false;
+  e.frozen = FREEZE_SECS;
+  e.frozenVx = e.vx; e.frozenVy = e.vy;
+  e.vx = 0; e.vy = 0;
+  e.fireTimer = Math.max(e.fireTimer, FREEZE_SECS + 0.4);   // and stays cold a beat after
+  S.frozenShips++;
+  SF.fx.ring(e.x, e.y, e.r + 8, "#dff4ff", 2, 0.3);
+  SF.fx.sparks(e.x, e.y, 6, "#ffffff", 90);
+  return true;
+}
+
+/** Ice takes the pilot: a beat with no stick and no guns, and no damage. */
+function freezePlayer(p){
+  if(!S || !p.alive || p.frozen > 0) return false;
+  p.frozen = PLAYER_FREEZE_SECS;
+  p.invuln = Math.max(p.invuln, PLAYER_FREEZE_SECS + 0.2);
+  p.vx = 0; p.vy = 0;
+  SF.fx.ring(p.x, p.y, p.r + 14, "#dff4ff", 3, 0.4);
+  SF.fx.sparks(p.x, p.y, 10, "#ffffff", 120);
+  SF.fx.text(p.x, p.y - 44, T("FROZEN!"), "#dff4ff", 18, true);
+  SF.audio.play("freeze", null, p.x);
+  return true;
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world: the ice the fronts leave                    */
+/* ------------------------------------------------------------------ */
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+  // Rime on the ground where a front passed: proof the weather is real.
+  for(const r of S.rime){
+    const g = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, r.r);
+    g.addColorStop(0, "rgba(255,255,255," + (r.a*0.8).toFixed(3) + ")");
+    g.addColorStop(0.6, "rgba(223,244,255," + (r.a*0.4).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(223,244,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.fill();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - the ice on a ship (called from render.drawEnemies, and here  */
+/*  for the pilot)                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A block of ice around a hull: pale, faceted, with the cracks that say it
+ * will break. `k` is how much of the freeze is left (1 = just caught), so a
+ * thawing block goes glassy and thin before it lets go.
+ */
+function drawIce(ctx, x, y, size, t, k){
+  const w = size*0.62, h = size*0.62, r = size*0.16;
+  const a = 0.35 + 0.35*Math.min(1, k == null ? 1 : k);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.18);
+  // the block
+  const g = ctx.createLinearGradient(-w, -h, w, h);
+  g.addColorStop(0, "rgba(244,249,255," + (a*0.95).toFixed(3) + ")");
+  g.addColorStop(0.5, "rgba(190,224,248," + (a*0.75).toFixed(3) + ")");
+  g.addColorStop(1, "rgba(150,196,236," + (a*0.9).toFixed(3) + ")");
+  ctx.fillStyle = g;
+  roundRect(ctx, -w, -h, w*2, h*2, r); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255," + (0.55 + 0.35*Math.min(1, k == null ? 1 : k)).toFixed(3) + ")";
+  ctx.lineWidth = 1.6;
+  roundRect(ctx, -w, -h, w*2, h*2, r); ctx.stroke();
+  // facets: two highlight strokes, one crack
+  ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-w*0.7, -h*0.85); ctx.lineTo(-w*0.2, -h*0.95); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-w*0.9, -h*0.3); ctx.lineTo(-w*0.85, h*0.3); ctx.stroke();
+  ctx.strokeStyle = "rgba(90,140,190,0.7)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w*0.2, -h*0.6); ctx.lineTo(w*0.05, 0); ctx.lineTo(w*0.45, h*0.5); ctx.stroke();
+  // a glint that wanders, so a frozen ship is never still
+  const gx = Math.cos(t*2.1 + x*0.01)*w*0.5, gy = Math.sin(t*1.7 + y*0.01)*h*0.5;
+  const gl = ctx.createRadialGradient(gx, gy, 0, gx, gy, size*0.22);
+  gl.addColorStop(0, "rgba(255,255,255,0.7)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = gl;
+  ctx.beginPath(); ctx.arc(gx, gy, size*0.22, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world: the lane, the wall, the snow                 */
+/* ------------------------------------------------------------------ */
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+  const VW = SF.game.VW || 600;
+
+  for(const f of S.fronts){
+    if(f.phase === "warn"){
+      /*
+       * THE TELEGRAPH, and it has to be unmissable: the whole lane goes
+       * blue and breathes faster as the front gets close, and the edge it
+       * will come from burns white. A child reads "not THERE" in one look,
+       * which is the entire lesson.
+       */
+      const k = 1 - Math.max(0, f.timer)/WARN_SECS;             // 0 -> 1 over the warning
+      const pulse = 0.6 + Math.sin(S.t*(6 + k*10))*0.4;
+      /*
+       * A SATURATED blue, not a pale one. The first cut tinted the lane with
+       * the ice's own colour and it vanished into the sheet from across the
+       * room; the one thing this level cannot afford is a warning you have
+       * to hunt for. Deep blue on white ice reads at a glance.
+       */
+      const a = 0.22 + 0.22*k*pulse;
+      const lane = ctx.createLinearGradient(0, f.y0, 0, f.y1);
+      lane.addColorStop(0, "rgba(60,130,255,0)");
+      lane.addColorStop(0.12, "rgba(60,130,255," + a.toFixed(3) + ")");
+      lane.addColorStop(0.88, "rgba(60,130,255," + a.toFixed(3) + ")");
+      lane.addColorStop(1, "rgba(60,130,255,0)");
+      ctx.fillStyle = lane;
+      ctx.fillRect(0, f.y0, VW, f.y1 - f.y0);
+      // the edge it comes from
+      const ex = f.dir > 0 ? 0 : VW;
+      const eg = ctx.createLinearGradient(ex, 0, ex + f.dir*90, 0);
+      eg.addColorStop(0, "rgba(255,255,255," + (0.35 + 0.5*k*pulse).toFixed(3) + ")");
+      eg.addColorStop(1, "rgba(220,240,255,0)");
+      ctx.fillStyle = eg;
+      ctx.fillRect(f.dir > 0 ? 0 : VW - 90, f.y0, 90, f.y1 - f.y0);
+      // the lane's rails: hard blue lines, so the edges are exact
+      ctx.strokeStyle = "rgba(40,110,240," + (0.45 + 0.5*k).toFixed(3) + ")";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(0, f.y0); ctx.lineTo(VW, f.y0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, f.y1); ctx.lineTo(VW, f.y1); ctx.stroke();
+    } else {
+      /*
+       * THE WALL. A deep band of white-blue with a hard bright leading edge,
+       * and crystals thrown ahead of it - the thing that is coming for you,
+       * drawn like weather rather than like a hitbox.
+       */
+      const x0 = f.dir > 0 ? f.x - BAND : f.x;
+      const g = ctx.createLinearGradient(x0, 0, x0 + BAND, 0);
+      if(f.dir > 0){
+        g.addColorStop(0, "rgba(220,240,255,0)");
+        g.addColorStop(0.55, "rgba(230,245,255,0.55)");
+        g.addColorStop(1, "rgba(255,255,255,0.9)");
+      } else {
+        g.addColorStop(0, "rgba(255,255,255,0.9)");
+        g.addColorStop(0.45, "rgba(230,245,255,0.55)");
+        g.addColorStop(1, "rgba(220,240,255,0)");
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(x0, f.y0, BAND, f.y1 - f.y0);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(f.x, f.y0); ctx.lineTo(f.x, f.y1); ctx.stroke();
+      // crystals ahead of the edge
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      for(let i = 0; i < 9; i++){
+        const yy = f.y0 + ((i*0.117 + S.t*0.35) % 1)*(f.y1 - f.y0);
+        const dx = f.dir*(6 + ((i*37) % 26));
+        ctx.fillRect(f.x + dx, yy, 2, 2);
+      }
+    }
+  }
+
+  // The pilot under the ice.
+  const world = SF.game.world;
+  if(world){
+    const seats = world.livePlayers();
+    for(let i = 0; i < seats.length; i++){
+      const p = seats[i];
+      if(p.alive && p.frozen > 0) drawIce(ctx, p.x, p.y, 62, timeMs/1000, p.frozen/PLAYER_FREEZE_SECS);
+    }
+  }
+
+  // Snow, always: the quiet reminder of where you are.
+  ctx.fillStyle = "#ffffff";
+  for(const s of S.snow){
+    ctx.globalAlpha = s.a;
+    ctx.fillRect(s.x, s.y, s.s, s.s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+SF.frost = { _state: () => S,
+             reset, begin, active, liveFronts, inFront, freezeEnemy, freezePlayer,
+             update, drawSky, drawIce, drawOver,
+             FREEZE_SECS, PLAYER_FREEZE_SECS };
+})();
+
+
 ;/* ===== src/mirrorduel.js ===== */
 /*
  * THE GLASS SEA'S DUEL - the reflection turns.
@@ -18735,6 +19252,10 @@ function resolve(world, ctxObj, dt){
         return true;
       }
 
+      // WHITEOUT: ice is brittle. A frozen ship shatters on the first round
+      // whatever its hull was, and the kill goes through the ordinary door,
+      // paid in full - the shatter is counted for its star there.
+      if(e.frozen > 0) e.hp = 0;
       e.hp -= b.dmg;
       e.flash = 1;
       /*
@@ -19934,6 +20455,9 @@ function drawEnemies(ctx, world, timeMs){
       else { ctx.fillStyle = e.type.tint || "#c0392b"; ctx.beginPath(); ctx.arc(0,0,size/2,0,TAU); ctx.fill(); }
     }
     ctx.restore();
+
+    // WHITEOUT: a frozen ship wears its ice over the hull. frost.js owns the look.
+    if(e.frozen > 0) SF.frost.drawIce(ctx, e.x, e.y, size, t, e.frozen/SF.frost.FREEZE_SECS);
 
     if(e.flash > 0){                              // white hit flash
       ctx.save();
@@ -25749,6 +26273,28 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"dunes",      x:0.50, y:0.50},
             {k:"suncatcher", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * FROSTFALL (Whiteout) - the night side of the desert world, where the
+   * light the thieves took never reached and the sea froze where it stood.
+   * The sixth surface, appended at the end, same Drawing Board index rule.
+   *
+   * The desert's opposite in every way that matters: no sun, so no hard
+   * shadows - a pale blue ambient from the sky the world lost, and soft
+   * pools under things instead of thrown shapes. The one thing that crosses
+   * the whole floor is the FROZEN RIVER (full height, wrap-exact, the trench
+   * rule), black ice with white cracks running through it. Pressure ridges
+   * cross the sheet the way the dune crests crossed the sand; snow drifts
+   * comb one way; and their heat drills stand over the ice, the only warm
+   * colour on the world, melting a ring each. The once-layer is the Frozen
+   * Fleet: a lake with their ships locked in it where the cold caught them -
+   * the level's rule, written on the ground before a front ever rolls.
+   */
+  { name:"Frostfall", surface:true,
+    clouds:["#dceaf5","#a9c4dc","#5f7f9c"], dust:"#f4f9ff", star:"#ffffff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"icefield",    x:0.50, y:0.50},
+            {k:"frozenfleet", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -28890,6 +29436,308 @@ function drawSuncatcher(ctx, W, H, p, rand){
   }
 }
 
+/* ---------------------------------------------------------
+   FROSTFALL - a frozen sea from above.
+   ---------------------------------------------------------
+   The sea's rule for the third time: one thing crosses the whole floor and
+   everything else answers to it. Here it is the FROZEN RIVER - and the cold
+   itself, which has no sun to throw shadows by, so nothing on this world is
+   lit from a side. Things sit in soft pools of their own shade. The only warm
+   colour is theirs: the heat drills, melting a ring each into the sheet. */
+
+const FROST = {
+  ice:"#dceaf5", iceLit:"#f4f9ff", iceDeep:"#b9d2e8", iceDark:"#93b3cf",
+  black:"#2c4258", blackLit:"#3f5b74", crack:"#f7fbff", shade:"#7f9db8",
+  snow:"#ffffff", snowShade:"#c8dbea",
+  rock:"#4d5f70", rockLit:"#6b7f92",
+  rig:"#2b2530", rigLit:"#4a4353", warm:"#ff8a3c", warmCore:"#ffe9a0", warn:"#ff5d73",
+};
+
+/** A crack across the ice: a bright hairline with a darker seam under it. */
+function iceCrack(ctx, x, y, a, l, rand){
+  ctx.lineCap = "round";
+  let px = x, py = y, aa = a;
+  ctx.strokeStyle = rgba(FROST.shade, 0.55); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px, py);
+  const pts = [[px, py]];
+  for(let i = 0; i < 4; i++){
+    aa += (rand() - 0.5)*0.9;
+    px += Math.cos(aa)*l/4; py += Math.sin(aa)*l/4;
+    ctx.lineTo(px, py); pts.push([px, py]);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = rgba(FROST.crack, 0.9); ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+/** A stone under snow: a dark shape, a white cap, a soft pool of shade. */
+function frostRock(ctx, x, y, r, rand){
+  const rot = rand()*TAU;
+  ctx.fillStyle = rgba(FROST.shade, 0.35);
+  ctx.beginPath(); ctx.ellipse(x + 2, y + r*0.5, r*1.2, r*0.7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.rock;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r*0.82, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.rockLit;
+  ctx.beginPath(); ctx.ellipse(x - r*0.2, y - r*0.2, r*0.55, r*0.4, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.snow;
+  ctx.beginPath(); ctx.ellipse(x - r*0.1, y - r*0.45, r*0.7, r*0.3, rot*0.3, 0, TAU); ctx.fill();
+}
+
+/** One of their heat drills: dark frame, warning eye, and the ring of melt
+ *  it has made in the sheet - the only warm thing on the world. */
+function heatDrill(ctx, x, y, rand){
+  const melt = ctx.createRadialGradient(x, y, 4, x, y, 34);
+  melt.addColorStop(0, rgba(FROST.warm, 0.55));
+  melt.addColorStop(0.45, rgba(FROST.warm, 0.18));
+  melt.addColorStop(1, rgba(FROST.warm, 0));
+  ctx.fillStyle = melt;
+  ctx.beginPath(); ctx.arc(x, y, 34, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(FROST.black, 0.7);
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill();          // open water under it
+  ctx.fillStyle = FROST.rig; ctx.fillRect(x - 6, y - 6, 12, 12);
+  ctx.fillStyle = FROST.rigLit; ctx.fillRect(x - 6, y - 6, 12, 3.5);
+  ctx.strokeStyle = FROST.rig; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 8, y + 8); ctx.lineTo(x, y - 10); ctx.lineTo(x + 8, y + 8); ctx.stroke();
+  ctx.fillStyle = FROST.warmCore;
+  ctx.beginPath(); ctx.arc(x, y + 2, 2, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.warn;
+  ctx.beginPath(); ctx.arc(x, y - 10, 1.4, 0, TAU); ctx.fill();
+}
+
+function drawIcefield(ctx, W, H, p, rand){
+  ctx.fillStyle = FROST.ice;
+  ctx.fillRect(0, 0, W, H);
+
+  // The sheet's own relief: broad soft mottling, blue in the hollows.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.28)*W;
+    const col = i % 3 ? FROST.iceLit : FROST.iceDeep;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.55 : 0.5));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE FROZEN RIVER - full height, wrap-exact: whole sine periods of t so
+   * position and slope agree at the seam. Black ice, the cold's own colour,
+   * with the cracks that say how deep it goes.
+   */
+  const rx0 = W*(0.30 + rand()*0.12);
+  const s1 = (rand() - 0.5)*W*0.16, s2 = (rand() - 0.5)*W*0.10;
+  const river = t => rx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+  const rw = 30 + rand()*10;
+  const riverPath = () => {
+    for(let i = 0; i <= 48; i++){ const t = i/48; const x = river(t);
+      i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(FROST.iceDark, 0.7); ctx.lineWidth = rw + 10;
+  ctx.beginPath(); riverPath(); ctx.stroke();                     // the bank
+  ctx.strokeStyle = FROST.black; ctx.lineWidth = rw;
+  ctx.beginPath(); riverPath(); ctx.stroke();
+  ctx.strokeStyle = FROST.blackLit; ctx.lineWidth = rw*0.4;
+  ctx.beginPath(); riverPath(); ctx.stroke();
+  // long cracks down the black ice, and a few windows of paler ice
+  for(let i = 0; i < 22; i++){
+    const t = rand(), x = river(t) + (rand() - 0.5)*rw*0.8, y = t*H;
+    tiled(ctx, H, y, yy => iceCrack(ctx, x, yy, rand()*TAU, 18 + rand()*30, rngFor(7100 + i)));
+  }
+  for(let i = 0; i < 7; i++){
+    const t = rand(), x = river(t) + (rand() - 0.5)*rw*0.5, y = t*H, r = 4 + rand()*6;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = rgba(FROST.iceDeep, 0.6);
+      ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.6, rand()*TAU, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * PRESSURE RIDGES - the ice sheet's crests, crossing the tile the way the
+   * dune crests crossed the sand, but lit by nothing: a pale rise and a soft
+   * blue fall, and a hairline of white along the break.
+   */
+  const ridgeAt = (x0, y0, len, a, amp) => {
+    const cx = t => x0 + Math.cos(a)*t*len + Math.cos(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    const cy = t => y0 + Math.sin(a)*t*len + Math.sin(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    return { cx, cy };
+  };
+  for(let i = 0; i < 8; i++){
+    const x0 = rand()*W, y0 = rand()*H;
+    const a = -0.3 + rand()*0.6 + (i % 2 ? Math.PI : 0);
+    const len = W*(0.3 + rand()*0.5), amp = 6 + rand()*18;
+    const c = ridgeAt(x0, y0, len, a, amp);
+    const path = (dx, dy) => {
+      ctx.beginPath();
+      for(let k = 0; k <= 32; k++){ const t = k/32;
+        k ? ctx.lineTo(c.cx(t) + dx, c.cy(t) + dy) : ctx.moveTo(c.cx(t) + dx, c.cy(t) + dy); }
+    };
+    tiled(ctx, H, y0, yy => {
+      const dy0 = yy - y0;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = rgba(FROST.shade, 0.35); ctx.lineWidth = 12;
+      path(0, 5 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(FROST.iceLit, 0.9); ctx.lineWidth = 9;
+      path(0, -3 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(FROST.snow, 0.95); ctx.lineWidth = 1.4;
+      path(0, dy0); ctx.stroke();
+    });
+  }
+
+  // Snow drifts, combed one way - the wind the fronts ride.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 60; i++){
+    const x = rand()*W, y = rand()*H, l = 10 + rand()*22;
+    ctx.strokeStyle = rgba(i % 2 ? FROST.snowShade : FROST.snow, 0.18 + rand()*0.2);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.quadraticCurveTo(x - l*0.5, yy + 3, x - l, yy - 1);
+      ctx.stroke();
+    });
+  }
+
+  // Crack networks on the open sheet, thinner than the river's.
+  for(let i = 0; i < 16; i++){
+    const x = rand()*W, y = rand()*H;
+    tiled(ctx, H, y, yy => iceCrack(ctx, x, yy, rand()*TAU, 14 + rand()*22, rngFor(7300 + i)));
+  }
+
+  // Stones under snow, in soft pools of shade.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3 + rand()*6;
+      tiled(ctx, H, y, yy => frostRock(ctx, x, yy, r, rngFor(7500 + c*16 + i)));
+    }
+  }
+
+  // Their heat drills, over the river where the ice is thinnest.
+  for(let i = 0; i < 3; i++){
+    const t = 0.15 + rand()*0.7;
+    const x = river(t) + (rand() < 0.5 ? -1 : 1)*(rw*0.9 + rand()*20), y = t*H;
+    tiled(ctx, H, y, yy => heatDrill(ctx, x, yy, rngFor(7700 + i)));
+  }
+
+  // Glints: the sheet catching a light that is not there.
+  for(let i = 0; i < 34; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(FROST.snow, 0.35 + rand()*0.5);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE FROZEN FLEET - the once-layer. A lake of black ice with their ships
+ * locked in it where the cold caught them: hulls half sunk, each under its
+ * own block, one hauler with a cabin light still burning. The level's rule,
+ * written on the ground before the first front ever rolls. Its snow apron
+ * settles it onto the sheet wherever the scroll has carried the floor.
+ */
+function drawFrozenfleet(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.48, R = W*0.31;
+
+  // The snow it has drifted into, downwind.
+  const apron = ctx.createRadialGradient(cx, cy, R*0.5, cx, cy, R*2.0);
+  apron.addColorStop(0, rgba(FROST.snow, 0.5));
+  apron.addColorStop(0.6, rgba(FROST.snow, 0.22));
+  apron.addColorStop(1, rgba(FROST.snow, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.arc(cx, cy, R*2.0, 0, TAU); ctx.fill();
+
+  // The lake: an irregular shore, black ice inside, a pale rim.
+  const shore = a => R*(1 + Math.sin(a*3 + 0.7)*0.08 + Math.sin(a*5 + 2.1)*0.05);
+  const lakePath = k => {
+    ctx.beginPath();
+    for(let i = 0; i <= 40; i++){
+      const a = (i/40)*TAU, r = shore(a)*k;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+  ctx.fillStyle = rgba(FROST.iceDark, 0.8); lakePath(1.06); ctx.fill();
+  ctx.fillStyle = FROST.black; lakePath(1.0); ctx.fill();
+  const deep = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+  deep.addColorStop(0, rgba("#1a2a3c", 0.9)); deep.addColorStop(1, rgba("#1a2a3c", 0));
+  ctx.fillStyle = deep; lakePath(1.0); ctx.fill();
+  // the cracks that run from the shore toward the middle
+  for(let i = 0; i < 18; i++){
+    const a = rand()*TAU, r0 = shore(a)*0.96;
+    const x = cx + Math.cos(a)*r0, y = cy + Math.sin(a)*r0;
+    iceCrack(ctx, x, y, a + Math.PI + (rand() - 0.5)*0.5, R*(0.25 + rand()*0.35), rngFor(7900 + i));
+  }
+
+  /*
+   * Their ships, where the cold found them: dark darts tilted in the ice,
+   * each under a pale block with a crack in it. Eight of them, none lined
+   * up, because a formation that froze mid-turn is not a formation.
+   */
+  for(let i = 0; i < 8; i++){
+    const a = rand()*TAU, d = rand()*R*0.75;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d, rot = rand()*TAU, s = 12 + rand()*8;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = rgba("#0d1520", 0.9);
+    ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.75, s*0.7); ctx.lineTo(0, s*0.35); ctx.lineTo(-s*0.75, s*0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(FROST.warn, 0.7);
+    ctx.beginPath(); ctx.arc(0, -s*0.3, 1.6, 0, TAU); ctx.fill();
+    // the block over it
+    const bg = ctx.createLinearGradient(-s, -s, s, s);
+    bg.addColorStop(0, rgba(FROST.iceLit, 0.55)); bg.addColorStop(1, rgba(FROST.iceDeep, 0.45));
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.moveTo(-s*1.1, -s*1.2); ctx.lineTo(s*1.1, -s*1.05); ctx.lineTo(s*1.0, s*1.1); ctx.lineTo(-s*1.0, s*1.0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rgba(FROST.snow, 0.85); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*1.1, -s*1.2); ctx.lineTo(s*1.1, -s*1.05); ctx.lineTo(s*1.0, s*1.1); ctx.lineTo(-s*1.0, s*1.0); ctx.closePath(); ctx.stroke();
+    ctx.strokeStyle = rgba(FROST.shade, 0.8); ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(-s*0.4, -s*1.1); ctx.lineTo(-s*0.1, -s*0.2); ctx.lineTo(s*0.5, s*0.6); ctx.stroke();
+    ctx.restore();
+  }
+
+  // The hauler that did not make it: a big dark hull, half through the ice,
+  // and one cabin light still burning - somebody is keeping it lit.
+  {
+    const x = cx - R*0.35, y = cy + R*0.2;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.4);
+    ctx.fillStyle = rgba("#0d1520", 0.95);
+    ctx.beginPath(); ctx.moveTo(-34, -12); ctx.lineTo(30, -16); ctx.lineTo(38, 0); ctx.lineTo(30, 16); ctx.lineTo(-34, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(FROST.iceLit, 0.5);
+    ctx.beginPath(); ctx.moveTo(-40, -6); ctx.lineTo(10, -20); ctx.lineTo(44, -4); ctx.lineTo(20, 8); ctx.closePath(); ctx.fill();
+    const lamp = ctx.createRadialGradient(22, 2, 0, 22, 2, 16);
+    lamp.addColorStop(0, rgba(FROST.warmCore, 0.95)); lamp.addColorStop(0.3, rgba(FROST.warm, 0.5)); lamp.addColorStop(1, rgba(FROST.warm, 0));
+    ctx.fillStyle = lamp;
+    ctx.beginPath(); ctx.arc(22, 2, 16, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  // Their camp on the shore: two huts with warm windows, a red eye, and the
+  // tracks in the snow that lead out onto the ice.
+  {
+    const kx = cx + R*1.25, ky = cy - R*0.45;
+    ctx.strokeStyle = rgba(FROST.shade, 0.5); ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(kx - 20, ky + 14); ctx.quadraticCurveTo(cx + R*0.9, cy - R*0.1, cx + R*0.5, cy); ctx.stroke();
+    for(let i = 0; i < 2; i++){
+      const bx = kx + i*34, by = ky + i*10, bw = 24, bh = 16;
+      ctx.fillStyle = rgba(FROST.shade, 0.4);
+      ctx.fillRect(bx - bw/2 + 3, by - bh/2 + 5, bw, bh);
+      ctx.fillStyle = FROST.rig; ctx.fillRect(bx - bw/2, by - bh/2, bw, bh);
+      ctx.fillStyle = FROST.snow; ctx.fillRect(bx - bw/2, by - bh/2, bw, 4);
+      ctx.fillStyle = FROST.warm;
+      ctx.fillRect(bx - bw/2 + 4, by + 1, 3, 3); ctx.fillRect(bx + bw/2 - 7, by + 1, 3, 3);
+    }
+    ctx.fillStyle = FROST.warn;
+    ctx.beginPath(); ctx.arc(kx + 44, ky - 4, 1.8, 0, TAU); ctx.fill();
+    ctx.fillStyle = rgba(FROST.shade, 0.4);
+    ctx.fillRect(kx + 24, ky + 30, 28, 20);
+    ctx.strokeStyle = rgba(FROST.rig, 0.7); ctx.lineWidth = 1;
+    ctx.strokeRect(kx + 24, ky + 30, 28, 20);
+    ctx.beginPath(); ctx.arc(kx + 38, ky + 40, 5.5, 0, TAU); ctx.stroke();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -29290,6 +30138,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
     else if(pr.k === "dunes") drawDunes(px, W, H, pr, rand);
     else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
+    else if(pr.k === "icefield") drawIcefield(px, W, H, pr, rand);
+    else if(pr.k === "frozenfleet") drawFrozenfleet(px, W, H, pr, rand);
   });
 }
 
@@ -31677,7 +32527,9 @@ function packEnemies(pool){
               R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100),
               // The Mirage: the guest paints from this list, so a double has
               // to arrive as a double - no shadow, and drawn as heat.
-              e.mirage ? 1 : 0]);
+              e.mirage ? 1 : 0,
+              // Whiteout: the guest draws the ice, so it has to know who wears it.
+              e.frozen > 0 ? 1 : 0]);
   }
   return out;
 }
@@ -31811,6 +32663,7 @@ function applySnapshot(world){
     if(!row){ e.alive = false; continue; }
     e.x = row[2]; e.y = row[3]; e.hp = row[4];
     e.angle = row[6]/100; e.flash = row[7]/100;
+    e.frozen = row[9] ? 1 : 0;           // a picture, held fresh by each snapshot
     delete seen[e.netId];
   }
   for(const id in seen){
@@ -31823,6 +32676,7 @@ function applySnapshot(world){
     if(!e) continue;
     e.netId = +id; e.hp = row[4]; e.angle = row[6]/100; e.entering = false;
     if(row[8]){ e.mirage = true; e.fireTimer = Infinity; e.diver = false; }
+    if(row[9]) e.frozen = 1;
   }
 
   const fillBullets = (pool, rows) => {
@@ -32312,6 +33166,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.volcano) SF.volcano.begin();
   SF.mirage.reset();                      // the heat waits for the desert
   if(mission.mirage) SF.mirage.begin();
+  SF.frost.reset();                       // the cold waits for the far side
+  if(mission.frost) SF.frost.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -32421,6 +33277,8 @@ function startMission(missionIndex, difficultyId){
     ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
     // The Mirage: real ships destroyed while their untouched twin still shimmered.
     seenThrough: 0,
+    // Whiteout: frozen ships broken before they thawed, and times the cold caught YOU.
+    shattered: 0, frozenTimes: 0,
     stars: 0,
   };
 
@@ -32702,6 +33560,7 @@ function startMission(missionIndex, difficultyId){
              : mission.dive ? "diveStart"
              : mission.volcano ? "volcanoStart"
              : mission.mirage ? "mirageStart"
+             : mission.frost ? "frostStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -33090,6 +33949,17 @@ const callbacks = {
        * Either way the lie comes apart with the ship that cast it, here
        * rather than a frame later, so the cause reads on screen.
        */
+      /*
+       * Whiteout's harvest star: this one was frozen when it broke. The
+       * kill is paid like any kill; the shatter is what the level counts.
+       */
+      if(run.mission.frost && e.frozen > 0){
+        run.stats.shattered = (run.stats.shattered || 0) + 1;
+        fx.text(e.x, e.y - e.r - 24, T("SHATTERED!"), "#dff4ff", 15, true);
+        fx.sparks(e.x, e.y, 14, "#ffffff", 200);
+        audio.play("shatter", null, e.x);
+        SF.comms.say("frostShatter");
+      }
       if(run.mission.mirage && e.mirageTwin){
         if(e.aimedFirst){
           run.stats.seenThrough++;
@@ -34656,6 +35526,48 @@ function update(dt, timeMs){
    * for: it clears the sky, and the level's own star (objectives: "melt")
    * counts every one.
    */
+  /*
+   * WHITEOUT. The cold's costs live here, beside the volcano's, for the
+   * same reason: this is where the seats and onEnemyKilled exist. frost.js
+   * owns what a front looks like and where it is; this block owns what it
+   * does.
+   *
+   * Both sides pay the same price - a beat of stillness. A hull inside the
+   * wall freezes (no stick, no guns, invulnerable under the ice: seconds,
+   * never a life; a hull already flashing from a respawn is left alone,
+   * as every hazard leaves it) and the level counts it against the "stay
+   * warm" star. THEIR ships freeze solid for five seconds and shatter in
+   * one hit (systems.js); the kill goes through the ordinary door, paid in
+   * full. Rocks are terrain and stay rocks; a bolt caught in the wall dies
+   * there, so a front you dodged is a front on your side.
+   */
+  if(run.mission.frost && SF.frost.active() && !run.ended){
+    const fronts = SF.frost.liveFronts();
+    for(let fi = 0; fi < fronts.length; fi++){
+      const fr = fronts[fi];
+      const seats = game.world.livePlayers();
+      for(let si = 0; si < seats.length; si++){
+        const q = seats[si];
+        if(!q.alive || q.frozen > 0 || q.invuln > 0) continue;
+        if(SF.frost.inFront(fr, q.x, q.y) && SF.frost.freezePlayer(q)){
+          run.stats.frozenTimes = (run.stats.frozenTimes || 0) + 1;
+          SF.comms.say("frostCaught");
+        }
+      }
+      const items = game.world.enemies.items;
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(!e.alive || e.entering || e.hazard || e.attached || e.frozen > 0) continue;
+        if(SF.frost.inFront(fr, e.x, e.y)) SF.frost.freezeEnemy(e);
+      }
+      const eb = game.world.enemyBullets.items;
+      for(let i = 0; i < eb.length; i++){
+        const b = eb[i];
+        if(b.alive && SF.frost.inFront(fr, b.x, b.y)) b.alive = false;
+      }
+    }
+  }
+
   if(run.mission.volcano && SF.volcano.active() && !run.ended){
     const bombs = SF.volcano.liveBombs();
     for(let bi = 0; bi < bombs.length; bi++){
@@ -35404,6 +36316,7 @@ function update(dt, timeMs){
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
+  if(run.mission.frost) SF.frost.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -35816,6 +36729,7 @@ function draw(timeMs){
   // The desert's shadows belong to the LIVE ships, so they go after the
   // rewind's claim on the frame: the replay paints its own from the tape.
   SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
+  SF.frost.drawSky(ctx, timeMs, VW, VH);             // the rime the fronts leave behind
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -35939,7 +36853,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -38194,6 +39108,7 @@ const FACE_KINDS = {
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
+  frost:   { c0:"#dff4ff", c1:"#2c4258" },   // Whiteout: ice, and the cold on it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -38323,6 +39238,7 @@ function missionFace(m){
              : m.current ? "flow"
              : m.garden ? "garden"
              : m.mirage ? "mirage"
+             : m.frost ? "frost"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -38456,11 +39372,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-39 (the sea and the desert join the crack)
-  { at:40, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 40-42 (the forge world opens it)
-  { at:43, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 43
+    sub:"where space stops behaving itself" },              // 33-40 (the sea, the desert and its frozen side join the crack)
+  { at:41, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 41-43 (the forge world opens it)
+  { at:44, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 44
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -41676,6 +42592,102 @@ function drawStoryArt(ctx, art, levels, mate){
     gl.addColorStop(0, "rgba(255,250,225,0.85)"); gl.addColorStop(0.3, "rgba(255,236,170,0.25)");
     gl.addColorStop(1, "rgba(255,236,170,0)");
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  } else if(art === "frostfront"){
+    /*
+     * Whiteout's establishing shot: the night side, a pale sheet under a
+     * black sky, their drill lights on it, and the front coming in from the
+     * left as a wall of white. The story is weather with an edge.
+     */
+    const sky = ctx.createLinearGradient(0, 0, 0, H*0.5);
+    sky.addColorStop(0, "#050a16"); sky.addColorStop(1, "#16273d");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 30; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.15) + ")";
+      ctx.fillRect((i*71) % W, (i*29) % Math.round(H*0.42), 1.3, 1.3);
+    }
+    // the sheet, and a low pale glow where the sky meets it
+    const ice = ctx.createLinearGradient(0, H*0.46, 0, H);
+    ice.addColorStop(0, "#c9dced"); ice.addColorStop(0.3, "#dceaf5"); ice.addColorStop(1, "#a9c4dc");
+    ctx.fillStyle = ice; ctx.fillRect(0, H*0.46, W, H*0.54);
+    ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, H*0.46, W, 1.5);
+    // ridges across it
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1.2;
+    [0.58, 0.7, 0.84].forEach((yy, i) => {
+      ctx.beginPath();
+      for(let x = 0; x <= W; x += 5) ctx.lineTo(x, H*yy + Math.sin(x*0.05 + i)*3);
+      ctx.stroke();
+    });
+    // their drills: dark pylons with warm melt rings
+    [0.55, 0.72, 0.86].forEach((fx, i) => {
+      const x = W*fx, y = H*(0.62 + i*0.09);
+      const g = ctx.createRadialGradient(x, y + 4, 0, x, y + 4, 16);
+      g.addColorStop(0, "rgba(255,138,60,0.6)"); g.addColorStop(1, "rgba(255,138,60,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y + 4, 16, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x, y - 18); ctx.stroke();
+      ctx.fillStyle = "#ff5d73"; ctx.beginPath(); ctx.arc(x, y - 19, 1.5, 0, Math.PI*2); ctx.fill();
+    });
+    // the front: a wall of white from the left, bright at its edge
+    const wall = ctx.createLinearGradient(0, 0, W*0.42, 0);
+    wall.addColorStop(0, "rgba(240,248,255,0.95)");
+    wall.addColorStop(0.7, "rgba(220,240,255,0.55)");
+    wall.addColorStop(1, "rgba(220,240,255,0)");
+    ctx.fillStyle = wall; ctx.fillRect(0, H*0.3, W*0.42, H*0.7);
+    ctx.fillStyle = "rgba(255,255,255,0.95)"; ctx.fillRect(W*0.36, H*0.3, 2.5, H*0.7);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    for(let i = 0; i < 12; i++) ctx.fillRect(W*0.38 + (i*13) % 22, H*(0.34 + i*0.055), 1.6, 1.6);
+    // one of theirs, already caught at the edge
+    ctx.fillStyle = "#1e1524";
+    ctx.beginPath(); ctx.moveTo(W*0.3, H*0.5 - 8); ctx.lineTo(W*0.3 + 10, H*0.5 + 6); ctx.lineTo(W*0.3, H*0.5 + 3); ctx.lineTo(W*0.3 - 10, H*0.5 + 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.2;
+    ctx.strokeRect(W*0.3 - 14, H*0.5 - 13, 28, 24);
+    // the squadron, far off and still out of it
+    A.drawShip(ctx, W*0.8, H*0.36, 26, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "shatter"){
+    /*
+     * The lesson, in one picture: the same ship twice - frozen in its block
+     * on the left, bursting into shards on the right - and the family ship
+     * below with the shot that did it. Nothing needs a caption.
+     */
+    ctx.fillStyle = "#dceaf5"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 20; i++){
+      const y = (i*53) % H, x = (i*97) % W;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 14, y + 3, x - 30, y - 1); ctx.stroke();
+    }
+    const sprite = SF.enemyArt.spriteFor("kamikaze", "#ff5d73", false);
+    const box = 66, lx = W*0.3, rx = W*0.7, y = H*0.4;
+    if(sprite){
+      ctx.drawImage(sprite, lx - box/2, y - box/2, box, box);
+      // its block
+      ctx.save(); ctx.translate(lx, y); ctx.rotate(-0.15);
+      const bg = ctx.createLinearGradient(-30, -30, 30, 30);
+      bg.addColorStop(0, "rgba(244,249,255,0.7)"); bg.addColorStop(1, "rgba(150,196,236,0.7)");
+      ctx.fillStyle = bg; ctx.fillRect(-32, -32, 64, 64);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 2; ctx.strokeRect(-32, -32, 64, 64);
+      ctx.strokeStyle = "rgba(90,140,190,0.8)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(8, -28); ctx.lineTo(2, 0); ctx.lineTo(18, 24); ctx.stroke();
+      ctx.restore();
+      // the other one, coming apart: five shards of the same block, flying
+      ctx.globalAlpha = 0.9;
+      [[-22,-18,0.5],[20,-22,-0.4],[26,14,0.9],[-24,20,-0.7],[2,30,0.2]].forEach(([dx, dy, rot]) => {
+        ctx.save(); ctx.translate(rx + dx*1.4, y + dy*1.4); ctx.rotate(rot);
+        ctx.fillStyle = "rgba(220,240,255,0.85)";
+        ctx.beginPath(); ctx.moveTo(-9, -6); ctx.lineTo(8, -9); ctx.lineTo(6, 7); ctx.lineTo(-7, 8); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.restore();
+      });
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(sprite, rx - box*0.4, y - box*0.4, box*0.8, box*0.8);
+      ctx.globalAlpha = 1;
+      const burst = ctx.createRadialGradient(rx, y, 0, rx, y, 44);
+      burst.addColorStop(0, "rgba(255,255,255,0.9)"); burst.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(rx, y, 44, 0, Math.PI*2); ctx.fill();
+    }
+    // the shot, and the ship that fired it
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(rx - 3, y + 40, 6, 18); ctx.fillRect(rx - 3, y + 66, 6, 18);
+    A.drawShip(ctx, rx, H*0.8, 56, { color: profile.shipColor, levels, t, idle:false });
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -41736,7 +42748,8 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["garden",   "secondHarvest"],
                          ["dive",     "theDive"],
                          ["volcano",  "forgeWorld"],
-                         ["mirage",   "theMirage"]];
+                         ["mirage",   "theMirage"],
+                         ["frost",    "whiteout"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

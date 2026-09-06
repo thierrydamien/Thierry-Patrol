@@ -615,12 +615,12 @@ async function run(){
    */
   check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Behind the Sky" && gift.id === 44 &&
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 45 &&
            gift.backstage === true && gift.sky29 === true &&
            !gift.boss;                       // the Brush is backstage's, not a slot
   })());
-  check("45 campaign missions defined, ids sequential from Earth",
-    SF.missions.MISSIONS.length === 45 &&
+  check("46 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 46 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i));
   /*
    * The sky contract, after Mission 0: every mission points at its own sky
@@ -641,11 +641,12 @@ async function run(){
                       : m.dive     ? m.sky === 42
                       : m.volcano  ? m.sky === 43
                       : m.mirage   ? m.sky === 44
+                      : m.frost    ? m.sky === 45
                       : m.id <= 21 ? m.sky === m.id - 1
                       : m.id <= 34 ? m.sky === m.id - 2
-                      : m.id <= 39 ? m.sky === m.id - 4
-                      : m.sky === m.id - 5) &&
-           SF.skygen.SKIES.length === 45 &&
+                      : m.id <= 40 ? m.sky === m.id - 5
+                      : m.sky === m.id - 6) &&
+           SF.skygen.SKIES.length === 46 &&
            SF.skygen.SKIES[40].surface === true &&
            SF.skygen.SKIES[40].props.some(pr => pr.k === "fields") &&
            SF.skygen.SKIES[41].surface === true &&
@@ -658,7 +659,10 @@ async function run(){
            SF.skygen.SKIES[43].props.some(pr => pr.k === "forgecity" && pr.once) &&
            SF.skygen.SKIES[44].surface === true &&
            SF.skygen.SKIES[44].props.some(pr => pr.k === "dunes") &&
-           SF.skygen.SKIES[44].props.some(pr => pr.k === "suncatcher" && pr.once);
+           SF.skygen.SKIES[44].props.some(pr => pr.k === "suncatcher" && pr.once) &&
+           SF.skygen.SKIES[45].surface === true &&
+           SF.skygen.SKIES[45].props.some(pr => pr.k === "icefield") &&
+           SF.skygen.SKIES[45].props.some(pr => pr.k === "frozenfleet" && pr.once);
   })());
   /*
    * ...and by NAME, which is what the stamp exists to protect: the missions
@@ -736,7 +740,7 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 129 && (() => {
+    SF.profile.maxStars() === 132 && (() => {
       const p = SF.profile.load("LEDGER");
       p.missions[SF.missions.MISSIONS.find(m => m.gift).id] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
@@ -2793,7 +2797,7 @@ async function run(){
       // A SURFACE is its own carve-out: the ground is the thing you fly
       // through, so it tiles by definition - only the landmarks on it (the
       // farm) must pass once. In space the rule stays absolute.
-      const GROUND = ["fields", "ground", "wild", "seabed", "emberfloor", "dunes"];
+      const GROUND = ["fields", "ground", "wild", "seabed", "emberfloor", "dunes", "icefield"];
       return SF.skygen.SKIES.every(sky => {
         const props = sky.props || [];
         if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
@@ -3203,7 +3207,7 @@ async function run(){
    * the Sky 29 gate for a pilot already at 116/117.
    */
   check("Earth's stars stay off the campaign ledger",
-    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 129);
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 132);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
@@ -4271,7 +4275,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,43");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,44");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -4560,12 +4564,13 @@ async function run(){
              (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
              // ...and the only other grounds are the two farms and the sea:
              // Earth, the taken world, and the drowned sky the dive swims.
-             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 6 &&
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 7 &&
              SF.skygen.isSurface(SF.missions.skyOf(0)) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden))) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.dive))) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.volcano))) &&
-             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.mirage)));
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.mirage))) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.frost)));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -9764,10 +9769,11 @@ async function run(){
       check("a v9 save shifts 34-41 up one and nothing below",
         v9.missions["33"] && v9.missions["33"].stars.pilot === 2 &&
         !v9.missions["34"] && !v9.missions["35"] &&
-        v9.missions["36"] && v9.missions["36"].stars.pilot === 3 &&
-        v9.missions["44"] && v9.missions["44"].stars.pilot === 1 &&
-        v9.lastMission === 36 && v9.missionsVer >= 12);
-      check("being carried survives this insert too", v9.reached === 37);
+        !v9.missions["36"] &&                      // ...and v13 lifts it once more
+        v9.missions["37"] && v9.missions["37"].stars.pilot === 3 &&
+        v9.missions["45"] && v9.missions["45"].stars.pilot === 1 &&
+        v9.lastMission === 37 && v9.missionsVer >= 13);
+      check("being carried survives this insert too", v9.reached === 38);
       // Every hand-written mission id sits BELOW this insert - the NOVA tune
       // named 32 before and must name 32 after, or a child's trophy un-earns.
       check("the NOVA tune still counts as earned",
@@ -9831,7 +9837,7 @@ async function run(){
     const G = SF.game, P = SF.profile;
     const vi = SF.missions.MISSIONS.findIndex(m => m.volcano);
     check("the forge world is a real stop, the road home's first",
-      vi === 40 && SF.missions.MISSIONS[vi].name === "The Forge World" &&
+      vi === 41 && SF.missions.MISSIONS[vi].name === "The Forge World" &&
       SF.missions.skyOf(vi) === 43 && SF.skygen.isSurface(43) &&
       SF.missions.MISSIONS[vi].objectives.indexOf("melt") >= 0 &&
       !!SF.missions.OBJECTIVES.melt);
@@ -9851,12 +9857,13 @@ async function run(){
       // (up one for the volcano, one more for the desert), 42 -> 44.
       check("a v10 save shifts 39-42 up one and nothing below",
         v10.missions["32"] && v10.missions["32"].stars.pilot === 1 &&
-        v10.missions["39"] && v10.missions["39"].stars.pilot === 2 &&
-        !v10.missions["38"] && !v10.missions["40"] &&
-        v10.missions["41"] && v10.missions["41"].stars.pilot === 3 &&
-        v10.missions["44"] && v10.missions["44"].stars.pilot === 1 &&
-        v10.lastMission === 41 && v10.missionsVer >= 12);
-      check("being carried survives the volcano insert too", v10.reached === 42);
+        // ...and the frozen side (v13) lifts everything from 36 once more.
+        v10.missions["40"] && v10.missions["40"].stars.pilot === 2 &&
+        !v10.missions["38"] && !v10.missions["39"] && !v10.missions["41"] &&
+        v10.missions["42"] && v10.missions["42"].stars.pilot === 3 &&
+        v10.missions["45"] && v10.missions["45"].stars.pilot === 1 &&
+        v10.lastMission === 42 && v10.missionsVer >= 13);
+      check("being carried survives the volcano insert too", v10.reached === 43);
       check("every hand-written mission id still sits below the insert",
         SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
         SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
@@ -10192,11 +10199,12 @@ async function run(){
         v11.missions["32"] && v11.missions["32"].stars.pilot === 1 &&
         v11.missions["34"] && v11.missions["34"].stars.pilot === 2 &&
         !v11.missions["35"] &&
-        v11.missions["36"] && v11.missions["36"].stars.pilot === 3 &&
-        v11.missions["40"] && v11.missions["40"].stars.pilot === 2 &&
-        v11.missions["44"] && v11.missions["44"].stars.pilot === 1 &&
-        v11.lastMission === 36 && v11.missionsVer >= 12);
-      check("being carried survives the desert insert too", v11.reached === 37);
+        !v11.missions["36"] &&                     // v13 lifts the desert's shift once more
+        v11.missions["37"] && v11.missions["37"].stars.pilot === 3 &&
+        v11.missions["41"] && v11.missions["41"].stars.pilot === 2 &&
+        v11.missions["45"] && v11.missions["45"].stars.pilot === 1 &&
+        v11.lastMission === 37 && v11.missionsVer >= 13);
+      check("being carried survives the desert insert too", v11.reached === 38);
       check("every hand-written mission id still sits below the desert insert",
         SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
         SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
@@ -10345,6 +10353,174 @@ async function run(){
     check("the doubles never entered the ledger",
       G.run.stats.spawned <= G.run.director.totalPlanned &&
       G.run.stats.kills <= G.run.stats.spawned);
+    check("the rookie run drew without errors", errors.length === 0);
+    G.godMode = false;
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+  }
+
+  /*
+   * WHITEOUT - the level whose hazard is the weather. Tested end to end: the
+   * stop is where the story says, an old save rides the insert, a front
+   * WARNS before it freezes anything, the wall freezes their ships and not
+   * the rocks, a frozen ship shatters on one round and is paid like any kill
+   * and counted for its star, the ice thaws, a hull in the lane loses a beat
+   * and never a life and is counted against the other star, a bolt caught
+   * in the wall dies there - and a whole rookie run freezes enough ships for
+   * the harvest star to be honest.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const fi = SF.missions.MISSIONS.findIndex(m => m.frost);
+    check("whiteout is a real stop, the desert's frozen side",
+      fi === 36 && SF.missions.MISSIONS[fi].name === "Whiteout" &&
+      SF.missions.MISSIONS[fi - 1].mirage === true &&
+      SF.missions.skyOf(fi) === 45 && SF.skygen.isSurface(45) &&
+      SF.missions.MISSIONS[fi].objectives.join(",") === "complete,shatter,stayWarm" &&
+      !!SF.missions.OBJECTIVES.shatter && !!SF.missions.OBJECTIVES.stayWarm);
+    check("the frozen fleet passes once; the ice sheet tiles",
+      !!SF.skygen.buildOnce(45, 300, 400, 1) &&
+      !!SF.skygen.build(45, 300, 400, 1));
+    check("the frozen stop wears its own colour on the map",
+      SF.ui.missionFace(SF.missions.MISSIONS[fi]).kind === "frost");
+    check("the stay-warm star is exactly never being caught",
+      SF.missions.OBJECTIVES.stayWarm.test({ frozenTimes: 0 }) === true &&
+      SF.missions.OBJECTIVES.stayWarm.test({ frozenTimes: 1 }) === false);
+
+    /* --- v13: an old family save rides the insert --- */
+    {
+      const v12 = P.migrate({ name:"V12", missionsVer: 12, tune:"nova",
+        missions: { "32": { cleared:true, stars:{pilot:1}, best:{} },
+                    "35": { cleared:true, stars:{pilot:2}, best:{} },
+                    "36": { cleared:true, stars:{pilot:3}, best:{pilot:800} },
+                    "40": { cleared:true, stars:{pilot:2}, best:{} },
+                    "44": { cleared:true, stars:{pilot:1}, best:{} } },
+        lastMission: 36, reached: 37 });
+      check("a v12 save shifts 36-44 up one and nothing below",
+        v12.missions["32"] && v12.missions["32"].stars.pilot === 1 &&
+        v12.missions["35"] && v12.missions["35"].stars.pilot === 2 &&
+        !v12.missions["36"] &&
+        v12.missions["37"] && v12.missions["37"].stars.pilot === 3 &&
+        v12.missions["41"] && v12.missions["41"].stars.pilot === 2 &&
+        v12.missions["45"] && v12.missions["45"].stars.pilot === 1 &&
+        v12.lastMission === 37 && v12.missionsVer >= 13);
+      check("being carried survives the frozen insert too", v12.reached === 38);
+      check("every hand-written mission id still sits below the frozen insert",
+        SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
+        SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
+        SF.config.TUNE_BY_ID.ghost.unlockMission === 23 &&
+        SF.config.UPGRADES.filter(u => u.unlock).every(u => u.unlock.every(g => g < 36)) &&
+        v12.tune === "nova");
+    }
+
+    /* --- the cold itself --- */
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("Icy");
+    G.coopWith = null;
+    G.profile = P.load("Icy");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(fi, "pilot");
+    await runFrames(80, true);                  // past the 2.2s intro
+    const w = G.world, run = G.run;
+    check("the level opens with the cold armed",
+      run.mission.frost === true && SF.frost.active() && run.phase !== "intro");
+    const S = SF.frost._state();
+    const BAND = 120;
+
+    w.player.x = 300; w.player.y = 700; w.player.targetX = 300; w.player.targetY = 700;
+    w.enemies.items.forEach(e => { e.alive = false; });
+    w.enemyBullets.killAll(); w.bullets.killAll();
+    run.director.nextWave = 999;                // the script stays out of this
+    const shoot = (x, y) => {
+      const b = w.bullets.spawn();
+      b.x = x; b.y = y + 30; b.vx = 0; b.vy = -900; b.r = 4;
+      b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+      b.hitBoss = false; b.hitWeak = false; b.owner = w.player; b.fromDrone = false;
+      return b;
+    };
+    const coins = () => w.pickups.items.filter(pk => pk.alive && pk.kind === "coin").length;
+
+    /* A front warns before it freezes anything. */
+    S.fronts.length = 0; S.nextFront = 0.01;
+    await runFrames(6, true);
+    check("a front warns before it freezes anything",
+      S.fronts.length === 1 && S.fronts[0].phase === "warn" && SF.frost.liveFronts().length === 0);
+
+    /* The wall sweeps a lane we control, over a ship and a rock. */
+    const f = S.fronts[0];
+    f.y0 = 200; f.y1 = 500; f.dir = 1; f.x = -BAND; f.timer = 0.01;
+    const g = w.spawnEnemy("grunt", 150, 300, { difficulty: run.difficulty });
+    g.entering = false; g.vy = 0; g.speed = 0; g.hp = 5; g.maxHp = 5;
+    const rock = w.spawnEnemy("asteroid", 150, 420, { difficulty: run.difficulty });
+    rock.entering = false; rock.vy = 0; rock.speed = 0;
+    const eb = w.spawnEnemyBullet(150, 360, 0, 40, "bolt", 4);
+    await runFrames(45, true);                  // ~1.5s: the wall has passed x=150
+    check("the wall freezes their ship where it stood",
+      g.alive && g.frozen > 0 && g.vx === 0 && g.vy === 0 && S.frozenShips >= 1);
+    check("rocks are terrain and stay rocks", rock.alive && !(rock.frozen > 0));
+    check("a bolt caught in the wall dies there", !eb.alive);
+
+    /* One round shatters it: paid like any kill, counted for the star. */
+    const kills0 = run.stats.kills, coins0 = coins();
+    shoot(g.x, g.y);
+    await runFrames(4, true);
+    check("a frozen ship shatters on one round, whatever its hull was",
+      !g.alive && run.stats.kills === kills0 + 1 && (run.stats.shattered || 0) === 1);
+    check("a shatter is a kill, paid in full", coins() > coins0);
+
+    /* The ice lets go on its own. */
+    const g2 = w.spawnEnemy("grunt", 420, 300, { difficulty: run.difficulty });
+    g2.entering = false; g2.vy = 0; g2.speed = 0;
+    SF.frost.freezeEnemy(g2);
+    check("the cold takes a ship for exactly its five seconds",
+      g2.frozen === SF.frost.FREEZE_SECS && SF.frost.FREEZE_SECS === 5.0);
+    g2.frozen = 0.05;
+    await runFrames(3, true);
+    check("...and thaws", g2.alive && g2.frozen === 0);
+    g2.alive = false;
+
+    /* A hull in the lane loses a beat, never a life. */
+    S.fronts.length = 0;
+    w.enemies.items.forEach(e => { e.alive = false; });
+    w.enemyBullets.killAll();
+    w.player.x = 300; w.player.y = 300; w.player.targetX = 300; w.player.targetY = 300;
+    w.player.invuln = 0; w.player.frozen = 0;
+    const lives0 = w.player.lives, hits0 = run.stats.hitsTaken || 0;
+    S.fronts.push({ phase:"sweep", timer:0, y0:200, y1:500, dir:1, x: 300 - 20, id: 99 });
+    await runFrames(3, true);
+    check("a hull in the lane is iced, and the cold is on the books",
+      w.player.frozen > 0 && w.player.invuln > 0 && (run.stats.frozenTimes || 0) === 1);
+    check("...but it costs seconds, not a life",
+      w.player.lives === lives0 && (run.stats.hitsTaken || 0) === hits0);
+    const px = w.player.x, py = w.player.y;
+    await runFrames(60, true);                  // the beat and a half passes
+    check("the ice lets the pilot go",
+      w.player.frozen === 0 && Math.abs(w.player.x - px) < 4 && Math.abs(w.player.y - py) < 4);
+    check("the cold draws without errors", errors.length === 0);
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+
+    /* --- a whole rookie run: enough freezes for the harvest star --- */
+    mk("Tundra");
+    G.coopWith = null;
+    G.profile = P.load("Tundra");
+    G.godMode = true;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(fi, "rookie");
+    let frames = 0;
+    while(G.state === "playing" && !G.run.ended && frames < 6000){
+      await runFrames(60);
+      frames += 60;
+    }
+    const RS = SF.frost._state();
+    console.log("Whiteout (rookie) ->", G.run.phase, "fronts:", RS ? RS.frontsRun : "-",
+      "frozen:", RS ? RS.frozenShips : "-", "shattered:", G.run.stats.shattered,
+      "iced:", G.run.stats.frozenTimes, "spawned:", G.run.stats.spawned, "kills:", G.run.stats.kills, "frames:", frames);
+    check("a rookie run freezes ships enough for the star three times over",
+      !!RS && RS.frozenShips >= 30 && RS.frontsRun >= 8);
+    check("the frozen side finishes: a frozen ship never holds the sky open",
+      G.run.stats.completed === true || G.run.ended === true);
     check("the rookie run drew without errors", errors.length === 0);
     G.godMode = false;
     G.run.ended = true; G.state = "idle";

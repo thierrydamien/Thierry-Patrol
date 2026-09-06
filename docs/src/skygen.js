@@ -690,6 +690,28 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"dunes",      x:0.50, y:0.50},
             {k:"suncatcher", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * FROSTFALL (Whiteout) - the night side of the desert world, where the
+   * light the thieves took never reached and the sea froze where it stood.
+   * The sixth surface, appended at the end, same Drawing Board index rule.
+   *
+   * The desert's opposite in every way that matters: no sun, so no hard
+   * shadows - a pale blue ambient from the sky the world lost, and soft
+   * pools under things instead of thrown shapes. The one thing that crosses
+   * the whole floor is the FROZEN RIVER (full height, wrap-exact, the trench
+   * rule), black ice with white cracks running through it. Pressure ridges
+   * cross the sheet the way the dune crests crossed the sand; snow drifts
+   * comb one way; and their heat drills stand over the ice, the only warm
+   * colour on the world, melting a ring each. The once-layer is the Frozen
+   * Fleet: a lake with their ships locked in it where the cold caught them -
+   * the level's rule, written on the ground before a front ever rolls.
+   */
+  { name:"Frostfall", surface:true,
+    clouds:["#dceaf5","#a9c4dc","#5f7f9c"], dust:"#f4f9ff", star:"#ffffff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"icefield",    x:0.50, y:0.50},
+            {k:"frozenfleet", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -3831,6 +3853,308 @@ function drawSuncatcher(ctx, W, H, p, rand){
   }
 }
 
+/* ---------------------------------------------------------
+   FROSTFALL - a frozen sea from above.
+   ---------------------------------------------------------
+   The sea's rule for the third time: one thing crosses the whole floor and
+   everything else answers to it. Here it is the FROZEN RIVER - and the cold
+   itself, which has no sun to throw shadows by, so nothing on this world is
+   lit from a side. Things sit in soft pools of their own shade. The only warm
+   colour is theirs: the heat drills, melting a ring each into the sheet. */
+
+const FROST = {
+  ice:"#dceaf5", iceLit:"#f4f9ff", iceDeep:"#b9d2e8", iceDark:"#93b3cf",
+  black:"#2c4258", blackLit:"#3f5b74", crack:"#f7fbff", shade:"#7f9db8",
+  snow:"#ffffff", snowShade:"#c8dbea",
+  rock:"#4d5f70", rockLit:"#6b7f92",
+  rig:"#2b2530", rigLit:"#4a4353", warm:"#ff8a3c", warmCore:"#ffe9a0", warn:"#ff5d73",
+};
+
+/** A crack across the ice: a bright hairline with a darker seam under it. */
+function iceCrack(ctx, x, y, a, l, rand){
+  ctx.lineCap = "round";
+  let px = x, py = y, aa = a;
+  ctx.strokeStyle = rgba(FROST.shade, 0.55); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px, py);
+  const pts = [[px, py]];
+  for(let i = 0; i < 4; i++){
+    aa += (rand() - 0.5)*0.9;
+    px += Math.cos(aa)*l/4; py += Math.sin(aa)*l/4;
+    ctx.lineTo(px, py); pts.push([px, py]);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = rgba(FROST.crack, 0.9); ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+/** A stone under snow: a dark shape, a white cap, a soft pool of shade. */
+function frostRock(ctx, x, y, r, rand){
+  const rot = rand()*TAU;
+  ctx.fillStyle = rgba(FROST.shade, 0.35);
+  ctx.beginPath(); ctx.ellipse(x + 2, y + r*0.5, r*1.2, r*0.7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.rock;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r*0.82, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.rockLit;
+  ctx.beginPath(); ctx.ellipse(x - r*0.2, y - r*0.2, r*0.55, r*0.4, rot, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.snow;
+  ctx.beginPath(); ctx.ellipse(x - r*0.1, y - r*0.45, r*0.7, r*0.3, rot*0.3, 0, TAU); ctx.fill();
+}
+
+/** One of their heat drills: dark frame, warning eye, and the ring of melt
+ *  it has made in the sheet - the only warm thing on the world. */
+function heatDrill(ctx, x, y, rand){
+  const melt = ctx.createRadialGradient(x, y, 4, x, y, 34);
+  melt.addColorStop(0, rgba(FROST.warm, 0.55));
+  melt.addColorStop(0.45, rgba(FROST.warm, 0.18));
+  melt.addColorStop(1, rgba(FROST.warm, 0));
+  ctx.fillStyle = melt;
+  ctx.beginPath(); ctx.arc(x, y, 34, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(FROST.black, 0.7);
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill();          // open water under it
+  ctx.fillStyle = FROST.rig; ctx.fillRect(x - 6, y - 6, 12, 12);
+  ctx.fillStyle = FROST.rigLit; ctx.fillRect(x - 6, y - 6, 12, 3.5);
+  ctx.strokeStyle = FROST.rig; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 8, y + 8); ctx.lineTo(x, y - 10); ctx.lineTo(x + 8, y + 8); ctx.stroke();
+  ctx.fillStyle = FROST.warmCore;
+  ctx.beginPath(); ctx.arc(x, y + 2, 2, 0, TAU); ctx.fill();
+  ctx.fillStyle = FROST.warn;
+  ctx.beginPath(); ctx.arc(x, y - 10, 1.4, 0, TAU); ctx.fill();
+}
+
+function drawIcefield(ctx, W, H, p, rand){
+  ctx.fillStyle = FROST.ice;
+  ctx.fillRect(0, 0, W, H);
+
+  // The sheet's own relief: broad soft mottling, blue in the hollows.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.12 + rand()*0.28)*W;
+    const col = i % 3 ? FROST.iceLit : FROST.iceDeep;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.55 : 0.5));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE FROZEN RIVER - full height, wrap-exact: whole sine periods of t so
+   * position and slope agree at the seam. Black ice, the cold's own colour,
+   * with the cracks that say how deep it goes.
+   */
+  const rx0 = W*(0.30 + rand()*0.12);
+  const s1 = (rand() - 0.5)*W*0.16, s2 = (rand() - 0.5)*W*0.10;
+  const river = t => rx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2)*s2*0.5;
+  const rw = 30 + rand()*10;
+  const riverPath = () => {
+    for(let i = 0; i <= 48; i++){ const t = i/48; const x = river(t);
+      i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(FROST.iceDark, 0.7); ctx.lineWidth = rw + 10;
+  ctx.beginPath(); riverPath(); ctx.stroke();                     // the bank
+  ctx.strokeStyle = FROST.black; ctx.lineWidth = rw;
+  ctx.beginPath(); riverPath(); ctx.stroke();
+  ctx.strokeStyle = FROST.blackLit; ctx.lineWidth = rw*0.4;
+  ctx.beginPath(); riverPath(); ctx.stroke();
+  // long cracks down the black ice, and a few windows of paler ice
+  for(let i = 0; i < 22; i++){
+    const t = rand(), x = river(t) + (rand() - 0.5)*rw*0.8, y = t*H;
+    tiled(ctx, H, y, yy => iceCrack(ctx, x, yy, rand()*TAU, 18 + rand()*30, rngFor(7100 + i)));
+  }
+  for(let i = 0; i < 7; i++){
+    const t = rand(), x = river(t) + (rand() - 0.5)*rw*0.5, y = t*H, r = 4 + rand()*6;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = rgba(FROST.iceDeep, 0.6);
+      ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.6, rand()*TAU, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * PRESSURE RIDGES - the ice sheet's crests, crossing the tile the way the
+   * dune crests crossed the sand, but lit by nothing: a pale rise and a soft
+   * blue fall, and a hairline of white along the break.
+   */
+  const ridgeAt = (x0, y0, len, a, amp) => {
+    const cx = t => x0 + Math.cos(a)*t*len + Math.cos(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    const cy = t => y0 + Math.sin(a)*t*len + Math.sin(a + Math.PI/2)*Math.sin(t*TAU)*amp;
+    return { cx, cy };
+  };
+  for(let i = 0; i < 8; i++){
+    const x0 = rand()*W, y0 = rand()*H;
+    const a = -0.3 + rand()*0.6 + (i % 2 ? Math.PI : 0);
+    const len = W*(0.3 + rand()*0.5), amp = 6 + rand()*18;
+    const c = ridgeAt(x0, y0, len, a, amp);
+    const path = (dx, dy) => {
+      ctx.beginPath();
+      for(let k = 0; k <= 32; k++){ const t = k/32;
+        k ? ctx.lineTo(c.cx(t) + dx, c.cy(t) + dy) : ctx.moveTo(c.cx(t) + dx, c.cy(t) + dy); }
+    };
+    tiled(ctx, H, y0, yy => {
+      const dy0 = yy - y0;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = rgba(FROST.shade, 0.35); ctx.lineWidth = 12;
+      path(0, 5 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(FROST.iceLit, 0.9); ctx.lineWidth = 9;
+      path(0, -3 + dy0); ctx.stroke();
+      ctx.strokeStyle = rgba(FROST.snow, 0.95); ctx.lineWidth = 1.4;
+      path(0, dy0); ctx.stroke();
+    });
+  }
+
+  // Snow drifts, combed one way - the wind the fronts ride.
+  ctx.lineWidth = 1;
+  for(let i = 0; i < 60; i++){
+    const x = rand()*W, y = rand()*H, l = 10 + rand()*22;
+    ctx.strokeStyle = rgba(i % 2 ? FROST.snowShade : FROST.snow, 0.18 + rand()*0.2);
+    tiled(ctx, H, y, yy => {
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.quadraticCurveTo(x - l*0.5, yy + 3, x - l, yy - 1);
+      ctx.stroke();
+    });
+  }
+
+  // Crack networks on the open sheet, thinner than the river's.
+  for(let i = 0; i < 16; i++){
+    const x = rand()*W, y = rand()*H;
+    tiled(ctx, H, y, yy => iceCrack(ctx, x, yy, rand()*TAU, 14 + rand()*22, rngFor(7300 + i)));
+  }
+
+  // Stones under snow, in soft pools of shade.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.10, y = cy + (rand() - 0.5)*W*0.10;
+      const r = 3 + rand()*6;
+      tiled(ctx, H, y, yy => frostRock(ctx, x, yy, r, rngFor(7500 + c*16 + i)));
+    }
+  }
+
+  // Their heat drills, over the river where the ice is thinnest.
+  for(let i = 0; i < 3; i++){
+    const t = 0.15 + rand()*0.7;
+    const x = river(t) + (rand() < 0.5 ? -1 : 1)*(rw*0.9 + rand()*20), y = t*H;
+    tiled(ctx, H, y, yy => heatDrill(ctx, x, yy, rngFor(7700 + i)));
+  }
+
+  // Glints: the sheet catching a light that is not there.
+  for(let i = 0; i < 34; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(FROST.snow, 0.35 + rand()*0.5);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.4, 1.4));
+  }
+}
+
+/*
+ * THE FROZEN FLEET - the once-layer. A lake of black ice with their ships
+ * locked in it where the cold caught them: hulls half sunk, each under its
+ * own block, one hauler with a cabin light still burning. The level's rule,
+ * written on the ground before the first front ever rolls. Its snow apron
+ * settles it onto the sheet wherever the scroll has carried the floor.
+ */
+function drawFrozenfleet(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.48, R = W*0.31;
+
+  // The snow it has drifted into, downwind.
+  const apron = ctx.createRadialGradient(cx, cy, R*0.5, cx, cy, R*2.0);
+  apron.addColorStop(0, rgba(FROST.snow, 0.5));
+  apron.addColorStop(0.6, rgba(FROST.snow, 0.22));
+  apron.addColorStop(1, rgba(FROST.snow, 0));
+  ctx.fillStyle = apron;
+  ctx.beginPath(); ctx.arc(cx, cy, R*2.0, 0, TAU); ctx.fill();
+
+  // The lake: an irregular shore, black ice inside, a pale rim.
+  const shore = a => R*(1 + Math.sin(a*3 + 0.7)*0.08 + Math.sin(a*5 + 2.1)*0.05);
+  const lakePath = k => {
+    ctx.beginPath();
+    for(let i = 0; i <= 40; i++){
+      const a = (i/40)*TAU, r = shore(a)*k;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+  ctx.fillStyle = rgba(FROST.iceDark, 0.8); lakePath(1.06); ctx.fill();
+  ctx.fillStyle = FROST.black; lakePath(1.0); ctx.fill();
+  const deep = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+  deep.addColorStop(0, rgba("#1a2a3c", 0.9)); deep.addColorStop(1, rgba("#1a2a3c", 0));
+  ctx.fillStyle = deep; lakePath(1.0); ctx.fill();
+  // the cracks that run from the shore toward the middle
+  for(let i = 0; i < 18; i++){
+    const a = rand()*TAU, r0 = shore(a)*0.96;
+    const x = cx + Math.cos(a)*r0, y = cy + Math.sin(a)*r0;
+    iceCrack(ctx, x, y, a + Math.PI + (rand() - 0.5)*0.5, R*(0.25 + rand()*0.35), rngFor(7900 + i));
+  }
+
+  /*
+   * Their ships, where the cold found them: dark darts tilted in the ice,
+   * each under a pale block with a crack in it. Eight of them, none lined
+   * up, because a formation that froze mid-turn is not a formation.
+   */
+  for(let i = 0; i < 8; i++){
+    const a = rand()*TAU, d = rand()*R*0.75;
+    const x = cx + Math.cos(a)*d, y = cy + Math.sin(a)*d, rot = rand()*TAU, s = 12 + rand()*8;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = rgba("#0d1520", 0.9);
+    ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.75, s*0.7); ctx.lineTo(0, s*0.35); ctx.lineTo(-s*0.75, s*0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(FROST.warn, 0.7);
+    ctx.beginPath(); ctx.arc(0, -s*0.3, 1.6, 0, TAU); ctx.fill();
+    // the block over it
+    const bg = ctx.createLinearGradient(-s, -s, s, s);
+    bg.addColorStop(0, rgba(FROST.iceLit, 0.55)); bg.addColorStop(1, rgba(FROST.iceDeep, 0.45));
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.moveTo(-s*1.1, -s*1.2); ctx.lineTo(s*1.1, -s*1.05); ctx.lineTo(s*1.0, s*1.1); ctx.lineTo(-s*1.0, s*1.0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rgba(FROST.snow, 0.85); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*1.1, -s*1.2); ctx.lineTo(s*1.1, -s*1.05); ctx.lineTo(s*1.0, s*1.1); ctx.lineTo(-s*1.0, s*1.0); ctx.closePath(); ctx.stroke();
+    ctx.strokeStyle = rgba(FROST.shade, 0.8); ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(-s*0.4, -s*1.1); ctx.lineTo(-s*0.1, -s*0.2); ctx.lineTo(s*0.5, s*0.6); ctx.stroke();
+    ctx.restore();
+  }
+
+  // The hauler that did not make it: a big dark hull, half through the ice,
+  // and one cabin light still burning - somebody is keeping it lit.
+  {
+    const x = cx - R*0.35, y = cy + R*0.2;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-0.4);
+    ctx.fillStyle = rgba("#0d1520", 0.95);
+    ctx.beginPath(); ctx.moveTo(-34, -12); ctx.lineTo(30, -16); ctx.lineTo(38, 0); ctx.lineTo(30, 16); ctx.lineTo(-34, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(FROST.iceLit, 0.5);
+    ctx.beginPath(); ctx.moveTo(-40, -6); ctx.lineTo(10, -20); ctx.lineTo(44, -4); ctx.lineTo(20, 8); ctx.closePath(); ctx.fill();
+    const lamp = ctx.createRadialGradient(22, 2, 0, 22, 2, 16);
+    lamp.addColorStop(0, rgba(FROST.warmCore, 0.95)); lamp.addColorStop(0.3, rgba(FROST.warm, 0.5)); lamp.addColorStop(1, rgba(FROST.warm, 0));
+    ctx.fillStyle = lamp;
+    ctx.beginPath(); ctx.arc(22, 2, 16, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  // Their camp on the shore: two huts with warm windows, a red eye, and the
+  // tracks in the snow that lead out onto the ice.
+  {
+    const kx = cx + R*1.25, ky = cy - R*0.45;
+    ctx.strokeStyle = rgba(FROST.shade, 0.5); ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(kx - 20, ky + 14); ctx.quadraticCurveTo(cx + R*0.9, cy - R*0.1, cx + R*0.5, cy); ctx.stroke();
+    for(let i = 0; i < 2; i++){
+      const bx = kx + i*34, by = ky + i*10, bw = 24, bh = 16;
+      ctx.fillStyle = rgba(FROST.shade, 0.4);
+      ctx.fillRect(bx - bw/2 + 3, by - bh/2 + 5, bw, bh);
+      ctx.fillStyle = FROST.rig; ctx.fillRect(bx - bw/2, by - bh/2, bw, bh);
+      ctx.fillStyle = FROST.snow; ctx.fillRect(bx - bw/2, by - bh/2, bw, 4);
+      ctx.fillStyle = FROST.warm;
+      ctx.fillRect(bx - bw/2 + 4, by + 1, 3, 3); ctx.fillRect(bx + bw/2 - 7, by + 1, 3, 3);
+    }
+    ctx.fillStyle = FROST.warn;
+    ctx.beginPath(); ctx.arc(kx + 44, ky - 4, 1.8, 0, TAU); ctx.fill();
+    ctx.fillStyle = rgba(FROST.shade, 0.4);
+    ctx.fillRect(kx + 24, ky + 30, 28, 20);
+    ctx.strokeStyle = rgba(FROST.rig, 0.7); ctx.lineWidth = 1;
+    ctx.strokeRect(kx + 24, ky + 30, 28, 20);
+    ctx.beginPath(); ctx.arc(kx + 38, ky + 40, 5.5, 0, TAU); ctx.stroke();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -4231,6 +4555,8 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "forgecity") drawForgecity(px, W, H, pr, rand);
     else if(pr.k === "dunes") drawDunes(px, W, H, pr, rand);
     else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
+    else if(pr.k === "icefield") drawIcefield(px, W, H, pr, rand);
+    else if(pr.k === "frozenfleet") drawFrozenfleet(px, W, H, pr, rand);
   });
 }
 

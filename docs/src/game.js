@@ -418,6 +418,8 @@ function startMission(missionIndex, difficultyId){
   if(mission.volcano) SF.volcano.begin();
   SF.mirage.reset();                      // the heat waits for the desert
   if(mission.mirage) SF.mirage.begin();
+  SF.frost.reset();                       // the cold waits for the far side
+  if(mission.frost) SF.frost.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -527,6 +529,8 @@ function startMission(missionIndex, difficultyId){
     ropesCut: 0, darkKills: 0, tightKills: 0, lateKills: 0,
     // The Mirage: real ships destroyed while their untouched twin still shimmered.
     seenThrough: 0,
+    // Whiteout: frozen ships broken before they thawed, and times the cold caught YOU.
+    shattered: 0, frozenTimes: 0,
     stars: 0,
   };
 
@@ -808,6 +812,7 @@ function startMission(missionIndex, difficultyId){
              : mission.dive ? "diveStart"
              : mission.volcano ? "volcanoStart"
              : mission.mirage ? "mirageStart"
+             : mission.frost ? "frostStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -1196,6 +1201,17 @@ const callbacks = {
        * Either way the lie comes apart with the ship that cast it, here
        * rather than a frame later, so the cause reads on screen.
        */
+      /*
+       * Whiteout's harvest star: this one was frozen when it broke. The
+       * kill is paid like any kill; the shatter is what the level counts.
+       */
+      if(run.mission.frost && e.frozen > 0){
+        run.stats.shattered = (run.stats.shattered || 0) + 1;
+        fx.text(e.x, e.y - e.r - 24, T("SHATTERED!"), "#dff4ff", 15, true);
+        fx.sparks(e.x, e.y, 14, "#ffffff", 200);
+        audio.play("shatter", null, e.x);
+        SF.comms.say("frostShatter");
+      }
       if(run.mission.mirage && e.mirageTwin){
         if(e.aimedFirst){
           run.stats.seenThrough++;
@@ -2762,6 +2778,48 @@ function update(dt, timeMs){
    * for: it clears the sky, and the level's own star (objectives: "melt")
    * counts every one.
    */
+  /*
+   * WHITEOUT. The cold's costs live here, beside the volcano's, for the
+   * same reason: this is where the seats and onEnemyKilled exist. frost.js
+   * owns what a front looks like and where it is; this block owns what it
+   * does.
+   *
+   * Both sides pay the same price - a beat of stillness. A hull inside the
+   * wall freezes (no stick, no guns, invulnerable under the ice: seconds,
+   * never a life; a hull already flashing from a respawn is left alone,
+   * as every hazard leaves it) and the level counts it against the "stay
+   * warm" star. THEIR ships freeze solid for five seconds and shatter in
+   * one hit (systems.js); the kill goes through the ordinary door, paid in
+   * full. Rocks are terrain and stay rocks; a bolt caught in the wall dies
+   * there, so a front you dodged is a front on your side.
+   */
+  if(run.mission.frost && SF.frost.active() && !run.ended){
+    const fronts = SF.frost.liveFronts();
+    for(let fi = 0; fi < fronts.length; fi++){
+      const fr = fronts[fi];
+      const seats = game.world.livePlayers();
+      for(let si = 0; si < seats.length; si++){
+        const q = seats[si];
+        if(!q.alive || q.frozen > 0 || q.invuln > 0) continue;
+        if(SF.frost.inFront(fr, q.x, q.y) && SF.frost.freezePlayer(q)){
+          run.stats.frozenTimes = (run.stats.frozenTimes || 0) + 1;
+          SF.comms.say("frostCaught");
+        }
+      }
+      const items = game.world.enemies.items;
+      for(let i = 0; i < items.length; i++){
+        const e = items[i];
+        if(!e.alive || e.entering || e.hazard || e.attached || e.frozen > 0) continue;
+        if(SF.frost.inFront(fr, e.x, e.y)) SF.frost.freezeEnemy(e);
+      }
+      const eb = game.world.enemyBullets.items;
+      for(let i = 0; i < eb.length; i++){
+        const b = eb[i];
+        if(b.alive && SF.frost.inFront(fr, b.x, b.y)) b.alive = false;
+      }
+    }
+  }
+
   if(run.mission.volcano && SF.volcano.active() && !run.ended){
     const bombs = SF.volcano.liveBombs();
     for(let bi = 0; bi < bombs.length; bi++){
@@ -3510,6 +3568,7 @@ function update(dt, timeMs){
   if(run.mission.dive) SF.dive.update(dt, run, game.world, simMs);
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
+  if(run.mission.frost) SF.frost.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -3922,6 +3981,7 @@ function draw(timeMs){
   // The desert's shadows belong to the LIVE ships, so they go after the
   // rewind's claim on the frame: the replay paints its own from the tape.
   SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
+  SF.frost.drawSky(ctx, timeMs, VW, VH);             // the rime the fronts leave behind
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -4045,7 +4105,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

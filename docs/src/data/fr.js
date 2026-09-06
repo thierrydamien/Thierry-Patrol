@@ -701,6 +701,44 @@ SF.i18n.register("fr", { name: "Français", s: {
   "C'est ça, {you} — tu as tiré sur celui qui a une ombre !",
 "MIRAGE!": "MIRAGE !",
 "SEEN THROUGH!": "DÉMASQUÉ !",
+
+/* ----- Whiteout (mission 36) ----- */
+"Whiteout": "Le Blizzard",
+"outrun the cold": "devance le froid",
+"Round the far side of the desert, {you}, the light they stole never reached - and the sea froze where it stood. The cold comes in FRONTS now: when a lane glows blue, get OUT of it. Anything it catches freezes solid. Them too - and a frozen ship shatters in ONE shot. Dodge the front, then go and collect.":
+  "De l'autre côté du désert, {you}, la lumière qu'ils ont volée n'est jamais arrivée — et la mer a gelé sur place. Le froid arrive maintenant par FRONTS : quand une bande devient bleue, SORS-en. Tout ce qu'il attrape gèle sur place. Eux aussi — et un vaisseau gelé se brise d'UN seul tir. Esquive le front, puis va récolter.",
+"Blue lane? GET OUT — then shatter!": "Bande bleue ? SORS — puis brise !",
+"Frostfall": "Givre",
+"THE FROZEN SIDE": "LA FACE GELÉE",
+"Round the far side of the desert the sun never comes up, {you}. When they took this world's light, the sea froze where it stood - and the cold has been rolling across it in fronts ever since.":
+  "De l'autre côté du désert, le soleil ne se lève jamais, {you}. Quand ils ont pris la lumière de ce monde, la mer a gelé sur place — et depuis, le froid la traverse par fronts.",
+"When a lane glows blue, get OUT of it. The front freezes everything it touches - their ships too, hanging in the air with their guns iced. A frozen ship shatters in ONE shot. Dodge the cold, then go and collect.":
+  "Quand une bande devient bleue, SORS-en. Le front gèle tout ce qu'il touche — leurs vaisseaux aussi, suspendus dans l'air, les canons pris dans la glace. Un vaisseau gelé se brise d'UN seul tir. Esquive le froid, puis va récolter.",
+"INTO THE COLD": "DANS LE FROID",
+"Shatter 10 frozen ships": "Brise 10 vaisseaux gelés",
+"Never get frozen": "Ne gèle jamais",
+"This world froze when they took its light, {you}. The cold comes in FRONTS - see the blue lane, get out of it.":
+  "Ce monde a gelé quand ils ont pris sa lumière, {you}. Le froid arrive par FRONTS — tu vois la bande bleue, sors-en.",
+"Anything the cold catches stops dead, {you}. Them too. A frozen ship shatters in one shot - go and collect.":
+  "Tout ce que le froid attrape s'arrête net, {you}. Eux aussi. Un vaisseau gelé se brise d'un seul tir — va récolter.",
+"Blue lane means GET OUT, {you}. Then come back for what it froze.":
+  "Bande bleue veut dire SORS, {you}. Puis reviens chercher ce qu'elle a gelé.",
+"Cold front, {you} — out of the blue lane, NOW!":
+  "Front froid, {you} — sors de la bande bleue, VITE !",
+"Here it comes, {you} — the lane's lit, move!":
+  "Le voilà, {you} — la bande est allumée, bouge !",
+"You're iced up, {you} — it'll pass. Next time, get out of the lane.":
+  "Tu es pris dans la glace, {you} — ça va passer. La prochaine fois, sors de la bande.",
+"The cold got you, {you}. Hold on — and watch for the blue.":
+  "Le froid t'a eu, {you}. Tiens bon — et surveille le bleu.",
+"SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!":
+  "BRISÉ ! Les gelés tombent en un coup, {you} — attrape-les avant qu'ils dégèlent !",
+"That's it, {you} — the cold froze it, YOU broke it.":
+  "C'est ça, {you} — le froid l'a gelé, TOI tu l'as brisé.",
+"FROZEN!": "GELÉ !",
+"SHATTERED!": "BRISÉ !",
+"warm": "au chaud",
+"iced": "gelé",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",

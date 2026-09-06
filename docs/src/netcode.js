@@ -318,7 +318,9 @@ function packEnemies(pool){
               R(e.hp), e.elite ? 1 : 0, R((e.angle || 0)*100), R((e.flash || 0)*100),
               // The Mirage: the guest paints from this list, so a double has
               // to arrive as a double - no shadow, and drawn as heat.
-              e.mirage ? 1 : 0]);
+              e.mirage ? 1 : 0,
+              // Whiteout: the guest draws the ice, so it has to know who wears it.
+              e.frozen > 0 ? 1 : 0]);
   }
   return out;
 }
@@ -452,6 +454,7 @@ function applySnapshot(world){
     if(!row){ e.alive = false; continue; }
     e.x = row[2]; e.y = row[3]; e.hp = row[4];
     e.angle = row[6]/100; e.flash = row[7]/100;
+    e.frozen = row[9] ? 1 : 0;           // a picture, held fresh by each snapshot
     delete seen[e.netId];
   }
   for(const id in seen){
@@ -464,6 +467,7 @@ function applySnapshot(world){
     if(!e) continue;
     e.netId = +id; e.hp = row[4]; e.angle = row[6]/100; e.entering = false;
     if(row[8]){ e.mirage = true; e.fireTimer = Infinity; e.diver = false; }
+    if(row[9]) e.frozen = 1;
   }
 
   const fillBullets = (pool, rows) => {

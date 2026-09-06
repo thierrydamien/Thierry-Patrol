@@ -848,6 +848,9 @@ function drawEnemies(ctx, world, timeMs){
     }
     ctx.restore();
 
+    // WHITEOUT: a frozen ship wears its ice over the hull. frost.js owns the look.
+    if(e.frozen > 0) SF.frost.drawIce(ctx, e.x, e.y, size, t, e.frozen/SF.frost.FREEZE_SECS);
+
     if(e.flash > 0){                              // white hit flash
       ctx.save();
       ctx.globalAlpha = clamp(e.flash, 0, 1) * 0.75;

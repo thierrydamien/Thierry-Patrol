@@ -165,6 +165,16 @@ const STORY = {
     button:"TRUST THE SHADOW",
   },
 
+  /* The pre-flight page for Whiteout - replays every visit. */
+  whiteout: {
+    title: "THE FROZEN SIDE",
+    panels: [
+      { art:"frostfront", text:"Round the far side of the desert the sun never comes up, {you}. When they took this world's light, the sea froze where it stood - and the cold has been rolling across it in fronts ever since." },
+      { art:"shatter",    text:"When a lane glows blue, get OUT of it. The front freezes everything it touches - their ships too, hanging in the air with their guns iced. A frozen ship shatters in ONE shot. Dodge the cold, then go and collect." },
+    ],
+    button:"INTO THE COLD",
+  },
+
   /* The Armory's guns started waking up with the campaign. Fires once, on
      the first pick of a pilot whose save owns a gun level the campaign has
      not reached yet (profile.dormantLevels) - nothing is lost, nothing is

@@ -557,6 +557,7 @@ class World {
       lives: loadout.lives, maxLives: loadout.lives,
       shield: loadout.shieldMax, shieldMax: loadout.shieldMax,
       invuln: 1.4, invulnTime: loadout.invulnTime,
+      frozen: 0,                        // Whiteout: seconds of ice left on the hull
       accel: 4300 * loadout.speedMult,
       maxSpeed: 430 * loadout.speedMult,
       fireInterval: loadout.fireInterval, cooldown: 0,
@@ -651,6 +652,25 @@ class World {
     }
 
     const input = inputState || SF.input.state;
+
+    /*
+     * WHITEOUT: iced over. No stick and no guns for a beat - the hull is
+     * invulnerable underneath (frost.js sets both), so a caught pilot loses
+     * seconds, never a life. The trail keeps decaying and the clocks keep
+     * running; nothing else does.
+     */
+    if(p.frozen > 0){
+      p.frozen = Math.max(0, p.frozen - dt);
+      p.vx = damp(p.vx, 0, 14, dt); p.vy = damp(p.vy, 0, 14, dt);
+      p.bank = damp(p.bank, 0, 10, dt);
+      p.recoil = damp(p.recoil, 0, 18, dt);
+      if(p.invuln > 0) p.invuln -= dt;
+      for(let i = p.trail.length-1; i >= 0; i--){
+        p.trail[i].life += dt;
+        if(p.trail[i].life > 0.3) p.trail.splice(i, 1);
+      }
+      return;
+    }
 
     // Acceleration-based movement: the ship has weight and carries a little
     // momentum, which reads far better than teleporting to the finger.
@@ -1116,6 +1136,8 @@ class World {
     // stamp that keeps a recycled slot from answering for a dead one.
     e.mirage = false; e.mirageTwin = null; e.mirageStamp = 0; e.firstHit = false; e.aimedFirst = false;
     e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
+    // Whiteout's ice: how long it holds, and the way it was going when caught.
+    e.frozen = 0; e.frozenVx = 0; e.frozenVy = 0;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship
@@ -1173,6 +1195,16 @@ class World {
       }
       e.spawnAnim = Math.min(1, e.spawnAnim + dt*5);
       if(e.flash > 0) e.flash -= dt*5;
+      /*
+       * WHITEOUT: frozen solid. No behaviour, no guns, no drift, no leash
+       * clock - the ice holds it exactly where the cold found it until it
+       * thaws, or until something shatters it (systems.js).
+       */
+      if(e.frozen > 0){
+        e.frozen -= dt;
+        if(e.frozen <= 0){ e.frozen = 0; e.vx = e.frozenVx; e.vy = e.frozenVy; }
+        continue;
+      }
       e.life += dt;
 
       /*

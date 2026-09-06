@@ -1388,6 +1388,7 @@ const FACE_KINDS = {
   flow:    { c0:"#67e8f9", c1:"#0d3c4a" },   // The Current: a river through it
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
+  frost:   { c0:"#dff4ff", c1:"#2c4258" },   // Whiteout: ice, and the cold on it
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1517,6 +1518,7 @@ function missionFace(m){
              : m.current ? "flow"
              : m.garden ? "garden"
              : m.mirage ? "mirage"
+             : m.frost ? "frost"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -1650,11 +1652,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-39 (the sea and the desert join the crack)
-  { at:40, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 40-42 (the forge world opens it)
-  { at:43, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 43
+    sub:"where space stops behaving itself" },              // 33-40 (the sea, the desert and its frozen side join the crack)
+  { at:41, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 41-43 (the forge world opens it)
+  { at:44, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 44
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -4870,6 +4872,102 @@ function drawStoryArt(ctx, art, levels, mate){
     gl.addColorStop(0, "rgba(255,250,225,0.85)"); gl.addColorStop(0.3, "rgba(255,236,170,0.25)");
     gl.addColorStop(1, "rgba(255,236,170,0)");
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  } else if(art === "frostfront"){
+    /*
+     * Whiteout's establishing shot: the night side, a pale sheet under a
+     * black sky, their drill lights on it, and the front coming in from the
+     * left as a wall of white. The story is weather with an edge.
+     */
+    const sky = ctx.createLinearGradient(0, 0, 0, H*0.5);
+    sky.addColorStop(0, "#050a16"); sky.addColorStop(1, "#16273d");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 30; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.15) + ")";
+      ctx.fillRect((i*71) % W, (i*29) % Math.round(H*0.42), 1.3, 1.3);
+    }
+    // the sheet, and a low pale glow where the sky meets it
+    const ice = ctx.createLinearGradient(0, H*0.46, 0, H);
+    ice.addColorStop(0, "#c9dced"); ice.addColorStop(0.3, "#dceaf5"); ice.addColorStop(1, "#a9c4dc");
+    ctx.fillStyle = ice; ctx.fillRect(0, H*0.46, W, H*0.54);
+    ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, H*0.46, W, 1.5);
+    // ridges across it
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1.2;
+    [0.58, 0.7, 0.84].forEach((yy, i) => {
+      ctx.beginPath();
+      for(let x = 0; x <= W; x += 5) ctx.lineTo(x, H*yy + Math.sin(x*0.05 + i)*3);
+      ctx.stroke();
+    });
+    // their drills: dark pylons with warm melt rings
+    [0.55, 0.72, 0.86].forEach((fx, i) => {
+      const x = W*fx, y = H*(0.62 + i*0.09);
+      const g = ctx.createRadialGradient(x, y + 4, 0, x, y + 4, 16);
+      g.addColorStop(0, "rgba(255,138,60,0.6)"); g.addColorStop(1, "rgba(255,138,60,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y + 4, 16, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#2b2530"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x, y - 18); ctx.stroke();
+      ctx.fillStyle = "#ff5d73"; ctx.beginPath(); ctx.arc(x, y - 19, 1.5, 0, Math.PI*2); ctx.fill();
+    });
+    // the front: a wall of white from the left, bright at its edge
+    const wall = ctx.createLinearGradient(0, 0, W*0.42, 0);
+    wall.addColorStop(0, "rgba(240,248,255,0.95)");
+    wall.addColorStop(0.7, "rgba(220,240,255,0.55)");
+    wall.addColorStop(1, "rgba(220,240,255,0)");
+    ctx.fillStyle = wall; ctx.fillRect(0, H*0.3, W*0.42, H*0.7);
+    ctx.fillStyle = "rgba(255,255,255,0.95)"; ctx.fillRect(W*0.36, H*0.3, 2.5, H*0.7);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    for(let i = 0; i < 12; i++) ctx.fillRect(W*0.38 + (i*13) % 22, H*(0.34 + i*0.055), 1.6, 1.6);
+    // one of theirs, already caught at the edge
+    ctx.fillStyle = "#1e1524";
+    ctx.beginPath(); ctx.moveTo(W*0.3, H*0.5 - 8); ctx.lineTo(W*0.3 + 10, H*0.5 + 6); ctx.lineTo(W*0.3, H*0.5 + 3); ctx.lineTo(W*0.3 - 10, H*0.5 + 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.2;
+    ctx.strokeRect(W*0.3 - 14, H*0.5 - 13, 28, 24);
+    // the squadron, far off and still out of it
+    A.drawShip(ctx, W*0.8, H*0.36, 26, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "shatter"){
+    /*
+     * The lesson, in one picture: the same ship twice - frozen in its block
+     * on the left, bursting into shards on the right - and the family ship
+     * below with the shot that did it. Nothing needs a caption.
+     */
+    ctx.fillStyle = "#dceaf5"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1;
+    for(let i = 0; i < 20; i++){
+      const y = (i*53) % H, x = (i*97) % W;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 14, y + 3, x - 30, y - 1); ctx.stroke();
+    }
+    const sprite = SF.enemyArt.spriteFor("kamikaze", "#ff5d73", false);
+    const box = 66, lx = W*0.3, rx = W*0.7, y = H*0.4;
+    if(sprite){
+      ctx.drawImage(sprite, lx - box/2, y - box/2, box, box);
+      // its block
+      ctx.save(); ctx.translate(lx, y); ctx.rotate(-0.15);
+      const bg = ctx.createLinearGradient(-30, -30, 30, 30);
+      bg.addColorStop(0, "rgba(244,249,255,0.7)"); bg.addColorStop(1, "rgba(150,196,236,0.7)");
+      ctx.fillStyle = bg; ctx.fillRect(-32, -32, 64, 64);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 2; ctx.strokeRect(-32, -32, 64, 64);
+      ctx.strokeStyle = "rgba(90,140,190,0.8)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(8, -28); ctx.lineTo(2, 0); ctx.lineTo(18, 24); ctx.stroke();
+      ctx.restore();
+      // the other one, coming apart: five shards of the same block, flying
+      ctx.globalAlpha = 0.9;
+      [[-22,-18,0.5],[20,-22,-0.4],[26,14,0.9],[-24,20,-0.7],[2,30,0.2]].forEach(([dx, dy, rot]) => {
+        ctx.save(); ctx.translate(rx + dx*1.4, y + dy*1.4); ctx.rotate(rot);
+        ctx.fillStyle = "rgba(220,240,255,0.85)";
+        ctx.beginPath(); ctx.moveTo(-9, -6); ctx.lineTo(8, -9); ctx.lineTo(6, 7); ctx.lineTo(-7, 8); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.restore();
+      });
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(sprite, rx - box*0.4, y - box*0.4, box*0.8, box*0.8);
+      ctx.globalAlpha = 1;
+      const burst = ctx.createRadialGradient(rx, y, 0, rx, y, 44);
+      burst.addColorStop(0, "rgba(255,255,255,0.9)"); burst.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(rx, y, 44, 0, Math.PI*2); ctx.fill();
+    }
+    // the shot, and the ship that fired it
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(rx - 3, y + 40, 6, 18); ctx.fillRect(rx - 3, y + 66, 6, 18);
+    A.drawShip(ctx, rx, H*0.8, 56, { color: profile.shipColor, levels, t, idle:false });
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -4930,7 +5028,8 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["garden",   "secondHarvest"],
                          ["dive",     "theDive"],
                          ["volcano",  "forgeWorld"],
-                         ["mirage",   "theMirage"]];
+                         ["mirage",   "theMirage"],
+                         ["frost",    "whiteout"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

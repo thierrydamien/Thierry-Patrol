@@ -171,6 +171,10 @@ const SOUNDS = {
   // The Mirage: a shot into hot air. A breath of sine sliding down and a
   // hiss - no click, no metal - the one sound in the game for hitting nothing.
   mirage:     { minGap: 90, fn: () => { tone(1040, 0.14, "sine", 0.028, 360); noise(0.07, 0.04, 3200, 900); }},
+  // Whiteout: the ice taking hold - a crystalline chime stepping down into a
+  // hiss - and letting go: a glassy burst with no bass in it at all.
+  freeze:     { minGap: 120, fn: () => { [1320, 990, 740].forEach((f,i) => tone(f, 0.12, "sine", 0.035, f*0.7, i*0.05)); noise(0.18, 0.05, 5200, 1800); }},
+  shatter:    { minGap: 50, fn: () => { noise(0.14, 0.12, 6000, 2200); [1760, 2200].forEach((f,i) => tone(f, 0.06, "triangle", 0.03, null, i*0.02)); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},

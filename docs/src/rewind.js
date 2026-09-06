@@ -83,7 +83,7 @@ function build(){
       f.enemies[n] = { alive:false, x:0, y:0, size:0, r:0, spawnAnim:1, typeId:"grunt", type:null,
                        elite:false, flash:0, hp:1, maxHp:1, spin:0, fuse:0, state:0, charge:0,
                        shielded:false, loot:0, carriesRescue:false, hazard:false, healTarget:null,
-                       mirage:false, phase:0, mirageHits:0 };
+                       mirage:false, phase:0, mirageHits:0, frozen:0 };
     // vx/vy ride along because the bolt renderer trails a tail down them, and
     // "which way was it going" is the whole point of watching the replay.
     for(let n = 0; n < MAX_EB; n++) f.ebullets[n] = { alive:false, x:0, y:0, vx:0, vy:1, r:4, kind:"bolt" };
@@ -141,6 +141,7 @@ function record(dt, world){
     // The Mirage: a replay that painted the fake as solid would teach the
     // opposite of the level. The ghost keeps its shimmer and its count.
     d.mirage = !!e.mirage; d.phase = e.phase || 0; d.mirageHits = e.mirageHits || 0;
+    d.frozen = e.frozen || 0;              // Whiteout: the replay keeps the ice on
   }
   for(let i = n; i < f.en; i++) f.enemies[i].alive = false;
   f.en = n;

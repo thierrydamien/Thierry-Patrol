@@ -373,6 +373,10 @@ function resolve(world, ctxObj, dt){
         return true;
       }
 
+      // WHITEOUT: ice is brittle. A frozen ship shatters on the first round
+      // whatever its hull was, and the kill goes through the ordinary door,
+      // paid in full - the shatter is counted for its star there.
+      if(e.frozen > 0) e.hp = 0;
       e.hp -= b.dmg;
       e.flash = 1;
       /*
