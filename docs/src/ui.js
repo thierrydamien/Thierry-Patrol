@@ -1389,6 +1389,8 @@ const FACE_KINDS = {
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
   frost:   { c0:"#dff4ff", c1:"#2c4258" },   // Whiteout: ice, and the cold on it
+  doors:   { c0:"#48e5c2", c1:"#2a2440" },   // The Moon of Doors: rune-light on dust
+  crystals:{ c0:"#ff60c4", c1:"#241c3a" },   // The Glow Cave: crystal on cave-dark
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -1519,6 +1521,8 @@ function missionFace(m){
              : m.garden ? "garden"
              : m.mirage ? "mirage"
              : m.frost ? "frost"
+             : m.doors ? "doors"
+             : m.crystals ? "crystals"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -1652,11 +1656,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-40 (the sea, the desert and its frozen side join the crack)
-  { at:41, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 41-43 (the forge world opens it)
-  { at:44, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 44
+    sub:"where space stops behaving itself" },              // 33-42 (the sea, the desert, its frozen side, the moon of doors and the cave under it)
+  { at:43, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 43-45 (the forge world opens it)
+  { at:46, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 46
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -4968,6 +4972,215 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "#ffd23f";
     ctx.fillRect(rx - 3, y + 40, 6, 18); ctx.fillRect(rx - 3, y + 66, 6, 18);
     A.drawShip(ctx, rx, H*0.8, 56, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "gatemoon"){
+    /*
+     * The Moon of Doors' establishing shot: an airless plain under a black
+     * sky, one low sun at the right throwing every shadow the same way, and
+     * the Great Arch on the horizon with a door lit between its stones -
+     * the first thing on this moon that is not grey.
+     */
+    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 40; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.17) + ")";
+      ctx.fillRect((i*67) % W, (i*31) % Math.round(H*0.5), 1.3, 1.3);
+    }
+    const sun = ctx.createRadialGradient(W*0.88, H*0.3, 0, W*0.88, H*0.3, W*0.3);
+    sun.addColorStop(0, "rgba(255,236,190,1)"); sun.addColorStop(0.08, "rgba(255,220,150,0.9)");
+    sun.addColorStop(0.3, "rgba(240,197,138,0.2)"); sun.addColorStop(1, "rgba(240,197,138,0)");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(W*0.88, H*0.3, W*0.3, 0, Math.PI*2); ctx.fill();
+    const dust = ctx.createLinearGradient(W, H*0.52, 0, H);
+    dust.addColorStop(0, "#c4bfd9"); dust.addColorStop(0.5, "#8a84a3"); dust.addColorStop(1, "#4d4866");
+    ctx.fillStyle = dust; ctx.fillRect(0, H*0.52, W, H*0.48);
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillRect(0, H*0.52, W, 1.2);
+    // craters: lit on the sun side, black on the other
+    [[0.18, 0.7, 16], [0.5, 0.86, 22], [0.78, 0.66, 10], [0.36, 0.6, 7]].forEach(([fx, fy, r]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.75)"; ctx.beginPath(); ctx.ellipse(x - r*0.15, y, r, r*0.4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(240,197,138,0.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(x, y, r, r*0.4, 0, -Math.PI*0.9, -Math.PI*0.1); ctx.stroke();
+    });
+    // standing stones, every shadow going left
+    [[0.1, 0.62, 5, 16], [0.3, 0.78, 7, 26], [0.66, 0.74, 5, 18], [0.9, 0.9, 8, 30]].forEach(([fx, fy, w, h]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.8)";
+      ctx.beginPath(); ctx.moveTo(x - w*0.5, y); ctx.lineTo(x - w*0.5 - h*1.6, y + 3); ctx.lineTo(x - w*0.5 - h*1.6, y + 6); ctx.lineTo(x + w*0.5, y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#4a4560"; ctx.fillRect(x - w*0.5, y - h, w, h);
+      ctx.fillStyle = "#a39dc4"; ctx.fillRect(x + w*0.5 - 1.5, y - h, 1.5, h);
+    });
+    // the Great Arch on the horizon, and the door lit between its stones
+    {
+      const ax = W*0.5, ay = H*0.53, mw = 12, mh = 58, span = 64;
+      [-1, 1].forEach(sd => {
+        const x = ax + sd*span*0.5;
+        ctx.fillStyle = "rgba(22,20,37,0.8)";
+        ctx.beginPath(); ctx.moveTo(x - mw*0.5, ay); ctx.lineTo(x - mw*0.5 - 70, ay + 10); ctx.lineTo(x - mw*0.5 - 70, ay + 14); ctx.lineTo(x + mw*0.5, ay); ctx.closePath(); ctx.fill();
+      });
+      const door = ctx.createRadialGradient(ax, ay - mh*0.5, 0, ax, ay - mh*0.5, 40);
+      door.addColorStop(0, "rgba(72,229,194,0.9)"); door.addColorStop(0.35, "rgba(72,229,194,0.35)"); door.addColorStop(1, "rgba(72,229,194,0)");
+      ctx.fillStyle = door; ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 40, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#48e5c2"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 17, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(230,255,250,0.9)"; ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 4, 0, Math.PI*2); ctx.fill();
+      [-1, 1].forEach(sd => {
+        const x = ax + sd*span*0.5;
+        ctx.fillStyle = "#3a3550"; ctx.fillRect(x - mw*0.5, ay - mh, mw, mh);
+        ctx.fillStyle = "#f0c58a"; ctx.fillRect(x + mw*0.5 - 2, ay - mh, 2, mh);
+        ctx.fillStyle = sd < 0 ? "#48e5c2" : "#ff5dbb";
+        for(let j = 0; j < 4; j++) ctx.fillRect(x - 2.5, ay - mh + 8 + j*12, 5, 1.5);
+      });
+      ctx.fillStyle = "#3a3550"; ctx.fillRect(ax - span*0.5 - mw*0.5, ay - mh - 9, span + mw, 9);
+      ctx.fillStyle = "#f0c58a"; ctx.fillRect(ax - span*0.5 - mw*0.5, ay - mh - 9, span + mw, 1.5);
+      ctx.fillStyle = "#04030a"; ctx.fillRect(ax - 4, ay - mh - 9, 6, 9);        // the crack in the lintel
+    }
+    A.drawShip(ctx, W*0.2, H*0.3, 30, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "twodoors"){
+    /*
+     * The lesson: two doors with the thread between them, and one shot
+     * drawn both sides of it - into the low door from the family ship, out
+     * of the high one into a thief. Nothing needs a caption.
+     */
+    ctx.fillStyle = "#8a84a3"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 40; i++){
+      ctx.fillStyle = "rgba(220,215,238," + (0.3 + (i % 3)*0.2) + ")";
+      ctx.fillRect((i*53) % W, (i*41) % H, 1.3, 1.3);
+    }
+    [[0.12, 0.2], [0.85, 0.5], [0.2, 0.88]].forEach(([fx, fy]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.7)";
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 22, y + 28); ctx.lineTo(x - 16, y + 30); ctx.lineTo(x + 6, y + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#6e6889"; ctx.fillRect(x - 3, y - 4, 7, 8);
+      ctx.fillStyle = "#a39dc4"; ctx.fillRect(x - 3, y - 4, 7, 1.5);
+    });
+    const hi = { x: W*0.62, y: H*0.24 }, lo = { x: W*0.3, y: H*0.64 };
+    ctx.setLineDash([4, 7]); ctx.strokeStyle = "rgba(72,229,194,0.75)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lo.x, lo.y); ctx.lineTo(hi.x, hi.y); ctx.stroke(); ctx.setLineDash([]);
+    const door = d => {
+      const g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 44);
+      g.addColorStop(0, "rgba(72,229,194,0.75)"); g.addColorStop(0.5, "rgba(72,229,194,0.25)"); g.addColorStop(1, "rgba(72,229,194,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(d.x, d.y, 44, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#4a4560"; ctx.beginPath(); ctx.arc(d.x, d.y, 26, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#a39dc4"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 26, -Math.PI*0.8, Math.PI*0.2); ctx.stroke();
+      const disc = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 20);
+      disc.addColorStop(0, "#e6fffa"); disc.addColorStop(0.3, "#48e5c2"); disc.addColorStop(1, "#0f2a3a");
+      ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(d.x, d.y, 20, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#48e5c2"; ctx.lineWidth = 1.2;
+      for(let j = 0; j < 12; j++){
+        const a = j/12*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(d.x + Math.cos(a)*22, d.y + Math.sin(a)*22); ctx.lineTo(d.x + Math.cos(a)*25, d.y + Math.sin(a)*25); ctx.stroke();
+      }
+    };
+    door(lo); door(hi);
+    const sprite = SF.enemyArt.spriteFor("interceptor", "#ff5d73", false);
+    if(sprite) ctx.drawImage(sprite, hi.x - 26, hi.y - 90, 52, 52);
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(hi.x - 3, hi.y - 46, 6, 16); ctx.fillRect(hi.x - 3, hi.y - 32, 6, 10);
+    const burst = ctx.createRadialGradient(hi.x, hi.y - 64, 0, hi.x, hi.y - 64, 30);
+    burst.addColorStop(0, "rgba(255,255,255,0.8)"); burst.addColorStop(1, "rgba(255,210,63,0)");
+    ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(hi.x, hi.y - 64, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(lo.x - 3, lo.y + 30, 6, 16); ctx.fillRect(lo.x - 3, lo.y + 54, 6, 16);
+    A.drawShip(ctx, lo.x, H*0.9, 56, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "geode"){
+    /*
+     * The Glow Cave's establishing shot: the dark under the moon, a pool
+     * that glows, giant crystals in four colours standing around it, and
+     * one shaft of daylight through the broken roof with the squadron in it.
+     */
+    const rg = (hex, a) => { const v = parseInt(hex.slice(1), 16); return "rgba(" + (v >> 16) + "," + ((v >> 8) & 255) + "," + (v & 255) + "," + a + ")"; };
+    ctx.fillStyle = "#130d22"; ctx.fillRect(0, 0, W, H);
+    const cx = W*0.5, cy = H*0.68;
+    const shaft = ctx.createLinearGradient(W*0.62, 0, W*0.4, H*0.7);
+    shaft.addColorStop(0, "rgba(207,230,255,0.4)"); shaft.addColorStop(1, "rgba(207,230,255,0)");
+    ctx.fillStyle = shaft;
+    ctx.beginPath(); ctx.moveTo(W*0.56, 0); ctx.lineTo(W*0.7, 0); ctx.lineTo(W*0.62, cy); ctx.lineTo(W*0.3, cy); ctx.closePath(); ctx.fill();
+    for(let i = 0; i < 24; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.15) + ")";
+      ctx.fillRect(W*0.36 + (i*37) % Math.round(W*0.3), (i*53) % Math.round(cy), 1.3, 1.3);
+    }
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W*0.5);
+    glow.addColorStop(0, "rgba(79,227,255,0.45)"); glow.addColorStop(0.4, "rgba(143,107,255,0.15)"); glow.addColorStop(1, "rgba(143,107,255,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, W*0.5, 0, Math.PI*2); ctx.fill();
+    const pool = ctx.createRadialGradient(cx, cy, 0, cx, cy, W*0.22);
+    pool.addColorStop(0, "#8ff0ff"); pool.addColorStop(0.5, "#1c7fa0"); pool.addColorStop(1, "#062a44");
+    ctx.fillStyle = pool; ctx.beginPath(); ctx.ellipse(cx, cy, W*0.22, W*0.08, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(143,240,255,0.7)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(cx, cy, W*0.22, W*0.08, 0, 0, Math.PI*2); ctx.stroke();
+    const hues = [["#ff60c4","#ffd6f1"], ["#5ef2ff","#dffcff"], ["#ffd166","#fff3c4"], ["#b48cff","#ece0ff"]];
+    [[0.12, 0.72, -0.35, 70, 22], [0.28, 0.8, -0.15, 52, 16], [0.72, 0.8, 0.2, 60, 18], [0.88, 0.7, 0.4, 76, 24],
+     [0.5, 0.86, 0.02, 40, 14], [0.2, 0.55, -0.6, 44, 12], [0.8, 0.52, 0.55, 48, 13]].forEach(([fx, fy, lean, len, wid], i) => {
+      const x = W*fx, y = H*fy, hue = hues[i % 4];
+      const halo = ctx.createRadialGradient(x, y - len*0.5, 0, x, y - len*0.5, len*0.9);
+      halo.addColorStop(0, rg(hue[0], 0.35)); halo.addColorStop(1, rg(hue[0], 0));
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y - len*0.5, len*0.9, 0, Math.PI*2); ctx.fill();
+      ctx.save(); ctx.translate(x, y); ctx.rotate(lean);
+      const g = ctx.createLinearGradient(0, 0, 0, -len);
+      g.addColorStop(0, rg(hue[1], 0.95)); g.addColorStop(0.4, rg(hue[0], 0.85)); g.addColorStop(1, rg(hue[0], 0.5));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.6, -len*0.55); ctx.lineTo(0, -len); ctx.lineTo(wid*0.6, -len*0.55); ctx.lineTo(wid*0.5, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.6, -len*0.55); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.restore();
+    });
+    for(let i = 0; i < 14; i++){
+      const x = cx + Math.cos(i*0.9)*W*(0.24 + (i % 3)*0.03), y = cy + Math.sin(i*0.9)*W*0.1 + 4;
+      ctx.fillStyle = "rgba(126,240,208,0.85)"; ctx.beginPath(); ctx.arc(x, y, 1.6 + (i % 3)*0.6, 0, Math.PI*2); ctx.fill();
+    }
+    A.drawShip(ctx, W*0.6, H*0.22, 34, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "ricochet"){
+    /*
+     * The lesson, in one picture: a crystal in the middle, a shot of ours
+     * banking off it into a turret it could never have reached straight,
+     * and a bolt of theirs breaking on the same crystal with the family
+     * ship sheltering under it.
+     */
+    const rg = (hex, a) => { const v = parseInt(hex.slice(1), 16); return "rgba(" + (v >> 16) + "," + ((v >> 8) & 255) + "," + (v & 255) + "," + a + ")"; };
+    ctx.fillStyle = "#1f1830"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 30; i++){
+      ctx.fillStyle = "rgba(90,79,122," + (0.3 + (i % 3)*0.2) + ")";
+      ctx.fillRect((i*59) % W, (i*43) % H, 1.4, 1.4);
+    }
+    const cx = W*0.5, cy = H*0.46, sx = W*0.6, tx = W*0.86, ty = H*0.22;
+    const pool = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90);
+    pool.addColorStop(0, "rgba(255,96,196,0.45)"); pool.addColorStop(1, "rgba(255,96,196,0)");
+    ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(cx, cy, 90, 0, Math.PI*2); ctx.fill();
+    const sprite = SF.enemyArt.spriteFor("turret", "#ff5d73", false);
+    if(sprite) ctx.drawImage(sprite, tx - 24, ty - 24, 48, 48);
+    // our shot: up from the ship, off the lower-right facet, across into the turret
+    ctx.strokeStyle = "rgba(255,210,63,0.5)"; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.moveTo(sx, H*0.8); ctx.lineTo(cx + 26, cy + 20); ctx.lineTo(tx - 18, ty + 12); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#ffd23f";
+    ctx.save(); ctx.translate(sx, H*0.7); ctx.rotate(0.1); ctx.fillRect(-3, -8, 6, 16); ctx.restore();
+    ctx.save(); ctx.translate(cx + 62, cy - 4); ctx.rotate(1.0); ctx.fillRect(-3, -8, 6, 16); ctx.restore();
+    const burst = ctx.createRadialGradient(tx, ty, 0, tx, ty, 34);
+    burst.addColorStop(0, "rgba(255,255,255,0.85)"); burst.addColorStop(1, "rgba(255,210,63,0)");
+    ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(tx, ty, 34, 0, Math.PI*2); ctx.fill();
+    // their bolt, from above, breaking on the crystal
+    ctx.fillStyle = "#ff5d73";
+    ctx.fillRect(cx - 2, H*0.05, 4, 14); ctx.fillRect(cx - 2, H*0.13, 4, 14);
+    const shatter = ctx.createRadialGradient(cx, cy - 44, 0, cx, cy - 44, 26);
+    shatter.addColorStop(0, "rgba(255,255,255,0.9)"); shatter.addColorStop(0.4, "rgba(255,93,115,0.5)"); shatter.addColorStop(1, "rgba(255,93,115,0)");
+    ctx.fillStyle = shatter; ctx.beginPath(); ctx.arc(cx, cy - 44, 26, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ff5d73";
+    for(let i = 0; i < 7; i++){ const a = -Math.PI/2 + (i - 3)*0.4; ctx.fillRect(cx + Math.cos(a)*22 - 1, cy - 44 + Math.sin(a)*14 - 1, 2.5, 2.5); }
+    // the crystal itself: six shards from a heart
+    [[-0.9, 40, 14], [-0.3, 48, 16], [0.35, 44, 15], [1.0, 36, 12], [2.2, 30, 11], [-2.0, 32, 11]].forEach(([a, len, wid], i) => {
+      const hue = i % 2 ? ["#ff60c4","#ffd6f1"] : ["#ffb3e6","#ffffff"];
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      const g = ctx.createLinearGradient(0, 0, 0, -len);
+      g.addColorStop(0, rg(hue[1], 0.95)); g.addColorStop(1, rg(hue[0], 0.7));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.55, -len*0.6); ctx.lineTo(0, -len); ctx.lineTo(wid*0.55, -len*0.6); ctx.lineTo(wid*0.5, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.55, -len*0.6); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.restore();
+    });
+    const heart = ctx.createRadialGradient(cx, cy, 0, cx, cy, 16);
+    heart.addColorStop(0, "rgba(255,255,255,1)"); heart.addColorStop(1, "rgba(255,214,241,0)");
+    ctx.fillStyle = heart; ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI*2); ctx.fill();
+    A.drawShip(ctx, sx, H*0.88, 56, { color: profile.shipColor, levels, t, idle:false });
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -5029,7 +5242,9 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["dive",     "theDive"],
                          ["volcano",  "forgeWorld"],
                          ["mirage",   "theMirage"],
-                         ["frost",    "whiteout"]];
+                         ["frost",    "whiteout"],
+                         ["doors",    "moonOfDoors"],
+                         ["crystals", "glowCave"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

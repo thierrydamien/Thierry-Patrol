@@ -117,6 +117,28 @@ const OBJECTIVES = {
   stayWarm:  { label:"Never get frozen", icon:"🧣",
                test: s => (s.frozenTimes || 0) === 0,
                progress: s => (s.frozenTimes || 0) === 0 ? "warm" : "iced" },
+  /*
+   * The Moon of Doors' pair. Both are things the level already makes happen
+   * by itself - rounds go through doors, ships come out of them - and the
+   * stars ask for the version a child CHOSE: aiming into a low door on
+   * purpose, and turning to meet the ship that just arrived.
+   */
+  doorShots: { label:"Destroy 15 through a door", icon:"🚪",
+               test: s => (s.doorShots || 0) >= 15,
+               progress: s => (s.doorShots || 0) + "/15" },
+  doorAmbush:{ label:"Catch 8 at the door", icon:"🌀",
+               test: s => (s.doorAmbush || 0) >= 8,
+               progress: s => (s.doorAmbush || 0) + "/8" },
+  /*
+   * The Glow Cave's pair: a kill by a round that had already come off a
+   * facet, and their bolts breaking on a crystal you were under.
+   */
+  bounce:    { label:"Destroy 10 off the bounce", icon:"💎",
+               test: s => (s.bounceKills || 0) >= 10,
+               progress: s => (s.bounceKills || 0) + "/10" },
+  cover:     { label:"Shelter from 15 bolts", icon:"🔮",
+               test: s => (s.covered || 0) >= 15,
+               progress: s => (s.covered || 0) + "/15" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -1835,7 +1857,94 @@ const MISSIONS = [
     objectives: ["complete","shatter","stayWarm"],
   },
   {
-    id:37, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE MOON OF DOORS - a dead moon paved with roads that lead to gates,
+     * built by whoever lived here before the thieves found it. The seventh
+     * surface (The Threshold), and the first level whose mechanic is a TOY
+     * rather than a hazard: two pairs of doors stand open at a time, and
+     * anything that flies into one leaves its twin the way it was going -
+     * their ships, their bolts, and your rounds. Not you: the doors answer
+     * to their metal now. doors.js owns the gates; the two stars are paid at
+     * the kill door in game.js - a ship destroyed by a round that went
+     * through, and a ship caught within a beat of stepping through.
+     */
+    id:37, sky:46, name:"The Moon of Doors", subtitle:"every door has a twin",
+    brief:"Somebody built DOORS on this moon, {you} - and the thieves have the keys. Two pairs stand open at a time: what flies into one comes out of its twin. Their ships, their bolts... and YOUR shots. Fire into a low door and your rounds arrive on top of the fleet. And watch the door beside you - what dives in up there comes out down HERE.",
+    goal:"Shoot INTO the doors!",
+    doors:true,
+    face:"interceptor",                   // the one that arrives where you didn't expect
+    waves: [
+      w(1,   "grunt",    8, "column"),           // straight down, straight through
+      w(8,   "weaver",   7, "twinColumns"),
+      w(15,  "swooper",  6, "pincer"),
+      w(22,  "striker",  5, "vee"),
+      w(29,  "grunt",   10, "tripleColumns"),
+      w(35,  "kamikaze", 6, "scatter"),
+      w(41,  "interceptor", 4, "sides"),
+      w(47,  "turret",   4, "sides"),
+      w(53,  "weaver",   8, "arc"),
+      w(59,  "brute",    4, "pincer"),
+      w(65,  "grunt",   11, "column"),
+      w(71,  "swooper",  7, "vee", { elite: 2 }),
+      w(77,  "splitter", 5, "scatter"),
+      w(83,  "sniper",   3, "sides"),
+      w(89,  "kamikaze", 7, "twinColumns"),
+      w(95,  "striker",  7, "arc", { elite: 2 }),
+      w(101, "mender",   2, "column"),
+      w(105, "interceptor", 5, "pincer", { elite: 1 }),
+      w(111, "brute",    5, "tripleColumns", { elite: 1 }),
+      w(117, "weaver",  10, "wall"),
+      w(123, "grunt",   13, "tripleColumns"),
+      w(129, "swooper",  9, "wall", { elite: 2 }),
+    ],
+    // No carriers: a mission with pilots to free must star their rescue, and
+    // both slots belong to the doors.
+    objectives: ["complete","doorShots","doorAmbush"],
+  },
+  {
+    /*
+     * THE GLOW CAVE - under the moon of doors the world is hollow, and it
+     * glows. The eighth surface (The Geode), and the second toy: clusters of
+     * crystal light stand at ship height and drift down with the floor.
+     * Hulls fly through them; a round cannot - yours ricochet off a facet,
+     * theirs shatter on it. So every crystal is a mirror for your guns and a
+     * wall for their fire, and choosing which is the level. crystals.js owns
+     * the crystals and the ricochet; the bounce star is paid at the kill
+     * door in game.js, the cover star where the bolt breaks.
+     */
+    id:38, sky:47, name:"The Glow Cave", subtitle:"shots bounce, bolts break",
+    brief:"Under the moon of doors the whole world is HOLLOW, {you}, and it glows. The crystals down here are made of light - fly straight through them. But a shot can't: yours BOUNCE off the facets, theirs BREAK on them. Hide under a crystal and their fire shatters. Bank a round off one and it finds a ship you could never hit straight.",
+    goal:"Bounce yours — hide from theirs!",
+    crystals:true,
+    face:"turret",                        // the ones that sit and shoot: the ones you bank a round into
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(8,   "turret",   4, "sides"),            // early, so the first bank is found early
+      w(14,  "weaver",   7, "arc"),
+      w(21,  "striker",  5, "vee"),
+      w(28,  "swooper",  6, "pincer"),
+      w(34,  "grunt",   10, "wall"),
+      w(40,  "sniper",   3, "sides"),            // the lines they draw break on the crystal
+      w(46,  "kamikaze", 6, "scatter"),
+      w(52,  "turret",   5, "sides"),
+      w(58,  "brute",    4, "pincer"),
+      w(64,  "weaver",   8, "twinColumns"),
+      w(70,  "interceptor", 4, "sides"),
+      w(76,  "striker",  7, "arc", { elite: 2 }),
+      w(82,  "splitter", 5, "scatter"),
+      w(88,  "turret",   6, "sides", { elite: 2 }),
+      w(94,  "swooper",  7, "vee"),
+      w(100, "mender",   2, "column"),
+      w(104, "sniper",   4, "sides", { elite: 1 }),
+      w(110, "brute",    5, "twinColumns", { elite: 1 }),
+      w(116, "kamikaze", 8, "pincer"),
+      w(122, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","bounce","cover"],
+  },
+  {
+    id:39, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -1878,7 +1987,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:38, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:40, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -1910,7 +2019,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:39, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:41, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -1952,7 +2061,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:40, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:42, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -1997,7 +2106,7 @@ const MISSIONS = [
      * level teaches is lure-and-dodge and its own star pays for it.
      * volcano.js owns the theatrics; the costs live in game.js by the flare.
      */
-    id:41, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    id:43, sky:43, name:"The Forge World", subtitle:"The ground fights back",
     brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
     goal:"The ground erupts — USE it!",
     volcano:true,
@@ -2029,7 +2138,7 @@ const MISSIONS = [
     objectives: ["complete","melt","rescueAll"],
   },
   {
-    id:42, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:44, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -2061,7 +2170,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:43, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:45, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -2100,7 +2209,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:44, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:46, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -2128,7 +2237,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:45, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:47, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,

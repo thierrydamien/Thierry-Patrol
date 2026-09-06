@@ -30,6 +30,8 @@
     "src/volcano.js",
     "src/mirage.js",
     "src/frost.js",
+    "src/doors.js",
+    "src/crystals.js",
     "src/mirrorduel.js",
     "src/homecoming.js",
     "src/prologue.js",

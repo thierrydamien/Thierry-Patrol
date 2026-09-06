@@ -4,52 +4,54 @@
  * order src/manifest.json declares. A line number in a stack trace maps
  * back through this index - each number is the file's FIRST line.
  *
- *       55  src/core.js
- *      225  src/i18n.js
- *      454  src/icons.js
- *     1058  src/haptics.js
- *     1237  src/audio.js
- *     1942  src/data/config.js
- *     2470  src/data/enemies.js
- *     3357  src/data/missions.js
- *     5603  src/wacky.js
- *     5819  src/data/comms.js
- *     6297  src/data/story.js
- *     6504  src/data/fr.js
- *     7997  src/profile.js
- *     8754  src/cloud.js
- *     9359  src/fx.js
- *    10472  src/input.js
- *    10966  src/entities.js
- *    12505  src/bossart.js
- *    13371  src/bosses.js
- *    14121  src/bossintro.js
- *    14244  src/rewind.js
- *    14783  src/finale.js
- *    15105  src/papadeath.js
- *    15427  src/backstage.js
- *    16378  src/sky29.js
- *    16624  src/dive.js
- *    16874  src/volcano.js
- *    17111  src/mirage.js
- *    17516  src/frost.js
- *    17854  src/mirrorduel.js
- *    18201  src/homecoming.js
- *    18401  src/prologue.js
- *    18880  src/systems.js
- *    19609  src/render.js
- *    24387  src/enemyart.js
- *    25339  src/insignia.js
- *    25584  src/skygen.js
- *    30614  src/shipart.js
- *    31814  src/paintjob.js
- *    31976  src/pilotart.js
- *    32071  src/comms.js
- *    32210  src/netcode.js
- *    32749  src/game.js
- *    36953  src/workshop.js
- *    37650  src/data/i18nbind.js
- *    37721  src/ui.js
+ *       57  src/core.js
+ *      227  src/i18n.js
+ *      456  src/icons.js
+ *     1060  src/haptics.js
+ *     1239  src/audio.js
+ *     1951  src/data/config.js
+ *     2479  src/data/enemies.js
+ *     3366  src/data/missions.js
+ *     5721  src/wacky.js
+ *     5937  src/data/comms.js
+ *     6441  src/data/story.js
+ *     6666  src/data/fr.js
+ *     8222  src/profile.js
+ *     8994  src/cloud.js
+ *     9599  src/fx.js
+ *    10712  src/input.js
+ *    11206  src/entities.js
+ *    12751  src/bossart.js
+ *    13617  src/bosses.js
+ *    14367  src/bossintro.js
+ *    14490  src/rewind.js
+ *    15029  src/finale.js
+ *    15351  src/papadeath.js
+ *    15673  src/backstage.js
+ *    16624  src/sky29.js
+ *    16870  src/dive.js
+ *    17120  src/volcano.js
+ *    17357  src/mirage.js
+ *    17762  src/frost.js
+ *    18100  src/doors.js
+ *    18403  src/crystals.js
+ *    18662  src/mirrorduel.js
+ *    19009  src/homecoming.js
+ *    19209  src/prologue.js
+ *    19688  src/systems.js
+ *    20417  src/render.js
+ *    25195  src/enemyart.js
+ *    26147  src/insignia.js
+ *    26392  src/skygen.js
+ *    32371  src/shipart.js
+ *    33571  src/paintjob.js
+ *    33733  src/pilotart.js
+ *    33828  src/comms.js
+ *    33967  src/netcode.js
+ *    34506  src/game.js
+ *    38745  src/workshop.js
+ *    39442  src/data/i18nbind.js
+ *    39513  src/ui.js
  */
 ;/* ===== src/core.js ===== */
 /*
@@ -1411,6 +1413,13 @@ const SOUNDS = {
   // hiss - and letting go: a glassy burst with no bass in it at all.
   freeze:     { minGap: 120, fn: () => { [1320, 990, 740].forEach((f,i) => tone(f, 0.12, "sine", 0.035, f*0.7, i*0.05)); noise(0.18, 0.05, 5200, 1800); }},
   shatter:    { minGap: 50, fn: () => { noise(0.14, 0.12, 6000, 2200); [1760, 2200].forEach((f,i) => tone(f, 0.06, "triangle", 0.03, null, i*0.02)); }},
+  // The Moon of Doors: a thing going through - a swept hiss and a note that
+  // climbs and never lands.
+  portal:     { minGap: 70, fn: () => { noise(0.16, 0.06, 600, 4200); tone(420, 0.18, "sine", 0.03, 1250); }},
+  // The Glow Cave: a round off a facet rings the crystal (bigger ones lower),
+  // and a bolt breaking on one is a pinch of glass.
+  chime:      { minGap: 40, fn: (r) => { const f = 2200 - Math.min(60, r || 30)*18; tone(f, 0.16, "sine", 0.035, f*0.98); tone(f*1.5, 0.08, "triangle", 0.012); }},
+  prism:      { minGap: 40, fn: () => { noise(0.05, 0.05, 7000, 3000); tone(3200, 0.03, "sine", 0.012); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},
@@ -3473,6 +3482,28 @@ const OBJECTIVES = {
   stayWarm:  { label:"Never get frozen", icon:"🧣",
                test: s => (s.frozenTimes || 0) === 0,
                progress: s => (s.frozenTimes || 0) === 0 ? "warm" : "iced" },
+  /*
+   * The Moon of Doors' pair. Both are things the level already makes happen
+   * by itself - rounds go through doors, ships come out of them - and the
+   * stars ask for the version a child CHOSE: aiming into a low door on
+   * purpose, and turning to meet the ship that just arrived.
+   */
+  doorShots: { label:"Destroy 15 through a door", icon:"🚪",
+               test: s => (s.doorShots || 0) >= 15,
+               progress: s => (s.doorShots || 0) + "/15" },
+  doorAmbush:{ label:"Catch 8 at the door", icon:"🌀",
+               test: s => (s.doorAmbush || 0) >= 8,
+               progress: s => (s.doorAmbush || 0) + "/8" },
+  /*
+   * The Glow Cave's pair: a kill by a round that had already come off a
+   * facet, and their bolts breaking on a crystal you were under.
+   */
+  bounce:    { label:"Destroy 10 off the bounce", icon:"💎",
+               test: s => (s.bounceKills || 0) >= 10,
+               progress: s => (s.bounceKills || 0) + "/10" },
+  cover:     { label:"Shelter from 15 bolts", icon:"🔮",
+               test: s => (s.covered || 0) >= 15,
+               progress: s => (s.covered || 0) + "/15" },
   ropes:     { label:"Cut 6 ropes", icon:"✂️",
                test: s => (s.ropesCut || 0) >= 6,
                progress: s => (s.ropesCut || 0) + "/6" },
@@ -5191,7 +5222,94 @@ const MISSIONS = [
     objectives: ["complete","shatter","stayWarm"],
   },
   {
-    id:37, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
+    /*
+     * THE MOON OF DOORS - a dead moon paved with roads that lead to gates,
+     * built by whoever lived here before the thieves found it. The seventh
+     * surface (The Threshold), and the first level whose mechanic is a TOY
+     * rather than a hazard: two pairs of doors stand open at a time, and
+     * anything that flies into one leaves its twin the way it was going -
+     * their ships, their bolts, and your rounds. Not you: the doors answer
+     * to their metal now. doors.js owns the gates; the two stars are paid at
+     * the kill door in game.js - a ship destroyed by a round that went
+     * through, and a ship caught within a beat of stepping through.
+     */
+    id:37, sky:46, name:"The Moon of Doors", subtitle:"every door has a twin",
+    brief:"Somebody built DOORS on this moon, {you} - and the thieves have the keys. Two pairs stand open at a time: what flies into one comes out of its twin. Their ships, their bolts... and YOUR shots. Fire into a low door and your rounds arrive on top of the fleet. And watch the door beside you - what dives in up there comes out down HERE.",
+    goal:"Shoot INTO the doors!",
+    doors:true,
+    face:"interceptor",                   // the one that arrives where you didn't expect
+    waves: [
+      w(1,   "grunt",    8, "column"),           // straight down, straight through
+      w(8,   "weaver",   7, "twinColumns"),
+      w(15,  "swooper",  6, "pincer"),
+      w(22,  "striker",  5, "vee"),
+      w(29,  "grunt",   10, "tripleColumns"),
+      w(35,  "kamikaze", 6, "scatter"),
+      w(41,  "interceptor", 4, "sides"),
+      w(47,  "turret",   4, "sides"),
+      w(53,  "weaver",   8, "arc"),
+      w(59,  "brute",    4, "pincer"),
+      w(65,  "grunt",   11, "column"),
+      w(71,  "swooper",  7, "vee", { elite: 2 }),
+      w(77,  "splitter", 5, "scatter"),
+      w(83,  "sniper",   3, "sides"),
+      w(89,  "kamikaze", 7, "twinColumns"),
+      w(95,  "striker",  7, "arc", { elite: 2 }),
+      w(101, "mender",   2, "column"),
+      w(105, "interceptor", 5, "pincer", { elite: 1 }),
+      w(111, "brute",    5, "tripleColumns", { elite: 1 }),
+      w(117, "weaver",  10, "wall"),
+      w(123, "grunt",   13, "tripleColumns"),
+      w(129, "swooper",  9, "wall", { elite: 2 }),
+    ],
+    // No carriers: a mission with pilots to free must star their rescue, and
+    // both slots belong to the doors.
+    objectives: ["complete","doorShots","doorAmbush"],
+  },
+  {
+    /*
+     * THE GLOW CAVE - under the moon of doors the world is hollow, and it
+     * glows. The eighth surface (The Geode), and the second toy: clusters of
+     * crystal light stand at ship height and drift down with the floor.
+     * Hulls fly through them; a round cannot - yours ricochet off a facet,
+     * theirs shatter on it. So every crystal is a mirror for your guns and a
+     * wall for their fire, and choosing which is the level. crystals.js owns
+     * the crystals and the ricochet; the bounce star is paid at the kill
+     * door in game.js, the cover star where the bolt breaks.
+     */
+    id:38, sky:47, name:"The Glow Cave", subtitle:"shots bounce, bolts break",
+    brief:"Under the moon of doors the whole world is HOLLOW, {you}, and it glows. The crystals down here are made of light - fly straight through them. But a shot can't: yours BOUNCE off the facets, theirs BREAK on them. Hide under a crystal and their fire shatters. Bank a round off one and it finds a ship you could never hit straight.",
+    goal:"Bounce yours — hide from theirs!",
+    crystals:true,
+    face:"turret",                        // the ones that sit and shoot: the ones you bank a round into
+    waves: [
+      w(1,   "grunt",    8, "line"),
+      w(8,   "turret",   4, "sides"),            // early, so the first bank is found early
+      w(14,  "weaver",   7, "arc"),
+      w(21,  "striker",  5, "vee"),
+      w(28,  "swooper",  6, "pincer"),
+      w(34,  "grunt",   10, "wall"),
+      w(40,  "sniper",   3, "sides"),            // the lines they draw break on the crystal
+      w(46,  "kamikaze", 6, "scatter"),
+      w(52,  "turret",   5, "sides"),
+      w(58,  "brute",    4, "pincer"),
+      w(64,  "weaver",   8, "twinColumns"),
+      w(70,  "interceptor", 4, "sides"),
+      w(76,  "striker",  7, "arc", { elite: 2 }),
+      w(82,  "splitter", 5, "scatter"),
+      w(88,  "turret",   6, "sides", { elite: 2 }),
+      w(94,  "swooper",  7, "vee"),
+      w(100, "mender",   2, "column"),
+      w(104, "sniper",   4, "sides", { elite: 1 }),
+      w(110, "brute",    5, "twinColumns", { elite: 1 }),
+      w(116, "kamikaze", 8, "pincer"),
+      w(122, "weaver",  10, "tripleColumns", { elite: 2 }),
+      w(128, "grunt",   13, "wall"),
+    ],
+    objectives: ["complete","bounce","cover"],
+  },
+  {
+    id:39, sky:32, name:"The Undertow", subtitle:"Gravity gone wrong",
     brief:"The Devourer's fall tore a hole in the sky, {you}. On the other side gravity runs in whirlpools - YOUR shots curve, THEIR shots curve, even the coins swim. Bend your aim around the wells!",
     goal:"Whirlpools bend your shots!",
     face:"shard",              // glass rain caught in the whirlpools
@@ -5234,7 +5352,7 @@ const MISSIONS = [
      * the ox must be the only big pale mass in the sky, or the lesson ("the
      * big thing is a tool, not an obstacle") gets muddled.
      */
-    id:38, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
+    id:40, sky:33, name:"The Stampede", subtitle:"you can't shoot them — push them",
     brief:"Something lives out here, and it is bigger than anything either side flies. Nothing you have will get through that hide — but your rounds still SHOVE. Line one up, push it across the sky, and let it walk through their formation.",
     goal:"STEER the herd into their ships",
     stampede:true,
@@ -5266,7 +5384,7 @@ const MISSIONS = [
     objectives: ["complete","roundUp","rescueAll"],
   },
   {
-    id:39, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
+    id:41, sky:34, name:"The Chorus", subtitle:"They fire on the beat",
     brief:"Listen, {you} - out here the whole fleet fires together, ON THE BEAT. Watch the sky pulse, learn the song, and weave between the verses. Silence a conductor and their whole choir forgets the words.",
     goal:"They fire ON THE BEAT — weave!",
     face:"bomber",             // the beat is a drumline of falling bombs
@@ -5308,7 +5426,7 @@ const MISSIONS = [
      * as mirrored pairs that line up with your two guns, so "the one I can't
      * reach" always has a partner the reflection can.
      */
-    id:40, sky:35, name:"The Glass Sea", subtitle:"two of you",
+    id:42, sky:35, name:"The Glass Sea", subtitle:"two of you",
     brief:"Nobody can explain this stretch. The sky is a mirror, and so are you — there is a second ship out there flying your flight backwards, and it fires whenever you fire. It cannot be hurt and it cannot be hit. Put yourself where it can do some good — and don't trust the far end of the sea. The glass has been known to stop pretending.",
     goal:"USE your reflection — it shoots too",
     mirror:true,
@@ -5353,7 +5471,7 @@ const MISSIONS = [
      * level teaches is lure-and-dodge and its own star pays for it.
      * volcano.js owns the theatrics; the costs live in game.js by the flare.
      */
-    id:41, sky:43, name:"The Forge World", subtitle:"The ground fights back",
+    id:43, sky:43, name:"The Forge World", subtitle:"The ground fights back",
     brief:"The Foundry doesn't make its own fire, {you} - it DRILLS it out of this world, and the world has HAD it. When the ground roars, get out from over the glow. And remember their ships are only metal: what burns you MELTS them. Let the planet fight beside you.",
     goal:"The ground erupts — USE it!",
     volcano:true,
@@ -5385,7 +5503,7 @@ const MISSIONS = [
     objectives: ["complete","melt","rescueAll"],
   },
   {
-    id:42, sky:36, name:"The Foundry", subtitle:"Stop the production line",
+    id:44, sky:36, name:"The Foundry", subtitle:"Stop the production line",
     brief:"They are BUILDING reinforcements right in front of you, {you}. Parts ride the belts toward the assembler - every part you shoot is a ship that never gets born. Starve the machine!",
     goal:"Shoot the parts on the belts!",
     face:"shielder",           // the machine guards its belts
@@ -5417,7 +5535,7 @@ const MISSIONS = [
     objectives: ["complete","denyParts","rescueAll"],
   },
   {
-    id:43, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
+    id:45, sky:37, name:"The Serpent's Garden", subtitle:"It eats your coins",
     brief:"Something old lives in this garden, {you}, and it is HUNGRY. The Tithe Serpent eats your coins and grows a new ring for every mouthful. Hit the glowing ring - slay it and get every penny back.",
     goal:"It EATS coins — hit the glow ring!",
     face:"serpent",            // the garden's owner, and the level's
@@ -5456,7 +5574,7 @@ const MISSIONS = [
      * parked between the squadron and Earth. When it falls, homecoming.js
      * flies the Launch Day sequence backwards, all the way down to the farm.
      */
-    id:44, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
+    id:46, sky:38, name:"The Long Way Home", subtitle:"the last fight, then the farm",
     brief:"This is the last of them, {you}: every ship the family ever beat, welded into one wall and parked between you and home. Un-weld it. The moment it falls, the squadron turns for Earth - all the way down to the farm.",
     goal:"Beat the Titan — then go home.",
     face:"rival",
@@ -5484,7 +5602,7 @@ const MISSIONS = [
      * ROYAL BRUSH (backstage.js) - before sky29.js sweeps the last stroke
      * and lines the squadron up for a photo.
      */
-    id:45, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
+    id:47, sky:39, name:"Behind the Sky", subtitle:"Where the game is made",
     brief:"The war is over - but the crack goes all the way through, {you}: BEHIND the sky, where skies get painted and ships get drawn. One canvas is still on the easel, with your names pencilled in the corner. Fly up, teach the workshop's brush whose sky this is, and paint Papa's last one together.",
     goal:"Paint Papa's last sky!",
     gift:true, sky29:true, backstage:true, coinRain:true,
@@ -6244,6 +6362,32 @@ const COMMS = {
     "SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!",
     "That's it, {you} — the cold froze it, YOU broke it.",
   ]},
+  doorsStart: { speaker:"control", cooldown:999, lines:[
+    "Two pairs of doors, {you}. Same colour, same door. Shoot INTO the low one - your rounds come out of the high one.",
+    "The doors don't take you, {you}, only them and the shots. Watch the one beside you: something's coming out of it.",
+    "Fire into a door, {you} - see where it lands. Then use it.",
+  ]},
+  doorAmbush: { speaker:"control", cooldown:25, lines:[
+    "Door beside you, {you} — something just came THROUGH!",
+    "They took a door, {you} — turn around!",
+  ]},
+  doorShot: { speaker:"control", cooldown:45, lines:[
+    "THROUGH the door, {you}! That's how you hit them before they arrive.",
+    "Your shot went in low and came out on top of them, {you}. Keep feeding the door!",
+  ]},
+  crystalsStart: { speaker:"control", cooldown:999, lines:[
+    "The crystals are light, {you} - fly through them. Your SHOTS can't: they bounce. Theirs break.",
+    "Get under a crystal when they open up, {you}. Their fire shatters on it.",
+    "Bank a round off a crystal, {you} - it goes where they aren't looking.",
+  ]},
+  crystalBounce: { speaker:"control", cooldown:45, lines:[
+    "OFF THE BOUNCE, {you}! A shot that comes off a crystal finds ships you can't see straight.",
+    "That one came off the facet, {you}. Nobody dodges a round from the side.",
+  ]},
+  crystalCover: { speaker:"control", cooldown:60, lines:[
+    "Their fire's breaking on the crystal, {you} — stay under it!",
+    "Good cover, {you}. Let the crystal take it.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",
@@ -6469,6 +6613,24 @@ const STORY = {
       { art:"shatter",    text:"When a lane glows blue, get OUT of it. The front freezes everything it touches - their ships too, hanging in the air with their guns iced. A frozen ship shatters in ONE shot. Dodge the cold, then go and collect." },
     ],
     button:"INTO THE COLD",
+  },
+
+  /* The pre-flight pages for The Moon of Doors and The Glow Cave. */
+  moonOfDoors: {
+    title: "THE DOORS THAT LEAD TO EACH OTHER",
+    panels: [
+      { art:"gatemoon", text:"Whoever lived on this moon built doors, {you} - rings of stone at the end of every road - and every door has a twin. Step into one and you step out of the other. The thieves found the keys first." },
+      { art:"twodoors", text:"The doors don't answer to you. But they answer to your SHOTS: fire into a low door and your rounds come out of the high one, on top of the fleet. And when their ships dive into a door up there... they come out down here, right beside you." },
+    ],
+    button:"THROUGH THE DOORS",
+  },
+  glowCave: {
+    title: "THE HOLLOW WORLD",
+    panels: [
+      { art:"geode",    text:"Under the moon of doors the world is hollow, {you}, and it glows. Crystals grow in the dark down here - made of light, tall as ships - and the thieves have been cutting them out by the cartload." },
+      { art:"ricochet", text:"The crystals are light: fly straight through them. A shot can't. Yours BOUNCE off the facets - bank one round and it finds a ship you could never hit straight. Theirs BREAK: duck under a crystal and their fire shatters on it." },
+    ],
+    button:"INTO THE GLOW",
   },
 
   /* The Armory's guns started waking up with the campaign. Fires once, on
@@ -7242,6 +7404,69 @@ SF.i18n.register("fr", { name: "Français", s: {
 "SHATTERED!": "BRISÉ !",
 "warm": "au chaud",
 "iced": "gelé",
+
+/* ----- The Moon of Doors (mission 37) ----- */
+"The Moon of Doors": "La Lune aux Portes",
+"every door has a twin": "chaque porte a sa jumelle",
+"Somebody built DOORS on this moon, {you} - and the thieves have the keys. Two pairs stand open at a time: what flies into one comes out of its twin. Their ships, their bolts... and YOUR shots. Fire into a low door and your rounds arrive on top of the fleet. And watch the door beside you - what dives in up there comes out down HERE.":
+  "Quelqu'un a construit des PORTES sur cette lune, {you} — et les voleurs ont les clés. Deux paires sont ouvertes à la fois : ce qui entre dans l'une ressort par sa jumelle. Leurs vaisseaux, leurs tirs… et TES tirs. Tire dans une porte basse et tes tirs arrivent au-dessus de la flotte. Et surveille la porte à côté de toi — ce qui plonge là-haut ressort ICI, en bas.",
+"Shoot INTO the doors!": "Tire DANS les portes !",
+"The Threshold": "Le Seuil",
+"THE DOORS THAT LEAD TO EACH OTHER": "LES PORTES QUI MÈNENT L'UNE À L'AUTRE",
+"Whoever lived on this moon built doors, {you} - rings of stone at the end of every road - and every door has a twin. Step into one and you step out of the other. The thieves found the keys first.":
+  "Ceux qui vivaient sur cette lune ont construit des portes, {you} — des anneaux de pierre au bout de chaque route — et chaque porte a sa jumelle. Entre dans l'une, tu ressors par l'autre. Les voleurs ont trouvé les clés les premiers.",
+"The doors don't answer to you. But they answer to your SHOTS: fire into a low door and your rounds come out of the high one, on top of the fleet. And when their ships dive into a door up there... they come out down here, right beside you.":
+  "Les portes ne t'obéissent pas. Mais elles obéissent à tes TIRS : tire dans une porte basse et tes tirs ressortent par la haute, au-dessus de la flotte. Et quand leurs vaisseaux plongent dans une porte là-haut… ils ressortent ici, en bas, juste à côté de toi.",
+"THROUGH THE DOORS": "À TRAVERS LES PORTES",
+"Destroy 15 through a door": "Détruis-en 15 à travers une porte",
+"Catch 8 at the door": "Attrape-en 8 à la porte",
+"Two pairs of doors, {you}. Same colour, same door. Shoot INTO the low one - your rounds come out of the high one.":
+  "Deux paires de portes, {you}. Même couleur, même porte. Tire DANS la basse — tes tirs ressortent par la haute.",
+"The doors don't take you, {you}, only them and the shots. Watch the one beside you: something's coming out of it.":
+  "Les portes ne te prennent pas, {you}, seulement eux et les tirs. Surveille celle à côté de toi : quelque chose va en sortir.",
+"Fire into a door, {you} - see where it lands. Then use it.":
+  "Tire dans une porte, {you} — regarde où ça atterrit. Puis sers-t'en.",
+"Door beside you, {you} — something just came THROUGH!":
+  "Porte à côté de toi, {you} — quelque chose vient de PASSER !",
+"They took a door, {you} — turn around!":
+  "Ils ont pris une porte, {you} — retourne-toi !",
+"THROUGH the door, {you}! That's how you hit them before they arrive.":
+  "À TRAVERS la porte, {you} ! C'est comme ça qu'on les touche avant qu'ils arrivent.",
+"Your shot went in low and came out on top of them, {you}. Keep feeding the door!":
+  "Ton tir est entré en bas et ressorti au-dessus d'eux, {you}. Continue de nourrir la porte !",
+"THROUGH THE DOOR!": "À TRAVERS LA PORTE !",
+"CAUGHT AT THE DOOR!": "ATTRAPÉ À LA PORTE !",
+
+/* ----- The Glow Cave (mission 38) ----- */
+"The Glow Cave": "La Grotte Lumineuse",
+"shots bounce, bolts break": "les tirs rebondissent, les leurs se brisent",
+"Under the moon of doors the whole world is HOLLOW, {you}, and it glows. The crystals down here are made of light - fly straight through them. But a shot can't: yours BOUNCE off the facets, theirs BREAK on them. Hide under a crystal and their fire shatters. Bank a round off one and it finds a ship you could never hit straight.":
+  "Sous la lune aux portes, le monde entier est CREUX, {you}, et il brille. Les cristaux d'ici sont faits de lumière — traverse-les tout droit. Mais un tir ne peut pas : les tiens REBONDISSENT sur les facettes, les leurs se BRISENT dessus. Cache-toi sous un cristal et leurs tirs éclatent. Fais ricocher un tir dessus et il trouve un vaisseau que tu n'aurais jamais pu toucher tout droit.",
+"Bounce yours — hide from theirs!": "Fais rebondir les tiens — cache-toi des leurs !",
+"The Geode": "La Géode",
+"THE HOLLOW WORLD": "LE MONDE CREUX",
+"Under the moon of doors the world is hollow, {you}, and it glows. Crystals grow in the dark down here - made of light, tall as ships - and the thieves have been cutting them out by the cartload.":
+  "Sous la lune aux portes, le monde est creux, {you}, et il brille. Des cristaux poussent dans le noir ici — faits de lumière, hauts comme des vaisseaux — et les voleurs les découpent par charrettes entières.",
+"The crystals are light: fly straight through them. A shot can't. Yours BOUNCE off the facets - bank one round and it finds a ship you could never hit straight. Theirs BREAK: duck under a crystal and their fire shatters on it.":
+  "Les cristaux sont de la lumière : traverse-les tout droit. Un tir ne peut pas. Les tiens REBONDISSENT sur les facettes — fais ricocher un tir et il trouve un vaisseau que tu n'aurais jamais pu toucher tout droit. Les leurs se BRISENT : glisse-toi sous un cristal et leurs tirs éclatent dessus.",
+"INTO THE GLOW": "DANS LA LUMIÈRE",
+"Destroy 10 off the bounce": "Détruis-en 10 par ricochet",
+"Shelter from 15 bolts": "Abrite-toi de 15 tirs",
+"The crystals are light, {you} - fly through them. Your SHOTS can't: they bounce. Theirs break.":
+  "Les cristaux sont de la lumière, {you} — traverse-les. Tes TIRS ne peuvent pas : ils rebondissent. Les leurs se brisent.",
+"Get under a crystal when they open up, {you}. Their fire shatters on it.":
+  "Glisse-toi sous un cristal quand ils ouvrent le feu, {you}. Leurs tirs éclatent dessus.",
+"Bank a round off a crystal, {you} - it goes where they aren't looking.":
+  "Fais ricocher un tir sur un cristal, {you} — il va là où ils ne regardent pas.",
+"OFF THE BOUNCE, {you}! A shot that comes off a crystal finds ships you can't see straight.":
+  "PAR RICOCHET, {you} ! Un tir qui rebondit sur un cristal trouve des vaisseaux que tu ne vois pas tout droit.",
+"That one came off the facet, {you}. Nobody dodges a round from the side.":
+  "Celui-là est parti de la facette, {you}. Personne n'esquive un tir qui vient de côté.",
+"Their fire's breaking on the crystal, {you} — stay under it!":
+  "Leurs tirs se brisent sur le cristal, {you} — reste dessous !",
+"Good cover, {you}. Let the crystal take it.":
+  "Bonne couverture, {you}. Laisse le cristal encaisser.",
+"OFF THE BOUNCE!": "PAR RICOCHET !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
@@ -8404,6 +8629,21 @@ function migrate(p){
     if(typeof p.lastMission === "number" && p.lastMission >= 36) p.lastMission += 1;
     if((p.reached || 0) >= 36) p.reached += 1;
     p.missionsVer = 13;
+  }
+  /*
+   * v14: The Moon of Doors and The Glow Cave landed together as missions 37
+   * and 38, pushing the old 37-45 up TWO. One migration for the pair, same
+   * shape as v10-v13 with a wider step; every hand-written mission id
+   * (tunes 23/28/32, devourerDown 32, the gun gates up to 28) sits below
+   * the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 14){
+    for(let id = 45; id >= 37; id--){
+      if(p.missions[id]){ p.missions[id + 2] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 37) p.lastMission += 2;
+    if((p.reached || 0) >= 37) p.reached += 2;
+    p.missionsVer = 14;
   }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
@@ -11775,6 +12015,7 @@ class World {
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
@@ -11793,6 +12034,7 @@ class World {
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -11907,6 +12149,7 @@ class World {
     }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
+    b.doorCool = 0;                                  // the Moon of Doors
     // The water slows their fire exactly as much as it slows yours.
     if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
     // BUBBLE SHOTS: their fire drifts in at just over a third speed and wobbles
@@ -12103,6 +12346,9 @@ class World {
     e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
     // Whiteout's ice: how long it holds, and the way it was going when caught.
     e.frozen = 0; e.frozenVx = 0; e.frozenVy = 0;
+    // The Moon of Doors: no door twice in a breath, and how long "just
+    // stepped through" lasts for the ambush star.
+    e.doorCool = 0; e.throughDoor = 0;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship
@@ -17847,6 +18093,568 @@ SF.frost = { _state: () => S,
              reset, begin, active, liveFronts, inFront, freezeEnemy, freezePlayer,
              update, drawSky, drawIce, drawOver,
              FREEZE_SECS, PLAYER_FREEZE_SECS };
+})();
+
+
+;/* ===== src/doors.js ===== */
+/*
+ * THE MOON OF DOORS - every door has a twin.
+ *
+ * The Threshold (skygen.js) is a dead moon paved with roads that lead to
+ * gates, built by whoever lived here before the thieves found it. This
+ * module is the gates. Two pairs stand open in the sky at a time, teal and
+ * rose, and anything that flies into one comes out of its twin with its
+ * speed and heading intact: THEIR ships, THEIR bolts, and YOUR rounds. Not
+ * you - the doors are keyed to their metal now, and the squadron flies over
+ * a disc like it is painted on the floor. Every twenty seconds or so the
+ * runes go dark and the pairs stand up again somewhere else.
+ *
+ * The lesson has two halves and the two stars pay for them. A round fired
+ * INTO a low door comes out of its high twin on top of the fleet before the
+ * fleet has arrived - "doorShots" counts the ships destroyed by a round that
+ * went through. And a ship that dives into a high door arrives from a low
+ * one, sometimes right beside you - "doorAmbush" counts the ships destroyed
+ * within a beat of stepping through, before they can turn.
+ *
+ * Same shape as the other world modules: a mission flag (`doors`) and the
+ * hooks game.js already calls - begin/update, a draw pass under the world
+ * (the stones and the discs, so ships fly over them) and one over it (the
+ * motes and the flash of a passing). The teleports are this file's own
+ * physics; the stars are paid at the kill door in game.js.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+
+const PAIRS = [
+  { hue:"#48e5c2", deep:"#0f6b5c", rgb:"72,229,194" },      // teal
+  { hue:"#ff5dbb", deep:"#7a1d55", rgb:"255,93,187" },      // rose
+];
+const GATE_R = 38;              // the disc a thing has to touch
+const OPEN_SECS = 1.2;          // runes lighting up
+const LIFE_SECS = 19;           // how long a pair stands
+const CLOSE_SECS = 0.9;
+const COOL = 0.7;               // no door twice in the same breath
+const AMBUSH_SECS = 2.6;        // how long "just stepped through" lasts
+
+let S = null;
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, gates: [], life: 0, phase: "open", k: 0, motes: [], flashes: [],
+        passes: 0, arrangements: 0 };
+  arrange(W, H);
+  for(let i = 0; i < 60; i++) S.motes.push(newMote(W, H));
+}
+
+function newMote(W, H){
+  return { g: Math.floor(Math.random()*4), a: Math.random()*TAU, d: 60 + Math.random()*70,
+           sp: 0.6 + Math.random()*0.8, s: 1 + Math.random()*1.4 };
+}
+
+/**
+ * Stand the two pairs up. One door of each pair in the high band, where the
+ * waves come in, and its twin low or wide, where you are - so a diving ship
+ * that takes a high door arrives among you, and a round you fire into a low
+ * door arrives among them. Nothing on top of anything else.
+ */
+function arrange(W, H){
+  const top = (SF.entityConst && SF.entityConst.PLAY_TOP) || 60;
+  const placed = [];
+  const far = (x, y, min) => placed.every(g => (g.x - x)*(g.x - x) + (g.y - y)*(g.y - y) > min*min);
+  const pick = (yLo, yHi, tries) => {
+    for(let i = 0; i < tries; i++){
+      const x = 80 + Math.random()*(W - 160), y = yLo + Math.random()*(yHi - yLo);
+      if(far(x, y, 170)) return { x, y };
+    }
+    return { x: 80 + Math.random()*(W - 160), y: (yLo + yHi)/2 };
+  };
+  S.gates.length = 0;
+  for(let p = 0; p < PAIRS.length; p++){
+    const a = pick(top + 70, top + 210, 30);
+    placed.push(a);
+    const b = pick(H*0.48, H*0.80, 30);
+    placed.push(b);
+    const ga = { x: a.x, y: a.y, r: GATE_R, pair: p, twin: null, ph: Math.random()*TAU };
+    const gb = { x: b.x, y: b.y, r: GATE_R, pair: p, twin: null, ph: Math.random()*TAU };
+    ga.twin = gb; gb.twin = ga;
+    S.gates.push(ga, gb);
+  }
+  S.life = LIFE_SECS; S.phase = "open"; S.k = 0;
+  S.arrangements++;
+}
+
+function active(){ return !!S; }
+/** Are the doors answering right now? Only a fully lit pair takes anything. */
+function open(){ return !!S && S.phase === "open" && S.k >= 0.85; }
+
+/** The door `x,y` is standing in, if any. */
+function gateAt(x, y, r){
+  if(!open()) return null;
+  for(const g of S.gates){
+    const dx = x - g.x, dy = y - g.y, rr = g.r + (r || 0)*0.5;
+    if(dx*dx + dy*dy < rr*rr) return g;
+  }
+  return null;
+}
+
+/** Send a thing through: it leaves the twin the way it was going. */
+function pass(o, g){
+  const t = g.twin;
+  const sp = Math.hypot(o.vx || 0, o.vy || 0);
+  const ux = sp > 1 ? o.vx/sp : 0, uy = sp > 1 ? o.vy/sp : 1;
+  o.x = t.x + ux*(t.r + 8); o.y = t.y + uy*(t.r + 8);
+  o.doorCool = COOL;
+  S.passes++;
+  const pr = PAIRS[g.pair];
+  S.flashes.push({ x: g.x, y: g.y, t: 0, rgb: pr.rgb }, { x: t.x, y: t.y, t: 0, rgb: pr.rgb });
+  SF.audio.play("portal", null, t.x);
+}
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+
+  // The stand: light up, stand, go dark, stand up again elsewhere.
+  if(S.phase === "open"){
+    S.k = Math.min(1, S.k + dt/OPEN_SECS);
+    S.life -= dt;
+    if(S.life <= 0){ S.phase = "close"; }
+  } else {
+    S.k = Math.max(0, S.k - dt/CLOSE_SECS);
+    if(S.k <= 0){ arrange(W, H); SF.audio.play("telegraph"); }
+  }
+
+  const fighting = run.phase !== "intro" && run.phase !== "lap" && run.phase !== "outro";
+  if(fighting && open()){
+    // Their ships.
+    const items = world.enemies.items;
+    for(let i = 0; i < items.length; i++){
+      const e = items[i];
+      if(e.throughDoor > 0) e.throughDoor -= dt;
+      if(e.doorCool > 0){ e.doorCool -= dt; continue; }
+      if(!e.alive || e.entering || e.attached || e.hazard) continue;
+      const g = gateAt(e.x, e.y, e.r);
+      if(g){
+        pass(e, g);
+        e.throughDoor = AMBUSH_SECS;
+        // A hover-type keeps its station height on the far side; a diver
+        // just keeps diving. Both are what the fiction promised.
+        SF.comms.say("doorAmbush");
+      }
+    }
+    // Their bolts, and yours.
+    const eb = world.enemyBullets.items;
+    for(let i = 0; i < eb.length; i++){
+      const b = eb[i];
+      if(!b.alive) continue;
+      if(b.doorCool > 0){ b.doorCool -= dt; continue; }
+      const g = gateAt(b.x, b.y, b.r);
+      if(g) pass(b, g);
+    }
+    const pb = world.bullets.items;
+    for(let i = 0; i < pb.length; i++){
+      const b = pb[i];
+      if(!b.alive) continue;
+      if(b.doorCool > 0){ b.doorCool -= dt; continue; }
+      const g = gateAt(b.x, b.y, b.r);
+      if(g){ pass(b, g); b.doored = true; }
+    }
+  } else {
+    // Cooldowns still run down while a pair is dark, so nothing is stuck.
+    const items = world.enemies.items;
+    for(let i = 0; i < items.length; i++){
+      const e = items[i];
+      if(e.throughDoor > 0) e.throughDoor -= dt;
+      if(e.doorCool > 0) e.doorCool -= dt;
+    }
+  }
+
+  for(const m of S.motes){ m.a += dt*m.sp*(1.2 + 0.6*S.k); m.d -= dt*(18 + 30*S.k); if(m.d < 6){ m.d = 60 + Math.random()*70; m.a = Math.random()*TAU; } }
+  for(let i = S.flashes.length - 1; i >= 0; i--){ const f = S.flashes[i]; f.t += dt; if(f.t > 0.45) S.flashes.splice(i, 1); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world: the stones, the discs, the thread           */
+/* ------------------------------------------------------------------ */
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+  const k = S.k;
+  const ease = k*k*(3 - 2*k);
+
+  // The thread between twins: faint, so a child can SEE which door leads
+  // where without being told - a lesson drawn rather than said.
+  for(let p = 0; p < PAIRS.length; p++){
+    const a = S.gates[p*2], b = S.gates[p*2 + 1];
+    const pr = PAIRS[p];
+    ctx.save();
+    ctx.strokeStyle = "rgba(" + pr.rgb + "," + (0.14*ease).toFixed(3) + ")";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 10]);
+    ctx.lineDashOffset = -S.t*30;
+    const mx = (a.x + b.x)/2 + (b.y - a.y)*0.18, my = (a.y + b.y)/2 - (b.x - a.x)*0.18;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mx, my, b.x, b.y); ctx.stroke();
+    ctx.restore();
+  }
+
+  for(const g of S.gates){
+    const pr = PAIRS[g.pair];
+    const R = g.r;
+    // The shadow the ring throws on the dust: the planet-light comes from the
+    // upper right, so everything on this moon leans its shade down-left.
+    ctx.fillStyle = "rgba(20,16,36,0.35)";
+    ctx.beginPath(); ctx.ellipse(g.x - 9, g.y + 11, R*1.15, R*0.55, 0, 0, TAU); ctx.fill();
+
+    // The ring of stones, warm on the lit side.
+    for(let i = 0; i < 12; i++){
+      const a = (i/12)*TAU + g.ph;
+      const sx = g.x + Math.cos(a)*R*1.08, sy = g.y + Math.sin(a)*R*1.08;
+      const lit = Math.cos(a + Math.PI*0.75);            // faces up-right
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(a);
+      ctx.fillStyle = lit > 0 ? "#5c5678" : "#3a3550";
+      ctx.fillRect(-5, -7, 10, 14);
+      ctx.fillStyle = lit > 0 ? "rgba(240,197,138,0.55)" : "rgba(240,197,138,0.12)";
+      ctx.fillRect(-5, -7, 10, 3);
+      ctx.restore();
+    }
+
+    // The disc: the pair's light, breathing, gathered toward the middle.
+    if(ease > 0.02){
+      const pulse = 0.85 + Math.sin(S.t*3 + g.ph)*0.15;
+      const disc = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, R*0.95*ease);
+      disc.addColorStop(0, "rgba(255,255,255," + (0.85*ease*pulse).toFixed(3) + ")");
+      disc.addColorStop(0.25, "rgba(" + pr.rgb + "," + (0.75*ease).toFixed(3) + ")");
+      disc.addColorStop(0.75, "rgba(" + pr.rgb + "," + (0.35*ease).toFixed(3) + ")");
+      disc.addColorStop(1, "rgba(" + pr.rgb + ",0)");
+      ctx.fillStyle = disc;
+      ctx.beginPath(); ctx.arc(g.x, g.y, R*0.95*ease, 0, TAU); ctx.fill();
+      // two arms of light turning in it
+      ctx.save();
+      ctx.translate(g.x, g.y); ctx.rotate(S.t*1.6 + g.ph);
+      ctx.strokeStyle = "rgba(255,255,255," + (0.5*ease).toFixed(3) + ")";
+      ctx.lineWidth = 2; ctx.lineCap = "round";
+      for(let arm = 0; arm < 2; arm++){
+        ctx.beginPath();
+        for(let i = 0; i <= 12; i++){
+          const t = i/12, ang = arm*Math.PI + t*2.4, rr = R*0.15 + t*R*0.7*ease;
+          const x = Math.cos(ang)*rr, y = Math.sin(ang)*rr;
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+      // the runes on the rim, lit in order as the door opens
+      ctx.strokeStyle = "rgba(" + pr.rgb + "," + (0.9*ease).toFixed(3) + ")";
+      ctx.lineWidth = 2.2; ctx.lineCap = "round";
+      const lit = Math.floor(24*ease);
+      for(let i = 0; i < lit; i++){
+        const a0 = (i/24)*TAU - S.t*0.4, a1 = a0 + TAU/24*0.45;
+        ctx.beginPath(); ctx.arc(g.x, g.y, R*1.22, a0, a1); ctx.stroke();
+      }
+    } else {
+      // Dark: the stones and a dead grey eye.
+      ctx.fillStyle = "rgba(40,36,58,0.6)";
+      ctx.beginPath(); ctx.arc(g.x, g.y, R*0.6, 0, TAU); ctx.fill();
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world: the motes falling in, the flash of a pass    */
+/* ------------------------------------------------------------------ */
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+  const ease = S.k*S.k*(3 - 2*S.k);
+  if(ease > 0.05){
+    for(const m of S.motes){
+      const g = S.gates[m.g]; if(!g) continue;
+      const pr = PAIRS[g.pair];
+      const x = g.x + Math.cos(m.a)*m.d, y = g.y + Math.sin(m.a)*m.d*0.8;
+      const a = (0.25 + 0.55*(1 - m.d/130))*ease;
+      ctx.fillStyle = "rgba(" + pr.rgb + "," + a.toFixed(3) + ")";
+      ctx.fillRect(x, y, m.s, m.s);
+    }
+  }
+  for(const f of S.flashes){
+    const k = f.t/0.45;
+    ctx.strokeStyle = "rgba(" + f.rgb + "," + (0.9*(1 - k)).toFixed(3) + ")";
+    ctx.lineWidth = 3 - 2*k;
+    ctx.beginPath(); ctx.arc(f.x, f.y, GATE_R*(0.6 + 1.1*k), 0, TAU); ctx.stroke();
+    const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, GATE_R*(0.8 + 0.6*k));
+    g.addColorStop(0, "rgba(255,255,255," + (0.5*(1 - k)).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + f.rgb + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(f.x, f.y, GATE_R*(0.8 + 0.6*k), 0, TAU); ctx.fill();
+  }
+}
+
+SF.doors = { _state: () => S, reset, begin, active, open, gateAt, pass, arrange,
+             update, drawSky, drawOver, GATE_R, AMBUSH_SECS, PAIRS };
+})();
+
+
+;/* ===== src/crystals.js ===== */
+/*
+ * THE GLOW CAVE - shots bounce, bolts break.
+ *
+ * The Geode (skygen.js) is the inside of a world: a cavern lit by nothing
+ * but what grows in it. This module is the crystals themselves - clusters
+ * of light standing at ship height, drifting down the field with the floor
+ * they grow from. Hulls fly through them (they are light, not stone), but a
+ * ROUND cannot: yours ricochet off a facet and carry on, theirs shatter on
+ * it like glass. So a crystal is two things at once - a mirror for your
+ * guns and a wall for theirs - and choosing which is the whole level. Duck
+ * under one and their fire breaks on it; angle a round into one and it
+ * comes off the facet into a ship you could never have hit straight.
+ *
+ * Two stars for the two halves. "bounce" counts the ships destroyed by a
+ * round that had already come off a crystal; "cover" counts their bolts
+ * that broke on a crystal you were sheltering under.
+ *
+ * Same shape as the other world modules: a mission flag (`crystals`) plus
+ * the hooks game.js already calls - begin/update, a draw pass under the
+ * world (the pool of light each cluster throws on the floor) and one over
+ * it (the shards, drawn glassy so a ship behind one is seen through it).
+ * The ricochet is this file's own physics; the bounce star is paid at the
+ * kill door in game.js and the cover star is counted here, where the bolt
+ * dies.
+ */
+(function(){
+"use strict";
+const SF = window.SF;
+const TAU = Math.PI*2;
+
+const HUES = [
+  { name:"rose",  rgb:"255,96,196",  core:"#ffd6f1", edge:"#7a1d6b" },
+  { name:"cyan",  rgb:"86,232,255",  core:"#e0fbff", edge:"#0e5f7a" },
+  { name:"gold",  rgb:"255,214,102", core:"#fff4cf", edge:"#8a5a10" },
+  { name:"violet",rgb:"168,120,255", core:"#eadfff", edge:"#3c1f7a" },
+];
+const COUNT = 6;                // clusters standing at once
+const DRIFT = 7.5;              // the floor's own scroll rate (render.js)
+const MAX_BOUNCES = 4;          // a round that will not stop is a round that leaves
+const COVER_REACH = 120;        // how close under a crystal counts as sheltering
+
+let S = null;
+
+function reset(){ S = null; }
+
+function begin(){
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S = { t: 0, clusters: [], sparks: [], bounces: 0, broken: 0, hueNext: 0, lastChime: -1 };
+  for(let i = 0; i < COUNT; i++) grow(W, H, i/COUNT*H - 40, true);
+}
+
+function active(){ return !!S; }
+
+/** Stand a new cluster up at `y` (or just above the top), clear of the others. */
+function grow(W, H, y, anywhere){
+  let x = 70 + Math.random()*(W - 140);
+  for(let tries = 0; tries < 24; tries++){
+    x = 70 + Math.random()*(W - 140);
+    const yy = y == null ? -90 : y;
+    if(S.clusters.every(c => (c.x - x)*(c.x - x) + (c.y - yy)*(c.y - yy) > 150*150)) break;
+  }
+  const hue = HUES[S.hueNext++ % HUES.length];
+  const n = 3 + Math.floor(Math.random()*3);
+  const shards = [];
+  const base = Math.random()*TAU;
+  for(let i = 0; i < n; i++){
+    shards.push({ a: base + (i/n)*TAU + (Math.random() - 0.5)*0.5,
+                  len: 26 + Math.random()*26, w: 9 + Math.random()*7,
+                  lean: (Math.random() - 0.5)*0.35 });
+  }
+  const r = 30 + n*3.5;
+  S.clusters.push({ x, y: y == null ? -90 : y, r, hue, shards, glow: 0, ph: Math.random()*TAU,
+                    spin: (Math.random() - 0.5)*0.05 });
+}
+
+/** Where does a line from `p` cross cluster `c`'s circle? A unit normal at
+ *  `p`, and the point on the rim `p` should be pushed out to. */
+function normalAt(c, x, y){
+  let dx = x - c.x, dy = y - c.y;
+  let d = Math.hypot(dx, dy);
+  if(d < 0.001){ dx = 0; dy = -1; d = 1; }
+  return { nx: dx/d, ny: dy/d, d };
+}
+
+function update(dt, run, world){
+  if(!S || run.ended) return;
+  const W = SF.game.VW || 600, H = SF.game.VH || 800;
+  S.t += dt;
+
+  // The floor carries them; a cluster that leaves the bottom is replaced at the top.
+  for(let i = S.clusters.length - 1; i >= 0; i--){
+    const c = S.clusters[i];
+    c.y += DRIFT*dt;
+    if(c.glow > 0) c.glow = Math.max(0, c.glow - dt*2.2);
+    if(c.y > H + 80){ S.clusters.splice(i, 1); grow(W, H, null); }
+  }
+
+  const seats = world.livePlayers();
+
+  /*
+   * YOUR ROUNDS RICOCHET. The reflection is the plain one - velocity mirrored
+   * about the facet's normal - and the round is set back on the rim so it can
+   * never be caught inside and reflected twice in a frame. Homing rounds
+   * simply start steering again from their new heading.
+   */
+  const pb = world.bullets.items;
+  for(let i = 0; i < pb.length; i++){
+    const b = pb[i];
+    if(!b.alive) continue;
+    for(let k = 0; k < S.clusters.length; k++){
+      const c = S.clusters[k];
+      const rr = c.r + b.r;
+      const dx = b.x - c.x, dy = b.y - c.y;
+      if(dx*dx + dy*dy >= rr*rr) continue;
+      const { nx, ny } = normalAt(c, b.x, b.y);
+      const dot = b.vx*nx + b.vy*ny;
+      if(dot >= 0){ b.x = c.x + nx*(rr + 1); b.y = c.y + ny*(rr + 1); continue; }   // already leaving
+      b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
+      b.x = c.x + nx*(rr + 1); b.y = c.y + ny*(rr + 1);
+      b.bounced = (b.bounced || 0) + 1;
+      S.bounces++;
+      c.glow = 1;
+      SF.fx.sparks(b.x, b.y, 4, c.hue.core, 120);
+      SF.fx.ring(b.x, b.y, 10, c.hue.core, 1.5, 0.16);
+      // A spread of five rounds can strike a facet in the same frame: one
+      // chime per breath, or the cave rings like a dropped tray.
+      if(S.t - S.lastChime > 0.07){ S.lastChime = S.t; SF.audio.play("chime", c.r, c.x); }
+      if(b.bounced > MAX_BOUNCES) b.alive = false;
+      break;
+    }
+  }
+
+  /*
+   * THEIR BOLTS BREAK. A bolt that reaches a crystal dies on it in a spray
+   * of its own colour - and if you were sheltering under that crystal, it
+   * was aimed at you, and the cover star knows.
+   */
+  const eb = world.enemyBullets.items;
+  for(let i = 0; i < eb.length; i++){
+    const b = eb[i];
+    if(!b.alive) continue;
+    for(let k = 0; k < S.clusters.length; k++){
+      const c = S.clusters[k];
+      const rr = c.r + b.r;
+      const dx = b.x - c.x, dy = b.y - c.y;
+      if(dx*dx + dy*dy >= rr*rr) continue;
+      b.alive = false;
+      S.broken++;
+      c.glow = Math.max(c.glow, 0.6);
+      SF.fx.sparks(b.x, b.y, 5, "#ffffff", 90);
+      SF.audio.play("prism", null, c.x);
+      let sheltered = false;
+      for(let s = 0; s < seats.length && !sheltered; s++){
+        const p = seats[s];
+        if(!p.alive) continue;
+        const px = p.x - c.x, py = p.y - c.y;
+        if(py > 0 && px*px + py*py < COVER_REACH*COVER_REACH) sheltered = true;
+      }
+      if(sheltered && run.stats){
+        run.stats.covered = (run.stats.covered || 0) + 1;
+        if(run.stats.covered % 5 === 0) SF.comms.say("crystalCover");
+      }
+      break;
+    }
+  }
+
+  for(let i = S.sparks.length - 1; i >= 0; i--){ const s = S.sparks[i]; s.t += dt; if(s.t > 0.4) S.sparks.splice(i, 1); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - under the world: the light each cluster throws on the floor  */
+/* ------------------------------------------------------------------ */
+
+function drawSky(ctx, timeMs, VW, VH){
+  if(!S) return;
+  for(const c of S.clusters){
+    const pulse = 0.7 + Math.sin(S.t*1.3 + c.ph)*0.3;
+    const R = c.r*2.6;
+    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, R);
+    g.addColorStop(0, "rgba(" + c.hue.rgb + "," + (0.30*pulse + 0.35*c.glow).toFixed(3) + ")");
+    g.addColorStop(0.5, "rgba(" + c.hue.rgb + "," + (0.12*pulse).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + c.hue.rgb + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(c.x, c.y, R, 0, TAU); ctx.fill();
+    // the dark base it grows from
+    ctx.fillStyle = "rgba(14,8,26,0.7)";
+    ctx.beginPath(); ctx.ellipse(c.x, c.y + 6, c.r*0.7, c.r*0.32, 0, 0, TAU); ctx.fill();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  DRAW - over the world: the shards, glassy, and the ships through them */
+/* ------------------------------------------------------------------ */
+
+function shard(ctx, c, s, t){
+  const a = s.a + c.spin*t;
+  const tipX = c.x + Math.cos(a)*s.len, tipY = c.y + Math.sin(a)*s.len;
+  const bx = c.x + Math.cos(a)*6, by = c.y + Math.sin(a)*6;
+  const px = -Math.sin(a)*s.w*0.5, py = Math.cos(a)*s.w*0.5;
+  const mx = c.x + Math.cos(a)*s.len*0.55, my = c.y + Math.sin(a)*s.len*0.55;
+  // the body: a long facet lit from its core
+  const g = ctx.createLinearGradient(bx - px, by - py, bx + px, by + py);
+  g.addColorStop(0, c.hue.edge);
+  g.addColorStop(0.42, c.hue.core);
+  g.addColorStop(0.6, "rgb(" + c.hue.rgb + ")");
+  g.addColorStop(1, c.hue.edge);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(bx - px, by - py);
+  ctx.lineTo(mx - px*1.15, my - py*1.15);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(mx + px*1.15, my + py*1.15);
+  ctx.lineTo(bx + px, by + py);
+  ctx.closePath();
+  ctx.fill();
+  // the spine of light down the middle, and the rim
+  ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx + px*0.3, by + py*0.3); ctx.lineTo(tipX - Math.cos(a)*3, tipY - Math.sin(a)*3); ctx.stroke();
+  ctx.strokeStyle = "rgba(" + c.hue.rgb + ",0.9)"; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(bx - px, by - py); ctx.lineTo(mx - px*1.15, my - py*1.15); ctx.lineTo(tipX, tipY);
+  ctx.lineTo(mx + px*1.15, my + py*1.15); ctx.lineTo(bx + px, by + py);
+  ctx.stroke();
+}
+
+function drawOver(ctx, timeMs){
+  if(!S) return;
+  for(const c of S.clusters){
+    const pulse = 0.75 + Math.sin(S.t*2.1 + c.ph)*0.25;
+    // the halo, brighter when a round has just struck it
+    const halo = ctx.createRadialGradient(c.x, c.y, c.r*0.3, c.x, c.y, c.r*1.5);
+    halo.addColorStop(0, "rgba(" + c.hue.rgb + "," + (0.22*pulse + 0.5*c.glow).toFixed(3) + ")");
+    halo.addColorStop(1, "rgba(" + c.hue.rgb + ",0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r*1.5, 0, TAU); ctx.fill();
+    // the shards, glassy: a ship behind one is seen through it
+    ctx.save();
+    ctx.globalAlpha = 0.78;
+    for(const s of c.shards) shard(ctx, c, s, S.t);
+    ctx.restore();
+    // the heart
+    const heart = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 9);
+    heart.addColorStop(0, "rgba(255,255,255," + (0.9*pulse).toFixed(3) + ")");
+    heart.addColorStop(1, "rgba(" + c.hue.rgb + ",0)");
+    ctx.fillStyle = heart;
+    ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, TAU); ctx.fill();
+    if(c.glow > 0.05){
+      ctx.strokeStyle = "rgba(255,255,255," + (0.8*c.glow).toFixed(3) + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r*(1.05 + (1 - c.glow)*0.4), 0, TAU); ctx.stroke();
+    }
+  }
+}
+
+SF.crystals = { _state: () => S, reset, begin, active, update, drawSky, drawOver, grow, HUES };
 })();
 
 
@@ -26295,6 +27103,51 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"icefield",    x:0.50, y:0.50},
             {k:"frozenfleet", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE THRESHOLD (The Moon of Doors) - an airless moon, and the first
+   * surface in the campaign that somebody BUILT on. The seventh surface,
+   * appended at the end, same Drawing Board index rule.
+   *
+   * Airless means the light is honest: one sun low over the top-right
+   * corner and no haze to soften it, so every stone throws a hard black
+   * shadow down-left and every crater keeps a bright lip on the sun side
+   * and a black wall on the other. That one rule - hard light, one
+   * direction - is what makes the moon read as a moon and not as the
+   * desert with its colour taken out. Two paved AVENUES cross the dust
+   * (full height, wrap-exact, the trench rule) with rune veins still alive
+   * in the joints; standing stones, fallen door-rings and dead sockets lie
+   * between them. The once-layer is the Great Arch: two monoliths and a
+   * cracked lintel over the dormant master door, their shadows raking the
+   * plaza, one of their ships crashed at its edge - the level's rule,
+   * written on the ground before the first pair of doors ever lights.
+   */
+  { name:"The Threshold", surface:true,
+    clouds:["#8a84a3","#5f5a78","#33304a"], dust:"#dcd7ee", star:"#ffffff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"moonfloor", x:0.50, y:0.50},
+            {k:"greatarch", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE GEODE (The Glow Cave) - under the moon, the whole world is hollow
+   * and it glows. The eighth surface, appended at the end, same rule.
+   *
+   * The moon's opposite: no sun at all, so nothing throws a shadow - the
+   * light comes UP, out of the things on the floor. A luminous stream
+   * crosses the tile (full height, wrap-exact) and lights its own banks,
+   * veins of violet mineral run through the rock, fungi glow in the
+   * hollows, and where the ceiling has cracked a shaft of daylight lands
+   * as a pale pool. The crystal clusters the level plays with are drawn
+   * live by crystals.js over this floor, so the rock stays deep enough for
+   * them to shine. The once-layer is the Great Geode: a ring of giant
+   * shards around a glowing pool under one shaft of daylight, with their
+   * rig on the shore and one shard already sawn off and loaded.
+   */
+  { name:"The Geode", surface:true,
+    clouds:["#2e2546","#1f1830","#130d22"], dust:"#b48cff", star:"#8ff0ff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"cavefloor",  x:0.50, y:0.50},
+            {k:"greatgeode", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -29738,6 +30591,906 @@ function drawFrozenfleet(ctx, W, H, p, rand){
   }
 }
 
+/* ---------------------------------------------------------
+   THE THRESHOLD - the moon of doors
+   ---------------------------------------------------------
+ * An airless moon, and the first surface in the campaign somebody BUILT
+ * on. Airless means the light is honest: one sun, low over the top-right
+ * corner, no haze to soften it - so every stone throws a hard black shadow
+ * down-left, every crater keeps a bright lip on the sun side and a black
+ * wall on the other, and the dust between them is flat and grey-violet.
+ * That single rule (hard light, one direction) is what makes the moon read
+ * as a moon instead of as the desert with its colour taken out.
+ *
+ * The builders' work runs through it: two paved avenues cross the tile
+ * (full height, wrap-exact - the trench rule) with rune veins still glowing
+ * teal and rose in the joints, standing stones line them, fallen door-rings
+ * lie half buried, and the sockets where doors once stood are dark rings in
+ * the dust. The once-layer is the Great Arch, the plaza the avenues lead to.
+ */
+const MOON = {
+  dust:"#8a84a3", lit:"#b3adc9", dark:"#5f5a78", shade:"#33304a", black:"#161425",
+  rim:"#dcd7ee", warm:"#f0c58a",
+  stone:"#4a4560", stoneLit:"#6e6889", stoneEdge:"#a39dc4",
+  teal:"#48e5c2", rose:"#ff5dbb", wreck:"#1e1524", warn:"#ff5d73", lamp:"#ffe9a0",
+};
+/* The sun sits over the top-right corner; every shadow on the moon falls
+ * this way. One vector, shared, so nothing on the floor disagrees. */
+const MOON_SX = -0.62, MOON_SY = 0.78;
+const MOON_SA = Math.atan2(MOON_SY, MOON_SX);
+
+/** A crater: an ejecta apron, a rim lit on the sun side, a bowl whose far
+ *  wall is black, and the rim's own shadow thrown down-left. */
+function moonCrater(ctx, x, y, r){
+  const ej = ctx.createRadialGradient(x, y, r*0.95, x, y, r*2.1);
+  ej.addColorStop(0, rgba(MOON.lit, 0.4)); ej.addColorStop(1, rgba(MOON.lit, 0));
+  ctx.fillStyle = ej; ctx.beginPath(); ctx.arc(x, y, r*2.1, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(MOON.shade, 0.6);
+  ctx.beginPath(); ctx.ellipse(x + MOON_SX*r*0.3, y + MOON_SY*r*0.3, r*1.12, r*1.04, 0, 0, TAU); ctx.fill();
+  const rg = ctx.createLinearGradient(x + r*0.75, y - r*0.75, x - r*0.75, y + r*0.75);
+  rg.addColorStop(0, MOON.rim); rg.addColorStop(0.55, MOON.dust); rg.addColorStop(1, MOON.dark);
+  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r*1.06, 0, TAU); ctx.fill();
+  const bg = ctx.createLinearGradient(x + r*0.8, y - r*0.8, x - r*0.8, y + r*0.8);
+  bg.addColorStop(0, MOON.black); bg.addColorStop(0.5, MOON.shade); bg.addColorStop(1, MOON.dust);
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, r*0.86, 0, TAU); ctx.fill();
+  if(r > 14){
+    ctx.fillStyle = rgba(MOON.dark, 0.75);
+    ctx.beginPath(); ctx.ellipse(x - r*0.12, y + r*0.14, r*0.5, r*0.4, 0, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = rgba(MOON.warm, 0.8); ctx.lineWidth = Math.max(1, r*0.07);
+  ctx.beginPath(); ctx.arc(x, y, r*0.99, -Math.PI*0.72, Math.PI*0.2); ctx.stroke();
+}
+
+/** A standing stone seen from above: a footprint with the sun on its
+ *  top-right edges and `tall` pixels of hard shadow down-left. */
+function moonStone(ctx, x, y, w, tall, rot, rand){
+  const h = w*(1.3 + rand()*0.6);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(MOON_SA);
+  ctx.fillStyle = rgba(MOON.black, 0.72);
+  ctx.beginPath(); ctx.moveTo(0, -h*0.5); ctx.lineTo(tall, -h*0.3); ctx.lineTo(tall, h*0.3); ctx.lineTo(0, h*0.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = MOON.stoneLit;
+  ctx.beginPath(); ctx.moveTo(-w*0.5, -h*0.5); ctx.lineTo(w*0.45, -h*0.55); ctx.lineTo(w*0.5, h*0.5); ctx.lineTo(-w*0.45, h*0.45); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-w*0.5, -h*0.5); ctx.lineTo(w*0.45, -h*0.55); ctx.lineTo(w*0.5, h*0.5); ctx.stroke();
+  ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w*0.5, h*0.5); ctx.lineTo(-w*0.45, h*0.45); ctx.lineTo(-w*0.5, -h*0.5); ctx.stroke();
+  ctx.restore();
+}
+
+/** A plinth: a square block, sun on two edges, a short hard shadow. */
+function moonPlinth(ctx, x, y, s){
+  ctx.fillStyle = rgba(MOON.black, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(x - s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5 + MOON_SX*s*1.1, y + s*0.5 + MOON_SY*s*1.1);
+  ctx.lineTo(x + s*0.5 + MOON_SX*s*1.1, y + s*0.5 + MOON_SY*s*1.1); ctx.lineTo(x + s*0.5, y + s*0.5);
+  ctx.lineTo(x + s*0.5, y - s*0.5); ctx.lineTo(x - s*0.5, y - s*0.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = MOON.stoneLit; ctx.fillRect(x - s*0.5, y - s*0.5, s, s);
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y + s*0.5); ctx.stroke();
+  ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y - s*0.5); ctx.stroke();
+}
+
+/** A fallen door-ring, part of one: an arc of stone with its rune ticks,
+ *  a few of them still lit, and its shadow beside it. */
+function moonRing(ctx, x, y, R, a0, a1, rune, rand){
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(MOON.black, 0.65); ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.arc(x + MOON_SX*8, y + MOON_SY*8, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.arc(x, y, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = MOON.stoneLit; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(x, y, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.stoneEdge, 0.9); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(x, y, R + 3.5, a0, a1); ctx.stroke();
+  for(let a = a0 + 0.12; a < a1 - 0.06; a += 0.24){
+    const lit = rand() < 0.4;
+    const x0 = x + Math.cos(a)*(R - 2.5), y0 = y + Math.sin(a)*(R - 2.5);
+    const x1 = x + Math.cos(a)*(R + 2.5), y1 = y + Math.sin(a)*(R + 2.5);
+    if(lit){
+      ctx.strokeStyle = rgba(rune, 0.35); ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    }
+    ctx.strokeStyle = lit ? rune : rgba(MOON.shade, 0.9); ctx.lineWidth = lit ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  }
+}
+
+/** The socket a door once stood in: a dark ring worn into the dust, the
+ *  disc inside it a shade darker, one dead rune at its rim. */
+function moonSocket(ctx, x, y, r){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(MOON.shade, 0.55)); g.addColorStop(0.8, rgba(MOON.shade, 0.35)); g.addColorStop(1, rgba(MOON.shade, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(MOON.black, 0.55); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, r*0.8, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.rim, 0.5); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, y, r*0.8 + 2, -Math.PI*0.7, Math.PI*0.15); ctx.stroke();
+}
+
+/** One of the builders' avenues: a bed with a sunlit kerb, slabs laid along
+ *  a wrap-exact curve, and a rune vein still alive in every third joint. */
+function moonAvenue(ctx, W, H, road, rw, rune, rand){
+  const n = Math.round(H/26), len = H/n;
+  const path = () => {
+    ctx.beginPath();
+    for(let i = 0; i <= 48; i++){ const t = i/48, x = road(t); i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "butt"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(MOON.black, 0.55); ctx.lineWidth = rw + 14;
+  ctx.save(); ctx.translate(MOON_SX*4, MOON_SY*4); path(); ctx.stroke(); ctx.restore();   // the kerb's shadow
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = rw + 8; path(); ctx.stroke();
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = rw + 8;
+  ctx.save(); ctx.translate(-MOON_SX*1.2, -MOON_SY*1.2); path(); ctx.stroke(); ctx.restore(); // the kerb's sun side
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = rw + 5; path(); ctx.stroke();
+  for(let i = 0; i < n; i++){
+    const t = (i + 0.5)/n, y = t*H, x = road(t);
+    const dx = (road(t + 0.002) - road(t - 0.002))/(0.004*H);
+    const a = -Math.atan(dx);
+    const broken = rand() < 0.07;
+    const tone = i % 2 ? MOON.stoneLit : mixHexHex(MOON.stoneLit, MOON.stone, 0.35);
+    const vein = i % 3 === 0, dead = rand() < 0.3;
+    tiled(ctx, H, y, yy => {
+      ctx.save(); ctx.translate(x, yy); ctx.rotate(a);
+      if(broken){
+        ctx.fillStyle = MOON.black; ctx.fillRect(-rw*0.5, -len*0.5 + 1, rw, len - 2);
+        ctx.fillStyle = rgba(MOON.dust, 0.85); ctx.fillRect(-rw*0.5, len*0.5 - 4, rw, 3);
+      } else {
+        ctx.fillStyle = tone; ctx.fillRect(-rw*0.5, -len*0.5 + 1, rw, len - 2);
+        ctx.strokeStyle = rgba(MOON.stoneEdge, 0.85); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-rw*0.5, -len*0.5 + 1.5); ctx.lineTo(rw*0.5, -len*0.5 + 1.5); ctx.lineTo(rw*0.5, len*0.5 - 1); ctx.stroke();
+        ctx.strokeStyle = rgba(MOON.shade, 0.9); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(rw*0.5, len*0.5 - 1); ctx.lineTo(-rw*0.5, len*0.5 - 1); ctx.lineTo(-rw*0.5, -len*0.5 + 1.5); ctx.stroke();
+      }
+      if(vein){
+        const yv = -len*0.5;
+        if(!dead){
+          ctx.strokeStyle = rgba(rune, 0.3); ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+          ctx.strokeStyle = rgba(rune, 0.95); ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(-rw*0.5 + 4, yv - 0.8, 3, 1.6); ctx.fillRect(rw*0.5 - 7, yv - 0.8, 3, 1.6);
+        } else {
+          ctx.strokeStyle = rgba(MOON.black, 0.8); ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+        }
+      }
+      ctx.restore();
+    });
+  }
+}
+
+function drawMoonfloor(ctx, W, H, p, rand){
+  ctx.fillStyle = MOON.dust;
+  ctx.fillRect(0, 0, W, H);
+
+  // Mare and highland: broad patches of darker and paler regolith.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.14 + rand()*0.3)*W;
+    const col = i % 3 ? MOON.dark : MOON.lit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.4 : 0.5)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // The grain of the dust: fine, half of it catching the sun.
+  for(let i = 0; i < 300; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? MOON.rim : MOON.shade, 0.22 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.2, 1.2));
+  }
+
+  // Old craters, the ones the avenues were built across.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = 4 + rand()*rand()*26;
+    tiled(ctx, H, y, yy => moonCrater(ctx, x, yy, r));
+  }
+
+  /*
+   * THE AVENUES - two of them, teal and rose, running the height of the
+   * tile on whole sine periods so position and slope agree at the seam.
+   */
+  const av0 = W*(0.22 + rand()*0.10), av1 = W*(0.66 + rand()*0.10);
+  const road0 = t => av0 + Math.sin(t*TAU)*W*0.05 + Math.sin(t*TAU*2 + 1.3)*W*0.025;
+  const road1 = t => av1 + Math.sin(t*TAU + 2.0)*W*0.06 + Math.sin(t*TAU*3)*W*0.02;
+  moonAvenue(ctx, W, H, road0, 34, MOON.teal, rand);
+  moonAvenue(ctx, W, H, road1, 28, MOON.rose, rand);
+
+  // Standing stones along both, every one throwing its shadow the same way.
+  [[road0, 34], [road1, 28]].forEach(([road, rw]) => {
+    for(let i = 0; i < 7; i++){
+      const t = rand(), side = rand() < 0.5 ? -1 : 1;
+      const x = road(t) + side*(rw*0.5 + 16 + rand()*26), y = t*H;
+      const w = 6 + rand()*6, tall = 24 + rand()*44, rot = (rand() - 0.5)*0.5;
+      tiled(ctx, H, y, yy => moonStone(ctx, x, yy, w, tall, rot, rngFor(8100 + i*7 + Math.round(t*100))));
+    }
+  });
+
+  // Fallen door-rings, part buried; the sockets they stood in; plinths.
+  for(let i = 0; i < 5; i++){
+    const x = rand()*W, y = rand()*H, R = 22 + rand()*22;
+    const a0 = rand()*TAU, a1 = a0 + 0.9 + rand()*2.4;
+    const rune = i % 2 ? MOON.rose : MOON.teal;
+    tiled(ctx, H, y, yy => moonRing(ctx, x, yy, R, a0, a1, rune, rngFor(8300 + i)));
+  }
+  for(let i = 0; i < 4; i++){
+    const x = rand()*W, y = rand()*H, r = 16 + rand()*10;
+    tiled(ctx, H, y, yy => moonSocket(ctx, x, yy, r));
+  }
+  for(let i = 0; i < 6; i++){
+    const x = rand()*W, y = rand()*H, s = 8 + rand()*8;
+    tiled(ctx, H, y, yy => moonPlinth(ctx, x, yy, s));
+  }
+
+  // Fresh craters, the ones that hit AFTER the builders left: they punch
+  // through avenue and stone alike.
+  for(let i = 0; i < 3; i++){
+    const road = i % 2 ? road1 : road0, t = rand();
+    const x = road(t) + (rand() - 0.5)*30, y = t*H, r = 16 + rand()*14;
+    tiled(ctx, H, y, yy => moonCrater(ctx, x, yy, r));
+  }
+
+  // Their rover tracks: paired dashes wandering between the avenues.
+  ctx.setLineDash([5, 6]); ctx.lineCap = "butt";
+  for(let i = 0; i < 3; i++){
+    const x0 = rand()*W, y0 = rand()*H, x1 = x0 + (rand() - 0.5)*W*0.6, y1 = y0 + 120 + rand()*140;
+    const cx = (x0 + x1)/2 + (rand() - 0.5)*120, cy = (y0 + y1)/2;
+    tiled(ctx, H, y0, yy => {
+      const d = yy - y0;
+      [-4, 4].forEach(off => {
+        ctx.strokeStyle = rgba(MOON.shade, 0.6); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x0 + off, yy); ctx.quadraticCurveTo(cx + off, cy + d, x1 + off, y1 + d); ctx.stroke();
+      });
+    });
+  }
+  ctx.setLineDash([]);
+
+  // Glints: the sun catching glass in the dust.
+  for(let i = 0; i < 26; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba("#ffffff", 0.45 + rand()*0.5);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.5, 1.5));
+  }
+}
+
+/*
+ * THE GREAT ARCH - the once-layer. The plaza the avenues lead to: rings of
+ * paving around the dormant master door, two colossal monoliths with a
+ * cracked lintel between them, and the sun raking their shadows across the
+ * whole floor. One of their ships lies crashed at the edge with its lamp
+ * still on. The level's rule - doors, and something on the other side of
+ * them - written on the ground before the first pair ever lights.
+ */
+function drawGreatarch(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.46, R = W*0.30;
+
+  // Dust trodden dark around the plaza; the paving itself.
+  const worn = ctx.createRadialGradient(cx, cy, R*0.9, cx, cy, R*1.9);
+  worn.addColorStop(0, rgba(MOON.dark, 0.45)); worn.addColorStop(1, rgba(MOON.dark, 0));
+  ctx.fillStyle = worn; ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(MOON.black, 0.5);
+  ctx.beginPath(); ctx.arc(cx + MOON_SX*3, cy + MOON_SY*3, R*1.02, 0, TAU); ctx.fill();   // the plaza's own lip
+  const RINGS = 6;
+  const ringR = k => R*(0.42 + k*0.1), ringW = R*0.1 - 2;
+  for(let k = 0; k < RINGS; k++){
+    const r0 = ringR(k), nj = 14 + k*6;
+    ctx.strokeStyle = k % 2 ? MOON.stoneLit : mixHexHex(MOON.stoneLit, MOON.stone, 0.35);
+    ctx.lineWidth = ringW;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + ringW/2, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.shade, 0.85); ctx.lineWidth = 1.2;
+    for(let j = 0; j < nj; j++){
+      const a = (j/nj)*TAU + k*0.11;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*r0, cy + Math.sin(a)*r0);
+      ctx.lineTo(cx + Math.cos(a)*(r0 + ringW), cy + Math.sin(a)*(r0 + ringW)); ctx.stroke();
+    }
+    ctx.strokeStyle = rgba(MOON.shade, 0.9); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, r0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.stoneEdge, 0.7); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + 1.2, -Math.PI*0.75, Math.PI*0.25); ctx.stroke();
+  }
+  // Missing slabs: black gaps where the paving has gone.
+  for(let i = 0; i < 9; i++){
+    const k = Math.floor(rand()*RINGS), r0 = ringR(k), nj = 14 + k*6;
+    const j = Math.floor(rand()*nj), a0 = (j/nj)*TAU + k*0.11, a1 = a0 + TAU/nj;
+    ctx.fillStyle = MOON.black;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + ringW, a0, a1); ctx.arc(cx, cy, r0, a1, a0, true); ctx.closePath(); ctx.fill();
+  }
+  // The rune circle inscribed in the paving: teal and rose, turn and turn about.
+  const rr = ringR(3) - 1;
+  for(let j = 0; j < 36; j++){
+    const a0 = (j/36)*TAU + 0.02, a1 = a0 + (TAU/36)*0.6;
+    const col = j % 2 ? MOON.teal : MOON.rose;
+    ctx.strokeStyle = rgba(col, 0.3); ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a1); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a1); ctx.stroke();
+  }
+
+  // The master door, dormant: a stone collar, a black disc, dead runes
+  // around it, and one hairline of teal that says it is not quite dead.
+  const dr = ringR(0) - 4;
+  ctx.fillStyle = rgba(MOON.black, 0.6);
+  ctx.beginPath(); ctx.arc(cx + MOON_SX*5, cy + MOON_SY*5, dr + 8, 0, TAU); ctx.fill();
+  const collar = ctx.createLinearGradient(cx + dr, cy - dr, cx - dr, cy + dr);
+  collar.addColorStop(0, MOON.stoneEdge); collar.addColorStop(0.5, MOON.stoneLit); collar.addColorStop(1, MOON.stone);
+  ctx.fillStyle = collar; ctx.beginPath(); ctx.arc(cx, cy, dr + 8, 0, TAU); ctx.fill();
+  const disc = ctx.createRadialGradient(cx - dr*0.2, cy + dr*0.2, 0, cx, cy, dr);
+  disc.addColorStop(0, "#0b0a16"); disc.addColorStop(0.7, MOON.black); disc.addColorStop(1, MOON.shade);
+  ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(cx, cy, dr, 0, TAU); ctx.fill();
+  for(let j = 0; j < 24; j++){
+    const a = (j/24)*TAU, live = j % 6 === 0;
+    ctx.strokeStyle = live ? rgba(MOON.teal, 0.8) : rgba(MOON.stoneLit, 0.5); ctx.lineWidth = live ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*(dr - 6), cy + Math.sin(a)*(dr - 6));
+    ctx.lineTo(cx + Math.cos(a)*(dr - 1), cy + Math.sin(a)*(dr - 1)); ctx.stroke();
+  }
+  ctx.strokeStyle = rgba(MOON.teal, 0.25); ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(cx - dr*0.7, cy + dr*0.15); ctx.lineTo(cx + dr*0.6, cy - dr*0.2); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.teal, 0.85); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(cx - dr*0.7, cy + dr*0.15); ctx.lineTo(cx - dr*0.2, cy + dr*0.05); ctx.lineTo(cx + dr*0.1, cy - dr*0.12); ctx.lineTo(cx + dr*0.6, cy - dr*0.2); ctx.stroke();
+
+  /*
+   * THE ARCH. Two monoliths and the lintel across them, and - this is the
+   * picture - their shadows: the lintel's a long dark band raked across the
+   * plaza, each monolith's a black blade beside it. Shadows first, so the
+   * stone lands on top of them.
+   */
+  const ml = { x: cx - R*0.6, y: cy - R*0.1 }, mr = { x: cx + R*0.6, y: cy - R*0.1 };
+  const mw = R*0.15, mh = R*0.3, tall = R*1.1;
+  const ly = cy - R*0.34, lw = R*0.11;
+  const shadowQuad = (x, y, w, h, len) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(MOON_SA);
+    const half = (Math.abs(w*Math.sin(MOON_SA)) + Math.abs(h*Math.cos(MOON_SA)))*0.5;
+    ctx.beginPath(); ctx.moveTo(0, -half); ctx.lineTo(len, -half*0.8); ctx.lineTo(len, half*0.8); ctx.lineTo(0, half); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  };
+  ctx.fillStyle = rgba(MOON.black, 0.55);
+  shadowQuad(ml.x, ml.y, mw, mh, tall);
+  shadowQuad(mr.x, mr.y, mw, mh, tall);
+  // the lintel's shadow: the whole span, shifted by the arch's height, with
+  // the gap where the middle has fallen out
+  const sx = MOON_SX*tall, sy = MOON_SY*tall;
+  const gapL = cx - R*0.14, gapR = cx + R*0.1;
+  [[ml.x - mw*0.5, gapL], [gapR, mr.x + mw*0.5]].forEach(([x0, x1]) => {
+    ctx.beginPath();
+    ctx.moveTo(x0 + sx, ly - lw*0.5 + sy); ctx.lineTo(x1 + sx, ly - lw*0.5 + sy);
+    ctx.lineTo(x1 + sx, ly + lw*0.5 + sy); ctx.lineTo(x0 + sx, ly + lw*0.5 + sy); ctx.closePath(); ctx.fill();
+  });
+  // the fallen piece, flat on the plaza, its own short shadow
+  {
+    const fx = cx - R*0.12, fy = cy + R*0.36, fl = R*0.22;
+    ctx.save(); ctx.translate(fx, fy); ctx.rotate(0.35);
+    ctx.fillStyle = rgba(MOON.black, 0.7); ctx.fillRect(-fl*0.5 + MOON_SX*5, -lw*0.5 + MOON_SY*5, fl, lw);
+    ctx.fillStyle = MOON.stoneLit; ctx.fillRect(-fl*0.5, -lw*0.5, fl, lw);
+    ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-fl*0.5, -lw*0.5); ctx.lineTo(fl*0.5, -lw*0.5); ctx.lineTo(fl*0.5, lw*0.5); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.rose, 0.8); ctx.lineWidth = 1.4;
+    for(let j = 0; j < 4; j++){ ctx.beginPath(); ctx.moveTo(-fl*0.35 + j*fl*0.22, -lw*0.3); ctx.lineTo(-fl*0.35 + j*fl*0.22, lw*0.3); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the monoliths' tops, sun on the top-right edges, a warm line where it catches
+  [ml, mr].forEach((m, i) => {
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(i ? 0.08 : -0.06);
+    const g = ctx.createLinearGradient(mw*0.5, -mh*0.5, -mw*0.5, mh*0.5);
+    g.addColorStop(0, MOON.stoneEdge); g.addColorStop(0.5, MOON.stoneLit); g.addColorStop(1, MOON.stone);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(-mw*0.5, -mh*0.5); ctx.lineTo(mw*0.5, -mh*0.52); ctx.lineTo(mw*0.5, mh*0.5); ctx.lineTo(-mw*0.5, mh*0.48); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = MOON.warm; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(-mw*0.5, -mh*0.5); ctx.lineTo(mw*0.5, -mh*0.52); ctx.lineTo(mw*0.5, mh*0.5); ctx.stroke();
+    ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(mw*0.5, mh*0.5); ctx.lineTo(-mw*0.5, mh*0.48); ctx.lineTo(-mw*0.5, -mh*0.5); ctx.stroke();
+    // the runes carved down its length
+    ctx.strokeStyle = rgba(i ? MOON.rose : MOON.teal, 0.85); ctx.lineWidth = 1.3;
+    for(let j = 0; j < 5; j++){
+      const yy = -mh*0.35 + j*mh*0.17;
+      ctx.beginPath(); ctx.moveTo(-mw*0.25, yy); ctx.lineTo(mw*0.25, yy); ctx.stroke();
+      if(j % 2) { ctx.beginPath(); ctx.moveTo(0, yy - 3); ctx.lineTo(0, yy + 3); ctx.stroke(); }
+    }
+    ctx.restore();
+  });
+  // the lintel, in its two pieces
+  [[ml.x - mw*0.5, gapL], [gapR, mr.x + mw*0.5]].forEach(([x0, x1], i) => {
+    const g = ctx.createLinearGradient(0, ly - lw*0.5, 0, ly + lw*0.5);
+    g.addColorStop(0, MOON.stoneEdge); g.addColorStop(0.4, MOON.stoneLit); g.addColorStop(1, MOON.stone);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    if(i === 0){ ctx.moveTo(x0, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.lineTo(x1 - lw*0.3, ly); ctx.lineTo(x1 + lw*0.1, ly + lw*0.5); ctx.lineTo(x0, ly + lw*0.5); }
+    else { ctx.moveTo(x0 + lw*0.2, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.lineTo(x1, ly + lw*0.5); ctx.lineTo(x0 - lw*0.2, ly + lw*0.5); ctx.lineTo(x0 + lw*0.3, ly); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = MOON.warm; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x0, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.stroke();
+    ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, ly + lw*0.5); ctx.lineTo(x1, ly + lw*0.5); ctx.stroke();
+    // the vein along it, alive on the teal side, dead past the break
+    ctx.strokeStyle = i ? rgba(MOON.black, 0.7) : rgba(MOON.teal, 0.9); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x0 + 6, ly); ctx.lineTo(x1 - 6, ly); ctx.stroke();
+  });
+
+  /*
+   * THE AVENUE OF LAMPS, running from the plaza's foot off the bottom of the
+   * frame: paired posts, teal on the left, rose on the right, each with the
+   * same hard shadow, and the paving between them.
+   */
+  {
+    const pw = R*0.5, top = cy + R*1.0;
+    const g = ctx.createLinearGradient(0, top, 0, H + 40);
+    g.addColorStop(0, rgba(MOON.stoneLit, 0.9)); g.addColorStop(1, rgba(MOON.stoneLit, 0.3));
+    ctx.fillStyle = g; ctx.fillRect(cx - pw*0.5, top, pw, H + 40 - top);
+    ctx.strokeStyle = rgba(MOON.shade, 0.8); ctx.lineWidth = 1.2;
+    for(let y = top; y < H + 40; y += 22){ ctx.beginPath(); ctx.moveTo(cx - pw*0.5, y); ctx.lineTo(cx + pw*0.5, y); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, H + 40); ctx.stroke();
+    for(let i = 0; i < 8; i++){
+      const y = top + 14 + i*R*0.27;
+      if(y > H + 30) break;
+      [-1, 1].forEach(side => {
+        const x = cx + side*(pw*0.5 + 12), col = side < 0 ? MOON.teal : MOON.rose;
+        ctx.strokeStyle = rgba(MOON.black, 0.7); ctx.lineWidth = 3; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + MOON_SX*26, y + MOON_SY*26); ctx.stroke();
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, 20);
+        halo.addColorStop(0, rgba(col, 0.55)); halo.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
+        ctx.fillStyle = MOON.stoneLit; ctx.fillRect(x - 3, y - 3, 6, 6);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x - 0.5, y - 0.5, 0.9, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  /*
+   * ONE OF THEIRS, crashed at the plaza's edge: the trench it dug coming in
+   * from the top-right, the hull at the end of it on its side, debris, and
+   * the cabin lamp still burning - somebody is still in there.
+   */
+  {
+    const x = cx + R*0.95, y = cy + R*0.55;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = rgba(MOON.black, 0.8); ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.moveTo(x + R*0.5, y - R*0.55); ctx.quadraticCurveTo(x + R*0.2, y - R*0.2, x, y); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.rim, 0.75); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + R*0.5 + 6, y - R*0.55 - 6); ctx.quadraticCurveTo(x + R*0.2 + 6, y - R*0.2 - 6, x + 6, y - 7); ctx.stroke();
+    for(let i = 0; i < 10; i++){
+      const dx = (rand() - 0.5)*70, dy = (rand() - 0.5)*50;
+      ctx.fillStyle = rgba(MOON.wreck, 0.9); ctx.fillRect(x + dx, y + dy, 2 + rand()*3, 2 + rand()*2);
+    }
+    ctx.save(); ctx.translate(x, y); ctx.rotate(2.4);
+    ctx.fillStyle = rgba(MOON.black, 0.7);
+    ctx.beginPath(); ctx.moveTo(MOON_SX*10, -22 + MOON_SY*10); ctx.lineTo(16 + MOON_SX*10, 16 + MOON_SY*10); ctx.lineTo(MOON_SX*10, 8 + MOON_SY*10); ctx.lineTo(-16 + MOON_SX*10, 16 + MOON_SY*10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = MOON.wreck;
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(16, 16); ctx.lineTo(0, 8); ctx.lineTo(-16, 16); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(MOON.stoneEdge, 0.45);
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(16, 16); ctx.lineTo(6, 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = MOON.wreck;                                         // the wing that came off
+    ctx.beginPath(); ctx.moveTo(-30, 30); ctx.lineTo(-18, 22); ctx.lineTo(-24, 40); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    const lamp = ctx.createRadialGradient(x - 2, y - 6, 0, x - 2, y - 6, 18);
+    lamp.addColorStop(0, rgba(MOON.lamp, 0.95)); lamp.addColorStop(0.3, rgba("#ff8a3c", 0.5)); lamp.addColorStop(1, rgba("#ff8a3c", 0));
+    ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(x - 2, y - 6, 18, 0, TAU); ctx.fill();
+    ctx.fillStyle = MOON.warn; ctx.beginPath(); ctx.arc(x + 9, y + 4, 1.8, 0, TAU); ctx.fill();
+  }
+}
+
+/* ---------------------------------------------------------
+   THE GEODE - the glow cave
+   ---------------------------------------------------------
+ * Under the moon, the whole world is hollow and it glows. The moon's
+ * opposite in the one way that matters: there is no sun down here, so
+ * nothing throws a shadow - the light comes UP, out of the things on the
+ * floor. A luminous stream crosses the tile (full height, wrap-exact) and
+ * lights its own banks; veins of violet mineral run through the rock;
+ * fungi glow in the hollows; and where the ceiling has cracked, a shaft of
+ * daylight falls and lands as a pale pool. The crystal clusters the level
+ * plays with are drawn live by crystals.js over this floor, so the rock
+ * stays deep enough for them to shine. The once-layer is the Great Geode.
+ */
+const CAVE = {
+  rock:"#1f1830", rockLit:"#2e2546", rockDeep:"#130d22", black:"#0a0716",
+  stream:"#4fe3ff", streamDeep:"#1c7fa0", streamLit:"#8ff0ff", streamGlow:"#2fb8e8",
+  vein:"#8f6bff", veinLit:"#d2bdff",
+  fungi:"#7ef0d0", fungiCore:"#e8fff6",
+  shaft:"#cfe6ff", mist:"#8fa3c8",
+  rail:"#3a3150", railLit:"#5f5580", warn:"#ff5d73", lamp:"#ffd166",
+  hues:[ ["#ff60c4","#ffd6f1"], ["#5ef2ff","#dffcff"], ["#ffd166","#fff3c4"], ["#b48cff","#ece0ff"] ],
+};
+
+/** A vein of the mineral: a branching hairline that glows. */
+function caveVein(ctx, x, y, a, l, rand){
+  const pts = [[x, y]];
+  let px = x, py = y, aa = a;
+  for(let i = 0; i < 5; i++){
+    aa += (rand() - 0.5)*1.0;
+    px += Math.cos(aa)*l/5; py += Math.sin(aa)*l/5;
+    pts.push([px, py]);
+  }
+  const trace = () => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(CAVE.vein, 0.22); ctx.lineWidth = 7; trace(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.vein, 0.9); ctx.lineWidth = 1.8; trace(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.veinLit, 0.9); ctx.lineWidth = 0.7; trace(); ctx.stroke();
+  // a side branch off the middle
+  const m = pts[2];
+  ctx.strokeStyle = rgba(CAVE.vein, 0.8); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[0] + Math.cos(aa + 1.4)*l*0.3, m[1] + Math.sin(aa + 1.4)*l*0.3); ctx.stroke();
+}
+
+/** A stalagmite seen from above: a bump, its tip catching the glow. */
+function caveStump(ctx, x, y, r){
+  ctx.fillStyle = rgba(CAVE.black, 0.7);
+  ctx.beginPath(); ctx.ellipse(x, y + r*0.2, r*1.35, r*1.1, 0, 0, TAU); ctx.fill();
+  const g = ctx.createRadialGradient(x - r*0.15, y - r*0.15, 0, x, y, r);
+  g.addColorStop(0, "#4a3f6a"); g.addColorStop(0.45, CAVE.rockLit); g.addColorStop(1, CAVE.rockDeep);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(CAVE.streamLit, 0.55);
+  ctx.beginPath(); ctx.arc(x - r*0.15, y - r*0.15, Math.max(1, r*0.16), 0, TAU); ctx.fill();
+}
+
+/** A clump of glowing fungi: a halo, the caps, a bright point on each. */
+function caveFungi(ctx, x, y, n, rand){
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, 16 + n*2);
+  halo.addColorStop(0, rgba(CAVE.fungi, 0.35)); halo.addColorStop(1, rgba(CAVE.fungi, 0));
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, 16 + n*2, 0, TAU); ctx.fill();
+  for(let i = 0; i < n; i++){
+    const a = rand()*TAU, d = rand()*(6 + n*1.5), r = 1.4 + rand()*2.2;
+    const fx = x + Math.cos(a)*d, fy = y + Math.sin(a)*d;
+    ctx.fillStyle = rgba(CAVE.fungi, 0.85); ctx.beginPath(); ctx.arc(fx, fy, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = CAVE.fungiCore; ctx.beginPath(); ctx.arc(fx - r*0.3, fy - r*0.3, r*0.4, 0, TAU); ctx.fill();
+  }
+}
+
+/** A small crystal in the floor, in one of the four colours: a halo, a
+ *  glassy shard, a bright edge. `s` is its size. */
+function caveShard(ctx, x, y, s, rot, hue){
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, s*2.4);
+  halo.addColorStop(0, rgba(hue[0], 0.35)); halo.addColorStop(1, rgba(hue[0], 0));
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, s*2.4, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createLinearGradient(0, -s, 0, s*0.6);
+  g.addColorStop(0, rgba(hue[1], 0.95)); g.addColorStop(1, rgba(hue[0], 0.8));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.55, s*0.3); ctx.lineTo(0, s*0.6); ctx.lineTo(-s*0.55, s*0.3); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = rgba("#ffffff", 0.85); ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.55, s*0.3); ctx.stroke();
+  ctx.restore();
+}
+
+/** Where a shaft of daylight lands: a pale pool with dust hanging in it. */
+function caveShaftPool(ctx, x, y, rx, ry, rot, rand){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, ry/rx);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+  g.addColorStop(0, rgba(CAVE.shaft, 0.34)); g.addColorStop(0.5, rgba(CAVE.shaft, 0.16)); g.addColorStop(1, rgba(CAVE.shaft, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
+  ctx.restore();
+  for(let i = 0; i < 14; i++){
+    const a = rand()*TAU, d = rand()*rx*0.8;
+    ctx.fillStyle = rgba("#ffffff", 0.3 + rand()*0.5);
+    ctx.fillRect(x + Math.cos(a)*d, y + Math.sin(a)*d*(ry/rx), 1.2, 1.2);
+  }
+}
+
+/** One of their ore carts on the rail: a dark box with the cargo glowing in it. */
+function caveCart(ctx, x, y, a, hue){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = CAVE.black; ctx.fillRect(-9, -6, 18, 12);
+  ctx.fillStyle = CAVE.rail; ctx.fillRect(-8, -5, 16, 10);
+  ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.strokeRect(-8, -5, 16, 10);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 9);
+  g.addColorStop(0, rgba(hue[1], 0.95)); g.addColorStop(0.5, rgba(hue[0], 0.7)); g.addColorStop(1, rgba(hue[0], 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawCavefloor(ctx, W, H, p, rand){
+  ctx.fillStyle = CAVE.rock;
+  ctx.fillRect(0, 0, W, H);
+
+  // The rock's own relief: paler bosses and deeper hollows, soft-edged.
+  for(let i = 0; i < 14; i++){
+    const x = rand()*W, y = rand()*H, r = (0.10 + rand()*0.26)*W;
+    const col = i % 3 ? CAVE.rockDeep : CAVE.rockLit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.7 : 0.6)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // Grit: the floor is not smooth.
+  for(let i = 0; i < 220; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? "#5a4f7a" : CAVE.black, 0.3 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.3, 1.3));
+  }
+
+  // Mist, lying in the low places.
+  for(let i = 0; i < 5; i++){
+    const x = rand()*W, y = rand()*H, r = (0.16 + rand()*0.2)*W;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(CAVE.mist, 0.09)); g.addColorStop(1, rgba(CAVE.mist, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE STREAM - full height, wrap-exact (whole sine periods of t), and the
+   * brightest thing on the floor: a glow on both banks, a dark bed, the
+   * water, a lit core, and ripples down its middle.
+   */
+  const sx0 = W*(0.30 + rand()*0.14);
+  const s1 = (rand() - 0.5)*W*0.2, s2 = (rand() - 0.5)*W*0.1;
+  const stream = t => sx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2 + 0.8)*s2;
+  const sw = 34 + rand()*12;
+  const streamPath = () => {
+    ctx.beginPath();
+    for(let i = 0; i <= 56; i++){ const t = i/56, x = stream(t); i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "butt"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(CAVE.streamGlow, 0.16); ctx.lineWidth = sw*3.6; streamPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.streamGlow, 0.22); ctx.lineWidth = sw*2.2; streamPath(); ctx.stroke();
+  ctx.strokeStyle = CAVE.black; ctx.lineWidth = sw + 12; streamPath(); ctx.stroke();
+  ctx.strokeStyle = CAVE.streamDeep; ctx.lineWidth = sw; streamPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.stream, 0.9); ctx.lineWidth = sw*0.55; streamPath(); ctx.stroke();
+  ctx.setLineDash([16, 30]);
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.85); ctx.lineWidth = sw*0.16; streamPath(); ctx.stroke();
+  ctx.setLineDash([]);
+  // the bank's wet edge, and stones in the water
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.5); ctx.lineWidth = 1.2;
+  ctx.save(); ctx.translate(-sw*0.5 - 6, 0); streamPath(); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(sw*0.5 + 6, 0); streamPath(); ctx.stroke(); ctx.restore();
+  for(let i = 0; i < 9; i++){
+    const t = rand(), x = stream(t) + (rand() - 0.5)*sw*0.7, y = t*H, r = 3 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = CAVE.rockDeep; ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.7, rand()*TAU, 0, TAU); ctx.fill();
+      ctx.strokeStyle = rgba(CAVE.streamLit, 0.7); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x, yy + 1.5, r + 2, (r + 2)*0.7, 0, 0, TAU); ctx.stroke();
+    });
+  }
+
+  // Veins of the mineral, glowing violet through the rock.
+  for(let i = 0; i < 16; i++){
+    const x = rand()*W, y = rand()*H, a = rand()*TAU, l = 40 + rand()*70;
+    tiled(ctx, H, y, yy => caveVein(ctx, x, yy, a, l, rngFor(8500 + i)));
+  }
+
+  // Stalagmites, in families.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.14, y = cy + (rand() - 0.5)*W*0.14, r = 4 + rand()*9;
+      tiled(ctx, H, y, yy => caveStump(ctx, x, yy, r));
+    }
+  }
+
+  // Where the ceiling has cracked: daylight lands in pale pools.
+  for(let i = 0; i < 3; i++){
+    const x = rand()*W, y = rand()*H, rx = 50 + rand()*50, ry = rx*(0.5 + rand()*0.3), rot = rand()*TAU;
+    tiled(ctx, H, y, yy => caveShaftPool(ctx, x, yy, rx, ry, rot, rngFor(8700 + i)));
+  }
+
+  // Fungi in the hollows, and small crystals grown into the floor.
+  for(let i = 0; i < 9; i++){
+    const x = rand()*W, y = rand()*H, n = 4 + Math.floor(rand()*6);
+    tiled(ctx, H, y, yy => caveFungi(ctx, x, yy, n, rngFor(8900 + i)));
+  }
+  for(let i = 0; i < 18; i++){
+    const x = rand()*W, y = rand()*H, s = 4 + rand()*6, rot = rand()*TAU;
+    const hue = CAVE.hues[i % CAVE.hues.length];
+    tiled(ctx, H, y, yy => caveShard(ctx, x, yy, s, rot, hue));
+  }
+
+  /*
+   * THEIR RAIL - a narrow-gauge track running the height of the tile (wrap-
+   * exact like the stream), sleepers under it, cut blocks stacked beside it,
+   * and two carts with what they cut still glowing in them.
+   */
+  const rx0 = W*(0.72 + rand()*0.12);
+  const rail = t => rx0 + Math.sin(t*TAU + 1.1)*W*0.035;
+  const railPath = off => {
+    ctx.beginPath();
+    for(let i = 0; i <= 56; i++){ const t = i/56, x = rail(t) + off; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  const nS = Math.round(H/14);
+  ctx.strokeStyle = rgba(CAVE.black, 0.8); ctx.lineWidth = 2.2;
+  for(let i = 0; i < nS; i++){
+    const t = (i + 0.5)/nS, x = rail(t), y = t*H;
+    tiled(ctx, H, y, yy => { ctx.beginPath(); ctx.moveTo(x - 8, yy); ctx.lineTo(x + 8, yy); ctx.stroke(); });
+  }
+  ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1.5;
+  railPath(-4.5); ctx.stroke(); railPath(4.5); ctx.stroke();
+  for(let i = 0; i < 5; i++){
+    const t = rand(), side = rand() < 0.5 ? -1 : 1;
+    const x = rail(t) + side*(16 + rand()*14), y = t*H, bw = 10 + rand()*8, bh = 7 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = CAVE.black; ctx.fillRect(x - bw*0.5 - 1, yy - bh*0.5 + 2, bw + 2, bh + 1);
+      ctx.fillStyle = CAVE.rockLit; ctx.fillRect(x - bw*0.5, yy - bh*0.5, bw, bh);
+      ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - bw*0.5, yy + bh*0.5); ctx.lineTo(x - bw*0.5, yy - bh*0.5); ctx.lineTo(x + bw*0.5, yy - bh*0.5); ctx.stroke();
+    });
+  }
+  for(let i = 0; i < 2; i++){
+    const t = 0.2 + rand()*0.6, y = t*H, x = rail(t);
+    const dx = (rail(t + 0.002) - rail(t - 0.002))/(0.004*H);
+    tiled(ctx, H, y, yy => caveCart(ctx, x, yy, -Math.atan(dx), CAVE.hues[(i + 1) % 4]));
+  }
+
+  // Rubble, everywhere.
+  for(let i = 0; i < 40; i++){
+    const x = rand()*W, y = rand()*H, r = 1.2 + rand()*2.4;
+    ctx.fillStyle = rgba(i % 3 ? CAVE.black : "#4a3f6a", 0.8);
+    tiled(ctx, H, y, yy => { ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill(); });
+  }
+}
+
+/*
+ * THE GREAT GEODE - the once-layer. A ring of giant crystals around a pool
+ * of the glowing water, one shaft of daylight falling through the broken
+ * ceiling onto it, and their rig on the far shore with a crystal already
+ * sawn off and loaded. The level's rule - light you fly through, that a
+ * shot cannot - as a place.
+ */
+function drawGreatgeode(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.47, R = W*0.30;
+
+  // The floor around it, lit by it.
+  const lit = ctx.createRadialGradient(cx, cy, R*0.6, cx, cy, R*1.9);
+  lit.addColorStop(0, rgba(CAVE.streamGlow, 0.26)); lit.addColorStop(0.5, rgba(CAVE.vein, 0.12)); lit.addColorStop(1, rgba(CAVE.vein, 0));
+  ctx.fillStyle = lit; ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+
+  // The pool: an irregular shore, a bright wet rim, water deepening to the middle.
+  const shore = a => R*0.62*(1 + Math.sin(a*3 + 0.4)*0.09 + Math.sin(a*5 + 1.9)*0.05);
+  const poolPath = k => {
+    ctx.beginPath();
+    for(let i = 0; i <= 44; i++){
+      const a = (i/44)*TAU, r = shore(a)*k;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+  ctx.fillStyle = rgba(CAVE.streamLit, 0.5); poolPath(1.08); ctx.fill();
+  ctx.fillStyle = CAVE.black; poolPath(1.0); ctx.fill();
+  const water = ctx.createRadialGradient(cx, cy, 0, cx, cy, R*0.66);
+  water.addColorStop(0, "#062a44"); water.addColorStop(0.55, CAVE.streamDeep); water.addColorStop(0.9, CAVE.stream); water.addColorStop(1, CAVE.streamLit);
+  ctx.fillStyle = water; poolPath(1.0); ctx.fill();
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.35); ctx.lineWidth = 1.2;
+  for(let i = 1; i <= 4; i++){ poolPath(0.2*i); ctx.stroke(); }
+
+  // The shaft: a column of daylight, tilted, landing on the pool.
+  ctx.save(); ctx.translate(cx + R*0.08, cy - R*0.05); ctx.rotate(-0.5); ctx.scale(1, 0.55);
+  const shaft = ctx.createRadialGradient(0, 0, 0, 0, 0, R*0.7);
+  shaft.addColorStop(0, rgba(CAVE.shaft, 0.55)); shaft.addColorStop(0.4, rgba(CAVE.shaft, 0.25)); shaft.addColorStop(1, rgba(CAVE.shaft, 0));
+  ctx.fillStyle = shaft; ctx.beginPath(); ctx.arc(0, 0, R*0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+  for(let i = 0; i < 26; i++){
+    const a = rand()*TAU, d = rand()*R*0.5;
+    ctx.fillStyle = rgba("#ffffff", 0.35 + rand()*0.55);
+    ctx.fillRect(cx + R*0.08 + Math.cos(a)*d, cy - R*0.05 + Math.sin(a)*d*0.6, 1.3, 1.3);
+  }
+
+  /*
+   * THE RING OF SHARDS - eleven giants growing outward from the shore, each
+   * in one of the four colours, glassy from a bright root to a darker tip,
+   * with the light they throw on the rock around them. And the gap in the
+   * ring on the far shore, where one has been cut away.
+   */
+  const N = 11, cut = 2;
+  const giants = [];
+  for(let i = 0; i < N; i++){
+    const a = (i/N)*TAU + 0.3 + (rand() - 0.5)*0.2;
+    const base = shore(a)*1.02, len = R*(0.36 + rand()*0.3), wid = R*(0.09 + rand()*0.06);
+    giants.push({ a, base, len, wid, hue: CAVE.hues[i % 4], lean: (rand() - 0.5)*0.25 });
+  }
+  giants.forEach((g, i) => {
+    if(i === cut) return;
+    const ux = Math.cos(g.a + g.lean), uy = Math.sin(g.a + g.lean);
+    const bx = cx + Math.cos(g.a)*g.base, by = cy + Math.sin(g.a)*g.base;
+    const tx = bx + ux*g.len, ty = by + uy*g.len;
+    const halo = ctx.createRadialGradient(bx + ux*g.len*0.5, by + uy*g.len*0.5, 0, bx + ux*g.len*0.5, by + uy*g.len*0.5, g.len*0.9);
+    halo.addColorStop(0, rgba(g.hue[0], 0.3)); halo.addColorStop(1, rgba(g.hue[0], 0));
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(bx + ux*g.len*0.5, by + uy*g.len*0.5, g.len*0.9, 0, TAU); ctx.fill();
+  });
+  giants.forEach((g, i) => {
+    const ux = Math.cos(g.a + g.lean), uy = Math.sin(g.a + g.lean);
+    const px = -uy, py = ux;
+    const bx = cx + Math.cos(g.a)*g.base, by = cy + Math.sin(g.a)*g.base;
+    if(i === cut){
+      // the stump: a flat sawn face, ringed, with the cut still bright
+      ctx.fillStyle = rgba(CAVE.black, 0.7);
+      ctx.beginPath(); ctx.ellipse(bx + ux*8, by + uy*8, g.wid*0.8, g.wid*0.55, g.a, 0, TAU); ctx.fill();
+      const face = ctx.createRadialGradient(bx + ux*6, by + uy*6, 0, bx + ux*6, by + uy*6, g.wid*0.7);
+      face.addColorStop(0, rgba(g.hue[1], 0.95)); face.addColorStop(1, rgba(g.hue[0], 0.8));
+      ctx.fillStyle = face; ctx.beginPath(); ctx.ellipse(bx + ux*6, by + uy*6, g.wid*0.7, g.wid*0.48, g.a, 0, TAU); ctx.fill();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(bx + ux*6, by + uy*6, g.wid*0.7, g.wid*0.48, g.a, 0, TAU); ctx.stroke();
+      return;
+    }
+    const tx = bx + ux*g.len, ty = by + uy*g.len;
+    const grad = ctx.createLinearGradient(bx, by, tx, ty);
+    grad.addColorStop(0, rgba(g.hue[1], 0.95)); grad.addColorStop(0.35, rgba(g.hue[0], 0.85)); grad.addColorStop(1, rgba(g.hue[0], 0.55));
+    // the root it grows from
+    ctx.fillStyle = rgba(CAVE.black, 0.75);
+    ctx.beginPath(); ctx.ellipse(bx, by, g.wid*0.9, g.wid*0.6, g.a, 0, TAU); ctx.fill();
+    // the shard: base corners, a shoulder, the tip
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(bx + px*g.wid*0.5, by + py*g.wid*0.5);
+    ctx.lineTo(bx + ux*g.len*0.55 + px*g.wid*0.62, by + uy*g.len*0.55 + py*g.wid*0.62);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(bx + ux*g.len*0.55 - px*g.wid*0.62, by + uy*g.len*0.55 - py*g.wid*0.62);
+    ctx.lineTo(bx - px*g.wid*0.5, by - py*g.wid*0.5);
+    ctx.closePath(); ctx.fill();
+    // the facet line down its spine, and the bright edge on one side
+    ctx.strokeStyle = rgba("#ffffff", 0.35); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.strokeStyle = rgba("#ffffff", 0.9); ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(bx + px*g.wid*0.5, by + py*g.wid*0.5);
+    ctx.lineTo(bx + ux*g.len*0.55 + px*g.wid*0.62, by + uy*g.len*0.55 + py*g.wid*0.62); ctx.lineTo(tx, ty); ctx.stroke();
+    // the heart of it, a bright seed near the root
+    const heart = ctx.createRadialGradient(bx + ux*g.len*0.22, by + uy*g.len*0.22, 0, bx + ux*g.len*0.22, by + uy*g.len*0.22, g.wid*0.6);
+    heart.addColorStop(0, rgba("#ffffff", 0.9)); heart.addColorStop(1, rgba(g.hue[1], 0));
+    ctx.fillStyle = heart; ctx.beginPath(); ctx.arc(bx + ux*g.len*0.22, by + uy*g.len*0.22, g.wid*0.6, 0, TAU); ctx.fill();
+  });
+  // small crystals between the giants, and fungi along the shore
+  for(let i = 0; i < 16; i++){
+    const a = rand()*TAU, d = shore(a)*(1.1 + rand()*0.5);
+    caveShard(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 3 + rand()*5, rand()*TAU, CAVE.hues[i % 4]);
+  }
+  for(let i = 0; i < 6; i++){
+    const a = rand()*TAU, d = shore(a)*(1.04 + rand()*0.12);
+    caveFungi(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 4 + Math.floor(rand()*4), rngFor(9100 + i));
+  }
+  for(let i = 0; i < 7; i++){
+    const a = rand()*TAU, d = shore(a)*(1.3 + rand()*0.7);
+    caveStump(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 5 + rand()*8);
+  }
+
+  /*
+   * THEIR RIG, on the shore by the stump: a dark platform, a boom out over
+   * the water with the saw hanging off it, two lamps, the red eye, a spur of
+   * rail with a cart on it, and the piece they cut lying beside it.
+   */
+  {
+    const g = giants[cut];
+    const kx = cx + Math.cos(g.a)*g.base*1.5, ky = cy + Math.sin(g.a)*g.base*1.5;
+    ctx.fillStyle = rgba(CAVE.black, 0.8); ctx.fillRect(kx - 26, ky - 14, 52, 30);
+    ctx.fillStyle = CAVE.rail; ctx.fillRect(kx - 24, ky - 12, 48, 26);
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.strokeRect(kx - 24, ky - 12, 48, 26);
+    for(let i = 0; i < 4; i++){ ctx.beginPath(); ctx.moveTo(kx - 24, ky - 12 + i*7); ctx.lineTo(kx + 24, ky - 12 + i*7); ctx.stroke(); }
+    // the boom, from the platform to a claw over the stump
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 3; ctx.lineCap = "round";
+    const bx = cx + Math.cos(g.a)*g.base + Math.cos(g.a)*6, by = cy + Math.sin(g.a)*g.base + Math.sin(g.a)*6;
+    ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.strokeStyle = CAVE.black; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.fillStyle = CAVE.rail; ctx.beginPath(); ctx.arc(bx, by, 5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, 5, 0, TAU); ctx.stroke();
+    // lamps and the eye
+    [[-14, -4], [14, -4]].forEach(([dx, dy]) => {
+      const lamp = ctx.createRadialGradient(kx + dx, ky + dy, 0, kx + dx, ky + dy, 16);
+      lamp.addColorStop(0, rgba(CAVE.lamp, 0.9)); lamp.addColorStop(1, rgba(CAVE.lamp, 0));
+      ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(kx + dx, ky + dy, 16, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(kx + dx, ky + dy, 1.6, 0, TAU); ctx.fill();
+    });
+    ctx.fillStyle = CAVE.warn; ctx.beginPath(); ctx.arc(kx + 20, ky + 10, 2, 0, TAU); ctx.fill();
+    // the spur, and the cart with the cut piece in it
+    ctx.strokeStyle = rgba(CAVE.black, 0.8); ctx.lineWidth = 2.2;
+    for(let i = 0; i < 6; i++){ ctx.beginPath(); ctx.moveTo(kx + 30 + i*12, ky - 6); ctx.lineTo(kx + 30 + i*12, ky + 10); ctx.stroke(); }
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(kx + 26, ky - 3); ctx.lineTo(kx + 100, ky - 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx + 26, ky + 6); ctx.lineTo(kx + 100, ky + 6); ctx.stroke();
+    caveCart(ctx, kx + 60, ky + 1.5, 0, g.hue);
+    // the piece itself, lying by the rig: a slab of the giant, glassy
+    ctx.save(); ctx.translate(kx - 10, ky + 34); ctx.rotate(0.5);
+    const slab = ctx.createLinearGradient(-22, 0, 22, 0);
+    slab.addColorStop(0, rgba(g.hue[1], 0.95)); slab.addColorStop(1, rgba(g.hue[0], 0.8));
+    ctx.fillStyle = rgba(CAVE.black, 0.7); ctx.fillRect(-22, -6, 46, 16);
+    ctx.fillStyle = slab; ctx.fillRect(-22, -8, 44, 14);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.strokeRect(-22, -8, 44, 14);
+    ctx.restore();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -30140,6 +31893,10 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
     else if(pr.k === "icefield") drawIcefield(px, W, H, pr, rand);
     else if(pr.k === "frozenfleet") drawFrozenfleet(px, W, H, pr, rand);
+    else if(pr.k === "moonfloor") drawMoonfloor(px, W, H, pr, rand);
+    else if(pr.k === "greatarch") drawGreatarch(px, W, H, pr, rand);
+    else if(pr.k === "cavefloor") drawCavefloor(px, W, H, pr, rand);
+    else if(pr.k === "greatgeode") drawGreatgeode(px, W, H, pr, rand);
   });
 }
 
@@ -33168,6 +34925,10 @@ function startMission(missionIndex, difficultyId){
   if(mission.mirage) SF.mirage.begin();
   SF.frost.reset();                       // the cold waits for the far side
   if(mission.frost) SF.frost.begin();
+  SF.doors.reset();                       // the doors stand dark until the moon
+  if(mission.doors) SF.doors.begin();
+  SF.crystals.reset();                    // nothing grows until the cave
+  if(mission.crystals) SF.crystals.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -33279,6 +35040,10 @@ function startMission(missionIndex, difficultyId){
     seenThrough: 0,
     // Whiteout: frozen ships broken before they thawed, and times the cold caught YOU.
     shattered: 0, frozenTimes: 0,
+    // The Moon of Doors and the Glow Cave: rounds that went through a door,
+    // ships caught a beat after stepping through, kills off a facet, bolts
+    // that broke on a crystal you were sheltering under.
+    doorShots: 0, doorAmbush: 0, bounceKills: 0, covered: 0,
     stars: 0,
   };
 
@@ -33561,6 +35326,8 @@ function startMission(missionIndex, difficultyId){
              : mission.volcano ? "volcanoStart"
              : mission.mirage ? "mirageStart"
              : mission.frost ? "frostStart"
+             : mission.doors ? "doorsStart"
+             : mission.crystals ? "crystalsStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -33953,6 +35720,27 @@ const callbacks = {
        * Whiteout's harvest star: this one was frozen when it broke. The
        * kill is paid like any kill; the shatter is what the level counts.
        */
+      /*
+       * The Moon of Doors' two stars: a round that came through a door and
+       * found a ship, and a ship caught within a beat of stepping through.
+       * The Glow Cave's: a round that had already come off a facet.
+       */
+      if(run.mission.doors){
+        if(bullet && bullet.doored){
+          run.stats.doorShots = (run.stats.doorShots || 0) + 1;
+          fx.text(e.x, e.y - e.r - 24, T("THROUGH THE DOOR!"), "#48e5c2", 15, true);
+          SF.comms.say("doorShot");
+        }
+        if(e.throughDoor > 0){
+          run.stats.doorAmbush = (run.stats.doorAmbush || 0) + 1;
+          fx.text(e.x, e.y - e.r - 40, T("CAUGHT AT THE DOOR!"), "#ff5dbb", 15, true);
+        }
+      }
+      if(run.mission.crystals && bullet && bullet.bounced > 0){
+        run.stats.bounceKills = (run.stats.bounceKills || 0) + 1;
+        fx.text(e.x, e.y - e.r - 24, T("OFF THE BOUNCE!"), "#ffd6f1", 15, true);
+        SF.comms.say("crystalBounce");
+      }
       if(run.mission.frost && e.frozen > 0){
         run.stats.shattered = (run.stats.shattered || 0) + 1;
         fx.text(e.x, e.y - e.r - 24, T("SHATTERED!"), "#dff4ff", 15, true);
@@ -36317,6 +38105,8 @@ function update(dt, timeMs){
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
   if(run.mission.frost) SF.frost.update(dt, run, game.world, simMs);
+  if(run.mission.doors) SF.doors.update(dt, run, game.world, simMs);
+  if(run.mission.crystals) SF.crystals.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -36730,6 +38520,8 @@ function draw(timeMs){
   // rewind's claim on the frame: the replay paints its own from the tape.
   SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
   SF.frost.drawSky(ctx, timeMs, VW, VH);             // the rime the fronts leave behind
+  SF.doors.drawSky(ctx, timeMs, VW, VH);             // the stones and the discs, under the ships
+  SF.crystals.drawSky(ctx, timeMs, VW, VH);          // the light each crystal throws on the floor
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -36853,7 +38645,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.doors.drawOver(ctx, timeMs); SF.crystals.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);
@@ -39109,6 +40901,8 @@ const FACE_KINDS = {
   garden:  { c0:"#8ef0a8", c1:"#14361f" },   // Second Harvest: green on the map
   mirage:  { c0:"#f2cf8a", c1:"#6b4416" },   // The Mirage: sand, and the sun on it
   frost:   { c0:"#dff4ff", c1:"#2c4258" },   // Whiteout: ice, and the cold on it
+  doors:   { c0:"#48e5c2", c1:"#2a2440" },   // The Moon of Doors: rune-light on dust
+  crystals:{ c0:"#ff60c4", c1:"#241c3a" },   // The Glow Cave: crystal on cave-dark
   fight:   { c0:"#5b6bd8", c1:"#1d2050" },   // the plain blue default
 };
 const faceCache = {};
@@ -39239,6 +41033,8 @@ function missionFace(m){
              : m.garden ? "garden"
              : m.mirage ? "mirage"
              : m.frost ? "frost"
+             : m.doors ? "doors"
+             : m.crystals ? "crystals"
              : (obj.includes("coinRush") || m.coinRain) ? "coins"
              : m.storm ? "storm"
              : m.convoy ? "escort"
@@ -39372,11 +41168,11 @@ const SECTORS = [
   { at:29, name:"THE DARK",        hue:"#64748b",
     sub:"their star went out, and something ate it" },      // 29-32
   { at:33, name:"THE CRACK",       hue:"#a78bfa",
-    sub:"where space stops behaving itself" },              // 33-40 (the sea, the desert and its frozen side join the crack)
-  { at:41, name:"THE ROAD HOME",   hue:"#22d3ee",
-    sub:"their last works, the last fight — and the farm" }, // 41-43 (the forge world opens it)
-  { at:44, name:"THE EASEL",       hue:"#ffd23f",
-    sub:"the one Papa never finished" },                    // 44
+    sub:"where space stops behaving itself" },              // 33-42 (the sea, the desert, its frozen side, the moon of doors and the cave under it)
+  { at:43, name:"THE ROAD HOME",   hue:"#22d3ee",
+    sub:"their last works, the last fight — and the farm" }, // 43-45 (the forge world opens it)
+  { at:46, name:"THE EASEL",       hue:"#ffd23f",
+    sub:"the one Papa never finished" },                    // 46
 ];
 
 if(SF.i18n) SECTORS.forEach(sec => SF.i18n.bind(sec, ["name", "sub"]));
@@ -42688,6 +44484,215 @@ function drawStoryArt(ctx, art, levels, mate){
     ctx.fillStyle = "#ffd23f";
     ctx.fillRect(rx - 3, y + 40, 6, 18); ctx.fillRect(rx - 3, y + 66, 6, 18);
     A.drawShip(ctx, rx, H*0.8, 56, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "gatemoon"){
+    /*
+     * The Moon of Doors' establishing shot: an airless plain under a black
+     * sky, one low sun at the right throwing every shadow the same way, and
+     * the Great Arch on the horizon with a door lit between its stones -
+     * the first thing on this moon that is not grey.
+     */
+    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 40; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.17) + ")";
+      ctx.fillRect((i*67) % W, (i*31) % Math.round(H*0.5), 1.3, 1.3);
+    }
+    const sun = ctx.createRadialGradient(W*0.88, H*0.3, 0, W*0.88, H*0.3, W*0.3);
+    sun.addColorStop(0, "rgba(255,236,190,1)"); sun.addColorStop(0.08, "rgba(255,220,150,0.9)");
+    sun.addColorStop(0.3, "rgba(240,197,138,0.2)"); sun.addColorStop(1, "rgba(240,197,138,0)");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(W*0.88, H*0.3, W*0.3, 0, Math.PI*2); ctx.fill();
+    const dust = ctx.createLinearGradient(W, H*0.52, 0, H);
+    dust.addColorStop(0, "#c4bfd9"); dust.addColorStop(0.5, "#8a84a3"); dust.addColorStop(1, "#4d4866");
+    ctx.fillStyle = dust; ctx.fillRect(0, H*0.52, W, H*0.48);
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillRect(0, H*0.52, W, 1.2);
+    // craters: lit on the sun side, black on the other
+    [[0.18, 0.7, 16], [0.5, 0.86, 22], [0.78, 0.66, 10], [0.36, 0.6, 7]].forEach(([fx, fy, r]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.75)"; ctx.beginPath(); ctx.ellipse(x - r*0.15, y, r, r*0.4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(240,197,138,0.85)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(x, y, r, r*0.4, 0, -Math.PI*0.9, -Math.PI*0.1); ctx.stroke();
+    });
+    // standing stones, every shadow going left
+    [[0.1, 0.62, 5, 16], [0.3, 0.78, 7, 26], [0.66, 0.74, 5, 18], [0.9, 0.9, 8, 30]].forEach(([fx, fy, w, h]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.8)";
+      ctx.beginPath(); ctx.moveTo(x - w*0.5, y); ctx.lineTo(x - w*0.5 - h*1.6, y + 3); ctx.lineTo(x - w*0.5 - h*1.6, y + 6); ctx.lineTo(x + w*0.5, y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#4a4560"; ctx.fillRect(x - w*0.5, y - h, w, h);
+      ctx.fillStyle = "#a39dc4"; ctx.fillRect(x + w*0.5 - 1.5, y - h, 1.5, h);
+    });
+    // the Great Arch on the horizon, and the door lit between its stones
+    {
+      const ax = W*0.5, ay = H*0.53, mw = 12, mh = 58, span = 64;
+      [-1, 1].forEach(sd => {
+        const x = ax + sd*span*0.5;
+        ctx.fillStyle = "rgba(22,20,37,0.8)";
+        ctx.beginPath(); ctx.moveTo(x - mw*0.5, ay); ctx.lineTo(x - mw*0.5 - 70, ay + 10); ctx.lineTo(x - mw*0.5 - 70, ay + 14); ctx.lineTo(x + mw*0.5, ay); ctx.closePath(); ctx.fill();
+      });
+      const door = ctx.createRadialGradient(ax, ay - mh*0.5, 0, ax, ay - mh*0.5, 40);
+      door.addColorStop(0, "rgba(72,229,194,0.9)"); door.addColorStop(0.35, "rgba(72,229,194,0.35)"); door.addColorStop(1, "rgba(72,229,194,0)");
+      ctx.fillStyle = door; ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 40, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#48e5c2"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 17, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(230,255,250,0.9)"; ctx.beginPath(); ctx.arc(ax, ay - mh*0.5, 4, 0, Math.PI*2); ctx.fill();
+      [-1, 1].forEach(sd => {
+        const x = ax + sd*span*0.5;
+        ctx.fillStyle = "#3a3550"; ctx.fillRect(x - mw*0.5, ay - mh, mw, mh);
+        ctx.fillStyle = "#f0c58a"; ctx.fillRect(x + mw*0.5 - 2, ay - mh, 2, mh);
+        ctx.fillStyle = sd < 0 ? "#48e5c2" : "#ff5dbb";
+        for(let j = 0; j < 4; j++) ctx.fillRect(x - 2.5, ay - mh + 8 + j*12, 5, 1.5);
+      });
+      ctx.fillStyle = "#3a3550"; ctx.fillRect(ax - span*0.5 - mw*0.5, ay - mh - 9, span + mw, 9);
+      ctx.fillStyle = "#f0c58a"; ctx.fillRect(ax - span*0.5 - mw*0.5, ay - mh - 9, span + mw, 1.5);
+      ctx.fillStyle = "#04030a"; ctx.fillRect(ax - 4, ay - mh - 9, 6, 9);        // the crack in the lintel
+    }
+    A.drawShip(ctx, W*0.2, H*0.3, 30, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "twodoors"){
+    /*
+     * The lesson: two doors with the thread between them, and one shot
+     * drawn both sides of it - into the low door from the family ship, out
+     * of the high one into a thief. Nothing needs a caption.
+     */
+    ctx.fillStyle = "#8a84a3"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 40; i++){
+      ctx.fillStyle = "rgba(220,215,238," + (0.3 + (i % 3)*0.2) + ")";
+      ctx.fillRect((i*53) % W, (i*41) % H, 1.3, 1.3);
+    }
+    [[0.12, 0.2], [0.85, 0.5], [0.2, 0.88]].forEach(([fx, fy]) => {
+      const x = W*fx, y = H*fy;
+      ctx.fillStyle = "rgba(22,20,37,0.7)";
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 22, y + 28); ctx.lineTo(x - 16, y + 30); ctx.lineTo(x + 6, y + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#6e6889"; ctx.fillRect(x - 3, y - 4, 7, 8);
+      ctx.fillStyle = "#a39dc4"; ctx.fillRect(x - 3, y - 4, 7, 1.5);
+    });
+    const hi = { x: W*0.62, y: H*0.24 }, lo = { x: W*0.3, y: H*0.64 };
+    ctx.setLineDash([4, 7]); ctx.strokeStyle = "rgba(72,229,194,0.75)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lo.x, lo.y); ctx.lineTo(hi.x, hi.y); ctx.stroke(); ctx.setLineDash([]);
+    const door = d => {
+      const g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 44);
+      g.addColorStop(0, "rgba(72,229,194,0.75)"); g.addColorStop(0.5, "rgba(72,229,194,0.25)"); g.addColorStop(1, "rgba(72,229,194,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(d.x, d.y, 44, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#4a4560"; ctx.beginPath(); ctx.arc(d.x, d.y, 26, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#a39dc4"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 26, -Math.PI*0.8, Math.PI*0.2); ctx.stroke();
+      const disc = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, 20);
+      disc.addColorStop(0, "#e6fffa"); disc.addColorStop(0.3, "#48e5c2"); disc.addColorStop(1, "#0f2a3a");
+      ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(d.x, d.y, 20, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#48e5c2"; ctx.lineWidth = 1.2;
+      for(let j = 0; j < 12; j++){
+        const a = j/12*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(d.x + Math.cos(a)*22, d.y + Math.sin(a)*22); ctx.lineTo(d.x + Math.cos(a)*25, d.y + Math.sin(a)*25); ctx.stroke();
+      }
+    };
+    door(lo); door(hi);
+    const sprite = SF.enemyArt.spriteFor("interceptor", "#ff5d73", false);
+    if(sprite) ctx.drawImage(sprite, hi.x - 26, hi.y - 90, 52, 52);
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(hi.x - 3, hi.y - 46, 6, 16); ctx.fillRect(hi.x - 3, hi.y - 32, 6, 10);
+    const burst = ctx.createRadialGradient(hi.x, hi.y - 64, 0, hi.x, hi.y - 64, 30);
+    burst.addColorStop(0, "rgba(255,255,255,0.8)"); burst.addColorStop(1, "rgba(255,210,63,0)");
+    ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(hi.x, hi.y - 64, 30, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillRect(lo.x - 3, lo.y + 30, 6, 16); ctx.fillRect(lo.x - 3, lo.y + 54, 6, 16);
+    A.drawShip(ctx, lo.x, H*0.9, 56, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "geode"){
+    /*
+     * The Glow Cave's establishing shot: the dark under the moon, a pool
+     * that glows, giant crystals in four colours standing around it, and
+     * one shaft of daylight through the broken roof with the squadron in it.
+     */
+    const rg = (hex, a) => { const v = parseInt(hex.slice(1), 16); return "rgba(" + (v >> 16) + "," + ((v >> 8) & 255) + "," + (v & 255) + "," + a + ")"; };
+    ctx.fillStyle = "#130d22"; ctx.fillRect(0, 0, W, H);
+    const cx = W*0.5, cy = H*0.68;
+    const shaft = ctx.createLinearGradient(W*0.62, 0, W*0.4, H*0.7);
+    shaft.addColorStop(0, "rgba(207,230,255,0.4)"); shaft.addColorStop(1, "rgba(207,230,255,0)");
+    ctx.fillStyle = shaft;
+    ctx.beginPath(); ctx.moveTo(W*0.56, 0); ctx.lineTo(W*0.7, 0); ctx.lineTo(W*0.62, cy); ctx.lineTo(W*0.3, cy); ctx.closePath(); ctx.fill();
+    for(let i = 0; i < 24; i++){
+      ctx.fillStyle = "rgba(255,255,255," + (0.3 + (i % 4)*0.15) + ")";
+      ctx.fillRect(W*0.36 + (i*37) % Math.round(W*0.3), (i*53) % Math.round(cy), 1.3, 1.3);
+    }
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W*0.5);
+    glow.addColorStop(0, "rgba(79,227,255,0.45)"); glow.addColorStop(0.4, "rgba(143,107,255,0.15)"); glow.addColorStop(1, "rgba(143,107,255,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, W*0.5, 0, Math.PI*2); ctx.fill();
+    const pool = ctx.createRadialGradient(cx, cy, 0, cx, cy, W*0.22);
+    pool.addColorStop(0, "#8ff0ff"); pool.addColorStop(0.5, "#1c7fa0"); pool.addColorStop(1, "#062a44");
+    ctx.fillStyle = pool; ctx.beginPath(); ctx.ellipse(cx, cy, W*0.22, W*0.08, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(143,240,255,0.7)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(cx, cy, W*0.22, W*0.08, 0, 0, Math.PI*2); ctx.stroke();
+    const hues = [["#ff60c4","#ffd6f1"], ["#5ef2ff","#dffcff"], ["#ffd166","#fff3c4"], ["#b48cff","#ece0ff"]];
+    [[0.12, 0.72, -0.35, 70, 22], [0.28, 0.8, -0.15, 52, 16], [0.72, 0.8, 0.2, 60, 18], [0.88, 0.7, 0.4, 76, 24],
+     [0.5, 0.86, 0.02, 40, 14], [0.2, 0.55, -0.6, 44, 12], [0.8, 0.52, 0.55, 48, 13]].forEach(([fx, fy, lean, len, wid], i) => {
+      const x = W*fx, y = H*fy, hue = hues[i % 4];
+      const halo = ctx.createRadialGradient(x, y - len*0.5, 0, x, y - len*0.5, len*0.9);
+      halo.addColorStop(0, rg(hue[0], 0.35)); halo.addColorStop(1, rg(hue[0], 0));
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y - len*0.5, len*0.9, 0, Math.PI*2); ctx.fill();
+      ctx.save(); ctx.translate(x, y); ctx.rotate(lean);
+      const g = ctx.createLinearGradient(0, 0, 0, -len);
+      g.addColorStop(0, rg(hue[1], 0.95)); g.addColorStop(0.4, rg(hue[0], 0.85)); g.addColorStop(1, rg(hue[0], 0.5));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.6, -len*0.55); ctx.lineTo(0, -len); ctx.lineTo(wid*0.6, -len*0.55); ctx.lineTo(wid*0.5, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.6, -len*0.55); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.restore();
+    });
+    for(let i = 0; i < 14; i++){
+      const x = cx + Math.cos(i*0.9)*W*(0.24 + (i % 3)*0.03), y = cy + Math.sin(i*0.9)*W*0.1 + 4;
+      ctx.fillStyle = "rgba(126,240,208,0.85)"; ctx.beginPath(); ctx.arc(x, y, 1.6 + (i % 3)*0.6, 0, Math.PI*2); ctx.fill();
+    }
+    A.drawShip(ctx, W*0.6, H*0.22, 34, { color: profile.shipColor, levels, t, idle:false });
+  } else if(art === "ricochet"){
+    /*
+     * The lesson, in one picture: a crystal in the middle, a shot of ours
+     * banking off it into a turret it could never have reached straight,
+     * and a bolt of theirs breaking on the same crystal with the family
+     * ship sheltering under it.
+     */
+    const rg = (hex, a) => { const v = parseInt(hex.slice(1), 16); return "rgba(" + (v >> 16) + "," + ((v >> 8) & 255) + "," + (v & 255) + "," + a + ")"; };
+    ctx.fillStyle = "#1f1830"; ctx.fillRect(0, 0, W, H);
+    for(let i = 0; i < 30; i++){
+      ctx.fillStyle = "rgba(90,79,122," + (0.3 + (i % 3)*0.2) + ")";
+      ctx.fillRect((i*59) % W, (i*43) % H, 1.4, 1.4);
+    }
+    const cx = W*0.5, cy = H*0.46, sx = W*0.6, tx = W*0.86, ty = H*0.22;
+    const pool = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90);
+    pool.addColorStop(0, "rgba(255,96,196,0.45)"); pool.addColorStop(1, "rgba(255,96,196,0)");
+    ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(cx, cy, 90, 0, Math.PI*2); ctx.fill();
+    const sprite = SF.enemyArt.spriteFor("turret", "#ff5d73", false);
+    if(sprite) ctx.drawImage(sprite, tx - 24, ty - 24, 48, 48);
+    // our shot: up from the ship, off the lower-right facet, across into the turret
+    ctx.strokeStyle = "rgba(255,210,63,0.5)"; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.moveTo(sx, H*0.8); ctx.lineTo(cx + 26, cy + 20); ctx.lineTo(tx - 18, ty + 12); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#ffd23f";
+    ctx.save(); ctx.translate(sx, H*0.7); ctx.rotate(0.1); ctx.fillRect(-3, -8, 6, 16); ctx.restore();
+    ctx.save(); ctx.translate(cx + 62, cy - 4); ctx.rotate(1.0); ctx.fillRect(-3, -8, 6, 16); ctx.restore();
+    const burst = ctx.createRadialGradient(tx, ty, 0, tx, ty, 34);
+    burst.addColorStop(0, "rgba(255,255,255,0.85)"); burst.addColorStop(1, "rgba(255,210,63,0)");
+    ctx.fillStyle = burst; ctx.beginPath(); ctx.arc(tx, ty, 34, 0, Math.PI*2); ctx.fill();
+    // their bolt, from above, breaking on the crystal
+    ctx.fillStyle = "#ff5d73";
+    ctx.fillRect(cx - 2, H*0.05, 4, 14); ctx.fillRect(cx - 2, H*0.13, 4, 14);
+    const shatter = ctx.createRadialGradient(cx, cy - 44, 0, cx, cy - 44, 26);
+    shatter.addColorStop(0, "rgba(255,255,255,0.9)"); shatter.addColorStop(0.4, "rgba(255,93,115,0.5)"); shatter.addColorStop(1, "rgba(255,93,115,0)");
+    ctx.fillStyle = shatter; ctx.beginPath(); ctx.arc(cx, cy - 44, 26, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ff5d73";
+    for(let i = 0; i < 7; i++){ const a = -Math.PI/2 + (i - 3)*0.4; ctx.fillRect(cx + Math.cos(a)*22 - 1, cy - 44 + Math.sin(a)*14 - 1, 2.5, 2.5); }
+    // the crystal itself: six shards from a heart
+    [[-0.9, 40, 14], [-0.3, 48, 16], [0.35, 44, 15], [1.0, 36, 12], [2.2, 30, 11], [-2.0, 32, 11]].forEach(([a, len, wid], i) => {
+      const hue = i % 2 ? ["#ff60c4","#ffd6f1"] : ["#ffb3e6","#ffffff"];
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      const g = ctx.createLinearGradient(0, 0, 0, -len);
+      g.addColorStop(0, rg(hue[1], 0.95)); g.addColorStop(1, rg(hue[0], 0.7));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.55, -len*0.6); ctx.lineTo(0, -len); ctx.lineTo(wid*0.55, -len*0.6); ctx.lineTo(wid*0.5, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(-wid*0.5, 0); ctx.lineTo(-wid*0.55, -len*0.6); ctx.lineTo(0, -len); ctx.stroke();
+      ctx.restore();
+    });
+    const heart = ctx.createRadialGradient(cx, cy, 0, cx, cy, 16);
+    heart.addColorStop(0, "rgba(255,255,255,1)"); heart.addColorStop(1, "rgba(255,214,241,0)");
+    ctx.fillStyle = heart; ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI*2); ctx.fill();
+    A.drawShip(ctx, sx, H*0.88, 56, { color: profile.shipColor, levels, t, idle:false });
   } else {
     A.drawShip(ctx, W/2, H*0.56, 100, { color: profile.shipColor, levels, t, idle:false });
   }
@@ -42749,7 +44754,9 @@ const PREFLIGHT_STORY = [["prologue", "launchDay"],
                          ["dive",     "theDive"],
                          ["volcano",  "forgeWorld"],
                          ["mirage",   "theMirage"],
-                         ["frost",    "whiteout"]];
+                         ["frost",    "whiteout"],
+                         ["doors",    "moonOfDoors"],
+                         ["crystals", "glowCave"]];
 
 function openBriefing(index){
   selectedMissionIndex = index;

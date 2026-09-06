@@ -409,6 +409,21 @@ function migrate(p){
     if((p.reached || 0) >= 36) p.reached += 1;
     p.missionsVer = 13;
   }
+  /*
+   * v14: The Moon of Doors and The Glow Cave landed together as missions 37
+   * and 38, pushing the old 37-45 up TWO. One migration for the pair, same
+   * shape as v10-v13 with a wider step; every hand-written mission id
+   * (tunes 23/28/32, devourerDown 32, the gun gates up to 28) sits below
+   * the insert, so nothing else moves.
+   */
+  if((p.missionsVer || 1) < 14){
+    for(let id = 45; id >= 37; id--){
+      if(p.missions[id]){ p.missions[id + 2] = p.missions[id]; delete p.missions[id]; }
+    }
+    if(typeof p.lastMission === "number" && p.lastMission >= 37) p.lastMission += 2;
+    if((p.reached || 0) >= 37) p.reached += 2;
+    p.missionsVer = 14;
+  }
   // Tunes are boss trophies now: a fitted tune whose boss this pilot hasn't
   // actually beaten (old save, or a copied one) reverts to the baseline.
   {

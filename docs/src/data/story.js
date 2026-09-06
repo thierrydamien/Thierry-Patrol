@@ -175,6 +175,24 @@ const STORY = {
     button:"INTO THE COLD",
   },
 
+  /* The pre-flight pages for The Moon of Doors and The Glow Cave. */
+  moonOfDoors: {
+    title: "THE DOORS THAT LEAD TO EACH OTHER",
+    panels: [
+      { art:"gatemoon", text:"Whoever lived on this moon built doors, {you} - rings of stone at the end of every road - and every door has a twin. Step into one and you step out of the other. The thieves found the keys first." },
+      { art:"twodoors", text:"The doors don't answer to you. But they answer to your SHOTS: fire into a low door and your rounds come out of the high one, on top of the fleet. And when their ships dive into a door up there... they come out down here, right beside you." },
+    ],
+    button:"THROUGH THE DOORS",
+  },
+  glowCave: {
+    title: "THE HOLLOW WORLD",
+    panels: [
+      { art:"geode",    text:"Under the moon of doors the world is hollow, {you}, and it glows. Crystals grow in the dark down here - made of light, tall as ships - and the thieves have been cutting them out by the cartload." },
+      { art:"ricochet", text:"The crystals are light: fly straight through them. A shot can't. Yours BOUNCE off the facets - bank one round and it finds a ship you could never hit straight. Theirs BREAK: duck under a crystal and their fire shatters on it." },
+    ],
+    button:"INTO THE GLOW",
+  },
+
   /* The Armory's guns started waking up with the campaign. Fires once, on
      the first pick of a pilot whose save owns a gun level the campaign has
      not reached yet (profile.dormantLevels) - nothing is lost, nothing is

@@ -175,6 +175,13 @@ const SOUNDS = {
   // hiss - and letting go: a glassy burst with no bass in it at all.
   freeze:     { minGap: 120, fn: () => { [1320, 990, 740].forEach((f,i) => tone(f, 0.12, "sine", 0.035, f*0.7, i*0.05)); noise(0.18, 0.05, 5200, 1800); }},
   shatter:    { minGap: 50, fn: () => { noise(0.14, 0.12, 6000, 2200); [1760, 2200].forEach((f,i) => tone(f, 0.06, "triangle", 0.03, null, i*0.02)); }},
+  // The Moon of Doors: a thing going through - a swept hiss and a note that
+  // climbs and never lands.
+  portal:     { minGap: 70, fn: () => { noise(0.16, 0.06, 600, 4200); tone(420, 0.18, "sine", 0.03, 1250); }},
+  // The Glow Cave: a round off a facet rings the crystal (bigger ones lower),
+  // and a bolt breaking on one is a pinch of glass.
+  chime:      { minGap: 40, fn: (r) => { const f = 2200 - Math.min(60, r || 30)*18; tone(f, 0.16, "sine", 0.035, f*0.98); tone(f*1.5, 0.08, "triangle", 0.012); }},
+  prism:      { minGap: 40, fn: () => { noise(0.05, 0.05, 7000, 3000); tone(3200, 0.03, "sine", 0.012); }},
   achievement:{ minGap: 300, fn: () => { [660,880,1108,1318].forEach((f,i)=>tone(f,0.11,"sine",0.06,null,i*0.075)); }},
   uiClick:    { minGap: 40, fn: () => { tone(660, 0.04, "square", 0.03, 880); }},
   uiBuy:      { minGap: 80, fn: () => { [523,784,1046].forEach((f,i)=>tone(f,0.09,"square",0.05,null,i*0.05)); }},

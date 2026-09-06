@@ -615,12 +615,12 @@ async function run(){
    */
   check("the gift stop is the workshop's own level", (() => {
     const M = SF.missions.MISSIONS, gift = M.find(m => m.gift);
-    return !!gift && gift.name === "Behind the Sky" && gift.id === 45 &&
+    return !!gift && gift.name === "Behind the Sky" && gift.id === 47 &&
            gift.backstage === true && gift.sky29 === true &&
            !gift.boss;                       // the Brush is backstage's, not a slot
   })());
-  check("46 campaign missions defined, ids sequential from Earth",
-    SF.missions.MISSIONS.length === 46 &&
+  check("48 campaign missions defined, ids sequential from Earth",
+    SF.missions.MISSIONS.length === 48 &&
     SF.missions.MISSIONS.every((m, i) => m.id === i));
   /*
    * The sky contract, after Mission 0: every mission points at its own sky
@@ -635,18 +635,22 @@ async function run(){
     // Untouched stops (1-21) still ride the default; the five grounds (two
     // farms, the sea, the volcano world, the desert) name theirs, appended so
     // no Drawing Board sky re-bases: 23-33 sit one insertion deep, 36-39
-    // three (the sea and the desert both landed below them), 41-44 four.
+    // three (the sea and the desert both landed below them), 41-44 four -
+    // and the moon and the cave (v14) lifted everything from 37 two more,
+    // so 39-42 now sit seven deep and 43-47 eight.
     return M.every(m => m.prologue ? m.sky === 40
                       : m.garden   ? m.sky === 41
                       : m.dive     ? m.sky === 42
                       : m.volcano  ? m.sky === 43
                       : m.mirage   ? m.sky === 44
                       : m.frost    ? m.sky === 45
+                      : m.doors    ? m.sky === 46
+                      : m.crystals ? m.sky === 47
                       : m.id <= 21 ? m.sky === m.id - 1
                       : m.id <= 34 ? m.sky === m.id - 2
-                      : m.id <= 40 ? m.sky === m.id - 5
-                      : m.sky === m.id - 6) &&
-           SF.skygen.SKIES.length === 46 &&
+                      : m.id <= 42 ? m.sky === m.id - 7
+                      : m.sky === m.id - 8) &&
+           SF.skygen.SKIES.length === 48 &&
            SF.skygen.SKIES[40].surface === true &&
            SF.skygen.SKIES[40].props.some(pr => pr.k === "fields") &&
            SF.skygen.SKIES[41].surface === true &&
@@ -662,7 +666,13 @@ async function run(){
            SF.skygen.SKIES[44].props.some(pr => pr.k === "suncatcher" && pr.once) &&
            SF.skygen.SKIES[45].surface === true &&
            SF.skygen.SKIES[45].props.some(pr => pr.k === "icefield") &&
-           SF.skygen.SKIES[45].props.some(pr => pr.k === "frozenfleet" && pr.once);
+           SF.skygen.SKIES[45].props.some(pr => pr.k === "frozenfleet" && pr.once) &&
+           SF.skygen.SKIES[46].surface === true &&
+           SF.skygen.SKIES[46].props.some(pr => pr.k === "moonfloor") &&
+           SF.skygen.SKIES[46].props.some(pr => pr.k === "greatarch" && pr.once) &&
+           SF.skygen.SKIES[47].surface === true &&
+           SF.skygen.SKIES[47].props.some(pr => pr.k === "cavefloor") &&
+           SF.skygen.SKIES[47].props.some(pr => pr.k === "greatgeode" && pr.once);
   })());
   /*
    * ...and by NAME, which is what the stamp exists to protect: the missions
@@ -740,7 +750,7 @@ async function run(){
    * only opens when every real star is home.
    */
   check("the gift stop stays out of the star ledger",
-    SF.profile.maxStars() === 132 && (() => {
+    SF.profile.maxStars() === 138 && (() => {
       const p = SF.profile.load("LEDGER");
       p.missions[SF.missions.MISSIONS.find(m => m.gift).id] = { cleared:true, stars:{ pilot:3 } };
       return SF.profile.totalStars(p) === 0;
@@ -2797,7 +2807,7 @@ async function run(){
       // A SURFACE is its own carve-out: the ground is the thing you fly
       // through, so it tiles by definition - only the landmarks on it (the
       // farm) must pass once. In space the rule stays absolute.
-      const GROUND = ["fields", "ground", "wild", "seabed", "emberfloor", "dunes", "icefield"];
+      const GROUND = ["fields", "ground", "wild", "seabed", "emberfloor", "dunes", "icefield", "moonfloor", "cavefloor"];
       return SF.skygen.SKIES.every(sky => {
         const props = sky.props || [];
         if(!props.some(pr => pr.once)) return true;      // wholly tiling: consistent
@@ -3207,7 +3217,7 @@ async function run(){
    * the Sky 29 gate for a pilot already at 116/117.
    */
   check("Earth's stars stay off the campaign ledger",
-    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 132);
+    SF.profile.totalStars(marc) === 0 && SF.profile.maxStars() === 138);
   check("money was banked", marc.money > 0);
   check("kills were counted", marc.totalKills > 0);
   console.log(`Mission 1 -> stars:${SF.profile.totalStars(marc)} kills:${marc.totalKills} money:${marc.money}`);
@@ -4275,7 +4285,7 @@ async function run(){
       /function drawBlackout\(ctx, world, timeMs, soft\)/.test(
         fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8")));
     check("the campaign bosses sit at their remapped stops",
-      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,44");
+      M.filter(m => m.boss).map(m => m.id).join(",") === "5,8,12,19,23,28,32,46");
 
     /* The trench gate: a wall with exactly one two-slot hole in it. The gap
        can hug an edge, so measure slot OCCUPANCY, not neighbour spacing. */
@@ -4564,13 +4574,15 @@ async function run(){
              (SF.skygen.SKIES[si].props || []).some(pr => pr.k === "ground") &&
              // ...and the only other grounds are the two farms and the sea:
              // Earth, the taken world, and the drowned sky the dive swims.
-             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 7 &&
+             M.filter((m, k) => SF.skygen.isSurface(SF.missions.skyOf(k))).length === 9 &&
              SF.skygen.isSurface(SF.missions.skyOf(0)) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.garden))) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.dive))) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.volcano))) &&
              SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.mirage))) &&
-             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.frost)));
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.frost))) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.doors))) &&
+             SF.skygen.isSurface(SF.missions.skyOf(M.findIndex(m => m.crystals)));
     })());
     check("nothing streams past a canyon floor", (() => {
       const r = fs.readFileSync(path.join(__dirname, "src/render.js"), "utf8");
@@ -9770,10 +9782,10 @@ async function run(){
         v9.missions["33"] && v9.missions["33"].stars.pilot === 2 &&
         !v9.missions["34"] && !v9.missions["35"] &&
         !v9.missions["36"] &&                      // ...and v13 lifts it once more
-        v9.missions["37"] && v9.missions["37"].stars.pilot === 3 &&
-        v9.missions["45"] && v9.missions["45"].stars.pilot === 1 &&
-        v9.lastMission === 37 && v9.missionsVer >= 13);
-      check("being carried survives this insert too", v9.reached === 38);
+        v9.missions["39"] && v9.missions["39"].stars.pilot === 3 &&     // ...and v14 two more
+        v9.missions["47"] && v9.missions["47"].stars.pilot === 1 &&
+        v9.lastMission === 39 && v9.missionsVer >= 14);
+      check("being carried survives this insert too", v9.reached === 40);
       // Every hand-written mission id sits BELOW this insert - the NOVA tune
       // named 32 before and must name 32 after, or a child's trophy un-earns.
       check("the NOVA tune still counts as earned",
@@ -9837,7 +9849,7 @@ async function run(){
     const G = SF.game, P = SF.profile;
     const vi = SF.missions.MISSIONS.findIndex(m => m.volcano);
     check("the forge world is a real stop, the road home's first",
-      vi === 41 && SF.missions.MISSIONS[vi].name === "The Forge World" &&
+      vi === 43 && SF.missions.MISSIONS[vi].name === "The Forge World" &&
       SF.missions.skyOf(vi) === 43 && SF.skygen.isSurface(43) &&
       SF.missions.MISSIONS[vi].objectives.indexOf("melt") >= 0 &&
       !!SF.missions.OBJECTIVES.melt);
@@ -9858,12 +9870,13 @@ async function run(){
       check("a v10 save shifts 39-42 up one and nothing below",
         v10.missions["32"] && v10.missions["32"].stars.pilot === 1 &&
         // ...and the frozen side (v13) lifts everything from 36 once more.
-        v10.missions["40"] && v10.missions["40"].stars.pilot === 2 &&
-        !v10.missions["38"] && !v10.missions["39"] && !v10.missions["41"] &&
-        v10.missions["42"] && v10.missions["42"].stars.pilot === 3 &&
-        v10.missions["45"] && v10.missions["45"].stars.pilot === 1 &&
-        v10.lastMission === 42 && v10.missionsVer >= 13);
-      check("being carried survives the volcano insert too", v10.reached === 43);
+        // ...and the moon and the cave (v14) two more from 37.
+        v10.missions["42"] && v10.missions["42"].stars.pilot === 2 &&
+        !v10.missions["38"] && !v10.missions["39"] && !v10.missions["40"] && !v10.missions["41"] &&
+        v10.missions["44"] && v10.missions["44"].stars.pilot === 3 &&
+        v10.missions["47"] && v10.missions["47"].stars.pilot === 1 &&
+        v10.lastMission === 44 && v10.missionsVer >= 14);
+      check("being carried survives the volcano insert too", v10.reached === 45);
       check("every hand-written mission id still sits below the insert",
         SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
         SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
@@ -10200,11 +10213,11 @@ async function run(){
         v11.missions["34"] && v11.missions["34"].stars.pilot === 2 &&
         !v11.missions["35"] &&
         !v11.missions["36"] &&                     // v13 lifts the desert's shift once more
-        v11.missions["37"] && v11.missions["37"].stars.pilot === 3 &&
-        v11.missions["41"] && v11.missions["41"].stars.pilot === 2 &&
-        v11.missions["45"] && v11.missions["45"].stars.pilot === 1 &&
-        v11.lastMission === 37 && v11.missionsVer >= 13);
-      check("being carried survives the desert insert too", v11.reached === 38);
+        v11.missions["39"] && v11.missions["39"].stars.pilot === 3 &&     // ...and v14 two more
+        v11.missions["43"] && v11.missions["43"].stars.pilot === 2 &&
+        v11.missions["47"] && v11.missions["47"].stars.pilot === 1 &&
+        v11.lastMission === 39 && v11.missionsVer >= 14);
+      check("being carried survives the desert insert too", v11.reached === 40);
       check("every hand-written mission id still sits below the desert insert",
         SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
         SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
@@ -10400,11 +10413,12 @@ async function run(){
         v12.missions["32"] && v12.missions["32"].stars.pilot === 1 &&
         v12.missions["35"] && v12.missions["35"].stars.pilot === 2 &&
         !v12.missions["36"] &&
-        v12.missions["37"] && v12.missions["37"].stars.pilot === 3 &&
-        v12.missions["41"] && v12.missions["41"].stars.pilot === 2 &&
-        v12.missions["45"] && v12.missions["45"].stars.pilot === 1 &&
-        v12.lastMission === 37 && v12.missionsVer >= 13);
-      check("being carried survives the frozen insert too", v12.reached === 38);
+        !v12.missions["37"] &&                     // v14 lifts the frozen shift two more
+        v12.missions["39"] && v12.missions["39"].stars.pilot === 3 &&
+        v12.missions["43"] && v12.missions["43"].stars.pilot === 2 &&
+        v12.missions["47"] && v12.missions["47"].stars.pilot === 1 &&
+        v12.lastMission === 39 && v12.missionsVer >= 14);
+      check("being carried survives the frozen insert too", v12.reached === 40);
       check("every hand-written mission id still sits below the frozen insert",
         SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
         SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
@@ -10520,6 +10534,310 @@ async function run(){
     check("a rookie run freezes ships enough for the star three times over",
       !!RS && RS.frozenShips >= 30 && RS.frontsRun >= 8);
     check("the frozen side finishes: a frozen ship never holds the sky open",
+      G.run.stats.completed === true || G.run.ended === true);
+    check("the rookie run drew without errors", errors.length === 0);
+    G.godMode = false;
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+  }
+
+  /*
+   * THE MOON OF DOORS - the first stop somebody BUILT on. Two pairs of doors
+   * stand open at a time and whatever flies into one leaves its twin: their
+   * ships, their bolts, our rounds. The pilot is never carried - the drag
+   * spring and a teleport would fight over the hull - and only a fully lit
+   * pair answers, so a door going dark is just a ring of stone.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const di = SF.missions.MISSIONS.findIndex(m => m.doors);
+    check("the moon of doors is a real stop, after the frozen side",
+      di === 37 && SF.missions.MISSIONS[di].name === "The Moon of Doors" &&
+      SF.missions.MISSIONS[di - 1].frost === true &&
+      SF.missions.skyOf(di) === 46 && SF.skygen.isSurface(46) &&
+      SF.missions.MISSIONS[di].objectives.join(",") === "complete,doorShots,doorAmbush" &&
+      !!SF.missions.OBJECTIVES.doorShots && !!SF.missions.OBJECTIVES.doorAmbush);
+    check("the great arch passes once; the moon floor tiles",
+      !!SF.skygen.buildOnce(46, 300, 400, 1) &&
+      !!SF.skygen.build(46, 300, 400, 1));
+    check("the doors stop wears its own colour on the map",
+      SF.ui.missionFace(SF.missions.MISSIONS[di]).kind === "doors");
+
+    /* --- v14: an old family save rides the insert --- */
+    {
+      const v13 = P.migrate({ name:"V13", missionsVer: 13, tune:"nova",
+        missions: { "32": { cleared:true, stars:{pilot:1}, best:{} },
+                    "36": { cleared:true, stars:{pilot:2}, best:{} },
+                    "37": { cleared:true, stars:{pilot:3}, best:{pilot:800} },
+                    "41": { cleared:true, stars:{pilot:2}, best:{} },
+                    "45": { cleared:true, stars:{pilot:1}, best:{} } },
+        lastMission: 37, reached: 38 });
+      check("a v13 save shifts 37-45 up two and nothing below",
+        v13.missions["32"] && v13.missions["32"].stars.pilot === 1 &&
+        v13.missions["36"] && v13.missions["36"].stars.pilot === 2 &&
+        !v13.missions["37"] && !v13.missions["38"] &&
+        v13.missions["39"] && v13.missions["39"].stars.pilot === 3 &&
+        !v13.missions["41"] &&
+        v13.missions["43"] && v13.missions["43"].stars.pilot === 2 &&
+        v13.missions["47"] && v13.missions["47"].stars.pilot === 1 &&
+        v13.lastMission === 39 && v13.missionsVer >= 14);
+      check("being carried survives the doors insert too", v13.reached === 40);
+      check("every hand-written mission id still sits below the doors insert",
+        SF.config.TUNE_BY_ID.nova.unlockMission === 32 &&
+        SF.config.TUNE_BY_ID.apex.unlockMission === 28 &&
+        SF.config.TUNE_BY_ID.ghost.unlockMission === 23 &&
+        SF.config.UPGRADES.filter(u => u.unlock).every(u => u.unlock.every(g => g < 37)) &&
+        v13.tune === "nova");
+    }
+
+    /* --- the doors themselves --- */
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("Keys");
+    G.coopWith = null;
+    G.profile = P.load("Keys");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(di, "pilot");
+    await runFrames(80, true);                  // past the 2.2s intro
+    const w = G.world, run = G.run;
+    const D = SF.doors._state();
+    const top = SF.entityConst.PLAY_TOP;
+    check("the level opens with two pairs standing, each door twinned",
+      run.mission.doors === true && SF.doors.active() && run.phase !== "intro" &&
+      D.gates.length === 4 && D.gates.every(g => g.twin && g.twin !== g && g.twin.twin === g && g.twin.pair === g.pair));
+    check("each pair has a door up where they come in and one down where we are",
+      SF.doors.PAIRS.length === 2 &&
+      [0, 1].every(p => D.gates[2*p].y <= top + 210 && D.gates[2*p + 1].y >= 800*0.48 && D.gates[2*p + 1].y > D.gates[2*p].y));
+    check("no two doors stand on each other",
+      D.gates.every((a, i) => D.gates.every((b, j) => i === j || Math.hypot(a.x - b.x, a.y - b.y) > 2*SF.doors.GATE_R)));
+
+    w.player.x = 300; w.player.y = 700; w.player.targetX = 300; w.player.targetY = 700;
+    w.enemies.items.forEach(e => { e.alive = false; });
+    w.enemyBullets.killAll(); w.bullets.killAll();
+    run.director.nextWave = 999;                // the script stays out of this
+    D.life = 999;                               // hold this pair open for the tests
+    await runFrames(2, true);
+    check("a fully lit pair answers", SF.doors.open() && D.k >= 0.85);
+    const shoot = (x, y, vx, vy) => {
+      const b = w.bullets.spawn();
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = 4;
+      b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+      b.hitBoss = false; b.hitWeak = false; b.owner = w.player; b.fromDrone = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;
+      return b;
+    };
+    const hi = D.gates[0], lo = D.gates[1];
+
+    /* A round into the low door leaves the high one, still climbing. */
+    const b1 = shoot(lo.x, lo.y + lo.r + 20, 0, -900);
+    await runFrames(3, true);
+    check("a round fired into a low door comes out of its twin, still climbing",
+      b1.alive && b1.doored === true && Math.abs(b1.x - hi.x) < 12 && b1.y < hi.y && b1.vy < 0 && D.passes >= 1);
+
+    /* One of theirs, diving into the high door, arrives at the low one - marked. */
+    const g1 = w.spawnEnemy("grunt", hi.x, hi.y - hi.r - 24, { difficulty: run.difficulty });
+    g1.entering = false; g1.vx = 0; g1.vy = 300; g1.speed = 300;
+    const passes1 = D.passes;
+    await runFrames(5, true);
+    check("a ship that dives into the high door comes out of the low one, and is marked",
+      g1.alive && g1.throughDoor > 0 && Math.abs(g1.x - lo.x) < 12 && g1.y > lo.y && D.passes === passes1 + 1);
+    check("...and cannot take the same door twice in one breath",
+      SF.doors.AMBUSH_SECS > 1 && g1.throughDoor <= SF.doors.AMBUSH_SECS);
+    g1.alive = false;
+
+    /* Their bolts go through too. */
+    const eb = w.spawnEnemyBullet(lo.x, lo.y + lo.r + 16, 0, -260, "bolt", 4);
+    await runFrames(4, true);
+    check("their bolts take the doors as well",
+      eb.alive && Math.abs(eb.x - hi.x) < 12 && eb.y < hi.y);
+    eb.alive = false;
+
+    /* The pilot never does. */
+    w.player.x = lo.x; w.player.y = lo.y; w.player.targetX = lo.x; w.player.targetY = lo.y;
+    const passes2 = D.passes;
+    await runFrames(4, true);
+    check("the pilot is never carried through a door",
+      Math.abs(w.player.x - lo.x) < 30 && Math.abs(w.player.y - lo.y) < 30 && D.passes === passes2);
+    w.player.x = 300; w.player.y = 700; w.player.targetX = 300; w.player.targetY = 700;
+
+    /* A pair going dark takes nothing. */
+    D.life = 0;
+    await runFrames(2, true);
+    check("a pair whose time is up goes dark", D.phase === "close" && !SF.doors.open());
+    const b2 = shoot(lo.x, lo.y + lo.r + 20, 0, -900);
+    await runFrames(3, true);
+    check("...and a round through a dark door is just a round",
+      b2.doored === false && D.passes === passes2);
+    w.bullets.killAll();
+
+    /* The stars: a kill by a round that took a door, and a ship caught fresh
+       out of one. Kills of the plain kind stay off both ledgers. */
+    D.phase = "open"; D.k = 1; D.life = 999;
+    const g3 = w.spawnEnemy("grunt", hi.x, hi.y - hi.r - 44, { difficulty: run.difficulty });
+    g3.entering = false; g3.vx = 0; g3.vy = 0; g3.speed = 0; g3.hp = 1; g3.maxHp = 1;
+    const kills0 = run.stats.kills;
+    shoot(lo.x, lo.y + lo.r + 20, 0, -900);
+    await runFrames(8, true);
+    check("a kill by a round that came through a door counts for the star",
+      !g3.alive && run.stats.kills === kills0 + 1 && (run.stats.doorShots || 0) === 1 && (run.stats.doorAmbush || 0) === 0);
+    const g4 = w.spawnEnemy("grunt", 120, 320, { difficulty: run.difficulty });
+    g4.entering = false; g4.vx = 0; g4.vy = 0; g4.speed = 0; g4.hp = 1; g4.maxHp = 1; g4.throughDoor = 1.5;
+    shoot(120, 360, 0, -900);
+    await runFrames(5, true);
+    check("a ship caught fresh out of a door counts for the other star",
+      !g4.alive && (run.stats.doorAmbush || 0) === 1 && (run.stats.doorShots || 0) === 1);
+    const g5 = w.spawnEnemy("grunt", 520, 320, { difficulty: run.difficulty });
+    g5.entering = false; g5.vx = 0; g5.vy = 0; g5.speed = 0; g5.hp = 1; g5.maxHp = 1;
+    shoot(520, 360, 0, -900);
+    await runFrames(5, true);
+    check("a plain kill is on neither ledger",
+      !g5.alive && (run.stats.doorAmbush || 0) === 1 && (run.stats.doorShots || 0) === 1);
+    check("the doors draw without errors", errors.length === 0);
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+
+    /* --- a whole rookie run: the doors see traffic, and the level ends --- */
+    mk("Lintel");
+    G.coopWith = null;
+    G.profile = P.load("Lintel");
+    G.godMode = true;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(di, "rookie");
+    let frames = 0;
+    while(G.state === "playing" && !G.run.ended && frames < 6000){
+      await runFrames(60);
+      frames += 60;
+    }
+    const DS = SF.doors._state();
+    console.log("Moon of Doors (rookie) ->", G.run.phase, "passes:", DS ? DS.passes : "-",
+      "stands:", DS ? DS.arrangements : "-", "doorShots:", G.run.stats.doorShots,
+      "doorAmbush:", G.run.stats.doorAmbush, "spawned:", G.run.stats.spawned, "kills:", G.run.stats.kills, "frames:", frames);
+    check("a rookie run sends plenty through the doors, over several stands",
+      !!DS && DS.passes >= 30 && DS.arrangements >= 3);
+    check("the moon of doors finishes: a door never holds the sky open",
+      G.run.stats.completed === true || G.run.ended === true);
+    check("the rookie run drew without errors", errors.length === 0);
+    G.godMode = false;
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+  }
+
+  /*
+   * THE GLOW CAVE - under the moon. Crystal clusters you fly straight
+   * through, but a shot cannot: ours ricochet off the facets, theirs break
+   * on them - and a bolt that breaks over a pilot sheltering under the
+   * crystal is the cover star's.
+   */
+  {
+    const G = SF.game, P = SF.profile;
+    const ci = SF.missions.MISSIONS.findIndex(m => m.crystals);
+    check("the glow cave is a real stop, under the moon of doors",
+      ci === 38 && SF.missions.MISSIONS[ci].name === "The Glow Cave" &&
+      SF.missions.MISSIONS[ci - 1].doors === true &&
+      SF.missions.skyOf(ci) === 47 && SF.skygen.isSurface(47) &&
+      SF.missions.MISSIONS[ci].objectives.join(",") === "complete,bounce,cover" &&
+      !!SF.missions.OBJECTIVES.bounce && !!SF.missions.OBJECTIVES.cover);
+    check("the great geode passes once; the cave floor tiles",
+      !!SF.skygen.buildOnce(47, 300, 400, 1) &&
+      !!SF.skygen.build(47, 300, 400, 1));
+    check("the cave stop wears its own colour on the map",
+      SF.ui.missionFace(SF.missions.MISSIONS[ci]).kind === "crystals");
+
+    const mk = n => { const q = P.blank(n); q.missionsVer = 99; P.save(q); return q; };
+    mk("Facet");
+    G.coopWith = null;
+    G.profile = P.load("Facet");
+    G.godMode = false;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(ci, "pilot");
+    await runFrames(80, true);                  // past the 2.2s intro
+    const w = G.world, run = G.run;
+    const C = SF.crystals._state();
+    check("the level opens with six clusters standing, in four colours",
+      run.mission.crystals === true && SF.crystals.active() && run.phase !== "intro" &&
+      C.clusters.length === 6 && new Set(C.clusters.map(c => c.hue.core)).size === 4);
+
+    w.enemies.items.forEach(e => { e.alive = false; });
+    w.enemyBullets.killAll(); w.bullets.killAll();
+    run.director.nextWave = 999;
+    const shoot = (x, y, vx, vy) => {
+      const b = w.bullets.spawn();
+      b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.r = 4;
+      b.dmg = 1; b.pierce = 0; b.homing = 0; b.tier = 0; b.age = 0;
+      b.hitBoss = false; b.hitWeak = false; b.owner = w.player; b.fromDrone = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;
+      return b;
+    };
+    // the lowest cluster that is fully on the field
+    const c = C.clusters.filter(k => k.y > 300 && k.y < 680).sort((a, b) => b.y - a.y)[0];
+    check("a cluster stands in the middle of the field to test against", !!c);
+    const far = c.x < 300 ? 520 : 80;
+    w.player.x = far; w.player.y = 700; w.player.targetX = far; w.player.targetY = 700;
+
+    /* A round straight up into it comes straight back. */
+    const b1 = shoot(c.x, c.y + c.r + 30, 0, -900);
+    await runFrames(4, true);
+    check("a round fired straight up into a crystal comes straight back down",
+      b1.bounced === 1 && b1.vy > 0 && Math.abs(b1.vx) < 1 && C.bounces >= 1);
+    w.bullets.killAll();
+
+    /* A kill by that round is the bounce star's. */
+    const g1 = w.spawnEnemy("grunt", c.x, c.y + c.r + 70, { difficulty: run.difficulty });
+    g1.entering = false; g1.vx = 0; g1.vy = 0; g1.speed = 0; g1.hp = 1; g1.maxHp = 1;
+    const kills0 = run.stats.kills;
+    shoot(c.x, c.y + c.r + 30, 0, -900);
+    await runFrames(10, true);
+    check("a kill off the bounce counts for the star",
+      !g1.alive && run.stats.kills === kills0 + 1 && (run.stats.bounceKills || 0) === 1);
+    const g2 = w.spawnEnemy("grunt", far, 320, { difficulty: run.difficulty });
+    g2.entering = false; g2.vx = 0; g2.vy = 0; g2.speed = 0; g2.hp = 1; g2.maxHp = 1;
+    shoot(far, 360, 0, -900);
+    await runFrames(5, true);
+    check("a straight kill is not", !g2.alive && (run.stats.bounceKills || 0) === 1);
+
+    /* A round that will not stop leaves. */
+    const b3 = shoot(c.x, c.y + c.r + 30, 0, -900);
+    b3.bounced = 4;
+    await runFrames(4, true);
+    check("a round on its fifth bounce is spent", !b3.alive);
+
+    /* Their bolt breaks on it - and shelters the pilot under it. */
+    w.player.x = c.x; w.player.y = c.y + 60; w.player.targetX = c.x; w.player.targetY = c.y + 60;
+    const covered0 = run.stats.covered || 0;
+    const eb1 = w.spawnEnemyBullet(c.x, c.y - c.r - 30, 0, 400, "bolt", 4);
+    await runFrames(8, true);
+    check("their bolt breaks on the crystal, and the pilot under it is sheltered",
+      !eb1.alive && C.broken >= 1 && (run.stats.covered || 0) === covered0 + 1);
+    w.player.x = far; w.player.y = 700; w.player.targetX = far; w.player.targetY = 700;
+    const eb2 = w.spawnEnemyBullet(c.x, c.y - c.r - 30, 0, 400, "bolt", 4);
+    await runFrames(8, true);
+    check("...but a bolt broken over nobody shelters nobody",
+      !eb2.alive && (run.stats.covered || 0) === covered0 + 1);
+    check("a hull flies through a crystal untouched",
+      w.player.lives === 3 && (run.stats.hitsTaken || 0) === 0);
+    check("the cave draws without errors", errors.length === 0);
+    G.run.ended = true; G.state = "idle";
+    G.world.reset();
+
+    /* --- a whole rookie run: the facets see work, and the level ends --- */
+    mk("Prism");
+    G.coopWith = null;
+    G.profile = P.load("Prism");
+    G.godMode = true;
+    id("overlayResults").classList.add("hidden");
+    G.startMission(ci, "rookie");
+    let frames = 0;
+    while(G.state === "playing" && !G.run.ended && frames < 6000){
+      await runFrames(60);
+      frames += 60;
+    }
+    const CS = SF.crystals._state();
+    console.log("Glow Cave (rookie) ->", G.run.phase, "bounces:", CS ? CS.bounces : "-",
+      "broken:", CS ? CS.broken : "-", "bounceKills:", G.run.stats.bounceKills, "covered:", G.run.stats.covered,
+      "spawned:", G.run.stats.spawned, "kills:", G.run.stats.kills, "frames:", frames);
+    check("a rookie run bounces plenty and breaks some of theirs",
+      !!CS && CS.bounces >= 30 && CS.broken >= 3);
+    check("the glow cave finishes: a crystal never holds the sky open",
       G.run.stats.completed === true || G.run.ended === true);
     check("the rookie run drew without errors", errors.length === 0);
     G.godMode = false;

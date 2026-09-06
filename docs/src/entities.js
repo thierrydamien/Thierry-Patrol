@@ -810,6 +810,7 @@ class World {
       b.r = 5 + tier*0.5; b.dmg = dmg; b.pierce = p.pierce; b.homing = homing;
       b.tier = tier; b.age = 0; b.fromDrone = false; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
       b.owner = p;                      // whose kill this becomes
       if(volley) volley.push(b);
     }
@@ -828,6 +829,7 @@ class World {
       b.r = 4.5; b.dmg = Math.max(1, Math.round(dmg*0.6)); b.pierce = p.pierce;
       b.homing = homing; b.tier = Math.max(0, tier-1); b.age = 0; b.fromDrone = true; b.hitBoss = false; b.hitWeak = false;
       b.fromMirror = false; b.petal = false;
+      b.doored = false; b.bounced = 0; b.doorCool = 0;   // doors and facets, per round
       b.owner = p;                      // a wingman's round is its pilot's
       if(volley) volley.push(b);
       fx.muzzle(p.x + side*52, p.y - 4, "#9fe4ff", 0.75);
@@ -942,6 +944,7 @@ class World {
     }
     const b = this.enemyBullets.spawn();
     b.x=x; b.y=y; b.vx=vx; b.vy=vy; b.r=r||4; b.kind=kind||"bolt"; b.age=0;
+    b.doorCool = 0;                                  // the Moon of Doors
     // The water slows their fire exactly as much as it slows yours.
     if(this.mods.water){ b.vx *= 0.8; b.vy *= 0.8; }
     // BUBBLE SHOTS: their fire drifts in at just over a third speed and wobbles
@@ -1138,6 +1141,9 @@ class World {
     e.twinOf = null; e.twinStamp = 0; e.mirageHits = 0; e.brushed = false;
     // Whiteout's ice: how long it holds, and the way it was going when caught.
     e.frozen = 0; e.frozenVx = 0; e.frozenVy = 0;
+    // The Moon of Doors: no door twice in a breath, and how long "just
+    // stepped through" lasts for the ambush star.
+    e.doorCool = 0; e.throughDoor = 0;
     // The Anchor's cable. Exactly the bug this block exists for: a ship that
     // died on the end of one would otherwise hand its link to whatever plain
     // grunt inherited the slot, and a live cable would stretch away to a ship

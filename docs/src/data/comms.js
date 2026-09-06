@@ -426,6 +426,32 @@ const COMMS = {
     "SHATTERED! Frozen ones go in one hit, {you} — get them before they thaw!",
     "That's it, {you} — the cold froze it, YOU broke it.",
   ]},
+  doorsStart: { speaker:"control", cooldown:999, lines:[
+    "Two pairs of doors, {you}. Same colour, same door. Shoot INTO the low one - your rounds come out of the high one.",
+    "The doors don't take you, {you}, only them and the shots. Watch the one beside you: something's coming out of it.",
+    "Fire into a door, {you} - see where it lands. Then use it.",
+  ]},
+  doorAmbush: { speaker:"control", cooldown:25, lines:[
+    "Door beside you, {you} — something just came THROUGH!",
+    "They took a door, {you} — turn around!",
+  ]},
+  doorShot: { speaker:"control", cooldown:45, lines:[
+    "THROUGH the door, {you}! That's how you hit them before they arrive.",
+    "Your shot went in low and came out on top of them, {you}. Keep feeding the door!",
+  ]},
+  crystalsStart: { speaker:"control", cooldown:999, lines:[
+    "The crystals are light, {you} - fly through them. Your SHOTS can't: they bounce. Theirs break.",
+    "Get under a crystal when they open up, {you}. Their fire shatters on it.",
+    "Bank a round off a crystal, {you} - it goes where they aren't looking.",
+  ]},
+  crystalBounce: { speaker:"control", cooldown:45, lines:[
+    "OFF THE BOUNCE, {you}! A shot that comes off a crystal finds ships you can't see straight.",
+    "That one came off the facet, {you}. Nobody dodges a round from the side.",
+  ]},
+  crystalCover: { speaker:"control", cooldown:60, lines:[
+    "Their fire's breaking on the crystal, {you} — stay under it!",
+    "Good cover, {you}. Let the crystal take it.",
+  ]},
   devourerStart: { speaker:"control", cooldown:999, lines:[
     "That's it, {you}. That's the thing that ate their sun.",
     "Everything you've got, {you}. Right now.",

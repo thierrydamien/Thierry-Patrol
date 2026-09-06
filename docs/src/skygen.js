@@ -712,6 +712,51 @@ const SKIES = [
     lum:1.0, density:0.8, stars:0, bright:0,
     props:[ {k:"icefield",    x:0.50, y:0.50},
             {k:"frozenfleet", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE THRESHOLD (The Moon of Doors) - an airless moon, and the first
+   * surface in the campaign that somebody BUILT on. The seventh surface,
+   * appended at the end, same Drawing Board index rule.
+   *
+   * Airless means the light is honest: one sun low over the top-right
+   * corner and no haze to soften it, so every stone throws a hard black
+   * shadow down-left and every crater keeps a bright lip on the sun side
+   * and a black wall on the other. That one rule - hard light, one
+   * direction - is what makes the moon read as a moon and not as the
+   * desert with its colour taken out. Two paved AVENUES cross the dust
+   * (full height, wrap-exact, the trench rule) with rune veins still alive
+   * in the joints; standing stones, fallen door-rings and dead sockets lie
+   * between them. The once-layer is the Great Arch: two monoliths and a
+   * cracked lintel over the dormant master door, their shadows raking the
+   * plaza, one of their ships crashed at its edge - the level's rule,
+   * written on the ground before the first pair of doors ever lights.
+   */
+  { name:"The Threshold", surface:true,
+    clouds:["#8a84a3","#5f5a78","#33304a"], dust:"#dcd7ee", star:"#ffffff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"moonfloor", x:0.50, y:0.50},
+            {k:"greatarch", x:0.50, y:0.50, once:true} ] },
+
+  /*
+   * THE GEODE (The Glow Cave) - under the moon, the whole world is hollow
+   * and it glows. The eighth surface, appended at the end, same rule.
+   *
+   * The moon's opposite: no sun at all, so nothing throws a shadow - the
+   * light comes UP, out of the things on the floor. A luminous stream
+   * crosses the tile (full height, wrap-exact) and lights its own banks,
+   * veins of violet mineral run through the rock, fungi glow in the
+   * hollows, and where the ceiling has cracked a shaft of daylight lands
+   * as a pale pool. The crystal clusters the level plays with are drawn
+   * live by crystals.js over this floor, so the rock stays deep enough for
+   * them to shine. The once-layer is the Great Geode: a ring of giant
+   * shards around a glowing pool under one shaft of daylight, with their
+   * rig on the shore and one shard already sawn off and loaded.
+   */
+  { name:"The Geode", surface:true,
+    clouds:["#2e2546","#1f1830","#130d22"], dust:"#b48cff", star:"#8ff0ff",
+    lum:1.0, density:0.8, stars:0, bright:0,
+    props:[ {k:"cavefloor",  x:0.50, y:0.50},
+            {k:"greatgeode", x:0.50, y:0.50, once:true} ] },
 ];
 
 /* Deterministic RNG, so a mission's sky is elaborate but always the same sky. */
@@ -4155,6 +4200,906 @@ function drawFrozenfleet(ctx, W, H, p, rand){
   }
 }
 
+/* ---------------------------------------------------------
+   THE THRESHOLD - the moon of doors
+   ---------------------------------------------------------
+ * An airless moon, and the first surface in the campaign somebody BUILT
+ * on. Airless means the light is honest: one sun, low over the top-right
+ * corner, no haze to soften it - so every stone throws a hard black shadow
+ * down-left, every crater keeps a bright lip on the sun side and a black
+ * wall on the other, and the dust between them is flat and grey-violet.
+ * That single rule (hard light, one direction) is what makes the moon read
+ * as a moon instead of as the desert with its colour taken out.
+ *
+ * The builders' work runs through it: two paved avenues cross the tile
+ * (full height, wrap-exact - the trench rule) with rune veins still glowing
+ * teal and rose in the joints, standing stones line them, fallen door-rings
+ * lie half buried, and the sockets where doors once stood are dark rings in
+ * the dust. The once-layer is the Great Arch, the plaza the avenues lead to.
+ */
+const MOON = {
+  dust:"#8a84a3", lit:"#b3adc9", dark:"#5f5a78", shade:"#33304a", black:"#161425",
+  rim:"#dcd7ee", warm:"#f0c58a",
+  stone:"#4a4560", stoneLit:"#6e6889", stoneEdge:"#a39dc4",
+  teal:"#48e5c2", rose:"#ff5dbb", wreck:"#1e1524", warn:"#ff5d73", lamp:"#ffe9a0",
+};
+/* The sun sits over the top-right corner; every shadow on the moon falls
+ * this way. One vector, shared, so nothing on the floor disagrees. */
+const MOON_SX = -0.62, MOON_SY = 0.78;
+const MOON_SA = Math.atan2(MOON_SY, MOON_SX);
+
+/** A crater: an ejecta apron, a rim lit on the sun side, a bowl whose far
+ *  wall is black, and the rim's own shadow thrown down-left. */
+function moonCrater(ctx, x, y, r){
+  const ej = ctx.createRadialGradient(x, y, r*0.95, x, y, r*2.1);
+  ej.addColorStop(0, rgba(MOON.lit, 0.4)); ej.addColorStop(1, rgba(MOON.lit, 0));
+  ctx.fillStyle = ej; ctx.beginPath(); ctx.arc(x, y, r*2.1, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(MOON.shade, 0.6);
+  ctx.beginPath(); ctx.ellipse(x + MOON_SX*r*0.3, y + MOON_SY*r*0.3, r*1.12, r*1.04, 0, 0, TAU); ctx.fill();
+  const rg = ctx.createLinearGradient(x + r*0.75, y - r*0.75, x - r*0.75, y + r*0.75);
+  rg.addColorStop(0, MOON.rim); rg.addColorStop(0.55, MOON.dust); rg.addColorStop(1, MOON.dark);
+  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r*1.06, 0, TAU); ctx.fill();
+  const bg = ctx.createLinearGradient(x + r*0.8, y - r*0.8, x - r*0.8, y + r*0.8);
+  bg.addColorStop(0, MOON.black); bg.addColorStop(0.5, MOON.shade); bg.addColorStop(1, MOON.dust);
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, r*0.86, 0, TAU); ctx.fill();
+  if(r > 14){
+    ctx.fillStyle = rgba(MOON.dark, 0.75);
+    ctx.beginPath(); ctx.ellipse(x - r*0.12, y + r*0.14, r*0.5, r*0.4, 0, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = rgba(MOON.warm, 0.8); ctx.lineWidth = Math.max(1, r*0.07);
+  ctx.beginPath(); ctx.arc(x, y, r*0.99, -Math.PI*0.72, Math.PI*0.2); ctx.stroke();
+}
+
+/** A standing stone seen from above: a footprint with the sun on its
+ *  top-right edges and `tall` pixels of hard shadow down-left. */
+function moonStone(ctx, x, y, w, tall, rot, rand){
+  const h = w*(1.3 + rand()*0.6);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(MOON_SA);
+  ctx.fillStyle = rgba(MOON.black, 0.72);
+  ctx.beginPath(); ctx.moveTo(0, -h*0.5); ctx.lineTo(tall, -h*0.3); ctx.lineTo(tall, h*0.3); ctx.lineTo(0, h*0.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = MOON.stoneLit;
+  ctx.beginPath(); ctx.moveTo(-w*0.5, -h*0.5); ctx.lineTo(w*0.45, -h*0.55); ctx.lineTo(w*0.5, h*0.5); ctx.lineTo(-w*0.45, h*0.45); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-w*0.5, -h*0.5); ctx.lineTo(w*0.45, -h*0.55); ctx.lineTo(w*0.5, h*0.5); ctx.stroke();
+  ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w*0.5, h*0.5); ctx.lineTo(-w*0.45, h*0.45); ctx.lineTo(-w*0.5, -h*0.5); ctx.stroke();
+  ctx.restore();
+}
+
+/** A plinth: a square block, sun on two edges, a short hard shadow. */
+function moonPlinth(ctx, x, y, s){
+  ctx.fillStyle = rgba(MOON.black, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(x - s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5 + MOON_SX*s*1.1, y + s*0.5 + MOON_SY*s*1.1);
+  ctx.lineTo(x + s*0.5 + MOON_SX*s*1.1, y + s*0.5 + MOON_SY*s*1.1); ctx.lineTo(x + s*0.5, y + s*0.5);
+  ctx.lineTo(x + s*0.5, y - s*0.5); ctx.lineTo(x - s*0.5, y - s*0.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = MOON.stoneLit; ctx.fillRect(x - s*0.5, y - s*0.5, s, s);
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y + s*0.5); ctx.stroke();
+  ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y - s*0.5); ctx.stroke();
+}
+
+/** A fallen door-ring, part of one: an arc of stone with its rune ticks,
+ *  a few of them still lit, and its shadow beside it. */
+function moonRing(ctx, x, y, R, a0, a1, rune, rand){
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(MOON.black, 0.65); ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.arc(x + MOON_SX*8, y + MOON_SY*8, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.arc(x, y, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = MOON.stoneLit; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(x, y, R, a0, a1); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.stoneEdge, 0.9); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(x, y, R + 3.5, a0, a1); ctx.stroke();
+  for(let a = a0 + 0.12; a < a1 - 0.06; a += 0.24){
+    const lit = rand() < 0.4;
+    const x0 = x + Math.cos(a)*(R - 2.5), y0 = y + Math.sin(a)*(R - 2.5);
+    const x1 = x + Math.cos(a)*(R + 2.5), y1 = y + Math.sin(a)*(R + 2.5);
+    if(lit){
+      ctx.strokeStyle = rgba(rune, 0.35); ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    }
+    ctx.strokeStyle = lit ? rune : rgba(MOON.shade, 0.9); ctx.lineWidth = lit ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  }
+}
+
+/** The socket a door once stood in: a dark ring worn into the dust, the
+ *  disc inside it a shade darker, one dead rune at its rim. */
+function moonSocket(ctx, x, y, r){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(MOON.shade, 0.55)); g.addColorStop(0.8, rgba(MOON.shade, 0.35)); g.addColorStop(1, rgba(MOON.shade, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = rgba(MOON.black, 0.55); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, r*0.8, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.rim, 0.5); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, y, r*0.8 + 2, -Math.PI*0.7, Math.PI*0.15); ctx.stroke();
+}
+
+/** One of the builders' avenues: a bed with a sunlit kerb, slabs laid along
+ *  a wrap-exact curve, and a rune vein still alive in every third joint. */
+function moonAvenue(ctx, W, H, road, rw, rune, rand){
+  const n = Math.round(H/26), len = H/n;
+  const path = () => {
+    ctx.beginPath();
+    for(let i = 0; i <= 48; i++){ const t = i/48, x = road(t); i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "butt"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(MOON.black, 0.55); ctx.lineWidth = rw + 14;
+  ctx.save(); ctx.translate(MOON_SX*4, MOON_SY*4); path(); ctx.stroke(); ctx.restore();   // the kerb's shadow
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = rw + 8; path(); ctx.stroke();
+  ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = rw + 8;
+  ctx.save(); ctx.translate(-MOON_SX*1.2, -MOON_SY*1.2); path(); ctx.stroke(); ctx.restore(); // the kerb's sun side
+  ctx.strokeStyle = MOON.stone; ctx.lineWidth = rw + 5; path(); ctx.stroke();
+  for(let i = 0; i < n; i++){
+    const t = (i + 0.5)/n, y = t*H, x = road(t);
+    const dx = (road(t + 0.002) - road(t - 0.002))/(0.004*H);
+    const a = -Math.atan(dx);
+    const broken = rand() < 0.07;
+    const tone = i % 2 ? MOON.stoneLit : mixHexHex(MOON.stoneLit, MOON.stone, 0.35);
+    const vein = i % 3 === 0, dead = rand() < 0.3;
+    tiled(ctx, H, y, yy => {
+      ctx.save(); ctx.translate(x, yy); ctx.rotate(a);
+      if(broken){
+        ctx.fillStyle = MOON.black; ctx.fillRect(-rw*0.5, -len*0.5 + 1, rw, len - 2);
+        ctx.fillStyle = rgba(MOON.dust, 0.85); ctx.fillRect(-rw*0.5, len*0.5 - 4, rw, 3);
+      } else {
+        ctx.fillStyle = tone; ctx.fillRect(-rw*0.5, -len*0.5 + 1, rw, len - 2);
+        ctx.strokeStyle = rgba(MOON.stoneEdge, 0.85); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-rw*0.5, -len*0.5 + 1.5); ctx.lineTo(rw*0.5, -len*0.5 + 1.5); ctx.lineTo(rw*0.5, len*0.5 - 1); ctx.stroke();
+        ctx.strokeStyle = rgba(MOON.shade, 0.9); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(rw*0.5, len*0.5 - 1); ctx.lineTo(-rw*0.5, len*0.5 - 1); ctx.lineTo(-rw*0.5, -len*0.5 + 1.5); ctx.stroke();
+      }
+      if(vein){
+        const yv = -len*0.5;
+        if(!dead){
+          ctx.strokeStyle = rgba(rune, 0.3); ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+          ctx.strokeStyle = rgba(rune, 0.95); ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(-rw*0.5 + 4, yv - 0.8, 3, 1.6); ctx.fillRect(rw*0.5 - 7, yv - 0.8, 3, 1.6);
+        } else {
+          ctx.strokeStyle = rgba(MOON.black, 0.8); ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(-rw*0.5, yv); ctx.lineTo(rw*0.5, yv); ctx.stroke();
+        }
+      }
+      ctx.restore();
+    });
+  }
+}
+
+function drawMoonfloor(ctx, W, H, p, rand){
+  ctx.fillStyle = MOON.dust;
+  ctx.fillRect(0, 0, W, H);
+
+  // Mare and highland: broad patches of darker and paler regolith.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = (0.14 + rand()*0.3)*W;
+    const col = i % 3 ? MOON.dark : MOON.lit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.4 : 0.5)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // The grain of the dust: fine, half of it catching the sun.
+  for(let i = 0; i < 300; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? MOON.rim : MOON.shade, 0.22 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.2, 1.2));
+  }
+
+  // Old craters, the ones the avenues were built across.
+  for(let i = 0; i < 12; i++){
+    const x = rand()*W, y = rand()*H, r = 4 + rand()*rand()*26;
+    tiled(ctx, H, y, yy => moonCrater(ctx, x, yy, r));
+  }
+
+  /*
+   * THE AVENUES - two of them, teal and rose, running the height of the
+   * tile on whole sine periods so position and slope agree at the seam.
+   */
+  const av0 = W*(0.22 + rand()*0.10), av1 = W*(0.66 + rand()*0.10);
+  const road0 = t => av0 + Math.sin(t*TAU)*W*0.05 + Math.sin(t*TAU*2 + 1.3)*W*0.025;
+  const road1 = t => av1 + Math.sin(t*TAU + 2.0)*W*0.06 + Math.sin(t*TAU*3)*W*0.02;
+  moonAvenue(ctx, W, H, road0, 34, MOON.teal, rand);
+  moonAvenue(ctx, W, H, road1, 28, MOON.rose, rand);
+
+  // Standing stones along both, every one throwing its shadow the same way.
+  [[road0, 34], [road1, 28]].forEach(([road, rw]) => {
+    for(let i = 0; i < 7; i++){
+      const t = rand(), side = rand() < 0.5 ? -1 : 1;
+      const x = road(t) + side*(rw*0.5 + 16 + rand()*26), y = t*H;
+      const w = 6 + rand()*6, tall = 24 + rand()*44, rot = (rand() - 0.5)*0.5;
+      tiled(ctx, H, y, yy => moonStone(ctx, x, yy, w, tall, rot, rngFor(8100 + i*7 + Math.round(t*100))));
+    }
+  });
+
+  // Fallen door-rings, part buried; the sockets they stood in; plinths.
+  for(let i = 0; i < 5; i++){
+    const x = rand()*W, y = rand()*H, R = 22 + rand()*22;
+    const a0 = rand()*TAU, a1 = a0 + 0.9 + rand()*2.4;
+    const rune = i % 2 ? MOON.rose : MOON.teal;
+    tiled(ctx, H, y, yy => moonRing(ctx, x, yy, R, a0, a1, rune, rngFor(8300 + i)));
+  }
+  for(let i = 0; i < 4; i++){
+    const x = rand()*W, y = rand()*H, r = 16 + rand()*10;
+    tiled(ctx, H, y, yy => moonSocket(ctx, x, yy, r));
+  }
+  for(let i = 0; i < 6; i++){
+    const x = rand()*W, y = rand()*H, s = 8 + rand()*8;
+    tiled(ctx, H, y, yy => moonPlinth(ctx, x, yy, s));
+  }
+
+  // Fresh craters, the ones that hit AFTER the builders left: they punch
+  // through avenue and stone alike.
+  for(let i = 0; i < 3; i++){
+    const road = i % 2 ? road1 : road0, t = rand();
+    const x = road(t) + (rand() - 0.5)*30, y = t*H, r = 16 + rand()*14;
+    tiled(ctx, H, y, yy => moonCrater(ctx, x, yy, r));
+  }
+
+  // Their rover tracks: paired dashes wandering between the avenues.
+  ctx.setLineDash([5, 6]); ctx.lineCap = "butt";
+  for(let i = 0; i < 3; i++){
+    const x0 = rand()*W, y0 = rand()*H, x1 = x0 + (rand() - 0.5)*W*0.6, y1 = y0 + 120 + rand()*140;
+    const cx = (x0 + x1)/2 + (rand() - 0.5)*120, cy = (y0 + y1)/2;
+    tiled(ctx, H, y0, yy => {
+      const d = yy - y0;
+      [-4, 4].forEach(off => {
+        ctx.strokeStyle = rgba(MOON.shade, 0.6); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x0 + off, yy); ctx.quadraticCurveTo(cx + off, cy + d, x1 + off, y1 + d); ctx.stroke();
+      });
+    });
+  }
+  ctx.setLineDash([]);
+
+  // Glints: the sun catching glass in the dust.
+  for(let i = 0; i < 26; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba("#ffffff", 0.45 + rand()*0.5);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.5, 1.5));
+  }
+}
+
+/*
+ * THE GREAT ARCH - the once-layer. The plaza the avenues lead to: rings of
+ * paving around the dormant master door, two colossal monoliths with a
+ * cracked lintel between them, and the sun raking their shadows across the
+ * whole floor. One of their ships lies crashed at the edge with its lamp
+ * still on. The level's rule - doors, and something on the other side of
+ * them - written on the ground before the first pair ever lights.
+ */
+function drawGreatarch(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.46, R = W*0.30;
+
+  // Dust trodden dark around the plaza; the paving itself.
+  const worn = ctx.createRadialGradient(cx, cy, R*0.9, cx, cy, R*1.9);
+  worn.addColorStop(0, rgba(MOON.dark, 0.45)); worn.addColorStop(1, rgba(MOON.dark, 0));
+  ctx.fillStyle = worn; ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(MOON.black, 0.5);
+  ctx.beginPath(); ctx.arc(cx + MOON_SX*3, cy + MOON_SY*3, R*1.02, 0, TAU); ctx.fill();   // the plaza's own lip
+  const RINGS = 6;
+  const ringR = k => R*(0.42 + k*0.1), ringW = R*0.1 - 2;
+  for(let k = 0; k < RINGS; k++){
+    const r0 = ringR(k), nj = 14 + k*6;
+    ctx.strokeStyle = k % 2 ? MOON.stoneLit : mixHexHex(MOON.stoneLit, MOON.stone, 0.35);
+    ctx.lineWidth = ringW;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + ringW/2, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.shade, 0.85); ctx.lineWidth = 1.2;
+    for(let j = 0; j < nj; j++){
+      const a = (j/nj)*TAU + k*0.11;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*r0, cy + Math.sin(a)*r0);
+      ctx.lineTo(cx + Math.cos(a)*(r0 + ringW), cy + Math.sin(a)*(r0 + ringW)); ctx.stroke();
+    }
+    ctx.strokeStyle = rgba(MOON.shade, 0.9); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, r0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.stoneEdge, 0.7); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + 1.2, -Math.PI*0.75, Math.PI*0.25); ctx.stroke();
+  }
+  // Missing slabs: black gaps where the paving has gone.
+  for(let i = 0; i < 9; i++){
+    const k = Math.floor(rand()*RINGS), r0 = ringR(k), nj = 14 + k*6;
+    const j = Math.floor(rand()*nj), a0 = (j/nj)*TAU + k*0.11, a1 = a0 + TAU/nj;
+    ctx.fillStyle = MOON.black;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 + ringW, a0, a1); ctx.arc(cx, cy, r0, a1, a0, true); ctx.closePath(); ctx.fill();
+  }
+  // The rune circle inscribed in the paving: teal and rose, turn and turn about.
+  const rr = ringR(3) - 1;
+  for(let j = 0; j < 36; j++){
+    const a0 = (j/36)*TAU + 0.02, a1 = a0 + (TAU/36)*0.6;
+    const col = j % 2 ? MOON.teal : MOON.rose;
+    ctx.strokeStyle = rgba(col, 0.3); ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a1); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a1); ctx.stroke();
+  }
+
+  // The master door, dormant: a stone collar, a black disc, dead runes
+  // around it, and one hairline of teal that says it is not quite dead.
+  const dr = ringR(0) - 4;
+  ctx.fillStyle = rgba(MOON.black, 0.6);
+  ctx.beginPath(); ctx.arc(cx + MOON_SX*5, cy + MOON_SY*5, dr + 8, 0, TAU); ctx.fill();
+  const collar = ctx.createLinearGradient(cx + dr, cy - dr, cx - dr, cy + dr);
+  collar.addColorStop(0, MOON.stoneEdge); collar.addColorStop(0.5, MOON.stoneLit); collar.addColorStop(1, MOON.stone);
+  ctx.fillStyle = collar; ctx.beginPath(); ctx.arc(cx, cy, dr + 8, 0, TAU); ctx.fill();
+  const disc = ctx.createRadialGradient(cx - dr*0.2, cy + dr*0.2, 0, cx, cy, dr);
+  disc.addColorStop(0, "#0b0a16"); disc.addColorStop(0.7, MOON.black); disc.addColorStop(1, MOON.shade);
+  ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(cx, cy, dr, 0, TAU); ctx.fill();
+  for(let j = 0; j < 24; j++){
+    const a = (j/24)*TAU, live = j % 6 === 0;
+    ctx.strokeStyle = live ? rgba(MOON.teal, 0.8) : rgba(MOON.stoneLit, 0.5); ctx.lineWidth = live ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*(dr - 6), cy + Math.sin(a)*(dr - 6));
+    ctx.lineTo(cx + Math.cos(a)*(dr - 1), cy + Math.sin(a)*(dr - 1)); ctx.stroke();
+  }
+  ctx.strokeStyle = rgba(MOON.teal, 0.25); ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(cx - dr*0.7, cy + dr*0.15); ctx.lineTo(cx + dr*0.6, cy - dr*0.2); ctx.stroke();
+  ctx.strokeStyle = rgba(MOON.teal, 0.85); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(cx - dr*0.7, cy + dr*0.15); ctx.lineTo(cx - dr*0.2, cy + dr*0.05); ctx.lineTo(cx + dr*0.1, cy - dr*0.12); ctx.lineTo(cx + dr*0.6, cy - dr*0.2); ctx.stroke();
+
+  /*
+   * THE ARCH. Two monoliths and the lintel across them, and - this is the
+   * picture - their shadows: the lintel's a long dark band raked across the
+   * plaza, each monolith's a black blade beside it. Shadows first, so the
+   * stone lands on top of them.
+   */
+  const ml = { x: cx - R*0.6, y: cy - R*0.1 }, mr = { x: cx + R*0.6, y: cy - R*0.1 };
+  const mw = R*0.15, mh = R*0.3, tall = R*1.1;
+  const ly = cy - R*0.34, lw = R*0.11;
+  const shadowQuad = (x, y, w, h, len) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(MOON_SA);
+    const half = (Math.abs(w*Math.sin(MOON_SA)) + Math.abs(h*Math.cos(MOON_SA)))*0.5;
+    ctx.beginPath(); ctx.moveTo(0, -half); ctx.lineTo(len, -half*0.8); ctx.lineTo(len, half*0.8); ctx.lineTo(0, half); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  };
+  ctx.fillStyle = rgba(MOON.black, 0.55);
+  shadowQuad(ml.x, ml.y, mw, mh, tall);
+  shadowQuad(mr.x, mr.y, mw, mh, tall);
+  // the lintel's shadow: the whole span, shifted by the arch's height, with
+  // the gap where the middle has fallen out
+  const sx = MOON_SX*tall, sy = MOON_SY*tall;
+  const gapL = cx - R*0.14, gapR = cx + R*0.1;
+  [[ml.x - mw*0.5, gapL], [gapR, mr.x + mw*0.5]].forEach(([x0, x1]) => {
+    ctx.beginPath();
+    ctx.moveTo(x0 + sx, ly - lw*0.5 + sy); ctx.lineTo(x1 + sx, ly - lw*0.5 + sy);
+    ctx.lineTo(x1 + sx, ly + lw*0.5 + sy); ctx.lineTo(x0 + sx, ly + lw*0.5 + sy); ctx.closePath(); ctx.fill();
+  });
+  // the fallen piece, flat on the plaza, its own short shadow
+  {
+    const fx = cx - R*0.12, fy = cy + R*0.36, fl = R*0.22;
+    ctx.save(); ctx.translate(fx, fy); ctx.rotate(0.35);
+    ctx.fillStyle = rgba(MOON.black, 0.7); ctx.fillRect(-fl*0.5 + MOON_SX*5, -lw*0.5 + MOON_SY*5, fl, lw);
+    ctx.fillStyle = MOON.stoneLit; ctx.fillRect(-fl*0.5, -lw*0.5, fl, lw);
+    ctx.strokeStyle = MOON.stoneEdge; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-fl*0.5, -lw*0.5); ctx.lineTo(fl*0.5, -lw*0.5); ctx.lineTo(fl*0.5, lw*0.5); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.rose, 0.8); ctx.lineWidth = 1.4;
+    for(let j = 0; j < 4; j++){ ctx.beginPath(); ctx.moveTo(-fl*0.35 + j*fl*0.22, -lw*0.3); ctx.lineTo(-fl*0.35 + j*fl*0.22, lw*0.3); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the monoliths' tops, sun on the top-right edges, a warm line where it catches
+  [ml, mr].forEach((m, i) => {
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(i ? 0.08 : -0.06);
+    const g = ctx.createLinearGradient(mw*0.5, -mh*0.5, -mw*0.5, mh*0.5);
+    g.addColorStop(0, MOON.stoneEdge); g.addColorStop(0.5, MOON.stoneLit); g.addColorStop(1, MOON.stone);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(-mw*0.5, -mh*0.5); ctx.lineTo(mw*0.5, -mh*0.52); ctx.lineTo(mw*0.5, mh*0.5); ctx.lineTo(-mw*0.5, mh*0.48); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = MOON.warm; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(-mw*0.5, -mh*0.5); ctx.lineTo(mw*0.5, -mh*0.52); ctx.lineTo(mw*0.5, mh*0.5); ctx.stroke();
+    ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(mw*0.5, mh*0.5); ctx.lineTo(-mw*0.5, mh*0.48); ctx.lineTo(-mw*0.5, -mh*0.5); ctx.stroke();
+    // the runes carved down its length
+    ctx.strokeStyle = rgba(i ? MOON.rose : MOON.teal, 0.85); ctx.lineWidth = 1.3;
+    for(let j = 0; j < 5; j++){
+      const yy = -mh*0.35 + j*mh*0.17;
+      ctx.beginPath(); ctx.moveTo(-mw*0.25, yy); ctx.lineTo(mw*0.25, yy); ctx.stroke();
+      if(j % 2) { ctx.beginPath(); ctx.moveTo(0, yy - 3); ctx.lineTo(0, yy + 3); ctx.stroke(); }
+    }
+    ctx.restore();
+  });
+  // the lintel, in its two pieces
+  [[ml.x - mw*0.5, gapL], [gapR, mr.x + mw*0.5]].forEach(([x0, x1], i) => {
+    const g = ctx.createLinearGradient(0, ly - lw*0.5, 0, ly + lw*0.5);
+    g.addColorStop(0, MOON.stoneEdge); g.addColorStop(0.4, MOON.stoneLit); g.addColorStop(1, MOON.stone);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    if(i === 0){ ctx.moveTo(x0, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.lineTo(x1 - lw*0.3, ly); ctx.lineTo(x1 + lw*0.1, ly + lw*0.5); ctx.lineTo(x0, ly + lw*0.5); }
+    else { ctx.moveTo(x0 + lw*0.2, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.lineTo(x1, ly + lw*0.5); ctx.lineTo(x0 - lw*0.2, ly + lw*0.5); ctx.lineTo(x0 + lw*0.3, ly); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = MOON.warm; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x0, ly - lw*0.5); ctx.lineTo(x1, ly - lw*0.5); ctx.stroke();
+    ctx.strokeStyle = MOON.shade; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x0, ly + lw*0.5); ctx.lineTo(x1, ly + lw*0.5); ctx.stroke();
+    // the vein along it, alive on the teal side, dead past the break
+    ctx.strokeStyle = i ? rgba(MOON.black, 0.7) : rgba(MOON.teal, 0.9); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x0 + 6, ly); ctx.lineTo(x1 - 6, ly); ctx.stroke();
+  });
+
+  /*
+   * THE AVENUE OF LAMPS, running from the plaza's foot off the bottom of the
+   * frame: paired posts, teal on the left, rose on the right, each with the
+   * same hard shadow, and the paving between them.
+   */
+  {
+    const pw = R*0.5, top = cy + R*1.0;
+    const g = ctx.createLinearGradient(0, top, 0, H + 40);
+    g.addColorStop(0, rgba(MOON.stoneLit, 0.9)); g.addColorStop(1, rgba(MOON.stoneLit, 0.3));
+    ctx.fillStyle = g; ctx.fillRect(cx - pw*0.5, top, pw, H + 40 - top);
+    ctx.strokeStyle = rgba(MOON.shade, 0.8); ctx.lineWidth = 1.2;
+    for(let y = top; y < H + 40; y += 22){ ctx.beginPath(); ctx.moveTo(cx - pw*0.5, y); ctx.lineTo(cx + pw*0.5, y); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, H + 40); ctx.stroke();
+    for(let i = 0; i < 8; i++){
+      const y = top + 14 + i*R*0.27;
+      if(y > H + 30) break;
+      [-1, 1].forEach(side => {
+        const x = cx + side*(pw*0.5 + 12), col = side < 0 ? MOON.teal : MOON.rose;
+        ctx.strokeStyle = rgba(MOON.black, 0.7); ctx.lineWidth = 3; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + MOON_SX*26, y + MOON_SY*26); ctx.stroke();
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, 20);
+        halo.addColorStop(0, rgba(col, 0.55)); halo.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
+        ctx.fillStyle = MOON.stoneLit; ctx.fillRect(x - 3, y - 3, 6, 6);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x - 0.5, y - 0.5, 0.9, 0, TAU); ctx.fill();
+      });
+    }
+  }
+
+  /*
+   * ONE OF THEIRS, crashed at the plaza's edge: the trench it dug coming in
+   * from the top-right, the hull at the end of it on its side, debris, and
+   * the cabin lamp still burning - somebody is still in there.
+   */
+  {
+    const x = cx + R*0.95, y = cy + R*0.55;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = rgba(MOON.black, 0.8); ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.moveTo(x + R*0.5, y - R*0.55); ctx.quadraticCurveTo(x + R*0.2, y - R*0.2, x, y); ctx.stroke();
+    ctx.strokeStyle = rgba(MOON.rim, 0.75); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + R*0.5 + 6, y - R*0.55 - 6); ctx.quadraticCurveTo(x + R*0.2 + 6, y - R*0.2 - 6, x + 6, y - 7); ctx.stroke();
+    for(let i = 0; i < 10; i++){
+      const dx = (rand() - 0.5)*70, dy = (rand() - 0.5)*50;
+      ctx.fillStyle = rgba(MOON.wreck, 0.9); ctx.fillRect(x + dx, y + dy, 2 + rand()*3, 2 + rand()*2);
+    }
+    ctx.save(); ctx.translate(x, y); ctx.rotate(2.4);
+    ctx.fillStyle = rgba(MOON.black, 0.7);
+    ctx.beginPath(); ctx.moveTo(MOON_SX*10, -22 + MOON_SY*10); ctx.lineTo(16 + MOON_SX*10, 16 + MOON_SY*10); ctx.lineTo(MOON_SX*10, 8 + MOON_SY*10); ctx.lineTo(-16 + MOON_SX*10, 16 + MOON_SY*10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = MOON.wreck;
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(16, 16); ctx.lineTo(0, 8); ctx.lineTo(-16, 16); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgba(MOON.stoneEdge, 0.45);
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(16, 16); ctx.lineTo(6, 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = MOON.wreck;                                         // the wing that came off
+    ctx.beginPath(); ctx.moveTo(-30, 30); ctx.lineTo(-18, 22); ctx.lineTo(-24, 40); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    const lamp = ctx.createRadialGradient(x - 2, y - 6, 0, x - 2, y - 6, 18);
+    lamp.addColorStop(0, rgba(MOON.lamp, 0.95)); lamp.addColorStop(0.3, rgba("#ff8a3c", 0.5)); lamp.addColorStop(1, rgba("#ff8a3c", 0));
+    ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(x - 2, y - 6, 18, 0, TAU); ctx.fill();
+    ctx.fillStyle = MOON.warn; ctx.beginPath(); ctx.arc(x + 9, y + 4, 1.8, 0, TAU); ctx.fill();
+  }
+}
+
+/* ---------------------------------------------------------
+   THE GEODE - the glow cave
+   ---------------------------------------------------------
+ * Under the moon, the whole world is hollow and it glows. The moon's
+ * opposite in the one way that matters: there is no sun down here, so
+ * nothing throws a shadow - the light comes UP, out of the things on the
+ * floor. A luminous stream crosses the tile (full height, wrap-exact) and
+ * lights its own banks; veins of violet mineral run through the rock;
+ * fungi glow in the hollows; and where the ceiling has cracked, a shaft of
+ * daylight falls and lands as a pale pool. The crystal clusters the level
+ * plays with are drawn live by crystals.js over this floor, so the rock
+ * stays deep enough for them to shine. The once-layer is the Great Geode.
+ */
+const CAVE = {
+  rock:"#1f1830", rockLit:"#2e2546", rockDeep:"#130d22", black:"#0a0716",
+  stream:"#4fe3ff", streamDeep:"#1c7fa0", streamLit:"#8ff0ff", streamGlow:"#2fb8e8",
+  vein:"#8f6bff", veinLit:"#d2bdff",
+  fungi:"#7ef0d0", fungiCore:"#e8fff6",
+  shaft:"#cfe6ff", mist:"#8fa3c8",
+  rail:"#3a3150", railLit:"#5f5580", warn:"#ff5d73", lamp:"#ffd166",
+  hues:[ ["#ff60c4","#ffd6f1"], ["#5ef2ff","#dffcff"], ["#ffd166","#fff3c4"], ["#b48cff","#ece0ff"] ],
+};
+
+/** A vein of the mineral: a branching hairline that glows. */
+function caveVein(ctx, x, y, a, l, rand){
+  const pts = [[x, y]];
+  let px = x, py = y, aa = a;
+  for(let i = 0; i < 5; i++){
+    aa += (rand() - 0.5)*1.0;
+    px += Math.cos(aa)*l/5; py += Math.sin(aa)*l/5;
+    pts.push([px, py]);
+  }
+  const trace = () => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(CAVE.vein, 0.22); ctx.lineWidth = 7; trace(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.vein, 0.9); ctx.lineWidth = 1.8; trace(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.veinLit, 0.9); ctx.lineWidth = 0.7; trace(); ctx.stroke();
+  // a side branch off the middle
+  const m = pts[2];
+  ctx.strokeStyle = rgba(CAVE.vein, 0.8); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[0] + Math.cos(aa + 1.4)*l*0.3, m[1] + Math.sin(aa + 1.4)*l*0.3); ctx.stroke();
+}
+
+/** A stalagmite seen from above: a bump, its tip catching the glow. */
+function caveStump(ctx, x, y, r){
+  ctx.fillStyle = rgba(CAVE.black, 0.7);
+  ctx.beginPath(); ctx.ellipse(x, y + r*0.2, r*1.35, r*1.1, 0, 0, TAU); ctx.fill();
+  const g = ctx.createRadialGradient(x - r*0.15, y - r*0.15, 0, x, y, r);
+  g.addColorStop(0, "#4a3f6a"); g.addColorStop(0.45, CAVE.rockLit); g.addColorStop(1, CAVE.rockDeep);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgba(CAVE.streamLit, 0.55);
+  ctx.beginPath(); ctx.arc(x - r*0.15, y - r*0.15, Math.max(1, r*0.16), 0, TAU); ctx.fill();
+}
+
+/** A clump of glowing fungi: a halo, the caps, a bright point on each. */
+function caveFungi(ctx, x, y, n, rand){
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, 16 + n*2);
+  halo.addColorStop(0, rgba(CAVE.fungi, 0.35)); halo.addColorStop(1, rgba(CAVE.fungi, 0));
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, 16 + n*2, 0, TAU); ctx.fill();
+  for(let i = 0; i < n; i++){
+    const a = rand()*TAU, d = rand()*(6 + n*1.5), r = 1.4 + rand()*2.2;
+    const fx = x + Math.cos(a)*d, fy = y + Math.sin(a)*d;
+    ctx.fillStyle = rgba(CAVE.fungi, 0.85); ctx.beginPath(); ctx.arc(fx, fy, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = CAVE.fungiCore; ctx.beginPath(); ctx.arc(fx - r*0.3, fy - r*0.3, r*0.4, 0, TAU); ctx.fill();
+  }
+}
+
+/** A small crystal in the floor, in one of the four colours: a halo, a
+ *  glassy shard, a bright edge. `s` is its size. */
+function caveShard(ctx, x, y, s, rot, hue){
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, s*2.4);
+  halo.addColorStop(0, rgba(hue[0], 0.35)); halo.addColorStop(1, rgba(hue[0], 0));
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, s*2.4, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createLinearGradient(0, -s, 0, s*0.6);
+  g.addColorStop(0, rgba(hue[1], 0.95)); g.addColorStop(1, rgba(hue[0], 0.8));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.55, s*0.3); ctx.lineTo(0, s*0.6); ctx.lineTo(-s*0.55, s*0.3); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = rgba("#ffffff", 0.85); ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s*0.55, s*0.3); ctx.stroke();
+  ctx.restore();
+}
+
+/** Where a shaft of daylight lands: a pale pool with dust hanging in it. */
+function caveShaftPool(ctx, x, y, rx, ry, rot, rand){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, ry/rx);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+  g.addColorStop(0, rgba(CAVE.shaft, 0.34)); g.addColorStop(0.5, rgba(CAVE.shaft, 0.16)); g.addColorStop(1, rgba(CAVE.shaft, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
+  ctx.restore();
+  for(let i = 0; i < 14; i++){
+    const a = rand()*TAU, d = rand()*rx*0.8;
+    ctx.fillStyle = rgba("#ffffff", 0.3 + rand()*0.5);
+    ctx.fillRect(x + Math.cos(a)*d, y + Math.sin(a)*d*(ry/rx), 1.2, 1.2);
+  }
+}
+
+/** One of their ore carts on the rail: a dark box with the cargo glowing in it. */
+function caveCart(ctx, x, y, a, hue){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = CAVE.black; ctx.fillRect(-9, -6, 18, 12);
+  ctx.fillStyle = CAVE.rail; ctx.fillRect(-8, -5, 16, 10);
+  ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.strokeRect(-8, -5, 16, 10);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 9);
+  g.addColorStop(0, rgba(hue[1], 0.95)); g.addColorStop(0.5, rgba(hue[0], 0.7)); g.addColorStop(1, rgba(hue[0], 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawCavefloor(ctx, W, H, p, rand){
+  ctx.fillStyle = CAVE.rock;
+  ctx.fillRect(0, 0, W, H);
+
+  // The rock's own relief: paler bosses and deeper hollows, soft-edged.
+  for(let i = 0; i < 14; i++){
+    const x = rand()*W, y = rand()*H, r = (0.10 + rand()*0.26)*W;
+    const col = i % 3 ? CAVE.rockDeep : CAVE.rockLit;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(col, i % 3 ? 0.7 : 0.6)); g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+  // Grit: the floor is not smooth.
+  for(let i = 0; i < 220; i++){
+    const x = rand()*W, y = rand()*H;
+    ctx.fillStyle = rgba(i % 2 ? "#5a4f7a" : CAVE.black, 0.3 + rand()*0.35);
+    tiled(ctx, H, y, yy => ctx.fillRect(x, yy, 1.3, 1.3));
+  }
+
+  // Mist, lying in the low places.
+  for(let i = 0; i < 5; i++){
+    const x = rand()*W, y = rand()*H, r = (0.16 + rand()*0.2)*W;
+    tiled(ctx, H, y, yy => {
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+      g.addColorStop(0, rgba(CAVE.mist, 0.09)); g.addColorStop(1, rgba(CAVE.mist, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill();
+    });
+  }
+
+  /*
+   * THE STREAM - full height, wrap-exact (whole sine periods of t), and the
+   * brightest thing on the floor: a glow on both banks, a dark bed, the
+   * water, a lit core, and ripples down its middle.
+   */
+  const sx0 = W*(0.30 + rand()*0.14);
+  const s1 = (rand() - 0.5)*W*0.2, s2 = (rand() - 0.5)*W*0.1;
+  const stream = t => sx0 + Math.sin(t*TAU)*s1 + Math.sin(t*TAU*2 + 0.8)*s2;
+  const sw = 34 + rand()*12;
+  const streamPath = () => {
+    ctx.beginPath();
+    for(let i = 0; i <= 56; i++){ const t = i/56, x = stream(t); i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  ctx.lineCap = "butt"; ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(CAVE.streamGlow, 0.16); ctx.lineWidth = sw*3.6; streamPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.streamGlow, 0.22); ctx.lineWidth = sw*2.2; streamPath(); ctx.stroke();
+  ctx.strokeStyle = CAVE.black; ctx.lineWidth = sw + 12; streamPath(); ctx.stroke();
+  ctx.strokeStyle = CAVE.streamDeep; ctx.lineWidth = sw; streamPath(); ctx.stroke();
+  ctx.strokeStyle = rgba(CAVE.stream, 0.9); ctx.lineWidth = sw*0.55; streamPath(); ctx.stroke();
+  ctx.setLineDash([16, 30]);
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.85); ctx.lineWidth = sw*0.16; streamPath(); ctx.stroke();
+  ctx.setLineDash([]);
+  // the bank's wet edge, and stones in the water
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.5); ctx.lineWidth = 1.2;
+  ctx.save(); ctx.translate(-sw*0.5 - 6, 0); streamPath(); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(sw*0.5 + 6, 0); streamPath(); ctx.stroke(); ctx.restore();
+  for(let i = 0; i < 9; i++){
+    const t = rand(), x = stream(t) + (rand() - 0.5)*sw*0.7, y = t*H, r = 3 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = CAVE.rockDeep; ctx.beginPath(); ctx.ellipse(x, yy, r, r*0.7, rand()*TAU, 0, TAU); ctx.fill();
+      ctx.strokeStyle = rgba(CAVE.streamLit, 0.7); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x, yy + 1.5, r + 2, (r + 2)*0.7, 0, 0, TAU); ctx.stroke();
+    });
+  }
+
+  // Veins of the mineral, glowing violet through the rock.
+  for(let i = 0; i < 16; i++){
+    const x = rand()*W, y = rand()*H, a = rand()*TAU, l = 40 + rand()*70;
+    tiled(ctx, H, y, yy => caveVein(ctx, x, yy, a, l, rngFor(8500 + i)));
+  }
+
+  // Stalagmites, in families.
+  for(let c = 0; c < 6; c++){
+    const cx = rand()*W, cy = rand()*H, n = 3 + Math.floor(rand()*4);
+    for(let i = 0; i < n; i++){
+      const x = cx + (rand() - 0.5)*W*0.14, y = cy + (rand() - 0.5)*W*0.14, r = 4 + rand()*9;
+      tiled(ctx, H, y, yy => caveStump(ctx, x, yy, r));
+    }
+  }
+
+  // Where the ceiling has cracked: daylight lands in pale pools.
+  for(let i = 0; i < 3; i++){
+    const x = rand()*W, y = rand()*H, rx = 50 + rand()*50, ry = rx*(0.5 + rand()*0.3), rot = rand()*TAU;
+    tiled(ctx, H, y, yy => caveShaftPool(ctx, x, yy, rx, ry, rot, rngFor(8700 + i)));
+  }
+
+  // Fungi in the hollows, and small crystals grown into the floor.
+  for(let i = 0; i < 9; i++){
+    const x = rand()*W, y = rand()*H, n = 4 + Math.floor(rand()*6);
+    tiled(ctx, H, y, yy => caveFungi(ctx, x, yy, n, rngFor(8900 + i)));
+  }
+  for(let i = 0; i < 18; i++){
+    const x = rand()*W, y = rand()*H, s = 4 + rand()*6, rot = rand()*TAU;
+    const hue = CAVE.hues[i % CAVE.hues.length];
+    tiled(ctx, H, y, yy => caveShard(ctx, x, yy, s, rot, hue));
+  }
+
+  /*
+   * THEIR RAIL - a narrow-gauge track running the height of the tile (wrap-
+   * exact like the stream), sleepers under it, cut blocks stacked beside it,
+   * and two carts with what they cut still glowing in them.
+   */
+  const rx0 = W*(0.72 + rand()*0.12);
+  const rail = t => rx0 + Math.sin(t*TAU + 1.1)*W*0.035;
+  const railPath = off => {
+    ctx.beginPath();
+    for(let i = 0; i <= 56; i++){ const t = i/56, x = rail(t) + off; i ? ctx.lineTo(x, t*H) : ctx.moveTo(x, t*H); }
+  };
+  const nS = Math.round(H/14);
+  ctx.strokeStyle = rgba(CAVE.black, 0.8); ctx.lineWidth = 2.2;
+  for(let i = 0; i < nS; i++){
+    const t = (i + 0.5)/nS, x = rail(t), y = t*H;
+    tiled(ctx, H, y, yy => { ctx.beginPath(); ctx.moveTo(x - 8, yy); ctx.lineTo(x + 8, yy); ctx.stroke(); });
+  }
+  ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1.5;
+  railPath(-4.5); ctx.stroke(); railPath(4.5); ctx.stroke();
+  for(let i = 0; i < 5; i++){
+    const t = rand(), side = rand() < 0.5 ? -1 : 1;
+    const x = rail(t) + side*(16 + rand()*14), y = t*H, bw = 10 + rand()*8, bh = 7 + rand()*5;
+    tiled(ctx, H, y, yy => {
+      ctx.fillStyle = CAVE.black; ctx.fillRect(x - bw*0.5 - 1, yy - bh*0.5 + 2, bw + 2, bh + 1);
+      ctx.fillStyle = CAVE.rockLit; ctx.fillRect(x - bw*0.5, yy - bh*0.5, bw, bh);
+      ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - bw*0.5, yy + bh*0.5); ctx.lineTo(x - bw*0.5, yy - bh*0.5); ctx.lineTo(x + bw*0.5, yy - bh*0.5); ctx.stroke();
+    });
+  }
+  for(let i = 0; i < 2; i++){
+    const t = 0.2 + rand()*0.6, y = t*H, x = rail(t);
+    const dx = (rail(t + 0.002) - rail(t - 0.002))/(0.004*H);
+    tiled(ctx, H, y, yy => caveCart(ctx, x, yy, -Math.atan(dx), CAVE.hues[(i + 1) % 4]));
+  }
+
+  // Rubble, everywhere.
+  for(let i = 0; i < 40; i++){
+    const x = rand()*W, y = rand()*H, r = 1.2 + rand()*2.4;
+    ctx.fillStyle = rgba(i % 3 ? CAVE.black : "#4a3f6a", 0.8);
+    tiled(ctx, H, y, yy => { ctx.beginPath(); ctx.arc(x, yy, r, 0, TAU); ctx.fill(); });
+  }
+}
+
+/*
+ * THE GREAT GEODE - the once-layer. A ring of giant crystals around a pool
+ * of the glowing water, one shaft of daylight falling through the broken
+ * ceiling onto it, and their rig on the far shore with a crystal already
+ * sawn off and loaded. The level's rule - light you fly through, that a
+ * shot cannot - as a place.
+ */
+function drawGreatgeode(ctx, W, H, p, rand){
+  const cx = W*0.50, cy = H*0.47, R = W*0.30;
+
+  // The floor around it, lit by it.
+  const lit = ctx.createRadialGradient(cx, cy, R*0.6, cx, cy, R*1.9);
+  lit.addColorStop(0, rgba(CAVE.streamGlow, 0.26)); lit.addColorStop(0.5, rgba(CAVE.vein, 0.12)); lit.addColorStop(1, rgba(CAVE.vein, 0));
+  ctx.fillStyle = lit; ctx.beginPath(); ctx.arc(cx, cy, R*1.9, 0, TAU); ctx.fill();
+
+  // The pool: an irregular shore, a bright wet rim, water deepening to the middle.
+  const shore = a => R*0.62*(1 + Math.sin(a*3 + 0.4)*0.09 + Math.sin(a*5 + 1.9)*0.05);
+  const poolPath = k => {
+    ctx.beginPath();
+    for(let i = 0; i <= 44; i++){
+      const a = (i/44)*TAU, r = shore(a)*k;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  };
+  ctx.fillStyle = rgba(CAVE.streamLit, 0.5); poolPath(1.08); ctx.fill();
+  ctx.fillStyle = CAVE.black; poolPath(1.0); ctx.fill();
+  const water = ctx.createRadialGradient(cx, cy, 0, cx, cy, R*0.66);
+  water.addColorStop(0, "#062a44"); water.addColorStop(0.55, CAVE.streamDeep); water.addColorStop(0.9, CAVE.stream); water.addColorStop(1, CAVE.streamLit);
+  ctx.fillStyle = water; poolPath(1.0); ctx.fill();
+  ctx.strokeStyle = rgba(CAVE.streamLit, 0.35); ctx.lineWidth = 1.2;
+  for(let i = 1; i <= 4; i++){ poolPath(0.2*i); ctx.stroke(); }
+
+  // The shaft: a column of daylight, tilted, landing on the pool.
+  ctx.save(); ctx.translate(cx + R*0.08, cy - R*0.05); ctx.rotate(-0.5); ctx.scale(1, 0.55);
+  const shaft = ctx.createRadialGradient(0, 0, 0, 0, 0, R*0.7);
+  shaft.addColorStop(0, rgba(CAVE.shaft, 0.55)); shaft.addColorStop(0.4, rgba(CAVE.shaft, 0.25)); shaft.addColorStop(1, rgba(CAVE.shaft, 0));
+  ctx.fillStyle = shaft; ctx.beginPath(); ctx.arc(0, 0, R*0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+  for(let i = 0; i < 26; i++){
+    const a = rand()*TAU, d = rand()*R*0.5;
+    ctx.fillStyle = rgba("#ffffff", 0.35 + rand()*0.55);
+    ctx.fillRect(cx + R*0.08 + Math.cos(a)*d, cy - R*0.05 + Math.sin(a)*d*0.6, 1.3, 1.3);
+  }
+
+  /*
+   * THE RING OF SHARDS - eleven giants growing outward from the shore, each
+   * in one of the four colours, glassy from a bright root to a darker tip,
+   * with the light they throw on the rock around them. And the gap in the
+   * ring on the far shore, where one has been cut away.
+   */
+  const N = 11, cut = 2;
+  const giants = [];
+  for(let i = 0; i < N; i++){
+    const a = (i/N)*TAU + 0.3 + (rand() - 0.5)*0.2;
+    const base = shore(a)*1.02, len = R*(0.36 + rand()*0.3), wid = R*(0.09 + rand()*0.06);
+    giants.push({ a, base, len, wid, hue: CAVE.hues[i % 4], lean: (rand() - 0.5)*0.25 });
+  }
+  giants.forEach((g, i) => {
+    if(i === cut) return;
+    const ux = Math.cos(g.a + g.lean), uy = Math.sin(g.a + g.lean);
+    const bx = cx + Math.cos(g.a)*g.base, by = cy + Math.sin(g.a)*g.base;
+    const tx = bx + ux*g.len, ty = by + uy*g.len;
+    const halo = ctx.createRadialGradient(bx + ux*g.len*0.5, by + uy*g.len*0.5, 0, bx + ux*g.len*0.5, by + uy*g.len*0.5, g.len*0.9);
+    halo.addColorStop(0, rgba(g.hue[0], 0.3)); halo.addColorStop(1, rgba(g.hue[0], 0));
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(bx + ux*g.len*0.5, by + uy*g.len*0.5, g.len*0.9, 0, TAU); ctx.fill();
+  });
+  giants.forEach((g, i) => {
+    const ux = Math.cos(g.a + g.lean), uy = Math.sin(g.a + g.lean);
+    const px = -uy, py = ux;
+    const bx = cx + Math.cos(g.a)*g.base, by = cy + Math.sin(g.a)*g.base;
+    if(i === cut){
+      // the stump: a flat sawn face, ringed, with the cut still bright
+      ctx.fillStyle = rgba(CAVE.black, 0.7);
+      ctx.beginPath(); ctx.ellipse(bx + ux*8, by + uy*8, g.wid*0.8, g.wid*0.55, g.a, 0, TAU); ctx.fill();
+      const face = ctx.createRadialGradient(bx + ux*6, by + uy*6, 0, bx + ux*6, by + uy*6, g.wid*0.7);
+      face.addColorStop(0, rgba(g.hue[1], 0.95)); face.addColorStop(1, rgba(g.hue[0], 0.8));
+      ctx.fillStyle = face; ctx.beginPath(); ctx.ellipse(bx + ux*6, by + uy*6, g.wid*0.7, g.wid*0.48, g.a, 0, TAU); ctx.fill();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(bx + ux*6, by + uy*6, g.wid*0.7, g.wid*0.48, g.a, 0, TAU); ctx.stroke();
+      return;
+    }
+    const tx = bx + ux*g.len, ty = by + uy*g.len;
+    const grad = ctx.createLinearGradient(bx, by, tx, ty);
+    grad.addColorStop(0, rgba(g.hue[1], 0.95)); grad.addColorStop(0.35, rgba(g.hue[0], 0.85)); grad.addColorStop(1, rgba(g.hue[0], 0.55));
+    // the root it grows from
+    ctx.fillStyle = rgba(CAVE.black, 0.75);
+    ctx.beginPath(); ctx.ellipse(bx, by, g.wid*0.9, g.wid*0.6, g.a, 0, TAU); ctx.fill();
+    // the shard: base corners, a shoulder, the tip
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(bx + px*g.wid*0.5, by + py*g.wid*0.5);
+    ctx.lineTo(bx + ux*g.len*0.55 + px*g.wid*0.62, by + uy*g.len*0.55 + py*g.wid*0.62);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(bx + ux*g.len*0.55 - px*g.wid*0.62, by + uy*g.len*0.55 - py*g.wid*0.62);
+    ctx.lineTo(bx - px*g.wid*0.5, by - py*g.wid*0.5);
+    ctx.closePath(); ctx.fill();
+    // the facet line down its spine, and the bright edge on one side
+    ctx.strokeStyle = rgba("#ffffff", 0.35); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.strokeStyle = rgba("#ffffff", 0.9); ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(bx + px*g.wid*0.5, by + py*g.wid*0.5);
+    ctx.lineTo(bx + ux*g.len*0.55 + px*g.wid*0.62, by + uy*g.len*0.55 + py*g.wid*0.62); ctx.lineTo(tx, ty); ctx.stroke();
+    // the heart of it, a bright seed near the root
+    const heart = ctx.createRadialGradient(bx + ux*g.len*0.22, by + uy*g.len*0.22, 0, bx + ux*g.len*0.22, by + uy*g.len*0.22, g.wid*0.6);
+    heart.addColorStop(0, rgba("#ffffff", 0.9)); heart.addColorStop(1, rgba(g.hue[1], 0));
+    ctx.fillStyle = heart; ctx.beginPath(); ctx.arc(bx + ux*g.len*0.22, by + uy*g.len*0.22, g.wid*0.6, 0, TAU); ctx.fill();
+  });
+  // small crystals between the giants, and fungi along the shore
+  for(let i = 0; i < 16; i++){
+    const a = rand()*TAU, d = shore(a)*(1.1 + rand()*0.5);
+    caveShard(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 3 + rand()*5, rand()*TAU, CAVE.hues[i % 4]);
+  }
+  for(let i = 0; i < 6; i++){
+    const a = rand()*TAU, d = shore(a)*(1.04 + rand()*0.12);
+    caveFungi(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 4 + Math.floor(rand()*4), rngFor(9100 + i));
+  }
+  for(let i = 0; i < 7; i++){
+    const a = rand()*TAU, d = shore(a)*(1.3 + rand()*0.7);
+    caveStump(ctx, cx + Math.cos(a)*d, cy + Math.sin(a)*d, 5 + rand()*8);
+  }
+
+  /*
+   * THEIR RIG, on the shore by the stump: a dark platform, a boom out over
+   * the water with the saw hanging off it, two lamps, the red eye, a spur of
+   * rail with a cart on it, and the piece they cut lying beside it.
+   */
+  {
+    const g = giants[cut];
+    const kx = cx + Math.cos(g.a)*g.base*1.5, ky = cy + Math.sin(g.a)*g.base*1.5;
+    ctx.fillStyle = rgba(CAVE.black, 0.8); ctx.fillRect(kx - 26, ky - 14, 52, 30);
+    ctx.fillStyle = CAVE.rail; ctx.fillRect(kx - 24, ky - 12, 48, 26);
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.strokeRect(kx - 24, ky - 12, 48, 26);
+    for(let i = 0; i < 4; i++){ ctx.beginPath(); ctx.moveTo(kx - 24, ky - 12 + i*7); ctx.lineTo(kx + 24, ky - 12 + i*7); ctx.stroke(); }
+    // the boom, from the platform to a claw over the stump
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 3; ctx.lineCap = "round";
+    const bx = cx + Math.cos(g.a)*g.base + Math.cos(g.a)*6, by = cy + Math.sin(g.a)*g.base + Math.sin(g.a)*6;
+    ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.strokeStyle = CAVE.black; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.fillStyle = CAVE.rail; ctx.beginPath(); ctx.arc(bx, by, 5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, 5, 0, TAU); ctx.stroke();
+    // lamps and the eye
+    [[-14, -4], [14, -4]].forEach(([dx, dy]) => {
+      const lamp = ctx.createRadialGradient(kx + dx, ky + dy, 0, kx + dx, ky + dy, 16);
+      lamp.addColorStop(0, rgba(CAVE.lamp, 0.9)); lamp.addColorStop(1, rgba(CAVE.lamp, 0));
+      ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(kx + dx, ky + dy, 16, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(kx + dx, ky + dy, 1.6, 0, TAU); ctx.fill();
+    });
+    ctx.fillStyle = CAVE.warn; ctx.beginPath(); ctx.arc(kx + 20, ky + 10, 2, 0, TAU); ctx.fill();
+    // the spur, and the cart with the cut piece in it
+    ctx.strokeStyle = rgba(CAVE.black, 0.8); ctx.lineWidth = 2.2;
+    for(let i = 0; i < 6; i++){ ctx.beginPath(); ctx.moveTo(kx + 30 + i*12, ky - 6); ctx.lineTo(kx + 30 + i*12, ky + 10); ctx.stroke(); }
+    ctx.strokeStyle = CAVE.railLit; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(kx + 26, ky - 3); ctx.lineTo(kx + 100, ky - 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx + 26, ky + 6); ctx.lineTo(kx + 100, ky + 6); ctx.stroke();
+    caveCart(ctx, kx + 60, ky + 1.5, 0, g.hue);
+    // the piece itself, lying by the rig: a slab of the giant, glassy
+    ctx.save(); ctx.translate(kx - 10, ky + 34); ctx.rotate(0.5);
+    const slab = ctx.createLinearGradient(-22, 0, 22, 0);
+    slab.addColorStop(0, rgba(g.hue[1], 0.95)); slab.addColorStop(1, rgba(g.hue[0], 0.8));
+    ctx.fillStyle = rgba(CAVE.black, 0.7); ctx.fillRect(-22, -6, 46, 16);
+    ctx.fillStyle = slab; ctx.fillRect(-22, -8, 44, 14);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.strokeRect(-22, -8, 44, 14);
+    ctx.restore();
+  }
+}
+
 function drawGround(ctx, W, H, p, rand){
   const base = p.dark || "#1c0d05";
   const pale = p.lit || "#a97a48";
@@ -4557,6 +5502,10 @@ function drawPropList(px, W, H, list, rand, coreDir, sky, dpr){
     else if(pr.k === "suncatcher") drawSuncatcher(px, W, H, pr, rand);
     else if(pr.k === "icefield") drawIcefield(px, W, H, pr, rand);
     else if(pr.k === "frozenfleet") drawFrozenfleet(px, W, H, pr, rand);
+    else if(pr.k === "moonfloor") drawMoonfloor(px, W, H, pr, rand);
+    else if(pr.k === "greatarch") drawGreatarch(px, W, H, pr, rand);
+    else if(pr.k === "cavefloor") drawCavefloor(px, W, H, pr, rand);
+    else if(pr.k === "greatgeode") drawGreatgeode(px, W, H, pr, rand);
   });
 }
 

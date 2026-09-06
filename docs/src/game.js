@@ -420,6 +420,10 @@ function startMission(missionIndex, difficultyId){
   if(mission.mirage) SF.mirage.begin();
   SF.frost.reset();                       // the cold waits for the far side
   if(mission.frost) SF.frost.begin();
+  SF.doors.reset();                       // the doors stand dark until the moon
+  if(mission.doors) SF.doors.begin();
+  SF.crystals.reset();                    // nothing grows until the cave
+  if(mission.crystals) SF.crystals.begin();
   SF.mirrorduel.reset();                  // the glass keeps pretending until asked
   if(mission.mirrorDuel) SF.mirrorduel.begin();
   SF.homecoming.reset();                  // the road home waits for the last fight
@@ -531,6 +535,10 @@ function startMission(missionIndex, difficultyId){
     seenThrough: 0,
     // Whiteout: frozen ships broken before they thawed, and times the cold caught YOU.
     shattered: 0, frozenTimes: 0,
+    // The Moon of Doors and the Glow Cave: rounds that went through a door,
+    // ships caught a beat after stepping through, kills off a facet, bolts
+    // that broke on a crystal you were sheltering under.
+    doorShots: 0, doorAmbush: 0, bounceKills: 0, covered: 0,
     stars: 0,
   };
 
@@ -813,6 +821,8 @@ function startMission(missionIndex, difficultyId){
              : mission.volcano ? "volcanoStart"
              : mission.mirage ? "mirageStart"
              : mission.frost ? "frostStart"
+             : mission.doors ? "doorsStart"
+             : mission.crystals ? "crystalsStart"
              : mission.garden ? "gardenStart"
              : mission.limpets ? "limpetStart"
              : mission.flare ? "flareStart"
@@ -1205,6 +1215,27 @@ const callbacks = {
        * Whiteout's harvest star: this one was frozen when it broke. The
        * kill is paid like any kill; the shatter is what the level counts.
        */
+      /*
+       * The Moon of Doors' two stars: a round that came through a door and
+       * found a ship, and a ship caught within a beat of stepping through.
+       * The Glow Cave's: a round that had already come off a facet.
+       */
+      if(run.mission.doors){
+        if(bullet && bullet.doored){
+          run.stats.doorShots = (run.stats.doorShots || 0) + 1;
+          fx.text(e.x, e.y - e.r - 24, T("THROUGH THE DOOR!"), "#48e5c2", 15, true);
+          SF.comms.say("doorShot");
+        }
+        if(e.throughDoor > 0){
+          run.stats.doorAmbush = (run.stats.doorAmbush || 0) + 1;
+          fx.text(e.x, e.y - e.r - 40, T("CAUGHT AT THE DOOR!"), "#ff5dbb", 15, true);
+        }
+      }
+      if(run.mission.crystals && bullet && bullet.bounced > 0){
+        run.stats.bounceKills = (run.stats.bounceKills || 0) + 1;
+        fx.text(e.x, e.y - e.r - 24, T("OFF THE BOUNCE!"), "#ffd6f1", 15, true);
+        SF.comms.say("crystalBounce");
+      }
       if(run.mission.frost && e.frozen > 0){
         run.stats.shattered = (run.stats.shattered || 0) + 1;
         fx.text(e.x, e.y - e.r - 24, T("SHATTERED!"), "#dff4ff", 15, true);
@@ -3569,6 +3600,8 @@ function update(dt, timeMs){
   if(run.mission.volcano) SF.volcano.update(dt, run, game.world, simMs);
   if(run.mission.mirage) SF.mirage.update(dt, run, game.world, simMs);
   if(run.mission.frost) SF.frost.update(dt, run, game.world, simMs);
+  if(run.mission.doors) SF.doors.update(dt, run, game.world, simMs);
+  if(run.mission.crystals) SF.crystals.update(dt, run, game.world, simMs);
   // The Glass Sea's turned reflection lives in mirrorduel.js...
   if(run.mission.mirrorDuel) SF.mirrorduel.update(dt, run, game.world, simMs);
   // ...and the descent to the farm lives in homecoming.js.
@@ -3982,6 +4015,8 @@ function draw(timeMs){
   // rewind's claim on the frame: the replay paints its own from the tape.
   SF.mirage.drawSky(ctx, timeMs, VW, VH);            // every real thing's shadow on the sand
   SF.frost.drawSky(ctx, timeMs, VW, VH);             // the rime the fronts leave behind
+  SF.doors.drawSky(ctx, timeMs, VW, VH);             // the stones and the discs, under the ships
+  SF.crystals.drawSky(ctx, timeMs, VW, VH);          // the light each crystal throws on the floor
   SF.render.drawHaulers(ctx, world, timeMs);         // under the traffic they're crossing
   if(game.run) SF.render.drawAct4(ctx, game.run, world, timeMs);   // wells, belts, spine, beat
   fx.drawLights(ctx);                                // the world catches the fire
@@ -4105,7 +4140,7 @@ function draw(timeMs){
   // The arrival is a cutscene: no HUD, no radio, no buttons over it.
   const cinema = game.run &&
     (game.run.phase === "finaleIntro" || game.run.phase === "bossIntro");
-  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
+  if(game.run && !cinema){ SF.backstage.drawOver(ctx, timeMs); SF.mirrorduel.drawOver(ctx, timeMs); SF.sky29.drawOver(ctx, timeMs); SF.dive.drawOver(ctx, timeMs); SF.volcano.drawOver(ctx, timeMs); SF.mirage.drawOver(ctx, timeMs); SF.frost.drawOver(ctx, timeMs); SF.doors.drawOver(ctx, timeMs); SF.crystals.drawOver(ctx, timeMs); SF.render.drawHud(ctx, game); SF.render.drawComms(ctx); }
   SF.render.drawFinaleIntro(ctx, timeMs);            // letterbox + name card, over everything
   SF.render.drawBossIntro(ctx, timeMs);              // same grammar, everyday size
   fx.drawFlash(ctx, VW, VH);

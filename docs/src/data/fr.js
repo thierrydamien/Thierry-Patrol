@@ -739,6 +739,69 @@ SF.i18n.register("fr", { name: "Français", s: {
 "SHATTERED!": "BRISÉ !",
 "warm": "au chaud",
 "iced": "gelé",
+
+/* ----- The Moon of Doors (mission 37) ----- */
+"The Moon of Doors": "La Lune aux Portes",
+"every door has a twin": "chaque porte a sa jumelle",
+"Somebody built DOORS on this moon, {you} - and the thieves have the keys. Two pairs stand open at a time: what flies into one comes out of its twin. Their ships, their bolts... and YOUR shots. Fire into a low door and your rounds arrive on top of the fleet. And watch the door beside you - what dives in up there comes out down HERE.":
+  "Quelqu'un a construit des PORTES sur cette lune, {you} — et les voleurs ont les clés. Deux paires sont ouvertes à la fois : ce qui entre dans l'une ressort par sa jumelle. Leurs vaisseaux, leurs tirs… et TES tirs. Tire dans une porte basse et tes tirs arrivent au-dessus de la flotte. Et surveille la porte à côté de toi — ce qui plonge là-haut ressort ICI, en bas.",
+"Shoot INTO the doors!": "Tire DANS les portes !",
+"The Threshold": "Le Seuil",
+"THE DOORS THAT LEAD TO EACH OTHER": "LES PORTES QUI MÈNENT L'UNE À L'AUTRE",
+"Whoever lived on this moon built doors, {you} - rings of stone at the end of every road - and every door has a twin. Step into one and you step out of the other. The thieves found the keys first.":
+  "Ceux qui vivaient sur cette lune ont construit des portes, {you} — des anneaux de pierre au bout de chaque route — et chaque porte a sa jumelle. Entre dans l'une, tu ressors par l'autre. Les voleurs ont trouvé les clés les premiers.",
+"The doors don't answer to you. But they answer to your SHOTS: fire into a low door and your rounds come out of the high one, on top of the fleet. And when their ships dive into a door up there... they come out down here, right beside you.":
+  "Les portes ne t'obéissent pas. Mais elles obéissent à tes TIRS : tire dans une porte basse et tes tirs ressortent par la haute, au-dessus de la flotte. Et quand leurs vaisseaux plongent dans une porte là-haut… ils ressortent ici, en bas, juste à côté de toi.",
+"THROUGH THE DOORS": "À TRAVERS LES PORTES",
+"Destroy 15 through a door": "Détruis-en 15 à travers une porte",
+"Catch 8 at the door": "Attrape-en 8 à la porte",
+"Two pairs of doors, {you}. Same colour, same door. Shoot INTO the low one - your rounds come out of the high one.":
+  "Deux paires de portes, {you}. Même couleur, même porte. Tire DANS la basse — tes tirs ressortent par la haute.",
+"The doors don't take you, {you}, only them and the shots. Watch the one beside you: something's coming out of it.":
+  "Les portes ne te prennent pas, {you}, seulement eux et les tirs. Surveille celle à côté de toi : quelque chose va en sortir.",
+"Fire into a door, {you} - see where it lands. Then use it.":
+  "Tire dans une porte, {you} — regarde où ça atterrit. Puis sers-t'en.",
+"Door beside you, {you} — something just came THROUGH!":
+  "Porte à côté de toi, {you} — quelque chose vient de PASSER !",
+"They took a door, {you} — turn around!":
+  "Ils ont pris une porte, {you} — retourne-toi !",
+"THROUGH the door, {you}! That's how you hit them before they arrive.":
+  "À TRAVERS la porte, {you} ! C'est comme ça qu'on les touche avant qu'ils arrivent.",
+"Your shot went in low and came out on top of them, {you}. Keep feeding the door!":
+  "Ton tir est entré en bas et ressorti au-dessus d'eux, {you}. Continue de nourrir la porte !",
+"THROUGH THE DOOR!": "À TRAVERS LA PORTE !",
+"CAUGHT AT THE DOOR!": "ATTRAPÉ À LA PORTE !",
+
+/* ----- The Glow Cave (mission 38) ----- */
+"The Glow Cave": "La Grotte Lumineuse",
+"shots bounce, bolts break": "les tirs rebondissent, les leurs se brisent",
+"Under the moon of doors the whole world is HOLLOW, {you}, and it glows. The crystals down here are made of light - fly straight through them. But a shot can't: yours BOUNCE off the facets, theirs BREAK on them. Hide under a crystal and their fire shatters. Bank a round off one and it finds a ship you could never hit straight.":
+  "Sous la lune aux portes, le monde entier est CREUX, {you}, et il brille. Les cristaux d'ici sont faits de lumière — traverse-les tout droit. Mais un tir ne peut pas : les tiens REBONDISSENT sur les facettes, les leurs se BRISENT dessus. Cache-toi sous un cristal et leurs tirs éclatent. Fais ricocher un tir dessus et il trouve un vaisseau que tu n'aurais jamais pu toucher tout droit.",
+"Bounce yours — hide from theirs!": "Fais rebondir les tiens — cache-toi des leurs !",
+"The Geode": "La Géode",
+"THE HOLLOW WORLD": "LE MONDE CREUX",
+"Under the moon of doors the world is hollow, {you}, and it glows. Crystals grow in the dark down here - made of light, tall as ships - and the thieves have been cutting them out by the cartload.":
+  "Sous la lune aux portes, le monde est creux, {you}, et il brille. Des cristaux poussent dans le noir ici — faits de lumière, hauts comme des vaisseaux — et les voleurs les découpent par charrettes entières.",
+"The crystals are light: fly straight through them. A shot can't. Yours BOUNCE off the facets - bank one round and it finds a ship you could never hit straight. Theirs BREAK: duck under a crystal and their fire shatters on it.":
+  "Les cristaux sont de la lumière : traverse-les tout droit. Un tir ne peut pas. Les tiens REBONDISSENT sur les facettes — fais ricocher un tir et il trouve un vaisseau que tu n'aurais jamais pu toucher tout droit. Les leurs se BRISENT : glisse-toi sous un cristal et leurs tirs éclatent dessus.",
+"INTO THE GLOW": "DANS LA LUMIÈRE",
+"Destroy 10 off the bounce": "Détruis-en 10 par ricochet",
+"Shelter from 15 bolts": "Abrite-toi de 15 tirs",
+"The crystals are light, {you} - fly through them. Your SHOTS can't: they bounce. Theirs break.":
+  "Les cristaux sont de la lumière, {you} — traverse-les. Tes TIRS ne peuvent pas : ils rebondissent. Les leurs se brisent.",
+"Get under a crystal when they open up, {you}. Their fire shatters on it.":
+  "Glisse-toi sous un cristal quand ils ouvrent le feu, {you}. Leurs tirs éclatent dessus.",
+"Bank a round off a crystal, {you} - it goes where they aren't looking.":
+  "Fais ricocher un tir sur un cristal, {you} — il va là où ils ne regardent pas.",
+"OFF THE BOUNCE, {you}! A shot that comes off a crystal finds ships you can't see straight.":
+  "PAR RICOCHET, {you} ! Un tir qui rebondit sur un cristal trouve des vaisseaux que tu ne vois pas tout droit.",
+"That one came off the facet, {you}. Nobody dodges a round from the side.":
+  "Celui-là est parti de la facette, {you}. Personne n'esquive un tir qui vient de côté.",
+"Their fire's breaking on the crystal, {you} — stay under it!":
+  "Leurs tirs se brisent sur le cristal, {you} — reste dessous !",
+"Good cover, {you}. Let the crystal take it.":
+  "Bonne couverture, {you}. Laisse le cristal encaisser.",
+"OFF THE BOUNCE!": "PAR RICOCHET !",
 "somebody lived here": "quelqu'un vivait ici",
 "Catch SEEDS — what you plant fights":
   "Attrape les GRAINES — elles se battent",
